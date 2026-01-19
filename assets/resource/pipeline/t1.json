@@ -1,0 +1,59 @@
+{
+    "打开pvz": {
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthd4399",
+        "next": [
+            "点击登录"
+        ]
+    },
+    "点击登录": {
+        "timeout": 100000,
+        "recognition": "OCR",
+        "expected": [
+            "登录"
+        ],
+        "action": "Click",
+        "next": [
+            "开始游戏"
+        ]
+    },
+    "开始游戏": {
+        "timeout": 30000,
+        "recognition": "OCR",
+        "expected": [
+            "开始游戏"
+        ],
+        "action": "Click",
+        "next": [
+            "使用云端进度"
+        ]
+    },
+    "使用云端进度": {
+        "timeout": 30000,
+        "recognition": "OCR",
+        "expected": [
+            "使用云端进度"
+        ],
+        "action": "Click",
+        "next": [
+            "存档覆盖",
+            "无"
+        ],
+        "on_error": [
+            "无"
+        ]
+        //（该注释已过期）云端进度的文字无法识别，明天再改，改成图片识别
+    },
+    "存档覆盖": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]成功进入游戏！[/color]",
+    },
+    "无": {
+        "focus": "[color:darkgray]成功进入游戏！[/color]"
+    }
+}
