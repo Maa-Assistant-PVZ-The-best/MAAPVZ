@@ -60,8 +60,8 @@
     // },
     "task": [
         {
-            "name": "普通任务",
-            "entry": "MyTask1"
+            "name": "开始登录",
+            "entry": "打开pvz"
         },
         {
             "name": "选项任务",

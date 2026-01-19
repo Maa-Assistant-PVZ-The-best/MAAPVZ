@@ -3,11 +3,25 @@
         "action": "StartApp",
         "package": "com.popcap.pvz2cthd4399",
         "next": [
+            "等待"
+        ],
+        "on_error": [
+            "点击登录"
+        ]
+    },
+    "等待": {
+        "timeout": 1000,
+        "recognition": "OCR",
+        "expected": [
+            "登录"
+        ],
+        "action": "DoNothing",
+        "next": [
             "点击登录"
         ]
     },
     "点击登录": {
-        "timeout": 100000,
+        "timeout": 1000000,
         "recognition": "OCR",
         "expected": [
             "登录"
@@ -26,6 +40,9 @@
         "action": "Click",
         "next": [
             "使用云端进度"
+        ],
+        "on_error": [
+            "无"
         ]
     },
     "使用云端进度": {
