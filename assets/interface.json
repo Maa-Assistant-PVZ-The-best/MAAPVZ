@@ -21,20 +21,20 @@
             "name": "安卓端",
             "type": "Adb",
             "display_short_side": 720 // 默认缩放分辨率的短边长度
-        },
-        {
-            "name": "桌面端",
-            "type": "Win32",
-            "win32": {
-                "class_regex": ".*",
-                "window_regex": "Visual Studio",
-                // 截图及控制方式，请根据项目实际情况修改
-                // 文档: https://maafw.xyz/docs/2.4-ControlMethods
-                "screencap": "PrintWindow", // 截图方式
-                "mouse": "PostMessageWithCursorPos", // 鼠标控制方式
-                "keyboard": "PostMessageWithCursorPos" // 键盘控制方式
-            }
         }
+        // {
+        //     "name": "桌面端",
+        //     "type": "Win32",
+        //     "win32": {
+        //         "class_regex": ".*",
+        //         "window_regex": "Visual Studio",
+        //         // 截图及控制方式，请根据项目实际情况修改
+        //         // 文档: https://maafw.xyz/docs/2.4-ControlMethods
+        //         "screencap": "PrintWindow", // 截图方式
+        //         "mouse": "PostMessageWithCursorPos", // 鼠标控制方式
+        //         "keyboard": "PostMessageWithCursorPos" // 键盘控制方式
+        //     }
+        // }
     ],
     "resource": [
         {
@@ -42,14 +42,14 @@
             "path": [
                 "./resource"
             ]
-        },
-        {
-            "name": "B 服",
-            "path": [
-                "./resource",
-                "./resource_bilibili"
-            ]
         }
+        // {
+        //     "name": "B 服",
+        //     "path": [
+        //         "./resource",
+        //         "./resource_bilibili"
+        //     ]
+        // }
     ],
     // 可选的 agent 示例
     // "agent": {
