@@ -21,7 +21,7 @@ jobs:
     # https://mirrorchyan.com/
     if: false
     # if: ${{ github.repository_owner == 'MaaXYZ' }}
-
+# 你好阿金留
     steps:
       - id: uploading
         uses: MirrorChyan/release-note-action@v1
