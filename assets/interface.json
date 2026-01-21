@@ -64,8 +64,8 @@
             "entry": "打开pvz"
         },
         {
-            "name": "选项任务",
-            "entry": "MyTask2",
+            "name": "签到",
+            "entry": "签到",
             "option": [
                 "任务选项1"
             ]

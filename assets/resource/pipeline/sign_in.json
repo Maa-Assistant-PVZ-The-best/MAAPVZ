@@ -1,3 +1,24 @@
 {
-    "检查当前是否在主界面": {}
+    "签到": {
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "执行签到",
+            "检查当前是否在主界面"
+        ],
+        "on_error": [
+            "返回主界面"
+        ]
+    },
+    "执行签到": {
+        "recognition": "OCR",
+        "expected": [
+            "签到"
+        ],
+        "action": "Click",
+        "next": [
+            "返回主界面"
+        ]
+    }
 }
