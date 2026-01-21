@@ -10,7 +10,7 @@
             "[JumpBack]检查当前是否在主界面"
         ],
         "on_error": [
-            "[jumpback]返回主界面",
+            "[jumpback]返回主界面"
         ]
     },
     "执行签到": {
