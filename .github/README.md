@@ -115,4 +115,4 @@ Win10 或者 Win11 系统自带了一份 "Python"，但它其实只是一个安�
 
 感谢以下开发者对本项目作出的贡献:
 
-[![Contributors](https://contrib.rocks/image?repo=daoyanxiaoz/REMOVED)](https://github.com/daoyanxiaoz/REMOVED/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=daoyanxiaoz/MAAPVZ)](https://github.com/daoyanxiaoz/MAAPVZ/graphs/contributors)
