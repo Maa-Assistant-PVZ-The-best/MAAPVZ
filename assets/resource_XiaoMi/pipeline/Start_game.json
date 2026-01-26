@@ -1,5 +1,6 @@
 {
     "打开pvz_XM": {
+        "timeout": 180000,
         "action": "StartApp",
         "package": "com.popcap.pvz2cthdxm",
         "next": [
@@ -7,7 +8,7 @@
         ]
     },
     "点击登录": {
-        "timeout": 100000,
+        "timeout": 30000,
         "recognition": "TemplateMatch",
         "template": [
             "登录.png"
@@ -19,7 +20,7 @@
         ],
     },
     "开始游戏": {
-        "timeout": 10000,
+        "timeout": 20000,
         "recognition": "TemplateMatch",
         "template": [
             "开始游戏.png"
@@ -68,6 +69,6 @@
         "post_wait_freezes": 1000,
         "next": [
             "关闭公告"
-        ],
+        ]
     }
 }
