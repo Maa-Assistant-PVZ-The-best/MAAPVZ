@@ -43,7 +43,7 @@
             "领取钻石.png"
         ],
         "threshold": [
-            1
+            0.6
         ],
         "action": "Click",
         "next": [
