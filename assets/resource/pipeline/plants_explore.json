@@ -11,8 +11,33 @@
             "[JumpBack]返回主界面"
         ]
     },
-    "点击日常": {},
-    "点击植物探险": {},
+    "点击日常": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "日常.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击植物探险"
+        ]
+    },
+    "点击植物探险": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "植物探险.png"
+        ],
+        "action": "Click",
+        "next": [
+            "检查_海盗/埃及"
+        ]
+    },
     "检查_海盗/埃及": {},
     "检查_西部/功夫": {},
     "检查_未来/黑暗": {},
