@@ -61,6 +61,10 @@
     //先检查一遍再找对应世界再找对应植物
     "滑动查找": {
         "recognition": "TemplateMatch",
+        "template": [
+            "探险完成.png"
+        ],
+        "inverse": true,
         "action": "Swipe",
         "begin": [
             402,
@@ -84,9 +88,19 @@
             "探险完成.png"
         ],
         "action": "Click",
+        "next": [
+            "确定探险完成"
+        ],
         "on_error": [
             "滑动查找"
         ]
+    },
+    "确定探险完成": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "探险完成_确定.png"
+        ],
+        "action": "Click"
     },
     "探索": {
         "next": []
