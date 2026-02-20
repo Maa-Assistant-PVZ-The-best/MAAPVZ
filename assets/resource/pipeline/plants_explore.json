@@ -46,11 +46,25 @@
         "action": "Click",
         "next": [
             "[JumpBack]点击探险完成",
-            "[JumpBack]滑动查找",
+            "[JumpBack]滑动",
             "检查_西部/功夫"
+        ],
+        // "on_error": [
+        //     "滑动"
+        // ]
+    },
+    "检查_西部/功夫": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "西部功夫.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]点击探险完成",
+            "[JumpBack]滑动2",
+            "检查_未来/黑暗"
         ]
     },
-    "检查_西部/功夫": {},
     "检查_未来/黑暗": {},
     "检查_海滩/冰河": {},
     "检查_天空/失落": {},
@@ -59,12 +73,29 @@
     "检查_平安/复兴": {},
     "检查_海底世界": {},
     //先检查一遍再找对应世界再找对应植物
-    "滑动查找": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "探险完成.png"
+    "滑动": {
+        "timeout": 4000,
+        "max_hit": 1,
+        "action": "Swipe",
+        "begin": [
+            402,
+            628,
+            1,
+            1
         ],
-        "inverse": true,
+        "end": [
+            407,
+            108,
+            1,
+            1
+        ],
+        "next": [
+            "点击探险完成"
+        ]
+    },
+    "滑动2": {
+        "timeout": 4000,
+        "max_hit": 1,
         "action": "Swipe",
         "begin": [
             402,
@@ -89,13 +120,13 @@
         ],
         "action": "Click",
         "next": [
-            "确定探险完成"
+            "完成探险"
         ],
         "on_error": [
-            "滑动查找"
+            "滑动"
         ]
     },
-    "确定探险完成": {
+    "完成探险": {
         "recognition": "TemplateMatch",
         "template": [
             "探险完成_确定.png"
