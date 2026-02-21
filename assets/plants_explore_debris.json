@@ -1,12 +1,14 @@
 {
     "option": {
-        "植物探险_豌豆射手碎片": {
-            "type": "switch",
-            "label": "豌豆射手碎片",
-            "default_case": false,
+        "海盗/埃及": {
+            "type": "select",
+            "default_case": "无",
             "cases": [
                 {
-                    "name": "Yes",
+                    "name": "无"
+                },
+                {
+                    "name": "豌豆射手",
                     "pipeline_override": {
                         "探索_豌豆射手": {
                             "enabled": true
@@ -14,22 +16,7 @@
                     }
                 },
                 {
-                    "name": "No",
-                    "pipeline_override": {
-                        "探索_豌豆射手": {
-                            "enabled": false
-                        }
-                    }
-                }
-            ]
-        },
-        "植物探险_卷心菜投手碎片": {
-            "type": "switch",
-            "label": "卷心菜投手碎片",
-            "default_case": false,
-            "cases": [
-                {
-                    "name": "Yes",
+                    "name": "卷心菜投手",
                     "pipeline_override": {
                         "探索_卷心菜投手": {
                             "enabled": true
@@ -37,22 +24,7 @@
                     }
                 },
                 {
-                    "name": "No",
-                    "pipeline_override": {
-                        "探索_卷心菜投手": {
-                            "enabled": false
-                        }
-                    }
-                }
-            ]
-        },
-        "植物探险_向日葵碎片": {
-            "type": "switch",
-            "label": "向日葵碎片",
-            "default_case": false,
-            "cases": [
-                {
-                    "name": "Yes",
+                    "name": "向日葵",
                     "pipeline_override": {
                         "探索_向日葵": {
                             "enabled": true
@@ -60,10 +32,354 @@
                     }
                 },
                 {
-                    "name": "No",
+                    "name": "玉米投手",
                     "pipeline_override": {
-                        "探索_向日葵": {
-                            "enabled": false
+                        "探索_玉米投手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "地刺",
+                    "pipeline_override": {
+                        "探索_地刺": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "弹簧豆",
+                    "pipeline_override": {
+                        "探索_弹簧豆": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "西部/功夫": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "双向射手",
+                    "pipeline_override": {
+                        "探索_双向射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "巴豆",
+                    "pipeline_override": {
+                        "探索_巴豆": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "闪电芦苇",
+                    "pipeline_override": {
+                        "探索_闪电芦苇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火葫芦",
+                    "pipeline_override": {
+                        "探索_火葫芦": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "白萝卜",
+                    "pipeline_override": {
+                        "探索_白萝卜": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "未来/黑暗": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "土豆地雷",
+                    "pipeline_override": {
+                        "探索_土豆地雷": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "坚果",
+                    "pipeline_override": {
+                        "探索_坚果": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "冰冻生菜",
+                    "pipeline_override": {
+                        "探索_冰冻生菜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "大喷菇",
+                    "pipeline_override": {
+                        "探索_大喷菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "磁力菇",
+                    "pipeline_override": {
+                        "探索_磁力菇": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "海滩/冰河": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "缠绕水草",
+                    "pipeline_override": {
+                        "探索_缠绕水草": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "鳄梨",
+                    "pipeline_override": {
+                        "探索_鳄梨": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火焰豌豆",
+                    "pipeline_override": {
+                        "探索_火焰豌豆": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "天空/失落": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "旋转芜菁",
+                    "pipeline_override": {
+                        "探索_旋转芜菁": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "旋涡枇杷",
+                    "pipeline_override": {
+                        "探索_旋涡枇杷": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "电离红掌",
+                    "pipeline_override": {
+                        "探索_电离红掌": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "红针花",
+                    "pipeline_override": {
+                        "探索_红针花": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "菠萝蜜",
+                    "pipeline_override": {
+                        "探索_菠萝蜜": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "摇滚/恐龙": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "潜伏芹菜",
+                    "pipeline_override": {
+                        "探索_潜伏芹菜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "复活萝卜",
+                    "pipeline_override": {
+                        "探索_复活萝卜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "原始豌豆射手",
+                    "pipeline_override": {
+                        "探索_原始豌豆射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "香水蘑菇",
+                    "pipeline_override": {
+                        "探索_香水蘑菇": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "摩登/蒸汽": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "毒影菇",
+                    "pipeline_override": {
+                        "探索_毒影菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "月光花",
+                    "pipeline_override": {
+                        "探索_月光花": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "番莲工程师",
+                    "pipeline_override": {
+                        "探索_番莲工程师": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "莲藕射手",
+                    "pipeline_override": {
+                        "探索_莲藕射手": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "平安/复兴": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "冬瓜守卫",
+                    "pipeline_override": {
+                        "探索_冬瓜守卫": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "芦荟医师",
+                    "pipeline_override": {
+                        "探索_芦荟医师": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "石斛防风网",
+                    "pipeline_override": {
+                        "探索_石斛防风网": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "千金藤",
+                    "pipeline_override": {
+                        "探索_千金藤": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "海底世界": {
+            "type": "select",
+            "default_case": "无",
+            "cases": [
+                {
+                    "name": "无"
+                },
+                {
+                    "name": "海蘑菇",
+                    "pipeline_override": {
+                        "探索_海蘑菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "噗噗鱼藤",
+                    "pipeline_override": {
+                        "探索_噗噗鱼藤": {
+                            "enabled": true
                         }
                     }
                 }
