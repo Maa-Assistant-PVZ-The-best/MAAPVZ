@@ -225,32 +225,51 @@
         ]
     },
     "自动选择": {
+        "pre_delay": 500,
+        "post_delay": 500,
         "recognition": "TemplateMatch",
         "template": [
             "自动选择.png"
         ],
         "action": "Click",
         "next": [
-            "点叉"
-        ]
-    },
-    "点叉": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "叉叉.png"
-        ],
-        "action": "Click",
-        "next": [
-            "探索_回到顶部"
+            "开始探险"
         ]
     },
     "开始探险": {
+        "pre_delay": 500,
+        "post_delay": 2000,
         "recognition": "TemplateMatch",
         "template": [
             "开始探险.png"
         ],
         "action": "Click",
-        "on_error": []
+        "next": [
+            "[JumpBack]探索_检查植物探索cd",
+            "探索_回到顶部"
+        ]
+    },
+    "探索_检查植物探索cd": {
+        "pre_delay": 500,
+        "post_delay": 500,
+        "recognition": "TemplateMatch",
+        "template": [
+            "探索_我再想想.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点叉"
+        ],
+        "focus": "[color:darkgray]当前植物探险失败，有植物正在cd中[/color]"
+    },
+    "点叉": {
+        "pre_delay": 500,
+        "post_delay": 500,
+        "recognition": "TemplateMatch",
+        "template": [
+            "叉叉.png"
+        ],
+        "action": "Click"
     },
     "探索_海盗/埃及": {
         "recognition": "TemplateMatch",
