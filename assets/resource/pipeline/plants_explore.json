@@ -255,6 +255,7 @@
         ]
     },
     "探索_豌豆射手": {
+        "enabled": false,
         "max_hit": 1,
         "next": [
             "探索_豌豆射手世界页面"
@@ -268,171 +269,1184 @@
         ]
     },
     "探索_豌豆射手页面": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "海盗埃及.png"
-        ],
-        "method": 10001,
-        "threshold": [
-            0.9
-        ],
         "action": "DoNothing",
         "next": [
             "探索_选择第一个植物"
         ]
     },
     "探索_卷心菜投手": {
+        "max_hit": 1,
         "enabled": false,
+        "next": [
+            "探索_卷心菜投手世界页面"
+        ]
     },
     "探索_卷心菜投手世界页面": {
         "action": "DoNothing",
         "next": [
-            "探索_卷心菜投手选择世界"
-        ]
-    },
-    "探索_卷心菜投手选择世界": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "海盗埃及.png",
-            "海盗埃及（灰色）.png"
-        ],
-        "action": "Click",
-        "pre_delay": 500,
-        "post_delay": 500,
-        "next": [
+            "[JumpBack]探索_海盗/埃及",
             "探索_卷心菜投手页面"
         ]
     },
     "探索_卷心菜投手页面": {
         "action": "DoNothing",
         "next": [
-            "探索_卷心菜投手区域"
-        ]
-    },
-    "探索_卷心菜投手区域": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "开始.png"
-        ],
-        "roi": [
-            388,
-            331,
-            654,
-            153
-        ],
-        "action": "Click",
-        "post_delay": 500,
-        "next": [
-            "自动选择"
+            "探索_选择第二个植物"
         ]
     },
     "探索_向日葵": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_向日葵世界页面"
+        ]
+    },
+    "探索_向日葵世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海盗/埃及",
+            "探索_向日葵页面"
+        ]
+    },
+    "探索_向日葵页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_玉米投手": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_玉米投手世界页面"
+        ]
+    },
+    "探索_玉米投手世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海盗/埃及",
+            "探索_玉米投手页面"
+        ]
+    },
+    "探索_玉米投手页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_地刺": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_地刺世界页面"
+        ]
+    },
+    "探索_地刺世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海盗/埃及",
+            "探索_地刺页面"
+        ]
+    },
+    "探索_地刺页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_弹簧豆": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_弹簧豆世界页面"
+        ]
+    },
+    "探索_弹簧豆世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海盗/埃及",
+            "探索_弹簧豆页面"
+        ]
+    },
+    "探索_弹簧豆页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_双向射手": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_双向射手世界页面"
+        ]
+    },
+    "探索_双向射手世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_西部/功夫",
+            "探索_双向射手页面"
+        ]
+    },
+    "探索_双向射手页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_巴豆": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_巴豆世界页面"
+        ]
+    },
+    "探索_巴豆世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_西部/功夫",
+            "探索_巴豆页面"
+        ]
+    },
+    "探索_巴豆页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_闪电芦苇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_闪电芦苇世界页面"
+        ]
+    },
+    "探索_闪电芦苇世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_西部/功夫",
+            "探索_闪电芦苇页面"
+        ]
+    },
+    "探索_闪电芦苇页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_火葫芦": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_火葫芦世界页面"
+        ]
+    },
+    "探索_火葫芦世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_西部/功夫",
+            "探索_火葫芦页面"
+        ]
+    },
+    "探索_火葫芦页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_白萝卜": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_白萝卜世界页面"
+        ]
+    },
+    "探索_白萝卜世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_西部/功夫",
+            "探索_白萝卜页面"
+        ]
+    },
+    "探索_白萝卜页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_土豆地雷": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_土豆地雷世界页面"
+        ]
+    },
+    "探索_土豆地雷世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_未来/黑暗",
+            "探索_土豆地雷页面"
+        ]
+    },
+    "探索_土豆地雷页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_坚果": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_坚果世界页面"
+        ]
+    },
+    "探索_坚果世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_未来/黑暗",
+            "探索_坚果页面"
+        ]
+    },
+    "探索_坚果页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_冰冻生菜": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_冰冻生菜世界页面"
+        ]
+    },
+    "探索_冰冻生菜世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_未来/黑暗",
+            "探索_冰冻生菜页面"
+        ]
+    },
+    "探索_冰冻生菜页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_大喷菇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_大喷菇世界页面"
+        ]
+    },
+    "探索_大喷菇世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_未来/黑暗",
+            "探索_大喷菇页面"
+        ]
+    },
+    "探索_大喷菇页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_磁力菇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_磁力菇世界页面"
+        ]
+    },
+    "探索_磁力菇世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_未来/黑暗",
+            "探索_磁力菇页面"
+        ]
+    },
+    "探索_磁力菇页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_缠绕水草": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_缠绕水草世界页面"
+        ]
+    },
+    "探索_缠绕水草世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海滩/冰河",
+            "探索_缠绕水草页面"
+        ]
+    },
+    "探索_缠绕水草页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_鳄梨": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_鳄梨世界页面"
+        ]
+    },
+    "探索_鳄梨世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海滩/冰河",
+            "探索_鳄梨页面"
+        ]
+    },
+    "探索_鳄梨页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_火焰豌豆": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_火焰豌豆世界页面"
+        ]
+    },
+    "探索_火焰豌豆世界页面": {
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]探索_海滩/冰河",
+            "探索_火焰豌豆页面"
+        ]
+    },
+    "探索_火焰豌豆页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_旋转芜菁": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_旋转芜菁世界页面"
+        ]
+    },
+    "探索_旋转芜菁世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_天空/失落",
+            "探索_旋转芜菁页面"
+        ]
+    },
+    "探索_旋转芜菁页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_旋涡枇杷": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_旋涡枇杷世界页面"
+        ]
+    },
+    "探索_旋涡枇杷世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_天空/失落",
+            "探索_旋涡枇杷页面"
+        ]
+    },
+    "探索_旋涡枇杷页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_电离红掌": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_电离红掌世界页面"
+        ]
+    },
+    "探索_电离红掌世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_天空/失落",
+            "探索_电离红掌页面"
+        ]
+    },
+    "探索_电离红掌页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_红针花": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_红针花世界页面"
+        ]
+    },
+    "探索_红针花世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_天空/失落",
+            "探索_红针花页面"
+        ]
+    },
+    "探索_红针花页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_菠萝蜜": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_菠萝蜜世界页面"
+        ]
+    },
+    "探索_菠萝蜜世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_天空/失落",
+            "探索_菠萝蜜页面"
+        ]
+    },
+    "探索_菠萝蜜页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_潜伏芹菜": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_潜伏芹菜世界页面"
+        ]
+    },
+    "探索_潜伏芹菜世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摇滚/恐龙",
+            "探索_潜伏芹菜页面"
+        ]
+    },
+    "探索_潜伏芹菜页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_复活萝卜": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_复活萝卜世界页面"
+        ]
+    },
+    "探索_复活萝卜世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摇滚/恐龙",
+            "探索_复活萝卜页面"
+        ]
+    },
+    "探索_复活萝卜页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_原始豌豆射手": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_原始豌豆射手世界页面"
+        ]
+    },
+    "探索_原始豌豆射手世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摇滚/恐龙",
+            "探索_原始豌豆射手页面"
+        ]
+    },
+    "探索_原始豌豆射手页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_香水蘑菇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_香水蘑菇世界页面"
+        ]
+    },
+    "探索_香水蘑菇世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摇滚/恐龙",
+            "探索_香水蘑菇页面"
+        ]
+    },
+    "探索_香水蘑菇页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_毒影菇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_毒影菇世界页面"
+        ]
+    },
+    "探索_毒影菇世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摩登/蒸汽",
+            "探索_毒影菇页面"
+        ]
+    },
+    "探索_毒影菇页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_月光花": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_月光花世界页面"
+        ]
+    },
+    "探索_月光花世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摩登/蒸汽",
+            "探索_月光花页面"
+        ]
+    },
+    "探索_月光花页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_番莲工程师": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_番莲工程师世界页面"
+        ]
+    },
+    "探索_番莲工程师世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摩登/蒸汽",
+            "探索_番莲工程师页面"
+        ]
+    },
+    "探索_番莲工程师页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_莲藕射手": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_莲藕射手世界页面"
+        ]
+    },
+    "探索_莲藕射手世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_摩登/蒸汽",
+            "探索_莲藕射手页面"
+        ]
+    },
+    "探索_莲藕射手页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_冬瓜守卫": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_冬瓜守卫世界页面"
+        ]
+    },
+    "探索_冬瓜守卫世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_平安/复兴",
+            "探索_冬瓜守卫页面"
+        ]
+    },
+    "探索_冬瓜守卫页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_芦荟医师": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_芦荟医师世界页面"
+        ]
+    },
+    "探索_芦荟医师世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_平安/复兴",
+            "探索_芦荟医师页面"
+        ]
+    },
+    "探索_芦荟医师页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_石斛防风网": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_石斛防风网世界页面"
+        ]
+    },
+    "探索_石斛防风网世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_平安/复兴",
+            "探索_石斛防风网页面"
+        ]
+    },
+    "探索_石斛防风网页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_千金藤": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_千金藤世界页面"
+        ]
+    },
+    "探索_千金藤世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            116,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_平安/复兴",
+            "探索_千金藤页面"
+        ]
+    },
+    "探索_千金藤页面": {
+        "action": "Swipe",
+        "begin": [
+            660,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            678,
+            159,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "探索_选择第三个植物"
+        ]
     },
     "探索_海蘑菇": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_海蘑菇世界页面"
+        ]
+    },
+    "探索_海蘑菇世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            5,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_海底世界a",
+            "探索_海蘑菇页面"
+        ]
+    },
+    "探索_海蘑菇页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第一个植物"
+        ]
     },
     "探索_噗噗鱼藤": {
         "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "探索_噗噗鱼藤世界页面"
+        ]
+    },
+    "探索_噗噗鱼藤世界页面": {
+        "action": "Swipe",
+        "begin": [
+            292,
+            637,
+            1,
+            1
+        ],
+        "end": [
+            280,
+            5,
+            1,
+            1
+        ],
+        "end_hold": 500,
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]探索_海底世界a",
+            "探索_噗噗鱼藤页面"
+        ]
+    },
+    "探索_噗噗鱼藤页面": {
+        "action": "DoNothing",
+        "next": [
+            "探索_选择第二个植物"
+        ]
     },
     "探索_世界_第一页": {
         "action": "DoNothing",
@@ -466,7 +1480,7 @@
         ],
         "end": [
             280,
-            116,
+            5,
             1,
             1
         ],
@@ -540,14 +1554,14 @@
     "探索_回到顶部": {
         "action": "Swipe",
         "begin": [
-            678,
-            159,
+            311,
+            181,
             1,
             1
         ],
         "end": [
-            660,
-            637,
+            299,
+            592,
             1,
             1
         ],
@@ -563,7 +1577,8 @@
             "海盗埃及（灰色）.png"
         ],
         "action": "Click",
-        "post_delay": 500
+        "pre_delay": 500,
+        "post_delay": 2000
     },
     "探索_海盗埃及": {
         "recognition": "TemplateMatch",

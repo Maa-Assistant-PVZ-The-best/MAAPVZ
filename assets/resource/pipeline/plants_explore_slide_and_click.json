@@ -265,6 +265,110 @@
         "pre_delay": 500,
         "post_delay": 500
     },
+    "探索_西部/功夫": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "西部功夫.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_未来/黑暗": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "未来黑暗.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_海滩/冰河": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "沙滩冰河.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_天空/失落": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "天空失落.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_摇滚/恐龙": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "摇滚恐龙.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_摩登/蒸汽": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "摩登蒸汽.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_平安/复兴": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "平安复兴.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
+    "探索_海底世界a": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "海底世界.png"
+        ],
+        "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
+        "pre_delay": 500,
+        "post_delay": 500
+    },
     "探索_选择第一个植物": {
         "recognition": "TemplateMatch",
         "template": [
@@ -273,6 +377,40 @@
         "roi": [
             387,
             171,
+            654,
+            153
+        ],
+        "action": "Click",
+        "post_delay": 500,
+        "next": [
+            "自动选择"
+        ]
+    },
+    "探索_选择第二个植物": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "开始.png"
+        ],
+        "roi": [
+            388,
+            331,
+            654,
+            153
+        ],
+        "action": "Click",
+        "post_delay": 500,
+        "next": [
+            "自动选择"
+        ]
+    },
+    "探索_选择第三个植物": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "开始.png"
+        ],
+        "roi": [
+            385,
+            488,
             654,
             153
         ],
