@@ -268,6 +268,14 @@
         ]
     },
     "探索_豌豆射手页面": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "海盗埃及.png"
+        ],
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
         "action": "DoNothing",
         "next": [
             "探索_选择第一个植物"

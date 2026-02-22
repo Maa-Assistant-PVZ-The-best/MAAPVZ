@@ -255,10 +255,13 @@
     "探索_海盗/埃及": {
         "recognition": "TemplateMatch",
         "template": [
-            "海盗埃及.png",
             "海盗埃及（灰色）.png"
         ],
         "action": "Click",
+        "method": 10001,
+        "threshold": [
+            0.9
+        ],
         "pre_delay": 500,
         "post_delay": 500
     },
