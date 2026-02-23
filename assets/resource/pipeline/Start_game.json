@@ -18,35 +18,7 @@
         "package": "com.popcap.pvz2cthdxm",
         "post_delay": 13000,
         "next": [
-            "小米的广告",
-            "小米_下次再说",
             "点击登录"
-        ]
-    },
-    "小米的广告": {
-        "timeout": 150000,
-        "recognition": "TemplateMatch",
-        "template": [
-            "小米进入游戏时的广告叉.png"
-        ],
-        "action": "Click",
-        "post_delay": 10000,
-        "next": [
-            "点击登录",
-            "小米_下次再说"
-        ]
-    },
-    "小米_下次再说": {
-        "timeout": 150000,
-        "recognition": "TemplateMatch",
-        "template": [
-            "小米里的绑定账号_下次再说.png"
-        ],
-        "action": "Click",
-        "post_delay": 10000,
-        "next": [
-            "点击登录",
-            "小米的广告"
         ]
     },
     "点击登录": {
@@ -57,7 +29,7 @@
             "登录_XM.png"
         ],
         "pre_wait_freezes": {
-            "time": 1000, // 需要连续2秒画面无变化
+            "time": 2000, // 需要连续2秒画面无变化
             "threshold": 0.95, // 相似度阈值95%
             "timeout": 10000, // 最多等待10秒
             "target": true, // 在识别区域内检测
@@ -66,7 +38,35 @@
         "action": "Click",
         "post_delay": 4000,
         "next": [
-            "开始游戏"
+            "开始游戏",
+            "小米的广告",
+            "小米_下次再说"
+        ]
+    },
+    "小米的广告": {
+        "timeout": 15000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "小米进入游戏时的广告叉.png"
+        ],
+        "action": "Click",
+        "post_delay": 10000,
+        "next": [
+            "开始游戏",
+            "小米_下次再说"
+        ]
+    },
+    "小米_下次再说": {
+        "timeout": 15000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "小米里的绑定账号_下次再说.png"
+        ],
+        "action": "Click",
+        "post_delay": 10000,
+        "next": [
+            "开始游戏",
+            "小米的广告"
         ]
     },
     "开始游戏": {
@@ -76,6 +76,7 @@
             "开始游戏.png"
         ],
         "action": "Click",
+        "post_delay": 10000,
         "next": [
             "使用云端进度"
         ],
@@ -104,17 +105,18 @@
             "覆盖存档_确定.png"
         ],
         "action": "Click",
-        "post_delay": 5000,
+        "post_delay": 10000,
         "next": [
             "关闭公告"
         ]
     },
     "关闭公告": {
-        "timeout": 10000,
+        "timeout": 6000,
         "recognition": "TemplateMatch",
         "template": [
             "叉叉.png",
-            "公告的叉叉.png"
+            "公告的叉叉.png",
+            "僵尸清除_确定.png"
         ],
         "pre_delay": 500,
         "action": "Click",
