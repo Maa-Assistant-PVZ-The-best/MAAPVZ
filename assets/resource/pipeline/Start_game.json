@@ -128,6 +128,9 @@
         ]
     },
     "执行完毕": {
-        "focus": "[color:darkgray]成功进入游戏！[/color]"
+        "focus": "[color:darkgray]植物探险已完成！[/color]",
+        "next": [
+            "返回主界面"
+        ]
     }
 }
