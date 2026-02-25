@@ -3,6 +3,15 @@
         "timeout": 1000,
         "next": []
     },
+    "打开pvz_官服": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 16000,
+        "next": [
+            "点击登录"
+        ]
+    },
     "打开pvz_4399": {
         "timeout": 180000,
         "action": "StartApp",
