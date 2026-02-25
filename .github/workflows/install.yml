@@ -2,21 +2,8 @@ name: install
 
 on:
   push:
-    tags:
-      - "v*"
     branches:
-      - "**"
-    paths:
-      - ".github/workflows/install.yml"
-      - "assets/**"
-      - "**.py"
-  pull_request:
-    branches:
-      - "**"
-    paths:
-      - ".github/workflows/install.yml"
-      - "assets/**"
-      - "**.py"
+      - main
   workflow_dispatch:
 
 jobs:
