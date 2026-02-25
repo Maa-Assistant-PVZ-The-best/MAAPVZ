@@ -148,7 +148,7 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
   release:
-    if: ${{ needs.meta.outputs.is_release == 'true' }}
+    if: ${{ needs.meta.outputs.is_release == 'true' || github.ref == 'refs/heads/main' }}
     needs: [meta, install, changelog]
     runs-on: ubuntu-latest
     steps:
