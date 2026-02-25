@@ -137,7 +137,7 @@
         ]
     },
     "执行完毕": {
-        "focus": "[color:darkgray]植物探险已完成！[/color]",
+        "focus": "[color:darkgray]登录成功！[/color]",
         "next": [
             "返回主界面"
         ]
