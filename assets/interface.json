@@ -4,7 +4,7 @@
     // 文档：https://maafw.xyz/docs/3.3-ProjectInterfaceV2
     // 示例：https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json
     "interface_version": 2,
-    "name": "MaaXXX",
+    "name": "MaaPVZ",
     "description": "这是一个使用 MaaFramework 创建的新项目。",
     "contact": "QQ群: 123456789",
     "license": "MIT",
@@ -59,8 +59,8 @@
     //     ]
     // },
     "import": [
-        "plants_explore_team.json",
-        "plants_explore_debris.json"
+        "./resource/task/plants_explore_team.json",
+        "./resource/task/plants_explore_debris.json"
     ],
     "task": [
         {
@@ -90,6 +90,10 @@
                 "探索第二队",
                 "探索第三队",
                 "探索第四队"
+            ],
+            "import": [
+                "plants_explore_team.json",
+                "plants_explore_debris.json"
             ]
         },
         {
