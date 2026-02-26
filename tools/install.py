@@ -106,8 +106,12 @@ def install_resource():
         dirs_exist_ok=True,
     )
     shutil.copy2(
-        working_dir / "assets" /"resource" / "task"/"plants_explore_debris.json" "plants_explore_team.json",
-        install_path,
+        working_dir / "assets" /"resource" / "task"/"plants_explore_debris.json",
+        install_path / "assets" / "resource" / "task" / "plants_explore_debris.json",
+    )
+    shutil.copy2(
+        working_dir / "assets" /"resource" / "task"/"plants_explore_team.json",
+        install_path / "assets" / "resource" / "task" / "plants_explore_team.json",
     )
 
     with open(install_path / "interface.json", "r", encoding="utf-8") as f:
