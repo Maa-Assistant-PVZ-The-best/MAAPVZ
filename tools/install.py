@@ -102,7 +102,7 @@ def install_resource():
 
     shutil.copytree(
         working_dir / "assets" / "resource" / "task",
-        install_path / "resource" / "task",
+        install_path /"assets" / "resource" / "task"/"plants_explore_debris.json" "plants_explore_team.json",
         dirs_exist_ok=True,
     )
     shutil.copy2(
