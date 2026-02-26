@@ -100,6 +100,16 @@ def install_resource():
         install_path,
     )
 
+    shutil.copytree(
+        working_dir / "assets" / "resource",
+        install_path / "resource",
+        dirs_exist_ok=True,
+    )
+    shutil.copy2(
+        working_dir / "assets" / "task",
+        install_path,
+    )
+
     with open(install_path / "interface.json", "r", encoding="utf-8") as f:
         interface = jsonc.load(f)
 
