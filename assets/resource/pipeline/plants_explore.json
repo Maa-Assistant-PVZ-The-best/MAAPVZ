@@ -45,6 +45,7 @@
             "海盗埃及（灰色）.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查海盗/埃及[/color]",
         "next": [
             "[JumpBack]点击探险完成",
             "[JumpBack]滑动",
@@ -60,6 +61,7 @@
             "西部功夫.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查西部/功夫[/color]",
         "next": [
             "[JumpBack]点击探险完成",
             "[JumpBack]滑动2",
@@ -72,6 +74,7 @@
             "未来黑暗.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查未来/黑暗[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -88,6 +91,7 @@
             "沙滩冰河.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查海滩/冰河[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -105,6 +109,7 @@
             "天空失落.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查天空/失落[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -121,6 +126,7 @@
             "摇滚恐龙.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查摇滚/恐龙[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -137,6 +143,7 @@
             "摩登蒸汽.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查摩登/蒸汽[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -156,6 +163,7 @@
             0.9
         ],
         "action": "Click",
+        "focus": "[color:darkgray]检查平安/复兴[/color]",
         "post_delay": 500,
         "next": [
             "[JumpBack]点击探险完成",
@@ -171,6 +179,7 @@
         ],
         "pre_wait_freezes": 1000,
         "action": "Click",
+        "focus": "[color:darkgray]检查海底世界[/color]",
         "post_delay": 500,
         "threshold": [
             0.9
@@ -202,6 +211,7 @@
             "探险完成_确定.png"
         ],
         "action": "Click",
+        "focus": "[color:darkgray]完成探险[/color]",
         "post_delay": 500
     },
     "检查完成": {
@@ -257,6 +267,7 @@
     "探索_豌豆射手": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]豌豆射手[/color]",
         "next": [
             "探索_豌豆射手世界页面"
         ]
@@ -276,6 +287,7 @@
     },
     "探索_卷心菜投手": {
         "max_hit": 1,
+        "focus": "[color:darkgray]卷心菜投手[/color]",
         "enabled": false,
         "next": [
             "探索_卷心菜投手世界页面"
@@ -297,6 +309,7 @@
     "探索_向日葵": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]向日葵[/color]",
         "next": [
             "探索_向日葵世界页面"
         ]
@@ -317,6 +330,7 @@
     "探索_玉米投手": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]玉米投手[/color]",
         "next": [
             "探索_玉米投手世界页面"
         ]
@@ -351,6 +365,7 @@
     "探索_地刺": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]地刺[/color]",
         "next": [
             "探索_地刺世界页面"
         ]
@@ -385,6 +400,7 @@
     "探索_弹簧豆": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]弹簧豆[/color]",
         "next": [
             "探索_弹簧豆世界页面"
         ]
@@ -419,6 +435,7 @@
     "探索_双向射手": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]双向射手[/color]",
         "next": [
             "探索_双向射手世界页面"
         ]
@@ -439,6 +456,7 @@
     "探索_巴豆": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]巴豆[/color]",
         "next": [
             "探索_巴豆世界页面"
         ]
@@ -459,6 +477,7 @@
     "探索_闪电芦苇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]闪电芦苇[/color]",
         "next": [
             "探索_闪电芦苇世界页面"
         ]
@@ -479,6 +498,7 @@
     "探索_火葫芦": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]火葫芦[/color]",
         "next": [
             "探索_火葫芦世界页面"
         ]
@@ -513,6 +533,7 @@
     "探索_白萝卜": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]白萝卜[/color]",
         "next": [
             "探索_白萝卜世界页面"
         ]
@@ -547,6 +568,7 @@
     "探索_土豆地雷": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]土豆地雷[/color]",
         "next": [
             "探索_土豆地雷世界页面"
         ]
@@ -567,6 +589,7 @@
     "探索_坚果": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]坚果[/color]",
         "next": [
             "探索_坚果世界页面"
         ]
@@ -587,6 +610,7 @@
     "探索_冰冻生菜": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]冰冻生菜[/color]",
         "next": [
             "探索_冰冻生菜世界页面"
         ]
@@ -607,6 +631,7 @@
     "探索_大喷菇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]大喷菇[/color]",
         "next": [
             "探索_大喷菇世界页面"
         ]
@@ -641,6 +666,7 @@
     "探索_磁力菇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]磁力菇[/color]",
         "next": [
             "探索_磁力菇世界页面"
         ]
@@ -675,6 +701,7 @@
     "探索_缠绕水草": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]缠绕水草[/color]",
         "next": [
             "探索_缠绕水草世界页面"
         ]
@@ -695,6 +722,7 @@
     "探索_鳄梨": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]鳄梨[/color]",
         "next": [
             "探索_鳄梨世界页面"
         ]
@@ -715,6 +743,7 @@
     "探索_火焰豌豆": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]火焰豌豆[/color]",
         "next": [
             "探索_火焰豌豆世界页面"
         ]
@@ -735,6 +764,7 @@
     "探索_旋转芜菁": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]旋转芜菁[/color]",
         "next": [
             "探索_旋转芜菁世界页面"
         ]
@@ -769,6 +799,7 @@
     "探索_旋涡枇杷": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]旋涡枇杷[/color]",
         "next": [
             "探索_旋涡枇杷世界页面"
         ]
@@ -803,6 +834,7 @@
     "探索_电离红掌": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]电离红掌[/color]",
         "next": [
             "探索_电离红掌世界页面"
         ]
@@ -837,6 +869,7 @@
     "探索_红针花": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]红针花[/color]",
         "next": [
             "探索_红针花世界页面"
         ]
@@ -885,6 +918,7 @@
     "探索_菠萝蜜": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]史上最强植物蜜帝[/color]",
         "next": [
             "探索_菠萝蜜世界页面"
         ]
@@ -933,6 +967,7 @@
     "探索_潜伏芹菜": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]潜伏芹菜[/color]",
         "next": [
             "探索_潜伏芹菜世界页面"
         ]
@@ -967,6 +1002,7 @@
     "探索_复活萝卜": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]复活萝卜[/color]",
         "next": [
             "探索_复活萝卜世界页面"
         ]
@@ -1001,6 +1037,7 @@
     "探索_原始豌豆射手": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]原始豌豆射手[/color]",
         "next": [
             "探索_原始豌豆射手世界页面"
         ]
@@ -1035,6 +1072,7 @@
     "探索_香水蘑菇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]香水蘑菇[/color]",
         "next": [
             "探索_香水蘑菇世界页面"
         ]
@@ -1083,6 +1121,7 @@
     "探索_毒影菇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]毒影菇[/color]",
         "next": [
             "探索_毒影菇世界页面"
         ]
@@ -1117,6 +1156,7 @@
     "探索_月光花": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]月光花[/color]",
         "next": [
             "探索_月光花世界页面"
         ]
@@ -1151,6 +1191,7 @@
     "探索_番莲工程师": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]番莲工程师[/color]",
         "next": [
             "探索_番莲工程师世界页面"
         ]
@@ -1185,6 +1226,7 @@
     "探索_莲藕射手": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]莲藕射手[/color]",
         "next": [
             "探索_莲藕射手世界页面"
         ]
@@ -1233,6 +1275,7 @@
     "探索_冬瓜守卫": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]冬瓜守卫[/color]",
         "next": [
             "探索_冬瓜守卫世界页面"
         ]
@@ -1267,6 +1310,7 @@
     "探索_芦荟医师": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]芦荟医师[/color]",
         "next": [
             "探索_芦荟医师世界页面"
         ]
@@ -1301,6 +1345,7 @@
     "探索_石斛防风网": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]石斛防风网[/color]",
         "next": [
             "探索_石斛防风网世界页面"
         ]
@@ -1335,6 +1380,7 @@
     "探索_千金藤": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]千金藤[/color]",
         "next": [
             "探索_千金藤世界页面"
         ]
@@ -1383,6 +1429,7 @@
     "探索_海蘑菇": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]海蘑菇[/color]",
         "next": [
             "探索_海蘑菇世界页面"
         ]
@@ -1417,6 +1464,7 @@
     "探索_噗噗鱼藤": {
         "enabled": false,
         "max_hit": 1,
+        "focus": "[color:darkgray]噗噗鱼藤[/color]",
         "next": [
             "探索_噗噗鱼藤世界页面"
         ]

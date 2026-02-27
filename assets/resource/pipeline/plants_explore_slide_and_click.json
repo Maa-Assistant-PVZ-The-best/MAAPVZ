@@ -178,6 +178,7 @@
             1,
             1
         ],
+        "focus": "[color:darkgray]滑动到天空失落-平安复兴[/color]",
         "end": [
             295,
             108,
@@ -189,6 +190,7 @@
         "timeout": 4000,
         "max_hit": 1,
         "action": "Swipe",
+        "focus": "[color:darkgray]滑动到海底世界[/color]",
         "post_delay": 200,
         "begin": [
             305,
