@@ -133,13 +133,28 @@
             "关闭公告"
         ],
         "on_error": [
+            "再次检查是否在主界面",
+            "执行完毕"
+        ]
+    },
+    "再次检查是否在主界面": {
+        "timeout": 3000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "叉叉.png",
+            "公告的叉叉.png",
+            "僵尸清除_确定.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": [
+            "关闭公告"
+        ],
+        "on_error": [
             "执行完毕"
         ]
     },
     "执行完毕": {
-        "focus": "[color:darkgray]登录成功！[/color]",
-        "next": [
-            "返回主界面"
-        ]
-    }
+        "focus": "[color:darkgray]登录成功！[/color]"
+    },
 }
