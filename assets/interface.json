@@ -79,7 +79,7 @@
             "entry": "签到_前置检查"
         },
         {
-            "name": "执行每日50钻（免广告卡）",
+            "name": "执行每日50钻(免广告卡)",
             "entry": "每日50钻_拥有免广告卡_前置检查"
         },
         {
@@ -90,10 +90,6 @@
                 "探索第二队",
                 "探索第三队",
                 "探索第四队"
-            ],
-            "import": [
-                "plants_explore_team.json",
-                "plants_explore_debris.json"
             ]
         },
         {
