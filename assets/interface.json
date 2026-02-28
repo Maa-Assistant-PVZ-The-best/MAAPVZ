@@ -4,7 +4,7 @@
     // 文档：https://maafw.xyz/docs/3.3-ProjectInterfaceV2
     // 示例：https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json
     "interface_version": 2,
-    "name": "MaaXXX",
+    "name": "MaaPVZ",
     "description": "这是一个使用 MaaFramework 创建的新项目。",
     "contact": "QQ群: 123456789",
     "license": "MIT",
@@ -59,8 +59,8 @@
     //     ]
     // },
     "import": [
-        "plants_explore_team.json",
-        "plants_explore_debris.json"
+        "./resource/task/plants_explore_team.json",
+        "./resource/task/plants_explore_debris.json"
     ],
     "task": [
         {
@@ -79,7 +79,7 @@
             "entry": "签到_前置检查"
         },
         {
-            "name": "执行每日50钻（免广告卡）",
+            "name": "执行每日50钻(免广告卡)",
             "entry": "每日50钻_拥有免广告卡_前置检查"
         },
         {
@@ -147,6 +147,7 @@
             ]
         }
     }
+    //1
     // "type": "select", //有“select（多选一）”,“switch（二选一）”,“input(输入)”三种形式
     // "label": "选择植物", //标识符，不写默认为”name“中的字符串，“$”表示国际化
     // "description": "选择要探索的植物", //详细信息解释
