@@ -135,6 +135,36 @@
                     }
                 },
                 {
+                    "name": "360",
+                    "pipeline_override": {
+                        "选择渠道服": {
+                            "next": [
+                                "打开pvz_360"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "华为",
+                    "pipeline_override": {
+                        "选择渠道服": {
+                            "next": [
+                                "打开pvz_华为"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "7723",
+                    "pipeline_override": {
+                        "选择渠道服": {
+                            "next": [
+                                "打开pvz_7723"
+                            ]
+                        }
+                    }
+                },
+                {
                     "name": "官服",
                     "pipeline_override": {
                         "选择渠道服": {

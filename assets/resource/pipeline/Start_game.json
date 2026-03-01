@@ -3,6 +3,33 @@
         "timeout": 1000,
         "next": []
     },
+    "打开pvz_华为": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthdhwct",
+        "post_delay": 16000,
+        "next": [
+            "点击登录"
+        ]
+    },
+    "打开pvz_360": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthd360",
+        "post_delay": 16000,
+        "next": [
+            "点击登录"
+        ]
+    },
+    "打开pvz_7723": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthdbazhang",
+        "post_delay": 16000,
+        "next": [
+            "点击登录"
+        ]
+    },
     "打开pvz_官服": {
         "timeout": 180000,
         "action": "StartApp",
@@ -156,5 +183,5 @@
     },
     "执行完毕": {
         "focus": "[color:darkgray]登录成功！[/color]"
-    },
+    }
 }
