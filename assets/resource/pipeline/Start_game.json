@@ -75,8 +75,23 @@
         "post_delay": 4000,
         "next": [
             "开始游戏",
+            "关闭广告通用",
             "小米的广告",
             "小米_下次再说"
+        ]
+    },
+    "关闭广告通用": {
+        "timeout": 15000,
+        "recognition": "OCR",
+        "expected": [
+            "x",
+            "X"
+        ],
+        "threshold": 0.1,
+        "action": "Click",
+        "post_delay": 10000,
+        "next": [
+            "开始游戏"
         ]
     },
     "小米的广告": {
