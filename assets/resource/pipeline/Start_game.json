@@ -141,7 +141,7 @@
         "package": "com.popcap.pvz2cthdxm",
         "post_delay": 13000,
         "next": [
-            "点击登录"
+            "点击登录_XM"
         ]
     },
     "点击登录_应用宝_微信": {
@@ -210,6 +210,22 @@
         "next": [
             "开始游戏",
             "关闭广告通用",
+            "小米的广告",
+            "小米_下次再说"
+        ]
+    },
+    "点击登录_XM": {
+        "timeout": 30000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "登录_4399.png",
+            "登录_XM.png"
+        ],
+        "threshold": 0.8,
+        "action": "Click",
+        "post_delay": 4000,
+        "next": [
+            "开始游戏",
             "小米的广告",
             "小米_下次再说"
         ]
