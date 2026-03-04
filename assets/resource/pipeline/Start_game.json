@@ -87,7 +87,7 @@
             "x",
             "X"
         ],
-        "threshold": 0.1,
+        "threshold": 0.8,
         "action": "Click",
         "post_delay": 10000,
         "next": [
@@ -129,9 +129,7 @@
         "action": "Click",
         "post_delay": 10000,
         "next": [
-            "使用云端进度"
-        ],
-        "on_error": [
+            "使用云端进度",
             "关闭公告"
         ]
     },
@@ -143,9 +141,7 @@
         ],
         "action": "Click",
         "next": [
-            "存档覆盖"
-        ],
-        "on_error": [
+            "存档覆盖",
             "关闭公告"
         ]
     },
@@ -172,11 +168,8 @@
         "pre_delay": 500,
         "action": "Click",
         "next": [
-            "关闭公告"
-        ],
-        "on_error": [
-            "再次检查是否在主界面",
-            "执行完毕"
+            "关闭公告",
+            "再次检查是否在主界面"
         ]
     },
     "再次检查是否在主界面": {
@@ -190,9 +183,7 @@
         "action": "Click",
         "post_wait_freezes": 1000,
         "next": [
-            "关闭公告"
-        ],
-        "on_error": [
+            "关闭公告",
             "执行完毕"
         ]
     },
