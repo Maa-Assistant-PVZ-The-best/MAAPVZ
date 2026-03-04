@@ -255,35 +255,60 @@
         "recognition": "Or",
         "any_of": [
             {
+                "recognition": "OCR",
                 "roi": [
                     747,
                     165,
                     38,
                     36
                 ],
-                "expected": "[×，x，X，✕，✖]",
-                "threshold": 0.1
+                "expected": [
+                    "×",
+                    "x",
+                    "X",
+                    "✕",
+                    "✖"
+                ],
+                "threshold": 0.8
             },
-            // {
-            //     "roi": [],
-            //     "expected": "[×，x，X，✕，✖]",
-            //     "threshold": 0.1
+            //     {
+            //     "recognition": "OCR",
+            //     "roi": [
+            //     ],
+            //     "expected": [
+            //         "×",
+            //         "x",
+            //         "X",
+            //         "✕",
+            //         "✖"
+            //     ],
+            //     "threshold": 0.8
             // },
-            // {
-            //     "roi": [],
-            //     "expected": "[×，x，X，✕，✖]",
-            //     "threshold": 0.1
+            //  {
+            //     "recognition": "OCR",
+            //     "roi": [
+            //     ],
+            //     "expected": [
+            //         "×",
+            //         "x",
+            //         "X",
+            //         "✕",
+            //         "✖"
+            //     ],
+            //     "threshold": 0.8
+            // }, {
+            //     "recognition": "OCR",
+            //     "roi": [
+            //     ],
+            //     "expected": [
+            //         "×",
+            //         "x",
+            //         "X",
+            //         "✕",
+            //         "✖"
+            //     ],
+            //     "threshold": 0.8
             // },
-            // {
-            //     "roi": [],
-            //     "expected": "[×，x，X，✕，✖]",
-            //     "threshold": 0.1
-            // },
-            // {
-            //     "roi": [],
-            //     "expected": "[×，x，X，✕，✖]",
-            //     "threshold": 0.1
-            // }
         ],
         "action": "Click",
         "post_delay": 10000,
