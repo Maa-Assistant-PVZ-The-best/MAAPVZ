@@ -177,6 +177,8 @@
         ]
     },
     "识别是否进入局内": {
+        "timeout": 10000,
+        "rate_limit": 2000,
         "recognition": "TemplateMatch",
         "template": [
             "双人对决_局内.png"
@@ -299,18 +301,87 @@
         ]
     },
     "识别（第二回合）": {
-        "timeout": 1,
-        "recognition": "TemplateMatch",
-        "template": [
-            "双人对决_第二回合.png"
-        ],
-        "action": "DoNothing",
-        "threshold": [
-            1
+        "timeout": 1000000,
+        "recognition": "Or",
+        "any_of": [
+            {
+                "recognition": "TemplateMatch",
+                "template": [
+                    "双人对决_第二回合.png"
+                ],
+                "threshold": [
+                    0.9
+                ]
+            },
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "2/20"
+                ],
+            }
         ],
         "next": [
             "放一号位僵尸"
         ]
     },
-    "放一号位僵尸": {}
+    "放一号位僵尸": {
+        "action": "Click",
+        "roi": [
+            85,
+            380,
+            2,
+            2
+        ],
+        "next": [
+            "判断游戏是否胜利",
+            "判断游戏是否失败",
+            "放一号位僵尸"
+        ]
+    },
+    "判断游戏是否失败": {
+        "timeout": 20,
+        "recognition": "TemplateMatch",
+        "template": [
+            "双人对决_失败掉分.png"
+        ],
+        "next": [
+            "游戏失败"
+        ]
+    },
+    "判断游戏是否胜利": {
+        "timeout": 20,
+        "recognition": "TemplateMatch",
+        "template": [
+            "双人对决_胜利.png"
+        ],
+        "next": [
+            "游戏胜利"
+        ]
+    },
+    "游戏胜利": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "双人对决的确认.png"
+        ],
+        "action": "Click",
+        "next": [
+            "重开"
+        ]
+    },
+    "游戏失败": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "双人对决的确认.png"
+        ],
+        "next": [
+            "重开"
+        ]
+    },
+    "重开": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "双人对决竞技.png"
+        ],
+        "action": "Click"
+    }
 }
