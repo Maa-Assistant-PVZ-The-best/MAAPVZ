@@ -301,7 +301,7 @@
         ]
     },
     "识别（第二回合）": {
-        "timeout": 1000000,
+        "timeout": 10,
         "recognition": "Or",
         "any_of": [
             {
