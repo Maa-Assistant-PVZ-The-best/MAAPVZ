@@ -130,43 +130,43 @@
         // }
     ],
     "option": {
-        "多少血量大退": {
-            "type": "select",
-            "description": "防止掉分，检测自己的血量低于一定值时大退，特殊情况血量会被遮住，从而导致大退失败",
-            "cases": [
-                {
-                    "name": "不进行大退",
-                    "description": "不进行大退"
-                },
-                {
-                    "name": "血量低于2时大退",
-                    "description": "该选项不稳定,有时会检测不到2血",
-                    "pipeline_override": {
-                        "检查血量是否为2": {
-                            "enabled": true
-                        }
-                    }
-                },
-                {
-                    "name": "血量低于4时大退",
-                    "description": "检查血量为4时大退",
-                    "pipeline_override": {
-                        "检查血量是否为4": {
-                            "enabled": true
-                        }
-                    }
-                },
-                {
-                    "name": "血量低于6时大退",
-                    "description": "检查血量为6时大退，特殊情况血量会被遮住，从而大退失败",
-                    "pipeline_override": {
-                        "检查血量是否为6": {
-                            "enabled": true
-                        }
-                    }
-                }
-            ]
-        },
+        //"多少血量大退": {
+    //        "type": "select",
+     //       "description": "防止掉分，检测自己的血量低于一定值时大退，特殊情况血量会被遮住，从而导致大退失败",
+       //     "cases": [
+          //      {
+            //        "name": "不进行大退",
+               //     "description": "不进行大退"
+           //     },
+             //   {
+               //     "name": "血量低于2时大退",
+                //    "description": "该选项不稳定,有时会检测不到2血",
+                  //  "pipeline_override": {
+                  //      "检查血量是否为2": {
+              //              "enabled": true
+             //           }
+              //      }
+            //    },
+            //    {
+              //      "name": "血量低于4时大退",
+                 //   "description": "检查血量为4时大退",
+                  //  "pipeline_override": {
+                   //     "检查血量是否为4": {
+           //                 "enabled": true
+             //           }
+         //           }
+       //         },
+             //   {
+              //      "name": "血量低于6时大退",
+             //      "description": "检查血量为6时大退，特殊情况血量会被遮住，从而大退失败",
+                //    "pipeline_override": {
+                //        "检查血量是否为6": {
+                   //         "enabled": true
+                 //       }
+           //         }
+     //           }
+      //      ]
+    //    },
         "一号位植物": {
             "type": "select",
             "description": "选择处理鸡和冰鼬的植物，通常都是能够吸引僵尸的植物",
