@@ -12,7 +12,7 @@
     // 填写项目地址和版本号可实现自动更新功能
     "github": "https://github.com/MaaXYZ/MaaPracticeBoilerplate",
     "version": "1.0.0",
-    "icon": "assets/app.ico",
+    "icon": "app.ico",
     // Mirror酱为第三方分发服务，新项目默认关闭
     // 若有需要请联系 Mirror酱 开通，直接自行开启是无法使用的
     // "mirrorchyan_rid": "MaaXXX",
@@ -118,7 +118,7 @@
         },
         {
             "name": "dbug",
-            "entry": "下拉栏第一次"
+            "entry": "点击骆驼牌"
         }
         // {
         //     "name": "参数任务",
