@@ -120,21 +120,23 @@ jobs:
         if: matrix.os == 'win'
         shell: bash
         run: |
-          # 安装 wine（用于运行 Windows 程序）
+          # 安装 wine
           sudo dpkg --add-architecture i386
           sudo apt update
           sudo apt install -y wine
 
-          # 下载 rcedit 工具
+          # 下载 rcedit
           curl -L -o rcedit.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
           chmod +x rcedit.exe
 
-          # 明确指定 exe 文件（如果实际文件名不是 MFAAvalonia.exe，请修改这里）
-          EXE_FILE="install/MFAAvalonia.exe"
+          # 列出 install 目录所有文件（重点！）
+          echo "=== Contents of install directory ==="
+          ls -la install/
 
-          # 检查文件是否存在
-          if [ ! -f "$EXE_FILE" ]; then
-            echo "错误：找不到 $EXE_FILE"
+          # 查找所有 .exe 文件
+          EXE_FILES=$(find install -name "*.exe" -type f)
+          if [ -z "$EXE_FILES" ]; then
+            echo "错误：在 install 目录中找不到任何 .exe 文件"
             exit 1
           fi
 
@@ -145,9 +147,20 @@ jobs:
           fi
           cp assets/app.ico ./app.ico
 
-          # 修改图标
-          wine ./rcedit.exe "$EXE_FILE" --set-icon "./app.ico"
-          echo "图标修改完成"
+          # 逐个修改所有 exe 文件
+          for EXE_FILE in $EXE_FILES; do
+            echo "=== Processing $EXE_FILE ==="
+            SIZE_BEFORE=$(stat -c %s "$EXE_FILE")
+            wine ./rcedit.exe "$EXE_FILE" --set-icon "./app.ico"
+            SIZE_AFTER=$(stat -c %s "$EXE_FILE")
+            echo "File size before: $SIZE_BEFORE, after: $SIZE_AFTER"
+            if [ "$SIZE_BEFORE" -eq "$SIZE_AFTER" ]; then
+              echo "警告：文件大小未变，图标可能未修改！"
+            else
+              echo "✅ 文件大小已变，图标修改成功。"
+            fi
+          done
+          echo "所有 exe 文件处理完成。"
 
       - uses: actions/upload-artifact@v4
         with:
