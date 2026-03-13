@@ -116,7 +116,7 @@ jobs:
           python ./install.py ${{ needs.meta.outputs.tag }} ${{ matrix.os }} ${{ matrix.arch }}
           cd ..
 
-      - name: Modify exe icon (Windows only)
+      - name: Modify exe icon and metadata (Windows only)
         if: matrix.os == 'win'
         shell: bash
         run: |
@@ -129,16 +129,9 @@ jobs:
           curl -L -o rcedit.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
           chmod +x rcedit.exe
 
-          # 列出 install 目录所有文件（重点！）
-          echo "=== Contents of install directory ==="
+          # 列出 install 目录内容（调试用）
+          echo "=== 修改前 install 目录内容 ==="
           ls -la install/
-
-          # 查找所有 .exe 文件
-          EXE_FILES=$(find install -name "*.exe" -type f)
-          if [ -z "$EXE_FILES" ]; then
-            echo "错误：在 install 目录中找不到任何 .exe 文件"
-            exit 1
-          fi
 
           # 检查图标文件
           if [ ! -f "assets/app.ico" ]; then
@@ -147,20 +140,36 @@ jobs:
           fi
           cp assets/app.ico ./app.ico
 
-          # 逐个修改所有 exe 文件
-          for EXE_FILE in $EXE_FILES; do
-            echo "=== Processing $EXE_FILE ==="
-            SIZE_BEFORE=$(stat -c %s "$EXE_FILE")
-            wine ./rcedit.exe "$EXE_FILE" --set-icon "./app.ico"
-            SIZE_AFTER=$(stat -c %s "$EXE_FILE")
-            echo "File size before: $SIZE_BEFORE, after: $SIZE_AFTER"
-            if [ "$SIZE_BEFORE" -eq "$SIZE_AFTER" ]; then
-              echo "警告：文件大小未变，图标可能未修改！"
-            else
-              echo "✅ 文件大小已变，图标修改成功。"
-            fi
-          done
-          echo "所有 exe 文件处理完成。"
+          # 原始 exe 文件名（通常为 MFAAvalonia.exe，请确认）
+          OLD_EXE="install/MFAAvalonia.exe"
+          if [ ! -f "$OLD_EXE" ]; then
+            echo "错误：找不到 $OLD_EXE"
+            exit 1
+          fi
+
+          # --- 1. 修改图标 ---
+          echo "正在修改图标..."
+          wine ./rcedit.exe "$OLD_EXE" --set-icon "./app.ico"
+
+          # --- 2. 重命名 exe 文件（改成你的项目名）---
+          NEW_EXE="install/MaaPVZ.exe"   # 将 MaaPVZ.exe 改成你想要的名称
+          echo "正在重命名文件：$OLD_EXE -> $NEW_EXE"
+          mv "$OLD_EXE" "$NEW_EXE"
+
+          # --- 3. 修改版本信息（右键属性中的详细信息）---
+          echo "正在设置版本信息..."
+          wine ./rcedit.exe "$NEW_EXE" \
+            --set-version-string "FileDescription" "MaaPVZ 自动化助手" \
+            --set-version-string "ProductName" "MaaPVZ" \
+            --set-version-string "CompanyName" "你的名字/组织" \
+            --set-version-string "LegalCopyright" "Copyright © 2025 你的名字" \
+            --set-file-version "1.0.0" \
+            --set-product-version "1.0.0"
+
+          # 再次列出目录，确认文件已改名
+          echo "=== 修改后 install 目录内容 ==="
+          ls -la install/
+          echo "✅ 所有操作完成！"
 
       - uses: actions/upload-artifact@v4
         with:
