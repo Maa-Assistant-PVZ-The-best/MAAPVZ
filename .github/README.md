@@ -1,118 +1,132 @@
-<!-- markdownlint-disable MD033 MD041 -->
-<p align="center">
-  <img alt="LOGO" src="https://cdn.jsdelivr.net/gh/MaaAssistantArknights/design@main/logo/maa-logo_512x512.png" width="256" height="256" />
-</p>
+MaaPVZ - 植物大战僵尸2自动化脚本
+<https://img.shields.io/badge/MaaFramework-2.0-blue>
+<https://img.shields.io/github/license/MaaXYZ/MaaPVZ>
 
-<div align="center">
+基于 MaaFramework 开发的《植物大战僵尸2》自动化脚本，支持日常签到、钻石领取、植物探险、双人对决等多种任务。通过图形识别和模拟操作，解放双手，轻松完成日常。
 
-# MaaPracticeBoilerplate
+功能特性
+✅ 自动登录：支持多渠道服（4399、小米、应用宝、B服、华为等），自动启动游戏并进入主界面。
 
-</div>
+✅ 每日签到：自动完成游戏内签到，领取奖励。
 
-本仓库为 [MaaFramework](https://github.com/MaaXYZ/MaaFramework) 所提供的项目模板，开发者可基于此模板直接创建自己的 MaaXXX 项目。
+✅ 每日50钻（免广告卡）：若拥有免广告卡，自动领取每日50钻石。
 
-> **MaaFramework** 是基于图像识别技术、运用 [MAA](https://github.com/MaaAssistantArknights/MaaAssistantArknights) 开发经验去芜存菁、完全重写的新一代自动化黑盒测试框架。
-> 低代码的同时仍拥有高扩展性，旨在打造一款丰富、领先、且实用的开源库，助力开发者轻松编写出更好的黑盒测试程序，并推广普及。
+✅ 植物探险：自动完成已解锁世界的植物探险，支持按世界优先级选择植物，自动领取已完成奖励并开启新探险。
 
-## 即刻开始
+✅ 双人对决（测试）：半自动对战脚本，可配置出场植物、僵尸释放时机及强化buff，智能应对不同对战策略。
 
-- [📄 快速开始](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/1.1-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B.md)
-- [🎞️ 视频教程](https://www.bilibili.com/video/BV1yr421E7MW)
+✅ 可配置选项：通过 GUI 或配置文件灵活调整各任务的行为，如植物选择、僵尸buff、渠道服等。
 
-## 如何开发
+快速开始
 
-0. 使用右上角 `Use this template` - `Create a new repository` 来基于本模板创建您自己的项目。
+1. 环境准备
+下载并安装 MaaFramework（≥2.0版本）。
 
-1. 克隆本项目（地址请修改为您基于本模板创建的新项目地址）。
+安装 Android 模拟器 或连接真机，并开启 ADB 调试。
 
-    ```bash
-    git clone https://github.com/MaaXYZ/MaaPracticeBoilerplate.git
-    ```
+将游戏《植物大战僵尸2》安装到设备中，并确保能正常启动。
 
-2. 下载 MaaFramework 的 [Release 包](https://github.com/MaaXYZ/MaaFramework/releases)，解压到 `deps` 文件夹中。
+1. 获取项目文件
+bash
+git clone <https://github.com/your-repo/MaaPVZ.git>
+或者直接下载 ZIP 压缩包并解压。
 
-3. 下载 OCR（文字识别）资源文件 [ppocr_v5.zip](https://download.maafw.xyz/MaaCommonAssets/OCR/ppocr_v5/ppocr_v5-zh_cn.zip) 解压到 `assets/resource/model/ocr/` 目录下，确保路径如下：
+2. 配置 MaaFramework
+打开 MaaPiCli.exe（或通过命令行启动 MaaFramework）。
 
-    ```tree
-    assets/resource/model/ocr/
-    ├── det.onnx
-    ├── keys.txt
-    └── rec.onnx
-    ```
+在界面中选择 MaaPVZ 项目（如果自动识别不到，请手动指定项目路径）。
 
-    _请注意，您不需要将 OCR 资源文件上传到您的代码仓库中。`.gitignore` 已经忽略了 `assets/resource/model/ocr/` 目录，且 GitHub workflow 在发布版本时会自动配置这些资源文件。_
+配置 ADB 连接：选择对应的模拟器或设备，填写 ADB 路径和序列号。
 
-4. 进行开发工作，按您的业务需求修改 `assets` 中的资源文件，请参考 [MaaFramework 相关文档](https://github.com/MaaXYZ/MaaFramework/blob/main/docs/zh_cn/1.1-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B.md#%E8%B5%84%E6%BA%90%E5%87%86%E5%A4%87)。
+在“资源”选项卡中，确保选中了 PVZ_2_国服通用 资源包。
 
-5. 完成开发后，上传您的代码并发布版本。
-1
+1. 运行任务
+在任务列表中选择需要执行的任务，点击“开始”即可。可组合多个任务顺序执行。
 
-    ```bash
-    # 配置 git 信息（仅第一次需要，后续不用再配置）
-    git config user.name "您的 GitHub 昵称"
-    git config user.email "您的 GitHub 邮箱"
-    
-    # 提交修改
-    git add .
-    git commit -m "XX 新功能"
-    git push origin HEAD -u
-    ```
+任务详解
+开始登录
+入口：选择渠道服
 
-6. 发布您的版本
+描述：首次运行或需要切换账号时使用。脚本会自动打开游戏，并根据所选渠道服完成登录（部分渠道需提前手动登录一次，以便记住账号）。
 
-    需要**先**修改仓库设置 `Settings` - `Actions` - `General` - `Read and write permissions` - `Save`
+选项：在“渠道服”下拉菜单中选择你的游戏渠道（如华为、小米、官服等），对于应用宝渠道，还需选择“QQ登录”或“微信登录”。
 
-    ```bash
-    # CI 检测到 tag 会自动进行发版
-    git tag v1.0.0
-    git push origin v1.0.0
-    ```
+签到
+入口：签到_前置检查
 
-7. 更多操作，请参考 [个性化配置](./docs/zh_cn/个性化配置.md)（可选）
+描述：自动进入签到界面并完成每日签到。若已签到，脚本会自动识别并跳过。
 
-## 生态共建
+执行每日50钻(免广告卡)
+入口：每日50钻_拥有免广告卡_前置检查
 
-MAA 正计划建设为一类项目，而非舟的单一软件。
+描述：前提是拥有免广告卡。自动进入每日钻石领取界面，点击领取50钻石。若无免广告卡，请勿勾选此任务，否则可能卡住。
 
-若您的项目依赖于 MaaFramework，我们欢迎您将它命名为 MaaXXX, MXA, MAX 等等。当然，这是许可而不是限制，您也可以自由选择其他与 MAA 无关的名字，完全取决于您自己的想法！
+植物探险
+入口：植物探险_前置检查
 
-同时，我们也非常欢迎您提出 PR，在 [社区项目列表](https://github.com/MaaXYZ/MaaFramework#%E7%A4%BE%E5%8C%BA%E9%A1%B9%E7%9B%AE) 中添加上您的项目！
+描述：自动完成植物探险任务。流程如下：
 
-## FAQ
+检查是否有已完成探险的植物，如有则优先领取奖励。
+所有奖励领取完毕后，开始新的探险。
+根据你勾选的世界顺序（见下方选项），依次为每个世界选择可用的植物进行探索。脚本会优先使用世界列表中靠前的植物，直到所有探险栏位占满。
+选项（多选）：海盗/埃及、西部/功夫、未来/黑暗、海滩/冰河、天空/失落、摇滚/恐龙、摩登/蒸汽、平安/复兴、海底世界。勾选的世界表示你希望优先探索的世界，脚本会按此顺序选择植物。如果只勾选部分世界，则只会探索这些世界；如果全勾，则按列表顺序探索前四个世界（因为探险栏位有限）。
 
-### 0. 我是第一次使用 git，这是什么？视频演示中那个黑框框命令行哪来的？
+双人对决（测试）
+入口：双人对决_前置检查
 
-黑框框是 git bash，几乎任何现代软件的开发都离不开 git，建议先参考 [菜鸟教程](https://www.runoob.com/git/git-install-setup.html) 或搜索一些视频，学习完 git 后再来进行后续开发工作。
+描述：实验性功能，用于自动进行双人对决模式。脚本会根据配置的植物和僵尸，在合适的回合自动放置和补种。由于对局情况复杂，建议先观察运行，如有问题欢迎反馈。
 
-### 1. 我是第一次使用 Python，在命令行输入 `python ./configure.py` 或 `python -m pip install MaaFW` 之后没有反应？没有报错，也没有提示成功，什么都没有
+选项配置：
 
-Win10 或者 Win11 系统自带了一份 "Python"，但它其实只是一个安装器，是没法用的。  
-你需要做的是关闭它或者删除它的环境变量，然后自己去 Python 官网下载并安装一份 Python。  
-[参考方法](https://www.bilibili.com/read/cv24692025/)
+一号位植物（单选）：吸引僵尸的植物，如热辣海枣、甜薯、金蝉花。注意不要与3阶/5阶任务冲突。
 
-### 2. 使用 MaaDebugger 或 MaaPicli 时弹窗报错，应用程序错误：应用程序无法正常启动
+二号位植物（单选）：攻击型植物，可选仙人掌、激光豆、苹果迫机炮、熊果臼炮、原始豌豆射手、冰龙草、尖刺秋葵、大喷菇、虎头菇、雷龙草、龙舌兰等。
 
-![缺少运行库](https://github.com/user-attachments/assets/942df84b-f47d-4bb5-98b5-ab5d44bc7c2a)
+到达特定回合释放特定的僵尸（复选框）：
 
-一般是电脑缺少某些运行库，请安装一下 [vc_redist](https://aka.ms/vs/17/release/vc_redist.x64.exe) 。
+放置橄榄位僵尸：在第5回合后放置橄榄僵尸（推荐）。
 
-### 3. 我在这个仓库里提了 Issue 很久没人回复
+放置巨人位僵尸：在第7回合后放置巨人僵尸（不推荐日常，适合特定任务）。
 
-这里是《项目模板》仓库，它仅仅是一个模板，一般很少会修改，开发者也较少关注。  
-在此仓库请仅提问模板相关问题，其他问题最好前往对应的仓库提出，如果有 log，最好也带上它（`debug/maa.log` 文件）
+僵尸强化buff（多选）：
 
-- MaaFW 本身及 MaaPiCli 的问题：[MaaFramework/issues](https://github.com/MaaXYZ/MaaFramework/issues)
-- MaaDebugger 的问题：[MaaDebugger/issues](https://github.com/MaaXYZ/MaaDebugger/issues)
-- 不知道算是哪里的、其他疑问等：[讨论区](https://github.com/MaaXYZ/MaaFramework/discussions)
+加速：僵尸获得加速效果。
 
-### 4. OCR 文字识别一直没有识别结果，报错 "Failed to load det or rec", "ocrer_ is null"
+血量提升：僵尸血量增加（会启用第2回合识别）。
 
-**请仔细阅读文档**，你无视了前面步骤的报错。我不想解释了，请再把本文档仔细阅读一遍！
+免控：僵尸免疫控制。
 
-## 鸣谢
+放置3阶5阶植物（互斥选项）：
 
-本项目由 **[MaaFramework](https://github.com/MaaXYZ/MaaFramework)** 强力驱动！
+放置3阶植物任务：启用后脚本会优先使用3阶植物（可能挤掉你配置的植物）。
 
-感谢以下开发者对本项目作出的贡献:
+放置5阶植物任务：启用后脚本会优先使用5阶植物。
 
-[![Contributors](https://contrib.rocks/image?repo=daoyanxiaoz/MAAPVZ)](https://github.com/daoyanxiaoz/MAAPVZ/graphs/contributors)
+注意：双人对决目前为测试阶段，请谨慎使用，并留意对局中的异常情况（如植物放置位置错误、僵尸释放时机偏差等）。
+
+配置说明
+项目的核心配置位于 interface.json 中，你可以通过 MaaPiCli 的界面直接修改，也可以手动编辑该文件。以下是一些关键配置项的含义：
+
+渠道服配置
+在“开始登录”任务中，可选的渠道服包括：4399、小米、应用宝、b服、荣耀、vivo、九游、OPPO、好游快报、百度、360、华为、7723、官服。选择后，脚本会调用对应的启动方式。
+
+植物探险的世界优先级
+通过勾选不同的世界，可以控制探险时优先选择哪些世界的植物。世界名称对应关系：
+
+海盗/埃及：海盗港湾、埃及
+
+西部/功夫：西部荒野、功夫世界
+
+未来/黑暗：未来世界、黑暗时代
+
+海滩/冰河：海滩、冰河世界
+
+天空/失落：天空之城、失落之城
+
+摇滚/恐龙：摇滚年代、恐龙危机
+
+摩登/蒸汽：摩登世界、蒸汽时代
+
+平安/复兴：平安时代、复兴时代
+
+海底世界：海底世界
