@@ -2,7 +2,7 @@
     // 本文件主要定义了通用 UI 的行为和显示内容
     // 可参考文档和示例添加更多您需要的功能
     // 文档：https://maafw.xyz/docs/3.3-ProjectInterfaceV2
-    // 示例：https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json
+    // 示例：https://github.com/MaaXYZ/MaaFramework/blob/main/sample/interface.json1
     "interface_version": 2,
     "name": "MaaPVZ",
     "description": "这是一个使用 MaaFramework 创建的新项目。",
