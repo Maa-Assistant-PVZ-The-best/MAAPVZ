@@ -49,11 +49,28 @@ jobs:
 
   install:
     needs: meta
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
-        os: [win, macos, linux, android]
-        arch: [aarch64, x86_64]
+        include:
+          - os: win
+            arch: x86_64
+            runner: windows-latest
+          - os: win
+            arch: aarch64
+            runner: windows-11-arm
+          - os: macos
+            arch: x86_64
+            runner: ubuntu-latest
+          - os: macos
+            arch: aarch64
+            runner: ubuntu-latest
+          - os: linux
+            arch: x86_64
+            runner: ubuntu-latest
+          - os: linux
+            arch: aarch64
+            runner: ubuntu-latest
       fail-fast: false
 
     steps:
@@ -81,6 +98,16 @@ jobs:
           out-file-path: "MFA"
           extract: true
 
+      - name: Modify MFAAvalonia exe icon
+        if: matrix.os == 'win' && matrix.arch == 'x86_64'
+        shell: bash
+        run: |
+          # 下载 rcedit
+          curl -L https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -o rcedit.exe
+
+          # 修改 exe 图标
+          ./rcedit.exe "MFA/MFAAvalonia.exe" --set-icon "docs/imgs/logo.ico"
+
       - name: Clean up MFAAvalonia archive
         if: matrix.os != 'android'
         shell: bash
@@ -95,7 +122,8 @@ jobs:
         run: |
           rm -rf MFA/runtimes
       
-      - name: Install
+      - name: Install on unix
+        if: matrix.os != 'win'
         shell: bash
         run: |
           if [[ "${{ matrix.os }}" != "android" ]]; then
@@ -116,60 +144,27 @@ jobs:
           python ./install.py ${{ needs.meta.outputs.tag }} ${{ matrix.os }} ${{ matrix.arch }}
           cd ..
 
-      - name: Modify exe icon and metadata (Windows only)
+      - name: Install on windows
         if: matrix.os == 'win'
         shell: bash
         run: |
-          # 安装 wine
-          sudo dpkg --add-architecture i386
-          sudo apt update
-          sudo apt install -y wine
-
-          # 下载 rcedit
-          curl -L -o rcedit.exe "https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe"
-          chmod +x rcedit.exe
-
-          # 列出 install 目录内容（调试用）
-          echo "=== 修改前 install 目录内容 ==="
-          ls -la install/
-
-          # 检查图标文件
-          if [ ! -f "assets/app.ico" ]; then
-            echo "错误：找不到 assets/app.ico"
-            exit 1
-          fi
-          cp assets/app.ico ./app.ico
-
-          # 原始 exe 文件名（通常为 MFAAvalonia.exe，请确认）
-          OLD_EXE="install/MFAAvalonia.exe"
-          if [ ! -f "$OLD_EXE" ]; then
-            echo "错误：找不到 $OLD_EXE"
-            exit 1
+          if [[ "${{ matrix.os }}" != "android" ]]; then
+            if [ -d "MFA" ]; then
+              echo "Copying MFA files to install directory..."
+              mkdir -p install
+              cp -r MFA/* install/
+              echo "MFA files copied successfully."
+            else
+              echo "MFA directory not found, skipping copy."
+            fi
+          else
+            echo "Skipping copy MFA for Android."
           fi
 
-          # --- 1. 修改图标 ---
-          echo "正在修改图标..."
-          wine ./rcedit.exe "$OLD_EXE" --set-icon "./app.ico"
-
-          # --- 2. 重命名 exe 文件（改成你的项目名）---
-          NEW_EXE="install/MaaPVZ.exe"   # 将 MaaPVZ.exe 改成你想要的名称
-          echo "正在重命名文件：$OLD_EXE -> $NEW_EXE"
-          mv "$OLD_EXE" "$NEW_EXE"
-
-          # --- 3. 修改版本信息（右键属性中的详细信息）---
-          echo "正在设置版本信息..."
-          wine ./rcedit.exe "$NEW_EXE" \
-            --set-version-string "FileDescription" "MaaPVZ 自动化助手" \
-            --set-version-string "ProductName" "MaaPVZ" \
-            --set-version-string "CompanyName" "你的名字/组织" \
-            --set-version-string "LegalCopyright" "Copyright © 2025 你的名字" \
-            --set-file-version "1.0.0" \
-            --set-product-version "1.0.0"
-
-          # 再次列出目录，确认文件已改名
-          echo "=== 修改后 install 目录内容 ==="
-          ls -la install/
-          echo "✅ 所有操作完成！"
+          cd tools/
+          python -m pip install -r ./requirements.txt
+          python ./install.py ${{ needs.meta.outputs.tag }} ${{ matrix.os }} ${{ matrix.arch }}
+          cd ..
 
       - uses: actions/upload-artifact@v4
         with:
