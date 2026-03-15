@@ -102,11 +102,11 @@ def install_resource():
 
     shutil.copytree(
         working_dir / "assets" / "resource" / "task",
-        install_path /"assets" / "resource" / "task",
+        install_path / "assets" / "resource" / "task",
         dirs_exist_ok=True,
     )
     shutil.copy2(
-        working_dir / "assets" /"resource" / "task"/"plants_explore_debris.json",
+        working_dir / "assets" / "resource" / "task" / "plants_explore_debris.json",
         install_path / "assets" / "resource" / "task" / "plants_explore_debris.json",
     )
 
@@ -127,6 +127,10 @@ def install_chores():
     shutil.copy2(
         working_dir / "LICENSE",
         install_path,
+    )
+    shutil.copy2(
+        working_dir / "docs" / "imgs" / "logo.ico",
+        install_path / "resource" / "logo.ico",
     )
 
 
