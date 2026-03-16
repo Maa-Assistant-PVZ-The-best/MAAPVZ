@@ -60,7 +60,8 @@
     //     ]
     // },
     "import": [
-        "./resource/task/plants_explore_debris.json"
+        "./resource/task/plants_explore_debris.json",
+        "./resource/task/fragment_challenge.json"
     ],
     "task": [
         {
@@ -115,6 +116,11 @@
                 //  "多少血量大退"
             ],
             "description": "会卡时差，在血量降低后放植物以及僵尸，本任务目前还在测试阶段，可能会有意想不到的bug，如有发现，请及时反馈！"
+        },
+        {
+            "name": "碎片挑战",
+            "entry": "碎片挑战_前置检查",
+            "option": [],
         }
         // {
         //     "name": "参数任务",

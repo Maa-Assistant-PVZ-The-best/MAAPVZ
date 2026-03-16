@@ -109,6 +109,10 @@ def install_resource():
         working_dir / "assets" /"resource" / "task"/"plants_explore_debris.json",
         install_path / "assets" / "resource" / "task" / "plants_explore_debris.json",
     )
+    shutil.copy2(
+        working_dir / "assets" /"resource" / "task"/"fragment_challenge.json",
+        install_path / "assets" / "resource" / "task" / "fragment_challenge.json",
+    )
 
     with open(install_path / "interface.json", "r", encoding="utf-8") as f:
         interface = jsonc.load(f)
