@@ -1,0 +1,135 @@
+{
+    "碎片挑战_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "点击日常_碎片挑战"
+        ],
+        "on_error": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "点击日常_碎片挑战": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "日常.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击碎片挑战"
+        ]
+    },
+    "点击碎片挑战": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_图标.png"
+        ],
+        "action": "Click",
+        "next": [
+            "巨人危机_难度选择",
+            "巨人危机_尚未开放"
+        ]
+    },
+    "巨人危机_难度选择": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_难度选择.png"
+        ],
+        "roi": [
+            228,
+            481,
+            235,
+            169
+        ],
+        "action": "Click",
+        "next": [
+            "碎片挑战_传奇模式"
+        ]
+    },
+    "巨人危机_尚未开放": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_尚未开放.png"
+        ],
+        "action": "DoNothing",
+        "next": [
+            "邪恶入侵_难度选择",
+            "邪恶入侵_尚未开放"
+        ]
+    },
+    "邪恶入侵_难度选择": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_难度选择.png"
+        ],
+        "roi": [
+            528,
+            484,
+            227,
+            165
+        ],
+        "action": "Click",
+        "next": [
+            "邪恶入侵_难度选择"
+        ]
+    },
+    "邪恶入侵_尚未开放": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_尚未开放.png"
+        ],
+        "action": "DoNothing",
+        "next": [
+            "暴走雪人_难度选择",
+            "暴走雪人_尚未开放"
+        ]
+    },
+    "暴走雪人_难度选择": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_难度选择.png"
+        ],
+        "roi": [
+            823,
+            478,
+            223,
+            169
+        ],
+        "action": "Click",
+        "next": [
+            "暴走雪人_难度选择"
+        ]
+    },
+    "暴走雪人_尚未开放": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_尚未开放.png"
+        ],
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "碎片挑战_传奇模式": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "碎片挑战_传奇模式.png"
+        ],
+        "roi": [
+            786,
+            305,
+            217,
+            148
+        ],
+        "action": "Click",
+        "next": []
+    }
+}
