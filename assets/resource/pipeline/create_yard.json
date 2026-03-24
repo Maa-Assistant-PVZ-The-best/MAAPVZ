@@ -1,0 +1,121 @@
+{
+    "创意庭院_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "创意庭院点击竞技",
+            "[JumpBack]检查当前是否在主界面"
+        ],
+        "on_error": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "创意庭院": {
+        "action": "DoNothing",
+        "next": [
+            "创意庭院点击竞技"
+        ]
+    },
+    "创意庭院点击竞技": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "竞技.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点击创意庭院",
+            "创意庭院点击竞技"
+        ]
+    },
+    "点击创意庭院": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点击游玩"
+        ]
+    },
+    "点击游玩": {
+        "max_hit": 6,
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院_游玩.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点击搜索"
+        ]
+    },
+    "点击搜索": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院_搜索.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点击搜索栏"
+        ]
+    },
+    "点击搜索栏": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院_搜索栏.png"
+        ],
+        "action": "Click",
+        "next": [
+            "输入关卡代码"
+        ]
+    },
+    "输入关卡代码": {
+        "action": "InputText",
+        "input_text": "and144301558",
+        "repeat": 1,
+        "next": [
+            "点击关卡"
+        ]
+    },
+    "点击关卡": {
+        "action": "Click",
+        "roi": [
+            332,
+            228,
+            252,
+            251
+        ],
+        "next": [
+            "创意庭院_点击挑战"
+        ]
+    },
+    "创意庭院_点击挑战": {
+        "recognition": "TemplateMatch",
+        "timeout": 180000,
+        "template": [
+            "创意庭院_点击挑战.png"
+        ],
+        "action": "Click",
+        "next": [
+            "创意庭院_领取黄币",
+            "创意庭院_继续"
+        ]
+    },
+    "创意庭院_领取黄币": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院_黄币确定.png"
+        ],
+        "action": "Click"
+    },
+    "创意庭院_继续": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "创意庭院_继续.png"
+        ],
+        "action": "Click",
+        "next": [
+            "点击游玩"
+        ]
+    }
+}
