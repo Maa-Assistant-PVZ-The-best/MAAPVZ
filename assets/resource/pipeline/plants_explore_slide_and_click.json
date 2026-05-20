@@ -1,6 +1,6 @@
 {
     "滑动": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -42,7 +42,7 @@
         ]
     },
     "滑动3": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -63,7 +63,7 @@
         ]
     },
     "滑动4": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -84,7 +84,7 @@
         ]
     },
     "滑动5": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -105,7 +105,7 @@
         ]
     },
     "滑动6": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -126,7 +126,7 @@
         ]
     },
     "滑动7": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
@@ -147,7 +147,7 @@
         ]
     },
     "滑动8": {
-        "timeout": 2000,
+        "timeout": 10000,
         "max_hit": 1,
         "action": "Swipe",
         "post_delay": 200,
