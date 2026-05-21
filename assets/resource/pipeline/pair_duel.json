@@ -656,8 +656,8 @@
     },
     "下拉栏第一次": {
         "action": "Swipe",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 10,
+        "post_delay": 10,
         "begin": [
             665,
             1,
@@ -675,7 +675,7 @@
         ]
     },
     "下拉栏第二次": {
-        "pre_delay": 0,
+        "pre_delay": 10,
         "action": "Swipe",
         "post_delay": 4500,
         "begin": [
@@ -696,7 +696,7 @@
     },
     "下拉栏返回": {
         "action": "Swipe",
-        "pre_delay": 0,
+        "pre_delay": 10,
         "post_delay": 100,
         "begin": [
             770,
