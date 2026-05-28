@@ -6,8 +6,17 @@
     "license": "MIT",
     "welcome": "首次使用！欢迎使用 MAA!",
     "github": "https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ",
-    "version": "v0.0.0-ci.260518-9d6dd66",
+    "version": "dbugv0.0.7",
     "icon": ".\\resource\\logo.ico",
+    "agent": {
+        "child_exec": "../.venv/Scripts/python.exe",
+        "child_args": [
+            "-u",
+            "../agent/main.py"
+        ],
+        "identifier": "3be2c931-9c0d-4d69-9ebd-eed2263e06fd",
+        "debug_session": "Agent 调试"
+    },
     "controller": [
         {
             "name": "安卓端",
@@ -98,6 +107,19 @@
             "entry": "创意庭院_前置检查"
         },
         {
+            "name": "dbug",
+            "entry": "碎片挑战_选择多余植物进行占位"
+        },
+        {
+            "name": "日志清理",
+            "entry": "cleanup_maafw_bak_logs",
+            "option": [
+                "保留备份日志个数"
+            ],
+            "default_check": true,
+            "description": "清理多余的日志,节省空间"
+        },
+        {
             "name": "埃及第一关刷金币",
             "entry": "埃及第一关刷金币_前置检查"
         }
@@ -137,6 +159,27 @@
         //     "type": "select",
         //     "cases": []
         // },
+        "保留备份日志个数": {
+            "description": "清理日志时保留备份日志个数",
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "保留日志数",
+                    "label": "保留日志数",
+                    "description": "输入需要的保留日志数,最大999",
+                    "pipeline_type": "int",
+                    "default": "3",
+                    "verify": "^[1-9]\\d{0,2}$"
+                }
+            ],
+            "pipeline_override": {
+                "cleanup_maafw_bak_logs": {
+                    "custom_action_param": {
+                        "save_log_count": "{保留日志数}"
+                    }
+                }
+            }
+        },
         "重复启动时黑屏请打开": {
             "description": "会重启pvz",
             "type": "switch",

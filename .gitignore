@@ -4,6 +4,15 @@ docs/.vuepress/.temp
 # Prerequisites
 *.d
 
+#虚拟环境
+/venv
+
+#缓存文件
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
 # Compiled Object files
 build
 build-*
@@ -452,3 +461,4 @@ tools/ImageCropper/**/*.png
 
 config
 debug
+/.venv

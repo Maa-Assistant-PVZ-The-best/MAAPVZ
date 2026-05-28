@@ -1,55 +1,13 @@
 {
-    "滑动_test": {
-        "action": "Swipe",
-        "begin": [
-            660,
-            637,
-            1,
-            1
-        ],
-        "end": [
-            678,
-            159,
-            1,
-            1
-        ],
-        "end_hold": 500,
-        "post_delay": 1000
-    },
-    "调节音量": {
-        "timeout": 5000,
-        "action": "Shell",
-        "cmd": "input keyevent 24",
-        "post_delay": 2000,
-        "next": [
-            "调节音量-"
-        ]
-    },
-    "调节音量-": {
-        "action": "Shell",
-        "cmd": "input keyevent 25",
-        "post_delay": 2000,
-        "next": [
-            "调节音量"
-        ]
-    },
-    "碎片挑战_查找胆小菇": {
-        "recognition": "OCR",
-        "expected": [
-            "向敌人发射孢子"
-        ],
-        "roi": [
-            228,
-            481,
-            831,
-            162
-        ],
-        "action": "Click",
-        "target": [
-            710,
-            580,
-            123,
-            50
-        ]
+    "cleanup_maafw_bak_logs": {
+        "recognition": "DirectHit",
+        "action": "Custom",
+        "custom_action": "CleanupMaafwBakLogs",
+        "custom_action_param": {
+            "save_log_count": "3"
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "$doc": "清理多余的maafw_bak日志,节省空间"
     }
 }

@@ -1,0 +1,18 @@
+{
+    "碎片挑战_选择多余植物进行占位": {
+        "action": "Custom",
+        "custom_action": "IncrementalClick",
+        "custom_action_param": {
+            "start_x": 159,
+            "start_y": 435,
+            "step_x": 155,
+            "step_y": 0,
+            "max_count": 5,
+            "reset_x": 0,
+            "reset_y": -81
+        },
+        "next": [
+            "碎片挑战_选择多余植物进行占位"
+        ]
+    }
+}
