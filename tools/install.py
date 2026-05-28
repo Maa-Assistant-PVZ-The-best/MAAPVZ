@@ -1,3 +1,10 @@
+import sys
+import io
+
+# 修复 Windows 控制台编码
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
 from pathlib import Path
 
 import shutil
@@ -55,20 +62,43 @@ def get_dotnet_platform_tag():
 
 
 def install_deps():
-    if not (working_dir / "deps" / "bin").exists():
+    deps_dir = working_dir / "deps"
+
+    # 自动处理：如果 deps/bin 不存在，但 deps 下存在以 MAA- 开头的子目录，则将其内容上移
+    if not (deps_dir / "bin").exists():
+        subdirs = [d for d in deps_dir.iterdir() if d.is_dir() and d.name.startswith("MAA-")]
+        if subdirs:
+            print(f"Found MaaFramework subdirectories: {subdirs}")
+            for sub in subdirs:
+                print(f"Moving contents of {sub} to {deps_dir}")
+                for item in sub.iterdir():
+                    dest = deps_dir / item.name
+                    # 如果目标已存在，先删除（避免冲突）
+                    if dest.exists():
+                        if dest.is_dir():
+                            shutil.rmtree(dest)
+                        else:
+                            dest.unlink()
+                    shutil.move(str(item), str(dest))
+                sub.rmdir()
+            print("Finished flattening deps directory.")
+
+    # 原检查逻辑
+    if not (deps_dir / "bin").exists():
         print('Please download the MaaFramework to "deps" first.')
         print('请先下载 MaaFramework 到 "deps"。')
         sys.exit(1)
 
+    # 下面的代码保持不变
     if os_name == "android":
         shutil.copytree(
-            working_dir / "deps" / "bin",
+            deps_dir / "bin",
             install_path,
             dirs_exist_ok=True,
         )
     else:
         shutil.copytree(
-            working_dir / "deps" / "bin",
+            deps_dir / "bin",
             install_path / "runtimes" / get_dotnet_platform_tag() / "native",
             ignore=shutil.ignore_patterns(
                 "*MaaDbgControlUnit*",
@@ -80,7 +110,7 @@ def install_deps():
         )
 
     shutil.copytree(
-        working_dir / "deps" / "share" / "MaaAgentBinary",
+        deps_dir / "share" / "MaaAgentBinary",
         install_path / "MaaAgentBinary",
         dirs_exist_ok=True,
     )
