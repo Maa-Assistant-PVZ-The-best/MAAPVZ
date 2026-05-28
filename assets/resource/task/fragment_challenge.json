@@ -23,7 +23,7 @@
                     "description": "优先级最高",
                     "pipeline_override": {
                         "碎片挑战_胆小菇_1": {
-                            "enabled": true,
+                            "enabled": true
                         }
                     }
                 },

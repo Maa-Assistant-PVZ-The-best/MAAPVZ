@@ -8,9 +8,12 @@ import time
 
 _offset_state_map = {}
 
+
 @AgentServer.custom_action("CleanupMaafwBakLogs")
 class CleanupMaafwBakLogs(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         try:
             keep_count = 3
             if argv.custom_action_param:
@@ -23,6 +26,7 @@ class CleanupMaafwBakLogs(CustomAction):
         except Exception as e:
             print(f"日志清理执行异常: {e}")
             return CustomAction.RunResult(success=False)
+
 
 def cleanup_maafw_bak_logs(context=None, keep_count: int = 3):
     root = Path(__file__).parent.parent
@@ -43,9 +47,12 @@ def cleanup_maafw_bak_logs(context=None, keep_count: int = 3):
     except Exception as e:
         print(f"[日志清理] 异常:{e}")
 
+
 @AgentServer.custom_action("OffsetClick")
 class OffsetClick(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         try:
             key = "FragmentChallenge"
             state = _offset_state_map.get(key)
@@ -68,11 +75,7 @@ class OffsetClick(CustomAction):
             n = param.get("n", 100)
 
             if state is None:
-                state = {
-                    "current_x": initial_x,
-                    "current_y": initial_y,
-                    "hit_count": 0
-                }
+                state = {"current_x": initial_x, "current_y": initial_y, "hit_count": 0}
                 _offset_state_map[key] = state
 
             click_x = state["current_x"]
@@ -82,7 +85,7 @@ class OffsetClick(CustomAction):
 
             # 正确获取控制器：通过 tasker.controller
             ctrl = context.tasker.controller
-            ctrl.click(click_x, click_y)
+            ctrl.post_click(click_x, click_y)
             print(f"[OffsetClick] 已执行点击 ({click_x}, {click_y})")
 
             state["current_x"] += dx
@@ -97,6 +100,7 @@ class OffsetClick(CustomAction):
             return CustomAction.RunResult(success=True)
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             print(f"OffsetClick 异常: {e}")
             return CustomAction.RunResult(success=False)
