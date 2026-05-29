@@ -1,18 +1,70 @@
 {
+    // 这是一个示例，展示如何在 pipeline 中使用自定义动作 "OffsetClick"。你需要根据实际情况修改节点名称、识别方式、模板路径和动作参数。 
+    // {
+    //     "碎片挑战_选择多余植物进行占位": {
+    //         "action": "Custom",
+    //         "custom_action": "OffsetClick",
+    //         "custom_action_param": {
+    //             "initial_x": 193,
+    //             "initial_y": 437,
+    //             "dx": 119,
+    //             "max_hits": 5,
+    //             "n": -286
+    //         },
+    //         "next": ["碎片挑战_选择多余植物进行占位"]
+    //     }
+    // }
+    // 绝对坐标点击动作（不依赖识别框位置）
+    // 参数（JSON 字符串）：
+    //     initial_x: 第一次点击的 x 绝对坐标（必需）
+    //     initial_y: 第一次点击的 y 绝对坐标（必需）
+    //     dx: 每次点击后 x 坐标的增加量（默认 50）
+    //     max_hits: 触发重置的点击次数（默认 3）
+    //     n: 重置时 y 坐标的变化量，新 y = initial_y - n（默认 100，n>0 表示减少 y）
+    //  """
     "碎片挑战_选择多余植物进行占位": {
-        "action": "Custom",
-        "custom_action": "IncrementalClick",
-        "custom_action_param": {
-            "start_x": 159,
-            "start_y": 435,
-            "step_x": 155,
-            "step_y": 0,
-            "max_count": 5,
-            "reset_x": 0,
-            "reset_y": -81
+        "recognition": "DirectHit",
+        "max_hit": 16,
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "OffsetClick",
+                "custom_action_param": {
+                    "initial_x": 193,
+                    "initial_y": 437,
+                    "dx": 119,
+                    "max_hits": 6,
+                    "n": -100
+                },
+                "target": true
+            }
         },
         "next": [
-            "碎片挑战_选择多余植物进行占位"
+            "碎片挑战_选择多余植物进行占位",
+            "碎片挑战_仙人掌_开始战斗"
+        ]
+    },
+    "巨人西部_种植仙人掌": {
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "OffsetClick",
+                "custom_action_param": {
+                    "initial_x": 467,
+                    "initial_y": 168,
+                    "dx": 90,
+                    "max_hits": 7,
+                    "n": -110
+                },
+                "target": true
+            }
+        },
+        "pre_delay": 100,
+        "post_delay": 100,
+        "next": [
+            "巨人西部_种植仙人掌_选择仙人掌",
+            "碎片挑战_二倍速"
         ]
     }
 }
