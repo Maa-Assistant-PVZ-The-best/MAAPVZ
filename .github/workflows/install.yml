@@ -20,28 +20,71 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+
+      # 新增：检测 commit 消息中是否包含发布关键词
+      - name: Check for release keyword
+        id: check_keyword
+        if: github.event_name == 'push'
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          if echo "$COMMIT_MSG" | grep -qE "\[release\]|#release"; then
+            echo "keyword_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "keyword_release=false" >> $GITHUB_OUTPUT
+          fi
+
       - id: set_tag
         run: |
           is_release=${{ startsWith(github.ref, 'refs/tags/v') }}
-          tag=$(git describe --tags --match "v*" ${{ github.ref }} || true)
-          if [[ $tag != v* ]]; then
-            tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
+
+          # 如果是 tag 推送，按原有逻辑处理
+          if $is_release; then
+            tag=$(git describe --tags --match "v*" ${{ github.ref }} || true)
             if [[ $tag != v* ]]; then
-              tag="v0.0.0"
+              tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+                --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' |
+                awk '/tag_name/{print $4}' FS='["]')
+              if [[ $tag != v* ]]; then
+                tag="v0.0.0"
+              fi
+              tag=$(date "+$tag-%y%m%d-$(git rev-parse --short HEAD)")
             fi
-            tag=$(date "+$tag-%y%m%d-$(git rev-parse --short HEAD)")
+            if ! $($is_release) ; then
+              prefix=${tag%-*-*}
+              suffix=${tag#$prefix-}
+              tag="$prefix-ci.$suffix"
+            fi
+          else
+            # 非 tag 推送（普通 push 或 workflow_dispatch）
+            KEYWORD_RELEASE="${{ steps.check_keyword.outputs.keyword_release }}"
+            if [[ "$GITHUB_EVENT_NAME" == "push" && "$KEYWORD_RELEASE" == "true" ]]; then
+              # 关键词触发发布：使用日期+短哈希作为版本号
+              tag=$(date "+v%y%m%d-$(git rev-parse --short HEAD)")
+              is_release=true
+              is_prerelease=true
+              echo "Keyword release triggered, tag=$tag"
+            else
+              # 默认非发布：仅生成 CI 标记，不触发 release
+              tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+                --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' |
+                awk '/tag_name/{print $4}' FS='["]')
+              if [[ $tag != v* ]]; then
+                tag="v0.0.0"
+              fi
+              tag=$(date "+$tag-%y%m%d-$(git rev-parse --short HEAD)")
+              prefix=${tag%-*-*}
+              suffix=${tag#$prefix-}
+              tag="$prefix-ci.$suffix"
+            fi
           fi
 
-          if ! $($is_release) ; then
-            prefix=${tag%-*-*}
-            suffix=${tag#$prefix-}
-            tag="$prefix-ci.$suffix"
-          fi
-
-          is_prerelease=false
-          if [[ $tag =~ .*alpha.* || $tag =~ .*beta.* || $tag =~ .*rc.* || $tag =~ .*dev.* || $tag =~ .*-ci.* ]]; then
-            is_prerelease=true
-            echo "This is a pre-release version"
+          # 判断是否预发布（原有逻辑 + 关键词触发）
+          if [[ -z "$is_prerelease" ]]; then
+            is_prerelease=false
+            if [[ $tag =~ .*alpha.* || $tag =~ .*beta.* || $tag =~ .*rc.* || $tag =~ .*dev.* || $tag =~ .*-ci.* ]]; then
+              is_prerelease=true
+              echo "This is a pre-release version"
+            fi
           fi
 
           echo tag=$tag | tee -a $GITHUB_OUTPUT
