@@ -7,7 +7,7 @@
             "点击竞技",
             "双人对决_竞技",
             "[JumpBack]检查当前是否在主界面"
-        ],
+        ]
     },
     "点击竞技": {
         "recognition": "TemplateMatch",
@@ -932,6 +932,8 @@
             2,
             2
         ],
+        "pre_delay": 0,
+        "post_delay": 0,
         "next": [
             "判断游戏是否胜利",
             "判断游戏是否失败",
@@ -964,6 +966,8 @@
         ]
     },
     "补种_放置一号位僵尸_升级": {
+        "pre_delay": 0,
+        "post_delay": 0,
         "next": [
             "补种远程一号位植物1",
             "补种近战一号位植物1"
@@ -1128,6 +1132,8 @@
         "enabled": false,
         "timeout": 10,
         "recognition": "Or",
+        "pre_delay": 0,
+        "post_delay": 0,
         "any_of": [
             {
                 "recognition": "OCR",
@@ -1225,6 +1231,8 @@
         "enabled": false,
         "timeout": 10,
         "recognition": "Or",
+        "pre_delay": 0,
+        "post_delay": 0,
         "any_of": [
             {
                 "recognition": "OCR",
@@ -1320,6 +1328,8 @@
         "enabled": false,
         "timeout": 10,
         "recognition": "Or",
+        "pre_delay": 0,
+        "post_delay": 0,
         "any_of": [
             {
                 "recognition": "OCR",
@@ -1352,6 +1362,8 @@
     "判断游戏是否失败": {
         "timeout": 20,
         "recognition": "TemplateMatch",
+        "pre_delay": 0,
+        "post_delay": 0,
         "template": [
             "双人对决_失败掉分.png"
         ],
@@ -1362,6 +1374,8 @@
     "判断游戏是否胜利": {
         "timeout": 20,
         "recognition": "TemplateMatch",
+        "pre_delay": 0,
+        "post_delay": 0,
         "template": [
             "双人对决_晋升.png"
         ],
@@ -1416,7 +1430,7 @@
         "action": "Click",
         "next": [
             "检查是否到宗师锅",
-            "双人对决_识别一号位是否满足",
+            "双人对决_识别一号位是否满足"
         ]
     },
     "只重开十次": {
@@ -1449,6 +1463,8 @@
     "检查突发情况": {
         "timeout": 10,
         "recognition": "TemplateMatch",
+        "pre_delay": 0,
+        "post_delay": 0,
         "template": [
             "双人对决_突发情况1.png",
             "双人对决_突发情况2.png",
