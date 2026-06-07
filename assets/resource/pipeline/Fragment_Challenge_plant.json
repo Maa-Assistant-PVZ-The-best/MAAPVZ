@@ -1827,6 +1827,12 @@
         "template": [
             "碎片挑战_植物_仙人掌.png"
         ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
         "action": "Click",
         "threshold": [
             0.8
@@ -2021,6 +2027,12 @@
         ],
         "template": [
             "碎片挑战_植物_猕猴桃.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
         ],
         "action": "Click",
         "threshold": [

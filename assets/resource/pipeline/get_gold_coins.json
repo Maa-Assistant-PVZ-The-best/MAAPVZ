@@ -88,7 +88,8 @@
         "action": "Click",
         "post_delay": 2000,
         "next": [
-            "埃及1_埃及第一天_开始战斗"
+            "埃及1_埃及第一天_开始战斗",
+            "埃及1_进入关卡"
         ]
     },
     "埃及1_埃及第一天_开始战斗": {
@@ -202,6 +203,12 @@
             608,
             315
         ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
         "action": "Click",
         "post_delay": 1000,
         "next": [
@@ -213,7 +220,6 @@
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "选择卡牌_仙人掌.png",
             "碎片挑战_植物_仙人掌.png"
         ],
         "roi": [
@@ -221,6 +227,12 @@
             374,
             608,
             315
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
         ],
         "action": "Click",
         "post_delay": 1000,
@@ -239,6 +251,12 @@
             374,
             608,
             315
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
         ],
         "action": "Click",
         "post_delay": 1000,
@@ -515,7 +533,6 @@
         ]
     },
     "埃及1_重开": {
-        "post_wait_freezes": 1000,
         "next": [
             "埃及1_进入关卡",
             "埃及1_胜利",
