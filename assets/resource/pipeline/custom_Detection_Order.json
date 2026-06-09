@@ -144,17 +144,40 @@
             "重置截图次数"
         ]
     },
-    "截图保存_无尽": {
+    "截图保存_无尽埃及": {
         "action": "Custom",
-        "pre_delay": 2000,
+        "pre_delay": 6000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
-            "name": "无尽挑战"
+            "name": "无尽埃及"
         },
         "next": [
             "重置截图次数"
         ]
     },
+    "截图保存_无尽海盗": {
+        "action": "Custom",
+        "pre_delay": 6000,
+        "custom_action": "TakeCountScreenshot",
+        "custom_action_param": {
+            "name": "无尽海盗"
+        },
+        "next": [
+            "重置截图次数"
+        ]
+    },
+    "截图保存_无尽沙滩": {
+        "action": "Custom",
+        "pre_delay": 6000,
+        "custom_action": "TakeCountScreenshot",
+        "custom_action_param": {
+            "name": "无尽沙滩"
+        },
+        "next": [
+            "重置截图次数"
+        ]
+    },
+    "序列检查_使用八种植物_截图": {},
     // ======================== 重置计数器节点 ========================
     // 清空所有点击次数及运行次数，下次从第1次开始递增
     "重置": {
