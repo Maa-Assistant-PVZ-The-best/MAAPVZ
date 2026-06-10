@@ -6,6 +6,8 @@
     "license": "MIT",
     "github": "https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ",
     "icon": ".\\resource\\logo.ico",
+    "mirrorchyan_rid": "MaaPVZ",
+    "mirrorchyan_multiplatform": true,
     "agent": {
         "child_exec": "../.venv/Scripts/python.exe",
         "child_args": [
