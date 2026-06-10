@@ -1692,7 +1692,7 @@
     "巨人_埃及": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_巨人埃及.png"
+            "Fragment_Challenge_plant/碎片挑战_巨人埃及.png"
         ],
         "action": "Click",
         "post_wait_freezes": 1000,
@@ -1710,7 +1710,7 @@
     "巨人_海盗": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_巨人海盗.png"
+            "Fragment_Challenge_plant/碎片挑战_巨人海盗.png"
         ],
         "action": "Click",
         "post_wait_freezes": 1000,
@@ -1728,7 +1728,7 @@
     "巨人_西部": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_巨人西部.png"
+            "Fragment_Challenge_plant/碎片挑战_巨人西部.png"
         ],
         "action": "Click",
         "post_wait_freezes": 1000,
@@ -1746,7 +1746,7 @@
     "邪恶入侵": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_邪恶入侵.png"
+            "Fragment_Challenge_plant/碎片挑战_邪恶入侵.png"
         ],
         "action": "Click",
         "post_wait_freezes": 1000,
@@ -1825,7 +1825,7 @@
             437
         ],
         "template": [
-            "碎片挑战_植物_仙人掌.png"
+            "Fragment_Challenge_plant/碎片挑战_植物_仙人掌.png"
         ],
         "target_offset": [
             17,
@@ -2026,7 +2026,7 @@
             437
         ],
         "template": [
-            "碎片挑战_植物_猕猴桃.png"
+            "Fragment_Challenge_plant/碎片挑战_植物_猕猴桃.png"
         ],
         "target_offset": [
             17,
@@ -2112,7 +2112,7 @@
         "action": "Click",
         "next": [
             "邪恶入侵_种植猕猴桃1",
-            "邪恶入侵_种植猕猴桃2",
+            "邪恶入侵_种植猕猴桃2"
         ]
     },
     //猕猴桃action
@@ -2120,7 +2120,7 @@
     "碎片挑战_二倍速": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Fragment_Challenge_plant/二倍速.png"
         ],
         "roi": [
             1144,
@@ -2158,7 +2158,7 @@
         "recognition": "TemplateMatch",
         "timeout": 50000,
         "template": [
-            "下一波.png"
+            "Fragment_Challenge_plant/下一波.png"
         ],
         "roi": [
             1168,
@@ -2196,7 +2196,7 @@
     "碎片挑战_钱袋子": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_巨人危机_钱袋子.png"
+            "Fragment_Challenge_plant/碎片挑战_巨人危机_钱袋子.png"
         ],
         "action": "Click",
         "post_delay": 0,

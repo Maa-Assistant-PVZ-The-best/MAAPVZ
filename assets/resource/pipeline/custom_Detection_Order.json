@@ -13,7 +13,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "神器一阶.png",
+            "template": "Detection_Order/神器一阶.png",
             "level": 1,
             "roi": [
                 630,
@@ -21,7 +21,7 @@
                 65,
                 72
             ],
-            "delay": 500,
+            "delay": 500
         },
         "next": [
             "点击三阶",
@@ -33,7 +33,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "神器三阶.png",
+            "template": "Detection_Order/神器三阶.png",
             "level": 3,
             "roi": [
                 755,
@@ -52,7 +52,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "神器四阶.png",
+            "template": "Detection_Order/神器四阶.png",
             "level": 4,
             "threshold": 0.9,
             "roi": [

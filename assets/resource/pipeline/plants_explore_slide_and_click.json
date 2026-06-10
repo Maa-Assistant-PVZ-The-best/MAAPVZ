@@ -246,7 +246,7 @@
         "post_delay": 500,
         "recognition": "TemplateMatch",
         "template": [
-            "自动选择.png"
+            "plants_explore_slide_and_click/自动选择.png"
         ],
         "action": "Click",
         "next": [
@@ -264,7 +264,7 @@
         "post_delay": 2000,
         "recognition": "TemplateMatch",
         "template": [
-            "开始探险.png"
+            "plants_explore_slide_and_click/开始探险.png"
         ],
         "action": "Click",
         "next": [
@@ -277,7 +277,7 @@
         "post_delay": 500,
         "recognition": "TemplateMatch",
         "template": [
-            "探索_我再想想.png"
+            "plants_explore_slide_and_click/探索_我再想想.png"
         ],
         "action": "Click",
         "next": [
@@ -290,14 +290,14 @@
         "post_delay": 500,
         "recognition": "TemplateMatch",
         "template": [
-            "叉叉.png"
+            "plants_explore_slide_and_click/叉叉.png"
         ],
         "action": "Click"
     },
     "探索_海盗/埃及": {
         "recognition": "TemplateMatch",
         "template": [
-            "海盗埃及（灰色）.png"
+            "plants_explore_slide_and_click/海盗埃及（灰色）.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -310,7 +310,7 @@
     "探索_西部/功夫": {
         "recognition": "TemplateMatch",
         "template": [
-            "西部功夫.png"
+            "plants_explore_slide_and_click/西部功夫.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -323,7 +323,7 @@
     "探索_未来/黑暗": {
         "recognition": "TemplateMatch",
         "template": [
-            "未来黑暗.png"
+            "plants_explore_slide_and_click/未来黑暗.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -336,7 +336,7 @@
     "探索_海滩/冰河": {
         "recognition": "TemplateMatch",
         "template": [
-            "沙滩冰河.png"
+            "plants_explore_slide_and_click/沙滩冰河.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -349,7 +349,7 @@
     "探索_天空/失落": {
         "recognition": "TemplateMatch",
         "template": [
-            "天空失落.png"
+            "plants_explore_slide_and_click/天空失落.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -362,7 +362,7 @@
     "探索_摇滚/恐龙": {
         "recognition": "TemplateMatch",
         "template": [
-            "摇滚恐龙.png"
+            "plants_explore_slide_and_click/摇滚恐龙.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -375,7 +375,7 @@
     "探索_摩登/蒸汽": {
         "recognition": "TemplateMatch",
         "template": [
-            "摩登蒸汽.png"
+            "plants_explore_slide_and_click/摩登蒸汽.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -388,7 +388,7 @@
     "探索_平安/复兴": {
         "recognition": "TemplateMatch",
         "template": [
-            "平安复兴.png"
+            "plants_explore_slide_and_click/平安复兴.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -401,7 +401,7 @@
     "探索_海底世界a": {
         "recognition": "TemplateMatch",
         "template": [
-            "海底世界.png"
+            "plants_explore_slide_and_click/海底世界.png"
         ],
         "action": "Click",
         "method": 10001,
@@ -414,7 +414,7 @@
     "探索_选择第一个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore_slide_and_click/开始.png"
         ],
         "roi": [
             387,
@@ -431,7 +431,7 @@
     "探索_选择第二个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore_slide_and_click/开始.png"
         ],
         "roi": [
             388,
@@ -448,7 +448,7 @@
     "探索_选择第三个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore_slide_and_click/开始.png"
         ],
         "roi": [
             385,
@@ -465,9 +465,9 @@
     "豌豆射手_开始": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore_slide_and_click/开始.png"
         ],
-        "order_by": "Horizontal", //排序方式
+        "order_by": "Horizontal",
         "index": 0,
         "action": "Click",
         "next": [

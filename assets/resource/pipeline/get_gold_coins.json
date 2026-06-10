@@ -10,7 +10,7 @@
     "点击星系": {
         "recognition": "TemplateMatch",
         "template": [
-            "星系.png"
+            "get_gold_coins/星系.png"
         ],
         "action": "Click",
         "post_delay": 3000,
@@ -44,7 +44,7 @@
     "星系_进入世界": {
         "recognition": "TemplateMatch",
         "template": [
-            "星系_进入.png"
+            "get_gold_coins/星系_进入.png"
         ],
         "action": "Click",
         "post_delay": 3000,
@@ -77,7 +77,7 @@
     "埃及1_进入关卡": {
         "recognition": "TemplateMatch",
         "template": [
-            "关卡_蓝色按钮.png"
+            "get_gold_coins/关卡_蓝色按钮.png"
         ],
         "roi": [
             364,
@@ -95,7 +95,7 @@
     "埃及1_埃及第一天_开始战斗": {
         "recognition": "TemplateMatch",
         "template": [
-            "世界_开始战斗.png"
+            "get_gold_coins/世界_开始战斗.png"
         ],
         "action": "Click",
         "post_wait_freezes": 4000,
@@ -195,7 +195,7 @@
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "选择卡牌_原始向日葵.png"
+            "get_gold_coins/选择卡牌_原始向日葵.png"
         ],
         "roi": [
             130,
@@ -213,14 +213,14 @@
         "post_delay": 1000,
         "next": [
             "埃及1_原始向日葵",
-            "埃及1_滑回最顶上",
+            "埃及1_滑回最顶上"
         ]
     },
     "埃及1_仙人掌": {
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "碎片挑战_植物_仙人掌.png"
+            "get_gold_coins/碎片挑战_植物_仙人掌.png"
         ],
         "roi": [
             130,
@@ -244,7 +244,7 @@
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "选择卡牌_向日葵.png"
+            "get_gold_coins/选择卡牌_向日葵.png"
         ],
         "roi": [
             130,
@@ -267,7 +267,7 @@
     "埃及1_检索阵容完整性": {
         "recognition": "TemplateMatch",
         "template": [
-            "埃及1_空的三号位.png"
+            "get_gold_coins/埃及1_空的三号位.png"
         ],
         "inverse": true,
         "threshold": [
@@ -453,13 +453,13 @@
             "埃及1_胜利",
             "埃及1_检查仙人掌冷却并点击",
             "埃及1_检查向日葵冷却并点击",
-            "埃及1_检查原始向日葵冷却并点击",
+            "埃及1_检查原始向日葵冷却并点击"
         ]
     },
     "埃及1_检查仙人掌冷却并点击": {
         "recognition": "TemplateMatch",
         "template": [
-            "双人对决_植物_仙人掌_新版.png"
+            "get_gold_coins/双人对决_植物_仙人掌_新版.png"
         ],
         "method": 10001,
         "roi": [
@@ -479,7 +479,7 @@
     "埃及1_检查向日葵冷却并点击": {
         "recognition": "TemplateMatch",
         "template": [
-            "选择卡牌_向日葵.png"
+            "get_gold_coins/选择卡牌_向日葵.png"
         ],
         "action": "Click",
         "threshold": [
@@ -498,7 +498,7 @@
     "埃及1_检查原始向日葵冷却并点击": {
         "recognition": "TemplateMatch",
         "template": [
-            "选择卡牌_原始向日葵.png"
+            "get_gold_coins/选择卡牌_原始向日葵.png"
         ],
         "method": 10001,
         "action": "Click",

@@ -6,12 +6,12 @@
         "next": [
             "执行签到",
             "[JumpBack]检查当前是否在主界面"
-        ],
+        ]
     },
     "执行签到": {
         "recognition": "TemplateMatch",
         "template": [
-            "签到.png"
+            "sign_in/签到.png"
         ],
         "pre_wait_freezes": 3000,
         "action": "Click",

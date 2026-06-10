@@ -14,7 +14,7 @@
     "点击日常": {
         "recognition": "TemplateMatch",
         "template": [
-            "日常.png"
+            "plants_explore/日常.png"
         ],
         "pre_wait_freezes": {
             "time": 1000,
@@ -31,7 +31,7 @@
     "点击植物探险": {
         "recognition": "TemplateMatch",
         "template": [
-            "植物探险.png"
+            "plants_explore/植物探险.png"
         ],
         "action": "Click",
         "next": [
@@ -42,8 +42,8 @@
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "海盗埃及.png",
-            "海盗埃及（灰色）.png"
+            "plants_explore/海盗埃及.png",
+            "plants_explore/海盗埃及（灰色）.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查海盗/埃及[/color]",
@@ -60,7 +60,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "西部功夫.png"
+            "plants_explore/西部功夫.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查西部/功夫[/color]",
@@ -74,7 +74,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "未来黑暗.png"
+            "plants_explore/未来黑暗.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查未来/黑暗[/color]",
@@ -92,7 +92,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "沙滩冰河.png"
+            "plants_explore/沙滩冰河.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查海滩/冰河[/color]",
@@ -109,7 +109,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "天空失落.png"
+            "plants_explore/天空失落.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查天空/失落[/color]",
@@ -126,7 +126,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "摇滚恐龙.png"
+            "plants_explore/摇滚恐龙.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查摇滚/恐龙[/color]",
@@ -144,7 +144,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "摩登蒸汽.png"
+            "plants_explore/摩登蒸汽.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]检查摩登/蒸汽[/color]",
@@ -162,7 +162,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "平安复兴.png"
+            "plants_explore/平安复兴.png"
         ],
         "threshold": [
             0.9
@@ -179,7 +179,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "海底世界.png"
+            "plants_explore/海底世界.png"
         ],
         "pre_wait_freezes": 1000,
         "action": "Click",
@@ -198,7 +198,7 @@
         "recognition": "TemplateMatch",
         "pre_wait_freezes": 2000,
         "template": [
-            "探险完成.png"
+            "plants_explore/探险完成.png"
         ],
         "action": "Click",
         "post_delay": 500,
@@ -209,7 +209,7 @@
     "完成探险": {
         "recognition": "TemplateMatch",
         "template": [
-            "探险完成_确定.png"
+            "plants_explore/探险完成_确定.png"
         ],
         "action": "Click",
         "focus": "[color:darkgray]完成探险[/color]",
@@ -1581,7 +1581,7 @@
     "探索_区域一": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore/开始.png"
         ],
         "roi": [
             387,
@@ -1595,7 +1595,7 @@
     "探索_区域二": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore/开始.png"
         ],
         "roi": [
             388,
@@ -1609,7 +1609,7 @@
     "探索_区域三": {
         "recognition": "TemplateMatch",
         "template": [
-            "开始.png"
+            "plants_explore/开始.png"
         ],
         "roi": [
             385,
@@ -1642,8 +1642,8 @@
     "点一下海盗埃及": {
         "recognition": "TemplateMatch",
         "template": [
-            "海盗埃及.png",
-            "海盗埃及（灰色）.png"
+            "plants_explore/海盗埃及.png",
+            "plants_explore/海盗埃及（灰色）.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1652,8 +1652,8 @@
     "探索_海盗埃及": {
         "recognition": "TemplateMatch",
         "template": [
-            "海盗埃及.png",
-            "海盗埃及（灰色）.png"
+            "plants_explore/海盗埃及.png",
+            "plants_explore/海盗埃及（灰色）.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1662,7 +1662,7 @@
     "探索_西部功夫": {
         "recognition": "TemplateMatch",
         "template": [
-            "西部功夫.png"
+            "plants_explore/西部功夫.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1671,7 +1671,7 @@
     "探索_未来黑暗": {
         "recognition": "TemplateMatch",
         "template": [
-            "未来黑暗.png"
+            "plants_explore/未来黑暗.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1680,7 +1680,7 @@
     "探索_沙滩冰河": {
         "recognition": "TemplateMatch",
         "template": [
-            "沙滩冰河.png"
+            "plants_explore/沙滩冰河.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1689,7 +1689,7 @@
     "探索_天空失落": {
         "recognition": "TemplateMatch",
         "template": [
-            "天空失落.png"
+            "plants_explore/天空失落.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1698,7 +1698,7 @@
     "探索_摇滚恐龙": {
         "recognition": "TemplateMatch",
         "template": [
-            "摇滚恐龙.png"
+            "plants_explore/摇滚恐龙.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1707,7 +1707,7 @@
     "探索_摩登蒸汽": {
         "recognition": "TemplateMatch",
         "template": [
-            "摩登蒸汽.png"
+            "plants_explore/摩登蒸汽.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1716,7 +1716,7 @@
     "探索_平安复兴": {
         "recognition": "TemplateMatch",
         "template": [
-            "平安复兴.png"
+            "plants_explore/平安复兴.png"
         ],
         "action": "Click",
         "pre_delay": 500,
@@ -1725,7 +1725,7 @@
     "探索_海底世界": {
         "recognition": "TemplateMatch",
         "template": [
-            "海底世界.png"
+            "plants_explore/海底世界.png"
         ],
         "action": "Click",
         "pre_delay": 500,

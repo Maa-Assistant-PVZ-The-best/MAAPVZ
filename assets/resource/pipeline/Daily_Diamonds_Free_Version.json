@@ -12,17 +12,17 @@
         "timeout": 5000,
         "recognition": "TemplateMatch",
         "template": [
-            "钻石.png"
+            "Daily_Diamonds_Free_Version/钻石.png"
         ],
         "target": [
             906,
             2,
             51,
             51
-        ], //尝试直接点击坐标
+        ],
         "method": 10001,
         "threshold": [
-            0.7999999 //有很大的问题，这个参数的问题非常不好调整（已解决）
+            0.7999999
         ],
         "green_mask": true,
         "action": "Click",
@@ -37,7 +37,7 @@
         "timeout": 5000,
         "recognition": "TemplateMatch",
         "template": [
-            "领取钻石.png"
+            "Daily_Diamonds_Free_Version/领取钻石.png"
         ],
         "threshold": [
             0.7
@@ -62,7 +62,7 @@
     "领取钻石_确定": {
         "recognition": "TemplateMatch",
         "template": [
-            "领取钻石_确定.png"
+            "Daily_Diamonds_Free_Version/领取钻石_确定.png"
         ],
         "action": "Click",
         "next": [

@@ -10,7 +10,7 @@
     "点击日常_碎片挑战": {
         "recognition": "TemplateMatch",
         "template": [
-            "日常.png"
+            "Fragment_Challenge/日常.png"
         ],
         "pre_wait_freezes": {
             "time": 1000,
@@ -28,7 +28,7 @@
     "点击碎片挑战": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_图标.png"
+            "Fragment_Challenge/碎片挑战_图标.png"
         ],
         "action": "Click",
         "next": [
@@ -44,7 +44,7 @@
     "碎片挑战_已完成": {
         "recognition": "TemplateMatch",
         "template": [
-            "叉叉.png"
+            "Fragment_Challenge/叉叉.png"
         ],
         "roi": [
             1032,
@@ -59,7 +59,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_难度选择.png"
+            "Fragment_Challenge/碎片挑战_难度选择.png"
         ],
         "roi": [
             228,
@@ -76,7 +76,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_尚未开放.png"
+            "Fragment_Challenge/碎片挑战_尚未开放.png"
         ],
         "action": "DoNothing",
         "next": [
@@ -88,7 +88,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_难度选择.png"
+            "Fragment_Challenge/碎片挑战_难度选择.png"
         ],
         "roi": [
             528,
@@ -105,7 +105,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_尚未开放.png"
+            "Fragment_Challenge/碎片挑战_尚未开放.png"
         ],
         "action": "DoNothing",
         "next": [
@@ -118,7 +118,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_难度选择.png"
+            "Fragment_Challenge/碎片挑战_难度选择.png"
         ],
         "roi": [
             823,
@@ -135,7 +135,7 @@
         "max_hit": 1,
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_尚未开放.png"
+            "Fragment_Challenge/碎片挑战_尚未开放.png"
         ],
         "action": "DoNothing",
         "next": [
@@ -150,7 +150,7 @@
         },
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_传奇模式.png"
+            "Fragment_Challenge/碎片挑战_传奇模式.png"
         ],
         "roi": [
             786,
@@ -184,8 +184,8 @@
     "碎片挑战_选择第一个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 0,
         "anchor": "传奇难度选择植物",
@@ -279,8 +279,8 @@
     "碎片挑战_选择第二个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 1,
         "action": "Click",
@@ -358,8 +358,8 @@
     "碎片挑战_选择第三个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 2,
         "action": "Click",
@@ -437,8 +437,8 @@
     "碎片挑战_选择第四个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 3,
         "action": "Click",
@@ -515,8 +515,8 @@
     "碎片挑战_选择第五个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 4,
         "action": "Click",
@@ -623,8 +623,8 @@
     "碎片挑战_选择第六个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 2,
         "action": "Click",
@@ -706,8 +706,8 @@
     "碎片挑战_选择第七个植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片图标_碎片.png",
-            "碎片挑战_装扮碎片.png"
+            "Fragment_Challenge/碎片图标_碎片.png",
+            "Fragment_Challenge/碎片挑战_装扮碎片.png"
         ],
         "index": 3,
         "action": "Click",
@@ -789,7 +789,7 @@
     "难度选择_返回_选择困难": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_难度选择_返回.png"
+            "Fragment_Challenge/碎片挑战_难度选择_返回.png"
         ],
         "action": "Click",
         "next": [
@@ -799,7 +799,7 @@
     "难度选择_返回_选择简单": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_难度选择_返回.png"
+            "Fragment_Challenge/碎片挑战_难度选择_返回.png"
         ],
         "action": "Click",
         "anchor": {
@@ -821,7 +821,7 @@
             "timeout": 10000
         },
         "template": [
-            "碎片挑战_普通模式.png"
+            "Fragment_Challenge/碎片挑战_普通模式.png"
         ],
         "roi": [
             259,
@@ -842,7 +842,7 @@
             "timeout": 10000
         },
         "template": [
-            "碎片挑战_困难模式.png"
+            "Fragment_Challenge/碎片挑战_困难模式.png"
         ],
         "roi": [
             516,
@@ -861,7 +861,7 @@
     "没有选到准备退出": {
         "recognition": "TemplateMatch",
         "template": [
-            "碎片挑战_叉叉.png"
+            "Fragment_Challenge/碎片挑战_叉叉.png"
         ],
         "action": "Click",
         "anchor": {
@@ -871,7 +871,7 @@
             "普通选择模式": "",
             "普通选择模式_翻页": "",
             "找不到退出": ""
-        }, //清空一下，邪恶入侵还要复用
+        },
         "next": [
             "点击日常_碎片挑战"
         ]

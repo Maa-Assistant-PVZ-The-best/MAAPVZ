@@ -17,7 +17,7 @@
             132
         ],
         "template": [
-            "植物.png"
+            "Detection_Order/植物.png"
         ],
         "action": "Click",
         "next": [
@@ -35,7 +35,7 @@
         ],
         "action": "Click",
         "template": [
-            "神器强化.png"
+            "Detection_Order/神器强化.png"
         ],
         "next": [
             "检查序列_点击进化神器",
@@ -75,8 +75,8 @@
     "检查序列_点击进化神器": {
         "recognition": "TemplateMatch",
         "template": [
-            "检查序列_进化神器1.png",
-            "检查序列_进化神器2.png"
+            "Detection_Order/检查序列_进化神器1.png",
+            "Detection_Order/检查序列_进化神器2.png"
         ],
         "action": "Click",
         "next": [
@@ -88,7 +88,7 @@
     "检查序列_返回主界面": {
         "recognition": "TemplateMatch",
         "template": [
-            "叉叉.png"
+            "Detection_Order/叉叉.png"
         ],
         "roi": [
             1014,
@@ -99,13 +99,13 @@
         "action": "Click",
         "post_wait_freezes": 1000,
         "next": [
-            "序列检查_点击竞技",
+            "序列检查_点击竞技"
         ]
     },
     "序列检查_点击竞技": {
         "recognition": "TemplateMatch",
         "template": [
-            "竞技.png"
+            "Detection_Order/竞技.png"
         ],
         "roi": [
             779,
@@ -128,7 +128,7 @@
             134
         ],
         "template": [
-            "无尽挑战.png"
+            "Detection_Order/无尽挑战.png"
         ],
         "action": "Click",
         "next": [
@@ -294,7 +294,7 @@
         ],
         "action": "Click",
         "next": [
-            "序列检查_无尽_点击开始/继续训练",
+            "序列检查_无尽_点击开始/继续训练"
         ]
     },
     "序列检查_无尽_点击开始/继续训练": {
@@ -383,7 +383,7 @@
     "序列检查_使用8种植物_种植_1": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -563,7 +563,7 @@
     "序列检查_点击追击": {
         "recognition": "TemplateMatch",
         "template": [
-            "潘追.png"
+            "Detection_Order/潘追.png"
         ],
         "action": "Click",
         "next": []
@@ -816,7 +816,7 @@
         "recognition": "TemplateMatch",
         "max_hit": 1,
         "template": [
-            "序列检查_向日葵.png"
+            "Detection_Order/序列检查_向日葵.png"
         ],
         "roi": [
             130,
@@ -915,8 +915,8 @@
     "序列检查_切换进化神器_点击进化神器": {
         "recognition": "TemplateMatch",
         "template": [
-            "序列检查_切换进化神器_点击进化神器1.png",
-            "序列检查_切换进化神器_点击进化神器2.png"
+            "Detection_Order/序列检查_切换进化神器_点击进化神器1.png",
+            "Detection_Order/序列检查_切换进化神器_点击进化神器2.png"
         ],
         "action": "Click",
         "next": [
@@ -943,7 +943,7 @@
     "序列检查_切换进化神器_退出": {
         "recognition": "TemplateMatch",
         "template": [
-            "叉叉.png"
+            "Detection_Order/叉叉.png"
         ],
         "action": "Click",
         "roi": [
@@ -969,12 +969,12 @@
         ],
         "action": "Click",
         "post_wait_freezes": 1000,
-        "next": [] //在interface覆盖
+        "next": []
     },
     "序列检查_开始战斗_种植1": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1002,7 +1002,7 @@
     "序列检查_开始战斗_种植2": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1030,7 +1030,7 @@
     "序列检查_开始战斗_种植3": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1058,7 +1058,7 @@
     "序列检查_开始战斗_种植4": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1086,7 +1086,7 @@
     "序列检查_开始战斗_种植5": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1114,7 +1114,7 @@
     "序列检查_开始战斗_种植6": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1142,7 +1142,7 @@
     "序列检查_开始战斗_种植7": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1170,7 +1170,7 @@
     "序列检查_开始战斗_种植8": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1198,7 +1198,7 @@
     "序列检查_开始战斗_种植9": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1226,7 +1226,7 @@
     "序列检查_局内_使用进化神器": {
         "recognition": "TemplateMatch",
         "template": [
-            "二倍速.png"
+            "Detection_Order/二倍速.png"
         ],
         "roi": [
             1139,
@@ -1256,5 +1256,5 @@
         "next": [
             "mini_tools"
         ]
-    },
+    }
 }

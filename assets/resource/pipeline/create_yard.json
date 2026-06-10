@@ -17,7 +17,7 @@
     "创意庭院点击竞技": {
         "recognition": "TemplateMatch",
         "template": [
-            "竞技.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -28,7 +28,7 @@
     "点击创意庭院": {
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -39,7 +39,7 @@
         "max_hit": 6,
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院_游玩.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -49,7 +49,7 @@
     "点击搜索": {
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院_搜索.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -59,7 +59,7 @@
     "点击搜索栏": {
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院_搜索栏.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -90,7 +90,7 @@
         "recognition": "TemplateMatch",
         "timeout": 180000,
         "template": [
-            "创意庭院_点击挑战.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
@@ -101,14 +101,14 @@
     "创意庭院_领取黄币": {
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院_黄币确定.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click"
     },
     "创意庭院_继续": {
         "recognition": "TemplateMatch",
         "template": [
-            "创意庭院_继续.png"
+            "create_yard/竞技.png"
         ],
         "action": "Click",
         "next": [
