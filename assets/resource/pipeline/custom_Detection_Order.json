@@ -146,7 +146,7 @@
     },
     "截图保存_无尽埃及": {
         "action": "Custom",
-        "pre_delay": 6000,
+        "pre_delay": 10000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽埃及"
@@ -157,7 +157,7 @@
     },
     "截图保存_无尽海盗": {
         "action": "Custom",
-        "pre_delay": 6000,
+        "pre_delay": 10000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽海盗"
@@ -168,7 +168,7 @@
     },
     "截图保存_无尽沙滩": {
         "action": "Custom",
-        "pre_delay": 6000,
+        "pre_delay": 10000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽沙滩"
