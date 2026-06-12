@@ -1,0 +1,79 @@
+{
+    "Dai_Enter": {
+        "recognition": "OCR",
+        "expected": "玩法说明",
+        "roi": [
+            1104,
+            42,
+            131,
+            43
+        ],
+        "action": "Click",
+        "target": [
+            603,
+            649
+        ],
+        "timeout": -1,
+        "next": [
+            "Dai_循环"
+        ]
+    },
+    "Dai_循环": {
+        "recognition": "OCR",
+        "expected": "支持左侧",
+        "roi": [
+            256,
+            491,
+            236,
+            71
+        ],
+        "action": "Click",
+        "target": [
+            463,
+            521
+        ],
+        "timeout": -1,
+        "post_delay": 2000,
+        "mix_hit": -1,
+        "next": [
+            "Dai_卡了",
+            "Dai_返回",
+            "Dai_循环"
+        ]
+    },
+    "Dai_卡了": {
+        "recognition": "OCR",
+        "expected": "系统提示",
+        "roi": [
+            562,
+            244,
+            165,
+            52
+        ],
+        "action": "Click",
+        "target": [
+            639,
+            513
+        ],
+        "timeout": -1,
+        "post_delay": 2000,
+        "next": [
+            "Dai_循环"
+        ]
+    },
+    "Dai_返回": {
+        "recognition": "OCR",
+        "expected": "返回",
+        "roi": [
+            586,
+            652,
+            117,
+            46
+        ],
+        "action": "Click",
+        "timeout": -1,
+        "next": [
+            "Dai_Enter"
+        ]
+    }
+}

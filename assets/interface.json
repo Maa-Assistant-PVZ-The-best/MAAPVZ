@@ -38,7 +38,11 @@
     ],
     "import": [
         "./resource/task/plants_explore_debris.json",
-        "./resource/task/fragment_challenge.json"
+        "./resource/task/fragment_challenge.json",
+        "./resource/pipeline/HeartTower_0.json",
+        "./resource/pipeline/HeartTower_1.json",
+        "./resource/pipeline/HeartTower_2.json",
+        "./resource/pipeline/HeartTower_3.json"
     ],
     "task": [
         {
@@ -113,6 +117,19 @@
             "description": "卡槽要带对,每行都要一个双发了再在选卡界面开脚本,"
         },
         {
+            "name": "心塔自动脚本",
+            "entry": "HeartTowerEntry",
+            "option": [
+                "起始关卡选择"
+            ]
+        },
+        {
+            "name": "戴夫杯",
+            "entry": "Dai_Enter",
+            "default_check": false,
+            "description": "在匹配界面开脚本"
+        },
+        {
             "name": "双人对决（已禁用）",
             "entry": "双人对决_前置检查",
             "resource": [
@@ -154,6 +171,47 @@
         },
     ],
     "option": {
+        "起始关卡选择": {
+            "type": "select",
+            "label": "起始关卡",
+            "description": "选择要打的关卡",
+            "default_case": "1关",
+            "cases": [
+                {
+                    "name": "1关",
+                    "label": "第1关",
+                    "pipeline_override": {
+                        "HeartTowerEntry": {
+                            "next": [
+                                "1关"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "2关",
+                    "label": "第2关",
+                    "pipeline_override": {
+                        "HeartTowerEntry": {
+                            "next": [
+                                "2关"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "3-149关",
+                    "label": "第3~149关",
+                    "pipeline_override": {
+                        "HeartTowerEntry": {
+                            "next": [
+                                "3_149关"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
         "刷金币模式选择": {
             "type": "select",
             "default_case": "一直刷胜场/金币",
