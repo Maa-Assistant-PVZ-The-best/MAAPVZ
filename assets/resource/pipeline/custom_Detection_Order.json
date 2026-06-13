@@ -13,7 +13,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "Detection_Order/神器一阶.png",
+            "template": "神器一阶.png",
             "level": 1,
             "roi": [
                 630,
@@ -33,7 +33,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "Detection_Order/神器三阶.png",
+            "template": "神器三阶.png",
             "level": 3,
             "roi": [
                 755,
@@ -52,7 +52,7 @@
         "action": "Custom",
         "custom_action": "ClickAndCount",
         "custom_action_param": {
-            "template": "Detection_Order/神器四阶.png",
+            "template": "神器四阶.png",
             "level": 4,
             "threshold": 0.9,
             "roi": [
@@ -146,7 +146,7 @@
     },
     "截图保存_无尽埃及": {
         "action": "Custom",
-        "pre_delay": 10000,
+        "pre_delay": 5000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽埃及"
@@ -157,7 +157,7 @@
     },
     "截图保存_无尽海盗": {
         "action": "Custom",
-        "pre_delay": 10000,
+        "pre_delay": 5000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽海盗"
@@ -168,7 +168,7 @@
     },
     "截图保存_无尽沙滩": {
         "action": "Custom",
-        "pre_delay": 10000,
+        "pre_delay": 5000,
         "custom_action": "TakeCountScreenshot",
         "custom_action_param": {
             "name": "无尽沙滩"
