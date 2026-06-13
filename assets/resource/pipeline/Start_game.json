@@ -12,6 +12,15 @@
             "点击登录"
         ]
     },
+    "打开pvz_联想": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "package": "com.popcap.pvz2cthdlx",
+        "post_delay": 16000,
+        "next": [
+            "点击登录"
+        ]
+    },
     "打开pvz_360": {
         "timeout": 180000,
         "action": "StartApp",
@@ -151,6 +160,15 @@
         "package": "com.popcap.pvz2cthdhwct",
         "next": [
             "打开pvz_华为"
+        ]
+    },
+    "关闭pvz_联想": {
+        "enabled": false,
+        "timeout": 180000,
+        "action": "StopApp",
+        "package": "com.popcap.pvz2cthdlx",
+        "next": [
+            "打开pvz_联想"
         ]
     },
     "关闭pvz_360": {
@@ -508,18 +526,16 @@
         "action": "Click",
         "next": [
             "关闭公告",
-            "再次检查是否在主界面"
+            "再次检查是否在主界面",
         ]
     },
     "再次检查是否在主界面": {
         "timeout": 3000,
         "recognition": "TemplateMatch",
         "template": [
-            "Start_game/叉叉.png",
-            "Start_game/公告的叉叉.png",
-            "Start_game/僵尸清除_确定.png"
+            "Start_game/主界面特征.png"
         ],
-        "action": "Click",
+        "green_mask": true,
         "post_wait_freezes": 1000,
         "next": [
             "关闭公告",

@@ -115,9 +115,15 @@
             "option": [
                 "模式选择"
             ],
-            "entry": "地宫2_前置检查",
+            "entry": "时空秘境_前置检查",
             "default_check": false,
-            "description": "需要有歌葵，会一直重开，能一直刷但是刷的很慢"
+        },
+        {
+            "name": "无尽挑战",
+            "entry": "无尽挑战_前置检查",
+            "option": [
+                "当期无尽模式"
+            ]
         },
         {
             "name": "心塔自动脚本",
@@ -170,26 +176,42 @@
         },
         {
             "name": "dbug（不要开启）",
-            "entry": "地宫2无尽_切换配置"
+            "entry": "探索_探险次数耗尽"
         },
     ],
     "option": {
+        "当期无尽模式": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "巨浪沙滩"
+                }
+            ]
+        },
         "模式选择": {
             "type": "select",
             "cases": [
                 {
-                    "name": "地宫",
+                    "name": "地宫遗迹",
                     "option": [
-                        "地宫2无尽"
+                        "地宫模式"
                     ]
                 }
             ]
         },
-        "地宫2无尽": {
+        "地宫模式": {
             "type": "select",
             "cases": [
                 {
-                    "name": "地宫2无尽"
+                    "name": "地宫遗迹2无尽",
+                    "description": "需要有歌葵，会一直重开，能一直刷但是刷的很慢",
+                    "pipeline_override": {
+                        "时空秘境_时空秘境": {
+                            "next": [
+                                "地宫2无尽_地宫秘境2"
+                            ]
+                        },
+                    }
                 }
             ]
         },
@@ -1277,6 +1299,9 @@
                 {
                     "name": "Yes",
                     "pipeline_override": {
+                        "关闭pvz_联想": {
+                            "enabled": true
+                        },
                         "关闭pvz_4399": {
                             "enabled": true
                         },
@@ -1713,6 +1738,17 @@
             "type": "select",
             "description": "选择你要进入的渠道服",
             "cases": [
+                {
+                    "name": "联想",
+                    "pipeline_override": {
+                        "选择渠道服": {
+                            "next": [
+                                "关闭pvz_联想",
+                                "打开pvz_联想"
+                            ]
+                        }
+                    }
+                },
                 {
                     "name": "4399",
                     "pipeline_override": {

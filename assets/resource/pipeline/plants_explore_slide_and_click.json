@@ -462,6 +462,15 @@
             "自动选择"
         ]
     },
+    "探索_探险次数耗尽": {
+        "recognition": "OCR",
+        "expected": [
+            "探险次数耗尽"
+        ],
+        "next": [
+            "探索_回到顶部"
+        ]
+    },
     "豌豆射手_开始": {
         "recognition": "TemplateMatch",
         "template": [

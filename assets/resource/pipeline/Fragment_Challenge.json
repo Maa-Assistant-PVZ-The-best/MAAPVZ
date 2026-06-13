@@ -31,6 +31,7 @@
             "Fragment_Challenge/碎片挑战_图标.png"
         ],
         "action": "Click",
+        "post_wait_freezes": 500,
         "next": [
             "巨人危机_难度选择",
             "巨人危机_尚未开放",

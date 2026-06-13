@@ -1,34 +1,4 @@
 {
-    "地宫2_前置检查": {
-        "timeout": 10000,
-        "action": "DoNothing",
-        "next": [
-            "地宫2无尽_点击竞技",
-            "[JumpBack]返回主界面"
-        ]
-    },
-    "地宫2无尽_点击竞技": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/竞技.png"
-        ],
-        "action": "Click",
-        "next": [
-            "地宫2无尽_时空秘境",
-            "地宫2无尽_点击竞技"
-        ]
-    },
-    "地宫2无尽_时空秘境": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/时空秘境.png"
-        ],
-        "action": "Click",
-        "next": [
-            "地宫2无尽_地宫秘境2",
-            "地宫2无尽_时空秘境"
-        ]
-    },
     "地宫2无尽_地宫秘境2": {
         "recognition": "TemplateMatch",
         "template": [
@@ -744,7 +714,8 @@
             "地宫2无尽_无尽模式",
             "地宫2无尽_切换配置",
             "地宫2无尽_第一关_等待_领取阳光",
-            "地宫2无尽_等待"
+            "地宫2无尽_等待",
+            "地宫2无尽_结算",
         ]
     },
     "地宫2无尽_第一关_等待_领取阳光": {
@@ -1868,7 +1839,10 @@
     },
     "地宫2无尽_婆罗_滑动1": {
         "recognition": "TemplateMatch",
-        "template": "Land_gong_two/婆罗.png",
+        "template": [
+            "Land_gong_two/婆罗.png",
+            "Land_gong_two/茄子婆罗.png"
+        ],
         "roi": [
             4,
             367,
@@ -2872,7 +2846,10 @@
     },
     "地宫2无尽_婆罗_滑动2": {
         "recognition": "TemplateMatch",
-        "template": "Land_gong_two/婆罗.png",
+        "template": [
+            "Land_gong_two/婆罗.png",
+            "Land_gong_two/茄子婆罗.png"
+        ],
         "roi": [
             4,
             367,
@@ -3277,7 +3254,8 @@
         "duration": 100,
         "pre_delay": 100,
         "next": [
-            "地宫2无尽_boss_检查3"
+            "地宫2无尽_boss_检查3",
+            "地宫2无尽_boss_铲子"
         ]
     },
     "地宫2无尽_boss_检查3": {

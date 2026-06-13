@@ -34,7 +34,7 @@
 
 ## 🚀 运行方法
 
-1. 前往 [Release页面](https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ/releases/latest) 下载最新版本。（暂不可用）
+1. 前往 [Release页面](https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ/releases/latest) 下载最新版本。
 2. 确保模拟器满足上述前置条件。
 3. 调整软件配置，选择对应渠道服与任务，然后启动。
 
