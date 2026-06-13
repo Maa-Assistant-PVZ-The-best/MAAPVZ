@@ -522,7 +522,7 @@
             "type": "select",
             "cases": [
                 {
-                    "name": "种八种不同植物",
+                    "name": "九个格子各自配置",
                     "description": "需要在编队6中配置，详细参考公告",
                     "option": [
                         "第一个格子",
