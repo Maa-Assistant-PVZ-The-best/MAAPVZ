@@ -13,7 +13,6 @@
             603,
             649
         ],
-        "timeout": -1,
         "next": [
             "Dai_循环"
         ]
@@ -32,12 +31,49 @@
             463,
             521
         ],
-        "timeout": -1,
         "post_delay": 2000,
         "next": [
             "Dai_卡了",
             "Dai_返回",
+            "Dai_局内",
+            "Dai_下一轮",
             "Dai_循环"
+        ]
+    },
+    "Dai_下一轮": {
+        "recognition": "OCR",
+        "expected": [
+            "进入下一轮"
+        ],
+        "roi": [
+            532,
+            647,
+            162,
+            47
+        ],
+        "pre_delay": 2000,
+        "next": [
+            "Dai_循环",
+            "Dai_下一轮",
+            "Dai_局内"
+        ]
+    },
+    "Dai_局内": {
+        "recognition": "OCR",
+        "expected": [
+            "表情"
+        ],
+        "pre_delay": 2000,
+        "roi": [
+            1132,
+            673,
+            48,
+            31
+        ],
+        "next": [
+            "Dai_循环",
+            "Dai_下一轮",
+            "Dai_局内"
         ]
     },
     "Dai_卡了": {
@@ -54,7 +90,6 @@
             639,
             513
         ],
-        "timeout": -1,
         "post_delay": 2000,
         "next": [
             "Dai_循环"
@@ -70,7 +105,6 @@
             46
         ],
         "action": "Click",
-        "timeout": -1,
         "next": [
             "Dai_Enter"
         ]

@@ -1,0 +1,9 @@
+{
+    "无尽挑战_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+}

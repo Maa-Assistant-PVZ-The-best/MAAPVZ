@@ -508,18 +508,16 @@
         "action": "Click",
         "next": [
             "关闭公告",
-            "再次检查是否在主界面"
+            "再次检查是否在主界面",
         ]
     },
     "再次检查是否在主界面": {
         "timeout": 3000,
         "recognition": "TemplateMatch",
         "template": [
-            "Start_game/叉叉.png",
-            "Start_game/公告的叉叉.png",
-            "Start_game/僵尸清除_确定.png"
+            "Start_game/主界面特征.png"
         ],
-        "action": "Click",
+        "green_mask": true,
         "post_wait_freezes": 1000,
         "next": [
             "关闭公告",
