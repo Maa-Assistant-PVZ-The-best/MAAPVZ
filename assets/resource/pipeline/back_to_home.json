@@ -9,7 +9,8 @@
             "back_to_home/公告的叉叉.png",
             "back_to_home/僵尸清除_确定.png",
             "back_to_home/返回主界面（双人对决）.png",
-            "back_to_home/活动的返回.png"
+            "back_to_home/活动的返回.png",
+            "back_to_home/时空秘境_返回.png"
         ],
         "action": "Click",
         "threshold": [
