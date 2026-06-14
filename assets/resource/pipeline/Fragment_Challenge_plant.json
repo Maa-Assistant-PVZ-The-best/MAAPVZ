@@ -1853,7 +1853,7 @@
             48
         ],
         "action": "Swipe",
-        "duration": 500,
+        "duration": 100,
         "begin": [
             381,
             401,
@@ -2054,7 +2054,7 @@
             48
         ],
         "action": "Swipe",
-        "duration": 500,
+        "duration": 100,
         "begin": [
             381,
             401,
@@ -2222,7 +2222,26 @@
         ],
         "action": "Click",
         "next": [
-            "点击碎片挑战"
+            "点击日常_碎片挑战"
+        ]
+    },
+    "碎片挑战_完成对局_确定_免广告卡": {
+        "post_wait_freezes": 500,
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "post_delay": 0,
+        "pre_delay": 0,
+        "roi": [
+            679,
+            564,
+            121,
+            45
+        ],
+        "action": "Click",
+        "next": [
+            "点击日常_碎片挑战"
         ]
     },
     "碎片挑战_邪恶入侵局内": {

@@ -2174,7 +2174,7 @@
             48
         ],
         "action": "Swipe",
-        "duration": 500,
+        "duration": 100,
         "begin": [
             381,
             401,
