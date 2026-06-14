@@ -6,4 +6,84 @@
             "[JumpBack]返回主界面"
         ]
     },
+    "无尽挑战_埃及": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_海盗港湾": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_狂野西部": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_功夫世界": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_未来世界": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_黑暗时代": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_巨浪沙滩": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_冰河世界": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_天空之城": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_失落之城": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_摇滚年代": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_恐龙危机": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_摩登世界": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_蒸汽时代": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_复兴时代": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    },
+    "无尽挑战_童话世界": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": []
+    }
 }

@@ -39,10 +39,6 @@
     "import": [
         "./resource/task/plants_explore_debris.json",
         "./resource/task/fragment_challenge.json",
-        "./resource/pipeline/HeartTower_0.json",
-        "./resource/pipeline/HeartTower_1.json",
-        "./resource/pipeline/HeartTower_2.json",
-        "./resource/pipeline/HeartTower_3.json"
     ],
     "task": [
         {
@@ -87,6 +83,11 @@
             "description": "先领取奖励，再进行探险"
         },
         {
+            "name": "潘妮秘宝",
+            "default_check": true,
+            "entry": "潘妮密保_前置检查"
+        },
+        {
             "name": "碎片挑战（测试）",
             "entry": "碎片挑战_前置检查",
             "description": "建议给仙人掌加点攻击，传奇巨人有概率会输",
@@ -97,10 +98,6 @@
                 "邪恶入侵配置"
                 // "暴走雪人配置"
             ]
-        },
-        {
-            "name": "潘妮秘宝",
-            "entry": "潘妮密保_前置检查"
         },
         {
             "name": "刷胜场/金币（测试）",
@@ -128,13 +125,6 @@
             "entry": "无尽挑战_前置检查",
             "option": [
                 "当期无尽模式"
-            ]
-        },
-        {
-            "name": "心塔自动脚本",
-            "entry": "HeartTowerEntry",
-            "option": [
-                "起始关卡选择"
             ]
         },
         {
@@ -208,52 +198,322 @@
             "type": "select",
             "cases": [
                 {
-                    "name": "神秘埃及"
+                    "name": "神秘埃及",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_埃及",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "海盗港湾"
+                    "name": "海盗港湾",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_海盗港湾",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "狂野西部"
+                    "name": "狂野西部",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_狂野西部",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "功夫世界"
+                    "name": "功夫世界",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_功夫世界",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "未来世界"
+                    "name": "未来世界",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_未来世界",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "黑暗时代"
+                    "name": "黑暗时代",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_黑暗时代",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "巨浪沙滩"
+                    "name": "巨浪沙滩",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_巨浪沙滩",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "冰河世界"
+                    "name": "冰河世界",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_冰河世界",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "天空之城"
+                    "name": "天空之城",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_天空之城",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "失落之城"
+                    "name": "失落之城",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_失落之城",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "摇滚年代"
+                    "name": "摇滚年代",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_摇滚年代",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "恐龙危机"
+                    "name": "恐龙危机",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_恐龙危机",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "摩登世界"
+                    "name": "摩登世界",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_摩登世界",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "蒸汽时代"
+                    "name": "蒸汽时代",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_蒸汽时代",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "复兴时代"
+                    "name": "复兴时代",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_复兴时代",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
                 },
                 {
-                    "name": "童话世界"
+                    "name": "童话世界",
+                    "option": [
+                        "植物配置"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_童话世界",
+                                "[JumpBack]返回主界面"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        "植物配置": {
+            "type": "select",
+            "description": "参考用户文档（关于我们-公告-用户文档）",
+            "cases": [
+                {
+                    "name": "自动心塔",
+                    "option": [
+                        "起始关卡选择"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_埃及": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_海盗港湾": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_狂野西部": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_功夫世界": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_未来世界": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_黑暗时代": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_巨浪沙滩": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_冰河世界": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_天空之城": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_失落之城": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_摇滚年代": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_恐龙危机": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_摩登世界": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_蒸汽时代": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_复兴时代": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        },
+                        "无尽挑战_童话世界": {
+                            "next": [
+                                "HeartTowerEntry"
+                            ]
+                        }
+                    }
                 }
             ]
         },
@@ -270,6 +530,7 @@
         },
         "地宫模式": {
             "type": "select",
+            "description": "参考用户文档（关于我们-公告-用户文档）",
             "cases": [
                 {
                     "name": "地宫遗迹2无尽",
@@ -493,6 +754,7 @@
             "cases": [
                 {
                     "name": "无尽埃及",
+                    "description": "参考用户文档（关于我们-公告-用户文档）",
                     "option": [
                         "种植类型"
                     ],
@@ -516,6 +778,7 @@
                 },
                 {
                     "name": "无尽海盗",
+                    "description": "参考用户文档（关于我们-公告-用户文档）",
                     "option": [
                         "种植类型"
                     ],
@@ -539,6 +802,7 @@
                 },
                 {
                     "name": "无尽沙滩",
+                    "description": "参考用户文档（关于我们-公告-用户文档）",
                     "option": [
                         "种植类型"
                     ],
@@ -662,7 +926,7 @@
             "type": "select",
             "cases": [
                 {
-                    "name": "九个格子各自配置",
+                    "name": "植物配置",
                     "description": "需要在编队6中配置，详细参考公告",
                     "option": [
                         "第一个格子",
