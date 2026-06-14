@@ -2141,10 +2141,17 @@
         ]
     },
     "地宫2无尽_婆罗_滑动1": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/婆罗.png",
-            "Land_gong_two/茄子婆罗.png"
+        "recognition": "ColorMatch",
+        "method": 40,
+        "lower": [
+            0,
+            112,
+            74
+        ],
+        "upper": [
+            134,
+            250,
+            231
         ],
         "roi": [
             4,
@@ -2152,7 +2159,6 @@
             139,
             149
         ],
-        "threshold": 0.89,
         "action": "Swipe",
         "begin": [
             57,
@@ -3148,10 +3154,31 @@
         ]
     },
     "地宫2无尽_婆罗_滑动2": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/婆罗.png",
-            "Land_gong_two/茄子婆罗.png"
+        "recognition": "ColorMatch",
+        "method": 40,
+        "lower": [
+            [
+                150,
+                0,
+                59
+            ],
+            [
+                0,
+                0,
+                59
+            ]
+        ],
+        "upper": [
+            [
+                179,
+                9,
+                207
+            ],
+            [
+                60,
+                9,
+                207
+            ]
         ],
         "roi": [
             4,
@@ -3159,7 +3186,6 @@
             139,
             149
         ],
-        "threshold": 0.89,
         "action": "Swipe",
         "begin": [
             57,
