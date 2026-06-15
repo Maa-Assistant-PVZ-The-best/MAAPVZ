@@ -1,1 +1,63 @@
-{}
+{
+    "旅行原木_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "旅行原木_点击日常",
+            "[JumpBack]检查当前是否在主界面"
+        ]
+    },
+    "旅行原木_点击日常": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/日常.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "旅行原木_点击旅行原木"
+        ]
+    },
+    "旅行原木_点击旅行原木": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Travel_Wood/旅行原木.png"
+        ],
+        "action": "Click",
+        "next": [
+            "旅行原木_朕收下了",
+            "旅行原木_领取宝箱",
+            "返回主界面"
+        ]
+    },
+    "旅行原木_朕收下了": {
+        "recognition": "OCR",
+        "expected": [
+            "朕收下了"
+        ],
+        "action": "Click",
+        "next": [
+            "旅行原木_朕收下了",
+            "旅行原木_领取宝箱"
+        ]
+    },
+    "旅行原木_领取宝箱": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Travel_Wood/宝箱.png"
+        ],
+        "action": "Click",
+        "next": [
+            "旅行原木_朕收下了",
+            "旅行原木_领取宝箱",
+            "返回主界面"
+        ]
+    }
+}

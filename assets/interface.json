@@ -100,6 +100,11 @@
             ]
         },
         {
+            "name": "旅行原木（测试）",
+            "entry": "旅行原木_前置检查",
+            "default_check": true,
+        },
+        {
             "name": "刷胜场/金币（测试）",
             "entry": "埃及第一关刷金币_前置检查",
             "description": "不要给仙人掌带超级装扮",
@@ -108,12 +113,12 @@
             ]
         },
         {
-            "name": "幸运宝藏",
+            "name": "幸运宝藏（测试）",
             "description": "仅自动领取，不会向你汇报获得什么东西",
             "entry": "幸运宝藏_前置检查"
         },
         {
-            "name": "时空秘境",
+            "name": "时空秘境（测试）",
             "option": [
                 "模式选择"
             ],
@@ -121,14 +126,14 @@
             "default_check": false,
         },
         {
-            "name": "无尽挑战",
+            "name": "无尽挑战（测试）",
             "entry": "无尽挑战_前置检查",
             "option": [
                 "当期无尽模式"
             ]
         },
         {
-            "name": "戴夫杯",
+            "name": "戴夫杯（测试）",
             "entry": "Dai_Enter",
             "default_check": false,
             "description": "在匹配界面开脚本"
@@ -1946,14 +1951,14 @@
                         }
                     }
                 },
-                // {
-                //     "name": "胆小菇",
-                //     "pipeline_override": {
-                //         "碎片挑战_检索胆小菇": {
-                //             "enabled": true
-                //         }
-                //     }
-                // },
+                {
+                    "name": "胆小菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索胆小菇": {
+                            "enabled": true
+                        }
+                    }
+                },
                 {
                     "name": "吹风荚兰",
                     "pipeline_override": {
