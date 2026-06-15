@@ -138,11 +138,13 @@ def install_deps():
 def install_resource():
     configure_ocr_model()
 
+    # 复制整个 resource 目录（包含 task 子目录及其中所有文件）
     shutil.copytree(
         working_dir / "assets" / "resource",
         install_path / "resource",
         dirs_exist_ok=True,
     )
+    # 复制 interface.json（只一次）
     shutil.copy2(
         working_dir / "assets" / "interface.json",
         install_path,
@@ -157,23 +159,19 @@ def install_resource():
 
     # 修正 agent 配置
     if "agent" in interface:
-        # 根据平台设置正确的 Python 可执行文件路径（相对于 install 根目录）
         if os_name == "win":
             interface["agent"]["child_exec"] = "python\\python.exe"
         else:
             interface["agent"]["child_exec"] = "python/bin/python3"
         
-        # 修正脚本参数中的路径
         if "child_args" in interface["agent"] and len(interface["agent"]["child_args"]) >= 2:
-            # 假设第二个参数是脚本路径，将其中的 "../agent/main.py" 改为 "agent/main.py"
             script_path = interface["agent"]["child_args"][1]
             if script_path.startswith(".."):
                 interface["agent"]["child_args"][1] = "agent/main.py"
 
     with open(interface_path, "w", encoding="utf-8") as f:
         jsonc.dump(interface, f, ensure_ascii=False, indent=4)
-
-
+        
 def install_chores():
     shutil.copy2(
         working_dir / "README.md",
