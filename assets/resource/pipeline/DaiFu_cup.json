@@ -41,6 +41,7 @@
         ]
     },
     "Dai_下一轮": {
+        "timeout": 30000,
         "recognition": "OCR",
         "expected": [
             "进入下一轮"
