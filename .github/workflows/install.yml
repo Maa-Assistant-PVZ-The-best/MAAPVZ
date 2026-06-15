@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 env:
@@ -20,43 +22,35 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-
-      # 删除了原本的 Check for release keyword 步骤，不再需要 [release] 关键词
-
       - id: set_tag
         run: |
-          is_release=false
-          is_prerelease=false
-          tag=""
-
-          # 只处理 push 到 main 分支的事件
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            # 取 commit 消息第一行
-            FIRST_LINE=$(echo "${{ github.event.head_commit.message }}" | head -n1)
-            # 检查是否以 v 开头并跟随语义版本号，例如 v0.1.3 或 v1.2.3-alpha
-            if [[ "$FIRST_LINE" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-              # 提取完整版本号（含可能的预发布后缀）
-              VERSION=$(echo "$FIRST_LINE" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?')
-              if [ -n "$VERSION" ]; then
-                is_release=true
-                tag="$VERSION"
-                # 根据版本号判断是否为预发布
-                if [[ "$VERSION" =~ -(alpha|beta|rc|pre|preview) ]]; then
-                  is_prerelease=true
-                fi
-              fi
+          # 检查标签格式
+          is_release=${{ startsWith(github.ref, 'refs/tags/v') }}
+          tag=$(git describe --tags --match "v*" ${{ github.ref }} || true)
+          if [[ $tag != v* ]]; then
+            tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
+            if [[ $tag != v* ]]; then
+              tag="v0.0.0"
             fi
+            tag=$(date "+$tag-%y%m%d-$(git rev-parse --short HEAD)")
           fi
 
-          # 无有效版本号时生成一个 CI 标记（不用于发布）
-          if [ -z "$tag" ]; then
-            short_hash=$(git rev-parse --short HEAD | tr 'a-z' 'A-Z')
-            tag="ci-$(date +%y%m%d)-${short_hash}"
+          if ! $($is_release) ; then
+            prefix=${tag%-*-*}
+            suffix=${tag#$prefix-}
+            tag="$prefix-ci.$suffix"
           fi
 
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "is_release=$is_release" >> $GITHUB_OUTPUT
-          echo "is_prerelease=$is_prerelease" >> $GITHUB_OUTPUT
+          # 检查是否为预发布版本
+          is_prerelease=false
+          if [[ $tag =~ .*alpha.* || $tag =~ .*beta.* || $tag =~ .*rc.* || $tag =~ .*dev.* || $tag =~ .*-ci.* ]]; then
+            is_prerelease=true
+            echo "This is a pre-release version"
+          fi
+
+          echo tag=$tag | tee -a $GITHUB_OUTPUT
+          echo is_release=$is_release | tee -a $GITHUB_OUTPUT
+          echo is_prerelease=$is_prerelease | tee -a $GITHUB_OUTPUT
     outputs:
       tag: ${{ steps.set_tag.outputs.tag }}
       is_release: ${{ steps.set_tag.outputs.is_release }}
@@ -254,17 +248,40 @@ jobs:
         id: git-cliff
         with:
           config: .github/cliff.toml
+          # 正式版：使用 tag-pattern 只匹配正式版标签，包含所有从上一个正式版以来的提交
+          # 预发布版：正常生成，只包含从上一个标签以来的提交
           args: >-
             -vv --latest --strip header
+            ${{ needs.meta.outputs.is_prerelease == 'false' && '--tag-pattern "^v[0-9]+\\.[0-9]+\\.[0-9]+$"' || '' }}
         env:
           OUTPUT: CHANGES.md
           GITHUB_REPO: ${{ github.repository }}
+
+      - name: Debug changelog output
+        run: |
+          echo "=== CHANGES.md 内容 ==="
+          cat CHANGES.md
+          echo "=== git-cliff 输出变量 content ==="
+          echo "${{ steps.git-cliff.outputs.content }}"
+
+      - name: Debug latest tag info
+        run: |
+          # 查看所有标签的排序
+          git tag -l --sort=-v:refname
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "无标签")
+          echo "Latest tag (git describe): $latest_tag"
 
   release:
     if: ${{ needs.meta.outputs.is_release == 'true' }}
     needs: [meta, install, changelog]
     runs-on: ubuntu-latest
     steps:
+      - name: Debug meta outputs
+        run: |
+          echo "is_release: ${{ needs.meta.outputs.is_release }}"
+          echo "is_prerelease: ${{ needs.meta.outputs.is_prerelease }}"
+          echo "tag: ${{ needs.meta.outputs.tag }}"
+
       - uses: actions/download-artifact@v4
         with:
           path: assets
