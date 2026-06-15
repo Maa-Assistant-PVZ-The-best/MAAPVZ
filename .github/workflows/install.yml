@@ -1,4 +1,4 @@
-name: install
+name: Build and Release
 
 on:
   push:
@@ -15,6 +15,10 @@ env:
 jobs:
   meta:
     runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
+      is_release: ${{ steps.set_tag.outputs.is_release }}
+      is_prerelease: ${{ steps.set_tag.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,37 +28,55 @@ jobs:
           python-version: "3.12"
       - id: set_tag
         run: |
-          # 检查标签格式
-          is_release=${{ startsWith(github.ref, 'refs/tags/v') }}
-          tag=$(git describe --tags --match "v*" ${{ github.ref }} || true)
-          if [[ $tag != v* ]]; then
-            tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
-            if [[ $tag != v* ]]; then
-              tag="v0.0.0"
+          is_release=false
+          is_prerelease=false
+          tag=""
+
+          # 只处理 push 到 main 分支的事件(commit 触发)
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            FIRST_LINE=$(echo "${{ github.event.head_commit.message }}" | head -n1)
+            if [[ "$FIRST_LINE" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              VERSION=$(echo "$FIRST_LINE" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?')
+              if [ -n "$VERSION" ]; then
+                is_release=true
+                tag="$VERSION"
+                if [[ "$VERSION" =~ -(alpha|beta|rc|pre|preview) ]]; then
+                  is_prerelease=true
+                fi
+              fi
             fi
             tag=$(date "+$tag-%y%m%d-$(git rev-parse --short HEAD)")
           fi
 
-          if ! $($is_release) ; then
-            prefix=${tag%-*-*}
-            suffix=${tag#$prefix-}
-            tag="$prefix-ci.$suffix"
+          # 无有效版本号时生成 CI 标签(不发布)
+          if [ -z "$tag" ]; then
+            short_hash=$(git rev-parse --short HEAD | tr 'a-z' 'A-Z')
+            tag="ci-$(date +%y%m%d)-${short_hash}"
           fi
 
-          # 检查是否为预发布版本
-          is_prerelease=false
-          if [[ $tag =~ .*alpha.* || $tag =~ .*beta.* || $tag =~ .*rc.* || $tag =~ .*dev.* || $tag =~ .*-ci.* ]]; then
-            is_prerelease=true
-            echo "This is a pre-release version"
-          fi
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+          echo "is_release=$is_release" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$is_prerelease" >> $GITHUB_OUTPUT
 
-          echo tag=$tag | tee -a $GITHUB_OUTPUT
-          echo is_release=$is_release | tee -a $GITHUB_OUTPUT
-          echo is_prerelease=$is_prerelease | tee -a $GITHUB_OUTPUT
-    outputs:
-      tag: ${{ steps.set_tag.outputs.tag }}
-      is_release: ${{ steps.set_tag.outputs.is_release }}
-      is_prerelease: ${{ steps.set_tag.outputs.is_prerelease }}
+  create_tag:
+    needs: meta
+    if: ${{ needs.meta.outputs.is_release == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create and push tag
+        run: |
+          TAG="${{ needs.meta.outputs.tag }}"
+          # 检查远程是否已存在该 tag
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "Tag ${TAG} already exists remotely, skipping creation."
+          else
+            git tag "${TAG}"
+            git push origin "${TAG}"
+            echo "Tag ${TAG} created and pushed."
+          fi
 
   install:
     needs: meta
@@ -86,7 +108,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-      - uses: actions/setup-python@v6   
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -233,7 +255,7 @@ jobs:
 
   changelog:
     name: Generate changelog
-    needs: meta
+    needs: [meta, create_tag]
     runs-on: ubuntu-latest
     outputs:
       release_body: ${{ steps.git-cliff.outputs.content }}
@@ -242,6 +264,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Fetch all tags (to ensure new tag is available)
+        run: git fetch --tags
 
       - name: Generate a changelog
         uses: orhun/git-cliff-action@v4
@@ -259,21 +285,20 @@ jobs:
 
       - name: Debug changelog output
         run: |
-          echo "=== CHANGES.md 内容 ==="
+          echo "CHANGES.md 内容:"
           cat CHANGES.md
-          echo "=== git-cliff 输出变量 content ==="
+          echo "git-cliff 输出变量 content:"
           echo "${{ steps.git-cliff.outputs.content }}"
 
       - name: Debug latest tag info
         run: |
-          # 查看所有标签的排序
           git tag -l --sort=-v:refname
           latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "无标签")
           echo "Latest tag (git describe): $latest_tag"
 
   release:
     if: ${{ needs.meta.outputs.is_release == 'true' }}
-    needs: [meta, install, changelog]
+    needs: [meta, install, changelog, create_tag]
     runs-on: ubuntu-latest
     steps:
       - name: Debug meta outputs
