@@ -2,9 +2,50 @@
     "有免广告卡_前置检查": {
         "timeout": 10000,
         "action": "DoNothing",
-        "max_hit": 3,
         "next": [
+            "免广告卡_option节点",
             "[JumpBack]检查当前是否在主界面"
         ]
     },
+    "免广告卡_option节点": {
+        "timeout": 3000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/主界面特征.png"
+        ],
+        "green_mask": true,
+        "threshold": [
+            0.8
+        ],
+        "method": 10001,
+        "action": "DoNothing",
+        "next": [
+            "免广告卡_免费每日50钻",
+            "免广告卡_潘妮秘宝",
+            "免广告卡_超z钥匙",
+            "返回主界面",
+            "确认当前是否在主界面"
+        ]
+    },
+    "免广告卡_潘妮秘宝": {
+        "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "潘妮秘宝_免广告卡_点击商店"
+        ]
+    },
+    "免广告卡_超z钥匙": {
+        "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "免广告卡_超z钥匙_点击竞技"
+        ]
+    },
+    "免广告卡_免费每日50钻": {
+        "enabled": false,
+        "max_hit": 1,
+        "next": [
+            "执行每日50钻"
+        ]
+    }
 }

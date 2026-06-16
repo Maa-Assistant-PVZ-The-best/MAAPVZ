@@ -1,13 +1,4 @@
 {
-    "每日50钻_拥有免广告卡_前置检查": {
-        "timeout": 10000,
-        "action": "DoNothing",
-        "max_hit": 3,
-        "next": [
-            "执行每日50钻",
-            "[JumpBack]检查当前是否在主界面"
-        ]
-    },
     "执行每日50钻": {
         "timeout": 5000,
         "recognition": "TemplateMatch",
@@ -53,11 +44,9 @@
         ],
         "next": [
             "领取钻石",
-            "领取钻石_确定"
+            "领取钻石_确定",
+            "有免广告卡_前置检查"
         ],
-        "on_error": [
-            "返回主界面"
-        ]
     },
     "领取钻石_确定": {
         "recognition": "TemplateMatch",

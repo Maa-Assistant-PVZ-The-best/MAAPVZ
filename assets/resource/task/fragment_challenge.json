@@ -573,6 +573,7 @@
             ]
         },
         "增加巨人危机挑战次数": {
+            "description": "暂时不要打开，没做完",
             "type": "switch",
             "cases": [
                 {
@@ -585,6 +586,7 @@
         },
         "增加邪恶入侵挑战次数": {
             "type": "switch",
+            "description": "暂时不要打开，没做完",
             "cases": [
                 {
                     "name": "No"

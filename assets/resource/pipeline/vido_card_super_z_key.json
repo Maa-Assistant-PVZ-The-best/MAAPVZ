@@ -1,0 +1,102 @@
+{
+    "免广告卡_超z钥匙_点击竞技": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "vido_card_super_z_key/竞技.png"
+        ],
+        "action": "Click",
+        "roi": [
+            596,
+            481,
+            559,
+            236
+        ],
+        "next": [
+            "免广告卡_超z钥匙_点击超z",
+            "免广告卡_超z钥匙_点击竞技"
+        ]
+    },
+    "免广告卡_超z钥匙_点击超z": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "vido_card_super_z_key/超z.png"
+        ],
+        "action": "Click",
+        "roi": [
+            481,
+            196,
+            672,
+            472
+        ],
+        "next": [
+            "免广告卡_超z钥匙_点击继续",
+            "免广告卡_超z钥匙_点击钥匙的加号",
+            "免广告卡_超z钥匙_点击超z"
+        ]
+    },
+    "免广告卡_超z钥匙_点击继续": {
+        "recognition": "OCR",
+        "expected": [
+            "继续"
+        ],
+        "action": "Click",
+        "next": [
+            "免广告卡_超z钥匙_点击继续",
+            "免广告卡_超z钥匙_点击钥匙的加号",
+        ]
+    },
+    "免广告卡_超z钥匙_点击钥匙的加号": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "vido_card_super_z_key/加号.png"
+        ],
+        "action": "Click",
+        "roi": [
+            571,
+            1,
+            168,
+            88
+        ],
+        "next": [
+            "免广告卡_超z钥匙_观看广告"
+        ]
+    },
+    "免广告卡_超z钥匙_观看广告": {
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "action": "Click",
+        "roi": [
+            288,
+            466,
+            192,
+            66
+        ],
+        "next": [
+            "免广告卡_超z钥匙_观看广告_确定",
+            "免广告卡_超z钥匙_返回"
+        ]
+    },
+    "免广告卡_超z钥匙_观看广告_确定": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "action": "Click",
+        "roi": [
+            477,
+            463,
+            264,
+            107
+        ],
+        "next": [
+            "免广告卡_超z钥匙_返回"
+        ]
+    },
+    "免广告卡_超z钥匙_返回": {
+        "next": [
+            "有免广告卡_前置检查"
+        ]
+    }
+}

@@ -11,11 +11,35 @@
             "back_to_home/返回主界面（双人对决）.png",
             "back_to_home/活动的返回.png",
             "back_to_home/时空秘境_返回.png",
-            "back_to_home/潘妮秘宝的叉叉.png"
+            "back_to_home/潘妮秘宝的叉叉.png",
+            "back_to_home/超z的叉叉.png"
         ],
         "action": "Click",
         "threshold": [
             0.9
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "返回主界面2",
+            "确认当前是否在主界面"
+        ]
+    },
+    "返回主界面2": {
+        "timeout": 30000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/潘妮秘宝的叉叉.png",
+            "back_to_home/超z的叉叉.png"
+        ],
+        "action": "Click",
+        "threshold": [
+            0.9
+        ],
+        "roi": [
+            951,
+            65,
+            152,
+            103
         ],
         "post_wait_freezes": 1000,
         "next": [
