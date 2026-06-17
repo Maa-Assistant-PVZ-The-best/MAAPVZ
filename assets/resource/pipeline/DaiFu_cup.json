@@ -1,5 +1,6 @@
 {
     "Dai_Enter": {
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": "玩法说明",
         "roi": [
@@ -18,6 +19,7 @@
         ]
     },
     "Dai_循环": {
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": "支持左侧",
         "roi": [
@@ -41,7 +43,7 @@
         ]
     },
     "Dai_下一轮": {
-        "timeout": 30000,
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": [
             "进入下一轮"
@@ -61,6 +63,7 @@
         ]
     },
     "Dai_局内": {
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": [
             "表情"
@@ -80,6 +83,7 @@
         ]
     },
     "Dai_卡了": {
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": "系统提示",
         "roi": [
@@ -100,6 +104,7 @@
         ]
     },
     "Dai_返回": {
+        "timeout": 60000,
         "recognition": "OCR",
         "expected": "返回",
         "roi": [
