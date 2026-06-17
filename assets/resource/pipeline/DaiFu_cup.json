@@ -9,6 +9,7 @@
             131,
             43
         ],
+        "focus": "开始匹配",
         "action": "Click",
         "target": [
             603,
@@ -27,7 +28,6 @@
         "timeout": 60000,
         "recognition": "OCR",
         "expected": "支持左侧",
-        "focus": "支持左侧",
         "roi": [
             256,
             491,

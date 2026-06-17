@@ -237,6 +237,10 @@
                 },
                 {
                     "name": "Yes",
+                    "option": [
+                        "潘妮秘宝选择宝箱",
+                        "潘妮秘宝使用几次免广告卡"
+                    ],
                     "pipeline_override": {
                         "免广告卡_潘妮秘宝": {
                             "enabled": true,
@@ -244,6 +248,40 @@
                     }
                 }
             ]
+        },
+        "潘妮秘宝选择宝箱": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "普通宝箱"
+                },
+                {
+                    "name": "装扮碎片宝箱",
+                    "pipeline_override": {
+                        "潘妮秘宝_免广告卡_点击秘宝": {
+                            "next": [
+                                "潘妮秘宝_免广告卡_装扮宝物_滑动"
+                            ]
+                        },
+                    }
+                }
+            ]
+        },
+        "潘妮秘宝使用几次免广告卡": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "使用次数",
+                    "pipeline_type": "int",
+                    "default": "1",
+                    "verify": "^[1-9]\\d{0,1}$"
+                }
+            ],
+            "pipeline_override": {
+                "免广告卡_潘妮秘宝": {
+                    "max_hit": "{使用次数}",
+                },
+            }
         },
         "超z钥匙": {
             "type": "switch",

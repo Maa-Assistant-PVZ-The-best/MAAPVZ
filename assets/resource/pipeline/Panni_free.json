@@ -209,7 +209,97 @@
         ],
         "action": "Click",
         "next": [
+            "潘妮秘宝_装扮宝物_滑动"
+        ]
+    },
+    "潘妮秘宝_装扮宝物_滑动": {
+        "recognition": "OCR",
+        "expected": [
+            "宝物"
+        ],
+        "action": "Swipe",
+        "begin": [
+            945,
+            466,
+            25,
+            24
+        ],
+        "end": [
+            129,
+            471,
+            37,
+            28
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "潘妮秘宝_装扮宝物"
+        ]
+    },
+    "潘妮秘宝_装扮宝物": {
+        "recognition": "OCR",
+        "expected": [
+            "获得"
+        ],
+        "roi": [
+            857,
+            574,
+            368,
+            116
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "潘妮秘宝_装扮宝物_领取",
+            "潘妮秘宝_装扮宝物_关闭"
+        ]
+    },
+    "潘妮秘宝_装扮宝物_领取": {
+        "recognition": "OCR",
+        "expected": [
+            "点击开启"
+        ],
+        "roi": [
+            426,
+            544,
+            134,
+            56
+        ],
+        "focus": "领取装扮宝箱",
+        "action": "Click",
+        "next": [
+            "潘妮秘宝_装扮宝箱_确定"
+        ]
+    },
+    "潘妮秘宝_装扮宝箱_确定": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "roi": [
+            714,
+            605,
+            90,
+            48
+        ],
+        "action": "Click",
+        "next": [
+            "潘妮秘宝_装扮宝物_关闭"
+        ]
+    },
+    "潘妮秘宝_装扮宝物_关闭": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Panni_free/叉叉.png"
+        ],
+        "roi": [
+            829,
+            14,
+            106,
+            101
+        ],
+        "action": "Click",
+        "next": [
             "返回主界面"
         ]
-    }
+    },
 }
