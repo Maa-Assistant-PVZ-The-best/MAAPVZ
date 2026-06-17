@@ -21,6 +21,7 @@
             "method": 5
         },
         "action": "Click",
+        "focus": "点击日常",
         "next": [
             "旅行原木_点击旅行原木"
         ]
@@ -30,6 +31,7 @@
         "template": [
             "Travel_Wood/旅行原木.png"
         ],
+        "focus": "点击旅行原木",
         "action": "Click",
         "next": [
             "旅行原木_朕收下了",
@@ -42,6 +44,7 @@
         "expected": [
             "朕收下了"
         ],
+        "focus": "朕收下了",
         "action": "Click",
         "next": [
             "旅行原木_朕收下了",
@@ -54,6 +57,7 @@
         "template": [
             "Travel_Wood/宝箱.png"
         ],
+        "focus": "领取宝箱",
         "action": "Click",
         "next": [
             "旅行原木_朕收下了",

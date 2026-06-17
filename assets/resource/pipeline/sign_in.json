@@ -10,6 +10,7 @@
     },
     "执行签到": {
         "recognition": "TemplateMatch",
+        "focus": "执行签到",
         "template": [
             "sign_in/签到.png"
         ],

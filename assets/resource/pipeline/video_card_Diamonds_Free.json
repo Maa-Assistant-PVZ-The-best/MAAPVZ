@@ -15,6 +15,7 @@
         "threshold": [
             0.7999999
         ],
+        "focus": "领取钻石",
         "green_mask": true,
         "action": "Click",
         "next": [

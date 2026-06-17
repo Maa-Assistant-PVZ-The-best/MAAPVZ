@@ -44,6 +44,7 @@
             162,
             67
         ],
+        "focus": "使用广告卡领取秘宝",
         "action": "Click",
         "post_wait_freezes": 500,
         "next": [
@@ -54,7 +55,8 @@
     "潘妮秘宝_免广告卡_普通宝物_领取": {
         "recognition": "OCR",
         "expected": [
-            "观看广告"
+            "观看广告",
+            "点击开启"
         ],
         "roi": [
             426,

@@ -84,6 +84,7 @@
     "幸运宝藏_点击领取": {
         "recognition": "OCR",
         "max_hit": 3,
+        "focus": "领取第一个宝藏",
         "expected": [
             "^领取$"
         ],
@@ -101,6 +102,7 @@
     "幸运宝藏_点击领取2": {
         "recognition": "OCR",
         "max_hit": 3,
+        "focus": "领取第二个宝藏",
         "expected": [
             "^领取$"
         ],
@@ -118,6 +120,7 @@
     "幸运宝藏_点击领取3": {
         "recognition": "OCR",
         "max_hit": 3,
+        "focus": "领取第三个宝藏",
         "expected": [
             "^领取$"
         ],
