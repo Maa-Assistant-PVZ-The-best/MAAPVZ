@@ -15,6 +15,11 @@
             649
         ],
         "next": [
+            "Dai_Enter",
+            "Dai_返回",
+            "Dai_卡了",
+            "Dai_局内",
+            "Dai_下一轮",
             "Dai_循环"
         ]
     },
@@ -22,6 +27,7 @@
         "timeout": 60000,
         "recognition": "OCR",
         "expected": "支持左侧",
+        "focus": "支持左侧",
         "roi": [
             256,
             491,
@@ -99,8 +105,11 @@
         ],
         "post_delay": 2000,
         "next": [
-            "Dai_循环",
-            "Dai_返回"
+            "Dai_卡了",
+            "Dai_返回",
+            "Dai_局内",
+            "Dai_下一轮",
+            "Dai_循环"
         ]
     },
     "Dai_返回": {
@@ -115,7 +124,12 @@
         ],
         "action": "Click",
         "next": [
-            "Dai_Enter"
+            "Dai_Enter",
+            "Dai_卡了",
+            "Dai_返回",
+            "Dai_局内",
+            "Dai_下一轮",
+            "Dai_循环"
         ]
     }
 }

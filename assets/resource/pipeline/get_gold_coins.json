@@ -12,6 +12,7 @@
         "template": [
             "get_gold_coins/星系.png"
         ],
+        "focus": "点击星系",
         "action": "Click",
         "post_delay": 3000,
         "next": [
@@ -25,6 +26,7 @@
         "expected": [
             "神秘埃及"
         ],
+        "focus": "寻找埃及",
         "roi": [
             571,
             473,
@@ -46,6 +48,7 @@
         "expected": [
             "进入"
         ],
+        "focus": "进入埃及",
         "action": "Click",
         "roi": [
             536,
@@ -67,6 +70,7 @@
             5,
             9
         ],
+        "focus": "滑动",
         "end": [
             366,
             576,
@@ -91,6 +95,7 @@
             440,
             468
         ],
+        "focus": "进入关卡",
         "action": "Click",
         "post_delay": 2000,
         "next": [
@@ -128,6 +133,7 @@
             61
         ],
         "action": "Click",
+        "focus": "简单模式",
         "next": [
             "埃及1_埃及第一天_开始战斗",
             "埃及1_进入关卡"
@@ -138,6 +144,7 @@
         "template": [
             "get_gold_coins/世界_开始战斗.png"
         ],
+        "focus": "开始战斗",
         "action": "Click",
         "post_wait_freezes": 4000,
         "next": [
@@ -150,6 +157,7 @@
         "expected": [
             "清空卡牌"
         ],
+        "focus": "清空卡牌",
         "max_hit": 3,
         "roi": [
             11,
@@ -335,6 +343,7 @@
             139,
             40
         ],
+        "focus": "开始战斗",
         "action": "Click",
         "post_wait_freezes": 1000,
         "next": [
@@ -571,10 +580,11 @@
             "埃及1_进入关卡",
             "埃及1_胜利",
             "埃及1_重开"
-        ]
+        ],
     },
     "埃及1_重开十次": {
         "pre_wait_freezes": 1000,
+        "focus": "重开",
         "max_hit": 10,
         "next": [
             "埃及1_进入关卡",

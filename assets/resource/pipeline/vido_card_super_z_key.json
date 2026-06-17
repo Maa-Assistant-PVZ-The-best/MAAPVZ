@@ -66,6 +66,7 @@
         "expected": [
             "观看广告"
         ],
+        "focus": "领取超z钥匙",
         "action": "Click",
         "roi": [
             288,
