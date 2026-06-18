@@ -288,6 +288,15 @@
             "打开pvz_官服"
         ]
     },
+    "关闭pvz_taptap": {
+        "enabled": false,
+        "timeout": 180000,
+        "action": "StopApp",
+        "package": "com.popcap.pvz2cthdbk",
+        "next": [
+            "打开pvz_taptap"
+        ]
+    },
     "关闭pvz_4399": {
         "enabled": false,
         "timeout": 180000,

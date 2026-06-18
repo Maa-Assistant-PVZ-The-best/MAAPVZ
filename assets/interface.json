@@ -457,7 +457,7 @@
                     "pipeline_override": {
                         "选择渠道服": {
                             "next": [
-                                "关闭pvz_官服",
+                                "关闭pvz_taptap",
                                 "打开pvz_taptap"
                             ]
                         }
