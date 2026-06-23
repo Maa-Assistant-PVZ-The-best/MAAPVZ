@@ -522,13 +522,11 @@
         ]
     },
     "开始游戏": {
-        "timeout": 3000,
         "recognition": "TemplateMatch",
         "template": [
             "Start_game/开始游戏.png"
         ],
         "action": "Click",
-        "post_delay": 10000,
         "focus": "点击开始游戏",
         "next": [
             "开始游戏",
@@ -537,10 +535,20 @@
         ]
     },
     "使用云端进度": {
-        "timeout": 3000,
         "recognition": "TemplateMatch",
         "template": [
             "Start_game/使用云端进度.png"
+        ],
+        "action": "Click",
+        "next": [
+            "存档覆盖",
+            "关闭公告"
+        ]
+    },
+    "使用本地进度": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Start_game/使用本地进度.png"
         ],
         "action": "Click",
         "next": [
