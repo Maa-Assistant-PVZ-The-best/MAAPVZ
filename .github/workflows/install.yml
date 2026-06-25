@@ -90,10 +90,10 @@ jobs:
             runner: windows-11-arm
           - os: macos
             arch: x86_64
-            runner: macos-13
+            runner: macos-15-intel
           - os: macos
             arch: aarch64
-            runner: macos-14
+            runner: macos-latest
           - os: linux
             arch: x86_64
             runner: ubuntu-latest
