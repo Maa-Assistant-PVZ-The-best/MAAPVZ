@@ -42,9 +42,6 @@
             69
         ],
         "action": "Click",
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发1" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
             "地宫2无尽_无尽模式_确定",
             "地宫2无尽_无尽模式"
@@ -99,6 +96,9 @@
                     309,
                     553
                 ],
+                "threshold": [
+                    0.6
+                ]
             },
             {
                 "recognition": "ColorMatch",
@@ -167,7 +167,7 @@
             "清空卡牌"
         ],
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找阳光菇",
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找双发",
             //初始化ancho
         },
         "roi": [
@@ -182,9 +182,9 @@
             "寻找植物_滑动"
         ]
     },
-    "地宫2无尽_第一关_寻找阳光菇": {
+    "地宫2无尽_第一关_寻找双发": {
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找向日葵",
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找蓓蕾",
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -194,37 +194,7 @@
             437
         ],
         "template": [
-            "Land_gong_two/阳光菇.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-        //重复调用anchor，保证只用一次滑回最顶上，保证代码简洁性
-    },
-    "地宫2无尽_第一关_寻找向日葵": {
-        "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找变身茄子",
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/向日葵.png"
+            "Land_gong_two/双发.png"
         ],
         "target_offset": [
             17,
@@ -241,67 +211,9 @@
             "滑回最顶上"
         ]
     },
-    "地宫2无尽_第一关_寻找变身茄子": {
+    "地宫2无尽_第一关_寻找蓓蕾": {
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找双头向日葵",
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/变身茄子.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫2无尽_第一关_寻找双头向日葵": {
-        "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找阳光蓓蕾",
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/双头向日葵.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫2无尽_第一关_寻找阳光蓓蕾": {
-        "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找导向蓟",
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找茄子",
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -328,9 +240,9 @@
             "滑回最顶上"
         ]
     },
-    "地宫2无尽_第一关_寻找导向蓟": {
+    "地宫2无尽_第一关_寻找茄子": {
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找双发",
+            "下一个寻找的植物": "",
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -340,36 +252,7 @@
             437
         ],
         "template": [
-            "Land_gong_two/导向蓟.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫2无尽_第一关_寻找双发": {
-        "anchor": {
-            "下一个寻找的植物": ""
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/双发.png"
+            "Land_gong_two/变身茄子.png"
         ],
         "target_offset": [
             17,
@@ -399,86 +282,7 @@
         ],
         "threshold": 0.75,
         "next": [
-            "地宫2无尽_检查灵体",
             "地宫2无尽_第一关_点击开始战斗"
-        ]
-    },
-    "地宫2无尽_检查灵体": {
-        "recognition": "And",
-        "all_of": [
-            {
-                "recognition": "TemplateMatch",
-                "template": [
-                    "Land_gong_two/灵体.png",
-                    "Land_gong_two/灵体1.png"
-                ],
-                "green_mask": true,
-                "roi": [
-                    899,
-                    72,
-                    309,
-                    553
-                ],
-            },
-            {
-                "recognition": "ColorMatch",
-                "method": 40,
-                "lower": [
-                    83,
-                    48,
-                    170
-                ],
-                "upper": [
-                    90,
-                    140,
-                    255
-                ],
-                "roi": [
-                    899,
-                    72,
-                    309,
-                    553
-                ],
-            }
-        ],
-        "next": [
-            "地宫2无尽_尝试刷掉灵体",
-            "地宫2无尽_检查灵体"
-        ]
-    },
-    "地宫2无尽_尝试刷掉灵体": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/暂停.png"
-        ],
-        "roi": [
-            1180,
-            4,
-            96,
-            78
-        ],
-        "focus": "尝试刷掉灵体",
-        "action": "Click",
-        "next": [
-            "地宫2无尽_尝试刷掉灵体_重新开始",
-            "地宫2无尽_尝试刷掉灵体"
-        ]
-    },
-    "地宫2无尽_尝试刷掉灵体_重新开始": {
-        "recognition": "OCR",
-        "expected": [
-            "重新开始"
-        ],
-        "roi": [
-            642,
-            498,
-            190,
-            85
-        ],
-        "action": "Click",
-        "timeout": 30000,
-        "next": [
-            "地宫2无尽_第一关_开始战斗"
         ]
     },
     "地宫2无尽_第一关_点击开始战斗": {
@@ -504,152 +308,84 @@
             "Land_gong_two/加速.png"
         ],
         "next": [
-            "地宫2无尽_第一关_种植阳光蓓蕾"
+            "地宫2无尽_第一关_种植蓓蕾"
         ]
     },
-    "地宫2无尽_第一关_种植阳光蓓蕾": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/阳光蓓蕾.png"
-        ],
+    "地宫2无尽_第一关_种植蓓蕾": {
         "action": "Swipe",
-        "roi": [
-            7,
-            61,
-            204,
-            545
+        "begin": [
+            55,
+            190,
+            6,
+            4
         ],
-        "begin": true,
         "end": [
-            729,
-            398,
-            37,
-            10
-        ],
-        "post_delay": 1500,
-        "next": [
-            "地宫2无尽_第一关_种植阳光蓓蕾_领取阳光",
-            "地宫2无尽_第一关_种植阳光蓓蕾"
-        ]
-    },
-    "地宫2无尽_第一关_种植阳光蓓蕾_领取阳光": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/阳光.png",
-            "Land_gong_two/阳光1.png",
-        ],
-        "roi": [
-            424,
-            100,
-            822,
-            546
-        ],
-        "threshold": [
-            0.4
-        ],
-        "pressure": 5,
-        "action": "Click",
-        "pre_delay": 0,
-        "green_mask": true,
-        "next": [
-            "地宫2无尽_第一关_种植阳光蓓蕾_领取阳光",
-            "地宫2无尽_第一关_种植导向蓟"
-        ]
-    },
-    "地宫2无尽_第一关_种植导向蓟": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/种植导向蓟.png"
-        ],
-        "action": "Swipe",
-        "roi": [
-            7,
-            61,
-            204,
-            545
-        ],
-        "threshold": [
-            0.9948
-        ],
-        "begin": true,
-        "end": [
-            1012,
-            145,
-            30,
-            32
-        ],
-        "next": [
-            "地宫2无尽_第一关_种植导向蓟_领取阳光",
-            "地宫2无尽_第一关_种植阳光菇"
-        ]
-    },
-    "地宫2无尽_第一关_种植导向蓟_领取阳光": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/阳光.png",
-            "Land_gong_two/阳光1.png",
-        ],
-        "pressure": 5,
-        "roi": [
-            424,
-            100,
-            822,
-            546
-        ],
-        "threshold": [
-            0.4
+            639,
+            370,
+            13,
+            3
         ],
         "pre_delay": 0,
-        "action": "Click",
-        "green_mask": true,
+        "post_delay": 0,
         "next": [
-            "地宫2无尽_第一关_种植导向蓟_领取阳光",
-            "地宫2无尽_第一关_种植阳光菇"
+            "地宫2无尽_第一关_种植茄子蓓蕾"
         ]
     },
-    "地宫2无尽_第一关_种植阳光菇": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/种植阳光菇.png"
-        ],
+    "地宫2无尽_第一关_种植茄子蓓蕾": {
         "action": "Swipe",
-        "threshold": [
-            0.9
+        "begin": [
+            52,
+            260,
+            14,
+            6
         ],
-        "roi": [
-            7,
-            61,
-            204,
-            545
-        ],
-        "begin": true,
         "end": [
-            1086,
-            150,
-            140,
-            457
+            550,
+            369,
+            7,
+            5
         ],
+        "pre_delay": 0,
+        "post_delay": 0,
         "next": [
-            "地宫2无尽_第一关_种植双发_领取阳光",
-            "地宫2无尽_第一关_开始战斗",
-            "地宫2无尽_第一关_种植阳光菇",
-            "地宫2无尽_无尽模式"
+            "地宫2无尽_第一关_滑动领取蓓蕾阳光"
+        ]
+    },
+    "地宫2无尽_第一关_滑动领取蓓蕾阳光": {
+        "pre_delay": 1500,
+        "action": "Swipe",
+        "begin": [
+            386,
+            400,
+            9,
+            1
+        ],
+        "end": [
+            841,
+            402,
+            5,
+            1
+        ],
+        "repeat_delay": 150,
+        "repeat": 7,
+        "next": [
+            "地宫2无尽_第一关_种植双发1"
         ]
     },
     "地宫2无尽_第一关_种植双发1": {
         "recognition": "TemplateMatch",
         "template": [
-            "Land_gong_two/种植双发.png"
+            "land_gong_one/种植双发.png"
         ],
         "action": "Swipe",
         "threshold": [
             0.9
         ],
         "roi": [
-            7,
-            61,
-            204,
-            545
+            1,
+            71,
+            127,
+            90
         ],
         "begin": true,
         "end": [
@@ -658,29 +394,25 @@
             19,
             21
         ],
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发2" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
-            "地宫2无尽_第一关_种植双发_领取阳光",
+            "地宫2无尽_第一关_种植双发2",
             "地宫2无尽_无尽模式",
-            "地宫2无尽_第一关_开始战斗",
         ]
     },
     "地宫2无尽_第一关_种植双发2": {
         "recognition": "TemplateMatch",
         "template": [
-            "Land_gong_two/种植双发.png"
+            "land_gong_one/种植双发.png"
         ],
         "action": "Swipe",
         "threshold": [
             0.9
         ],
         "roi": [
-            7,
-            61,
-            204,
-            545
+            1,
+            71,
+            127,
+            90
         ],
         "begin": true,
         "end": [
@@ -689,150 +421,91 @@
             19,
             22
         ],
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发3" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
-            "地宫2无尽_第一关_种植双发_领取阳光",
+            "地宫2无尽_第一关_种植双发3",
             "地宫2无尽_无尽模式",
-            "地宫2无尽_第一关_开始战斗",
         ]
     },
     "地宫2无尽_第一关_种植双发3": {
         "recognition": "TemplateMatch",
         "template": [
-            "Land_gong_two/种植双发.png"
+            "land_gong_one/种植双发.png"
         ],
         "action": "Swipe",
         "threshold": [
             0.9
         ],
         "roi": [
-            7,
-            61,
-            204,
-            545
+            1,
+            71,
+            127,
+            90
         ],
         "begin": true,
         "end": [
-            453,
-            367,
-            24,
-            31
+            456,
+            360,
+            12,
+            13
         ],
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发4" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
-            "地宫2无尽_第一关_种植双发_领取阳光",
+            "地宫2无尽_第一关_种植双发4",
             "地宫2无尽_无尽模式",
-            "地宫2无尽_第一关_开始战斗",
         ]
     },
     "地宫2无尽_第一关_种植双发4": {
         "recognition": "TemplateMatch",
         "template": [
-            "Land_gong_two/种植双发.png"
+            "land_gong_one/种植双发.png"
         ],
         "action": "Swipe",
         "threshold": [
             0.9
         ],
         "roi": [
-            7,
-            61,
-            204,
-            545
+            1,
+            71,
+            127,
+            90
         ],
         "begin": true,
         "end": [
-            450,
-            476,
-            32,
-            30
+            458,
+            487,
+            10,
+            12
         ],
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发5" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
-            "地宫2无尽_第一关_种植双发_领取阳光",
+            "地宫2无尽_第一关_种植双发5",
             "地宫2无尽_无尽模式",
-            "地宫2无尽_第一关_开始战斗",
         ]
     },
     "地宫2无尽_第一关_种植双发5": {
         "recognition": "TemplateMatch",
         "template": [
-            "Land_gong_two/种植双发.png"
+            "land_gong_one/种植双发.png"
         ],
         "action": "Swipe",
         "threshold": [
             0.9
         ],
         "roi": [
-            7,
-            61,
-            204,
-            545
+            1,
+            71,
+            127,
+            90
         ],
         "begin": true,
         "end": [
-            459,
-            584,
-            19,
-            26
+            461,
+            591,
+            6,
+            16
         ],
-        "anchor": {
-            "双发种植": "地宫2无尽_第一关_种植双发1" //因为是在循环里的，不可以加maxhit，所以改用anchor，重构可以考虑用custom
-        },
         "next": [
             "地宫2无尽_等待"
         ]
     },
-    "地宫2无尽_第一关_种植双发_领取阳光": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "Land_gong_two/阳光.png",
-            "Land_gong_two/阳光1.png",
-        ],
-        "pressure": 10,
-        "roi": [
-            424,
-            100,
-            822,
-            546
-        ],
-        "threshold": [
-            0.4
-        ],
-        "pre_delay": 0,
-        "action": "Click",
-        "green_mask": true,
-        "next": [
-            "地宫2无尽_无尽模式",
-            "地宫2无尽_第一关_开始战斗",
-            "[Anchor]双发种植",
-            "地宫2无尽_第一关_种植双发_领取阳光",
-            "地宫2无尽_第一关_种植阳光菇",
-        ]
-    },
-    // "地宫2无尽_下一关": {
-    //     "recognition": "OCR",
-    //     "expected": [
-    //         "开始战斗"
-    //     ],
-    //     "roi": [
-    //         1048,
-    //         630,
-    //         234,
-    //         84
-    //     ],
-    //     "threshold": 0.75,
-    //     "action": "Click",
-    //     "next": [
-    //         "地宫2无尽_进入关卡_第一关"
-    //     ]
-    // },
     "地宫2无尽_等待": {
         "recognition": "TemplateMatch",
         "template": [
