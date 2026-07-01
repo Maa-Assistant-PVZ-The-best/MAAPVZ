@@ -62,6 +62,8 @@
         ],
         "focus": "领取宝箱",
         "action": "Click",
+        "repeat": 3,
+        "repeat_delay": 200,
         "post_wait_freezes": 1000,
         "next": [
             "旅行原木_朕收下了",
