@@ -1,5 +1,5 @@
 {
-    "埃及第一关刷金币_前置检查": {
+    "刷金币_前置检查": {
         "timeout": 10000,
         "action": "DoNothing",
         "next": [
@@ -15,40 +15,14 @@
         "focus": "点击星系",
         "action": "Click",
         "post_delay": 3000,
-        "next": [
-            "查找埃及世界",
-            "星系滑动"
-        ]
-    },
-    "查找埃及世界": {
-        "timeout": 1000,
-        "recognition": "OCR",
-        "expected": [
-            "神秘埃及"
-        ],
-        "focus": "寻找埃及",
-        "roi": [
-            571,
-            473,
-            142,
-            37
-        ],
-        "action": "Click",
-        "post_wait_freezes": 1000,
-        "next": [
-            "星系_进入世界",
-            "查找埃及世界"
-        ],
-        "on_error": [
-            "星系滑动"
-        ]
+        "next": []
     },
     "星系_进入世界": {
         "recognition": "OCR",
         "expected": [
             "进入"
         ],
-        "focus": "进入埃及",
+        "focus": "进入世界",
         "action": "Click",
         "roi": [
             536,
@@ -57,9 +31,7 @@
             69
         ],
         "post_wait_freezes": 2000,
-        "next": [
-            "埃及1_进入关卡"
-        ]
+        "next": []
     },
     "星系滑动": {
         "timeout": 1500,
@@ -79,9 +51,244 @@
         ],
         "end_hold": 50,
         "post_delay": 1000,
+        "next": []
+    },
+    //功夫世界街机神器刷胜场
+    "功夫13_点击植物": {},
+    "功夫13_神器强化": {},
+    "功夫13_点击街机": {},
+    "功夫13_点击装备（如果有）": {},
+    "功夫13_神器强化_返回": {},
+    "查找功夫世界": {
+        "recognition": "OCR",
+        "expected": [
+            "功夫世界"
+        ],
+        "focus": "寻找功夫世界",
+        "roi": [
+            492,
+            376,
+            293,
+            193
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
         "next": [
-            "查找埃及世界",
-            "星系滑动"
+            "星系_进入世界",
+            "查找功夫世界"
+        ]
+    },
+    "功夫13_定位": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/功夫世界的房子.png"
+        ],
+        "post_wait_freezes": 100,
+        "next": [
+            "功夫13_找13关"
+        ]
+    },
+    "功夫13_找13关": {
+        "action": "Swipe",
+        "begin": [
+            1183,
+            383
+        ],
+        "end": [
+            174,
+            445
+        ],
+        "end_hold": 50,
+        "repeat": 3,
+        "repeat_delay": 100,
+        "next": [
+            "功夫13_进入关卡"
+        ]
+    },
+    "功夫13_进入关卡": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/功夫-13.png"
+        ],
+        "roi": [
+            489,
+            386,
+            447,
+            215
+        ],
+        "action": "Click",
+        "post_wait_freezes": 300,
+        "next": [
+            "功夫13_开始战斗",
+            "功夫13_进入关卡"
+        ]
+    },
+    "功夫13_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            512,
+            510,
+            261,
+            88
+        ],
+        "focus": "开始战斗",
+        "target_offset": [
+            10,
+            10,
+            -10,
+            -10
+        ],
+        "action": "Click",
+        "next": [
+            "功夫13_识别加速"
+        ]
+    },
+    "功夫13_识别加速": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/二倍速.png"
+        ],
+        "roi": [
+            1144,
+            8,
+            62,
+            64
+        ],
+        "next": [
+            "功夫13_使用街机"
+        ]
+    },
+    "功夫13_使用街机": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/局内_街机神器.png"
+        ],
+        "roi": [
+            666,
+            602,
+            168,
+            114
+        ],
+        "action": "Click",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "功夫13_点击n次屏幕"
+        ]
+    },
+    "功夫13_点击n次屏幕": {
+        "action": "Click",
+        "pre_delay": 0,
+        "repeat": 100,
+        "repeat_delay": 0,
+        "target": [
+            685,
+            522,
+            1,
+            1
+        ],
+        "next": [
+            "功夫13_点击加速"
+        ]
+    },
+    "功夫13_点击加速": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/二倍速.png"
+        ],
+        "roi": [
+            1144,
+            8,
+            62,
+            64
+        ],
+        "action": "Click",
+        "target_offset": [
+            10,
+            10,
+            -20,
+            -20
+        ],
+        "next": [
+            "功夫13_下一波"
+        ]
+    },
+    "功夫13_下一波": {
+        "recognition": "TemplateMatch",
+        "timeout": 70000,
+        "template": [
+            "get_gold_coins/下一波.png"
+        ],
+        "roi": [
+            1168,
+            167,
+            113,
+            93
+        ],
+        "action": "Click",
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "功夫13_结算",
+            "功夫13_下一波"
+        ]
+    },
+    "功夫13_结算": {
+        "recognition": "OCR",
+        "expected": [
+            "继续"
+        ],
+        "roi": [
+            554,
+            595,
+            162,
+            90
+        ],
+        "action": "Click",
+        "pre_delay": 100,
+        "repeat": 3,
+        "next": [
+            "功夫13_重开",
+            "功夫13_结算"
+        ]
+    },
+    "功夫13_重开": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/主界面特征.png"
+        ],
+        "green_mask": true,
+        "threshold": [
+            0.7
+        ],
+        "method": 10001,
+        "action": "DoNothing",
+        "next": [
+            "功夫13_进入关卡"
+        ]
+    },
+    //功夫世界街机神器刷胜场
+    //埃及低配刷金币模式
+    "查找埃及世界": {
+        "recognition": "OCR",
+        "expected": [
+            "神秘埃及"
+        ],
+        "focus": "寻找埃及",
+        "roi": [
+            571,
+            473,
+            142,
+            37
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": [
+            "星系_进入世界",
+            "查找埃及世界"
         ]
     },
     "埃及1_进入关卡": {
@@ -592,4 +799,5 @@
             "埃及1_重开"
         ]
     }
+    //埃及低配刷金币模式
 }
