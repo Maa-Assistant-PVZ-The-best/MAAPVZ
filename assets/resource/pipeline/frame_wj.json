@@ -55,14 +55,16 @@
     "frame_wj_抛花1": {
         "action": "Swipe",
         "begin": [
-            67,
-            133
+            53,
+            115
         ],
         "end": [
-            1209,
-            149
+            1208,
+            154,
+            0,
+            3
         ],
-        "pre_delay": 0,
+        "pre_delay": 100,
         "post_delay": 100,
         "duration": 100,
         "next": [
@@ -72,15 +74,17 @@
     "frame_wj_抛花2": {
         "action": "Swipe",
         "begin": [
-            67,
-            133
+            53,
+            115
         ],
         "end": [
-            1182,
-            273
+            1208,
+            258,
+            0,
+            1
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 100,
         "timeout": 600000,
         "next": [
@@ -98,7 +102,7 @@
             405
         ],
         "repeat": 30,
-        "repeat_delay": 0,
+        "repeat_delay": 5,
         "pre_delay": 0,
         "post_delay": 0,
         "duration": 20,
