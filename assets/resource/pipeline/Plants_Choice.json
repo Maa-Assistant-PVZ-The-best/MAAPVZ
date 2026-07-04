@@ -11,15 +11,16 @@
         ],
         "action": "Swipe",
         "post_wait_freezes": 100,
-        "duration": 700,
+        "duration": 300,
         "begin": [
-            376,
+            215,
             648
         ],
         "end": [
-            376,
+            215,
             400
         ],
+        "end_hold": 50,
         "next": [
             "[Anchor]下一个寻找的植物",
             "寻找植物_滑动" //如果找不到，继续滑动
