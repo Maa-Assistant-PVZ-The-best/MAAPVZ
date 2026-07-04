@@ -1,0 +1,153 @@
+{
+    "种植物_初始化植物位置": {
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第一个槽位"
+        ]
+    },
+    "种植物_初始化第一个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    50,
+                    114,
+                    14,
+                    12
+                ] // 你原来的坐标
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第二个槽位"
+        ]
+    },
+    "种植物_初始化第二个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    62,
+                    196,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第三个槽位"
+        ]
+    },
+    "种植物_初始化第三个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    56,
+                    267,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第四个槽位"
+        ]
+    },
+    "种植物_初始化第四个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    61,
+                    338,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第五个槽位"
+        ]
+    },
+    "种植物_初始化第五个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    60,
+                    399,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第六个槽位"
+        ]
+    },
+    "种植物_初始化第六个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    61,
+                    482,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第七个槽位"
+        ]
+    },
+    "种植物_初始化第七个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    64,
+                    539,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化第八个槽位"
+        ]
+    },
+    "种植物_初始化第八个槽位": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    57,
+                    613,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_1"
+        ] // 最后一个，结束
+    }
+}

@@ -1,0 +1,3962 @@
+{
+    "将第1个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第1个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第一个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第2个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第二个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第3个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第三个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第4个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第四个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第5个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第五个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第6个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第六个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第7个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第七个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至1_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子1_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至2_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子2_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至3_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子3_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至4_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子4_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_6",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_7",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_8": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_8",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    },
+    "将第8个植物种植至5_9": {
+        "action": "Swipe",
+        "begin": "种植物_初始化第八个槽位",
+        "end": "种植物_初始化格子5_9",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个种植的植物"
+        ]
+    }
+}

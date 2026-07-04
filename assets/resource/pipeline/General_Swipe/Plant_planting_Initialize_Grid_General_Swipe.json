@@ -1,0 +1,815 @@
+{
+    "种植物_初始化格子1_1": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    465,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_2"
+        ]
+    },
+    "种植物_初始化格子1_2": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    556,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_3"
+        ]
+    },
+    "种植物_初始化格子1_3": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    647,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_4"
+        ]
+    },
+    "种植物_初始化格子1_4": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    738,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_5"
+        ]
+    },
+    "种植物_初始化格子1_5": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    829,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_6"
+        ]
+    },
+    "种植物_初始化格子1_6": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    920,
+                    149,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_7"
+        ]
+    },
+    "种植物_初始化格子1_7": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1010,
+                    183,
+                    6,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_8"
+        ]
+    },
+    "种植物_初始化格子1_8": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1105,
+                    182,
+                    7,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子1_9"
+        ]
+    },
+    "种植物_初始化格子1_9": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1197,
+                    184,
+                    7,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_1"
+        ]
+    },
+    "种植物_初始化格子2_1": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    465,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_2"
+        ]
+    },
+    "种植物_初始化格子2_2": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    556,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_3"
+        ]
+    },
+    "种植物_初始化格子2_3": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    647,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_4"
+        ]
+    },
+    "种植物_初始化格子2_4": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    738,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_5"
+        ]
+    },
+    "种植物_初始化格子2_5": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    829,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_6"
+        ]
+    },
+    "种植物_初始化格子2_6": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    920,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_7"
+        ]
+    },
+    "种植物_初始化格子2_7": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1011,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_8"
+        ]
+    },
+    "种植物_初始化格子2_8": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1102,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子2_9"
+        ]
+    },
+    "种植物_初始化格子2_9": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1193,
+                    257,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_1"
+        ]
+    },
+    "种植物_初始化格子3_1": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    465,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_2"
+        ]
+    },
+    "种植物_初始化格子3_2": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    556,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_3"
+        ]
+    },
+    "种植物_初始化格子3_3": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    647,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_4"
+        ]
+    },
+    "种植物_初始化格子3_4": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    738,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_5"
+        ]
+    },
+    "种植物_初始化格子3_5": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    829,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_6"
+        ]
+    },
+    "种植物_初始化格子3_6": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    920,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_7"
+        ]
+    },
+    "种植物_初始化格子3_7": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1011,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_8"
+        ]
+    },
+    "种植物_初始化格子3_8": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1102,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子3_9"
+        ]
+    },
+    "种植物_初始化格子3_9": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1193,
+                    365,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_1"
+        ]
+    },
+    "种植物_初始化格子4_1": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    465,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_2"
+        ]
+    },
+    "种植物_初始化格子4_2": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    556,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_3"
+        ]
+    },
+    "种植物_初始化格子4_3": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    647,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_4"
+        ]
+    },
+    "种植物_初始化格子4_4": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    738,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_5"
+        ]
+    },
+    "种植物_初始化格子4_5": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    829,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_6"
+        ]
+    },
+    "种植物_初始化格子4_6": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    920,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_7"
+        ]
+    },
+    "种植物_初始化格子4_7": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1011,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_8"
+        ]
+    },
+    "种植物_初始化格子4_8": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1102,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子4_9"
+        ]
+    },
+    "种植物_初始化格子4_9": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1193,
+                    473,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_1"
+        ]
+    },
+    "种植物_初始化格子5_1": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    465,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_2"
+        ]
+    },
+    "种植物_初始化格子5_2": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    556,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_3"
+        ]
+    },
+    "种植物_初始化格子5_3": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    647,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_4"
+        ]
+    },
+    "种植物_初始化格子5_4": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    738,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_5"
+        ]
+    },
+    "种植物_初始化格子5_5": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    829,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_6"
+        ]
+    },
+    "种植物_初始化格子5_6": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    920,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_7"
+        ]
+    },
+    "种植物_初始化格子5_7": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1011,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_8"
+        ]
+    },
+    "种植物_初始化格子5_8": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1102,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "种植物_初始化格子5_9"
+        ]
+    },
+    "种植物_初始化格子5_9": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1193,
+                    581,
+                    8,
+                    6
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": []
+    },
+    "因为没有引用过anchor，单纯防止报错用": {
+        "anchor": {
+            "下一个种植的植物": ""
+        }
+    }
+}
