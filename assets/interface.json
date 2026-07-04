@@ -45,7 +45,8 @@
         "./resource/task/Endless.json",
         "./resource/task/pair_duel.json",
         "./resource/task/mini_tools.json",
-        "./resource/task/test.json"
+        "./resource/task/test.json",
+        "./resource/task/video_card.json",
     ],
     "task": [
         {
@@ -211,112 +212,6 @@
                                 "关闭公告"
                             ]
                         },
-                    }
-                }
-            ]
-        },
-        "双倍碎片（需要免广告卡）": {
-            "type": "switch",
-            "default_case": "No",
-            "cases": [
-                {
-                    "name": "Yes",
-                    "pipeline_override": {
-                        "点击探险完成": {
-                            "next": [
-                                "植物探险_使用免广告卡",
-                                "完成探险"
-                            ]
-                        },
-                    }
-                },
-                {
-                    "name": "No"
-                }
-            ]
-        },
-        "每日免费五十钻": {
-            "type": "switch",
-            "cases": [
-                {
-                    "name": "No"
-                },
-                {
-                    "name": "Yes",
-                    "pipeline_override": {
-                        "免广告卡_免费每日50钻": {
-                            "enabled": true,
-                        }
-                    }
-                }
-            ]
-        },
-        "潘妮秘宝": {
-            "type": "switch",
-            "cases": [
-                {
-                    "name": "No"
-                },
-                {
-                    "name": "Yes",
-                    "option": [
-                        "潘妮秘宝选择宝箱",
-                        "潘妮秘宝使用几次免广告卡"
-                    ],
-                    "pipeline_override": {
-                        "免广告卡_潘妮秘宝": {
-                            "enabled": true,
-                        }
-                    }
-                }
-            ]
-        },
-        "潘妮秘宝选择宝箱": {
-            "type": "select",
-            "cases": [
-                {
-                    "name": "普通宝箱"
-                },
-                {
-                    "name": "装扮碎片宝箱",
-                    "pipeline_override": {
-                        "潘妮秘宝_免广告卡_点击秘宝": {
-                            "next": [
-                                "潘妮秘宝_免广告卡_装扮宝物_滑动"
-                            ]
-                        },
-                    }
-                }
-            ]
-        },
-        "潘妮秘宝使用几次免广告卡": {
-            "type": "input",
-            "inputs": [
-                {
-                    "name": "使用次数",
-                    "pipeline_type": "int",
-                    "default": "1",
-                    "verify": "^[1-9]\\d{0,1}$"
-                }
-            ],
-            "pipeline_override": {
-                "免广告卡_潘妮秘宝": {
-                    "max_hit": "{使用次数}",
-                },
-            }
-        },
-        "超z钥匙": {
-            "type": "switch",
-            "cases": [
-                {
-                    "name": "No"
-                },
-                {
-                    "name": "Yes",
-                    "pipeline_override": {
-                        "免广告卡_超z钥匙": {
-                            "enabled": true,
-                        }
                     }
                 }
             ]
