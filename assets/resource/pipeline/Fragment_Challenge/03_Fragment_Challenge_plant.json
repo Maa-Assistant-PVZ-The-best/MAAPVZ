@@ -1,0 +1,337 @@
+{
+    //白卡
+    "期望植物_开始游戏": {
+        "recognition": "OCR",
+        "expected": [
+            "开始游戏"
+        ],
+        "roi": [
+            711,
+            580,
+            120,
+            51
+        ],
+        "action": "Click",
+        "next": [
+            "检查是否进入局内",
+            "邪恶入侵_点击继续游戏",
+            "期望植物_开始游戏"
+        ]
+    },
+    "邪恶入侵_点击继续游戏": {
+        "recognition": "OCR",
+        "expected": [
+            "点击继续游戏"
+        ],
+        "roi": [
+            296,
+            306,
+            200,
+            68
+        ],
+        "action": "Click",
+        "next": [
+            "检查是否进入局内",
+            "邪恶入侵_点击继续游戏"
+        ]
+    },
+    "检查是否进入局内": {
+        "recognition": "OCR",
+        "expected": [
+            "选择你的植物"
+        ],
+        "roi": [
+            314,
+            0,
+            233,
+            48
+        ],
+        "next": [
+            "查看场地"
+        ]
+    },
+    //识别局内区域
+    "查看场地": {
+        "recognition": "OCR",
+        "expected": [
+            "选择你的植物"
+        ],
+        "roi": [
+            314,
+            0,
+            233,
+            48
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "target": [
+            1208,
+            82,
+            57,
+            53
+        ],
+        "next": [
+            "检查碎片挑战局内类型"
+        ]
+    },
+    "检查碎片挑战局内类型": {
+        "action": "DoNothing",
+        "next": [
+            "巨人_西部",
+            "巨人_海盗",
+            "巨人_埃及",
+            "邪恶入侵"
+        ]
+    },
+    "巨人_埃及": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_巨人埃及.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "target": [
+            1208,
+            82,
+            57,
+            53
+        ],
+        "anchor": {
+            "自动识别所需的对局配置": ""
+        },
+        "next": []
+    },
+    "巨人_海盗": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_巨人海盗.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "target": [
+            1208,
+            82,
+            57,
+            53
+        ],
+        "anchor": {
+            "自动识别所需的对局配置": ""
+        },
+        "next": [] //暂时
+    },
+    "巨人_西部": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_巨人西部.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "anchor": {
+            "自动识别所需的对局配置": ""
+        },
+        "target": [
+            1208,
+            82,
+            57,
+            53
+        ],
+        "next": []
+    },
+    "邪恶入侵": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_邪恶入侵.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "anchor": {
+            "自动识别所需的对局配置": ""
+        },
+        "target": [
+            1208,
+            82,
+            57,
+            53
+        ],
+        "next": []
+    },
+    //植物配置区域 
+    "碎片挑战_二倍速": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/二倍速.png"
+        ],
+        "roi": [
+            1144,
+            8,
+            62,
+            64
+        ],
+        "action": "Click",
+        "target_offset": [
+            10,
+            10,
+            -20,
+            -20
+        ],
+        "next": [
+            "碎片挑战_开始战斗"
+        ]
+    },
+    "碎片挑战_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1018,
+            82,
+            177,
+            69
+        ],
+        "action": "Click",
+        "timeout": 50000,
+        "next": [
+            "碎片挑战_下一波",
+            "碎片挑战_失败",
+            "碎片挑战_钱袋子",
+            "碎片挑战_开始战斗",
+            "碎片挑战_邪恶入侵局内"
+        ]
+    },
+    "碎片挑战_下一波": {
+        "recognition": "TemplateMatch",
+        "timeout": 70000,
+        "template": [
+            "Fragment_Challenge_plant/下一波.png"
+        ],
+        "roi": [
+            1168,
+            167,
+            113,
+            93
+        ],
+        "action": "Click",
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "碎片挑战_钱袋子",
+            "碎片挑战_下一波",
+            "碎片挑战_完成对局__确定",
+            "碎片挑战_失败",
+            "碎片挑战_清一下金币"
+        ]
+    },
+    "碎片挑战_清一下金币": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/二倍速.png"
+        ],
+        "roi": [
+            1144,
+            8,
+            62,
+            64
+        ],
+        "action": "Click",
+        "target": [
+            1218,
+            208,
+            19,
+            19
+        ],
+        "repeat": 3,
+        "next": [
+            "碎片挑战_钱袋子",
+            "碎片挑战_下一波",
+            "碎片挑战_完成对局__确定",
+            "碎片挑战_失败",
+            "碎片挑战_清一下金币"
+        ]
+    },
+    "碎片挑战_失败": {
+        "recognition": "OCR",
+        "expected": [
+            "购买小推车"
+        ],
+        "roi": [
+            529,
+            179,
+            206,
+            57
+        ],
+        "post_delay": 0,
+        "pre_delay": 0,
+        "focus": "没有打过，结束任务",
+        "action": "StopTask",
+        "next": []
+    },
+    "碎片挑战_钱袋子": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_巨人危机_钱袋子.png"
+        ],
+        "action": "Click",
+        "post_delay": 0,
+        "pre_delay": 0,
+        "post_wait_freezes": 1000,
+        "next": [
+            "碎片挑战_完成对局__确定",
+            "碎片挑战_钱袋子"
+        ]
+    },
+    "碎片挑战_完成对局__确定": {
+        "post_wait_freezes": 500,
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "post_delay": 0,
+        "pre_delay": 0,
+        "roi": [
+            357,
+            522,
+            396,
+            112
+        ],
+        "action": "Click",
+        "next": [
+            "碎片挑战_重置所有偏移"
+        ]
+    },
+    "碎片挑战_完成对局_确定_免广告卡": {
+        "post_wait_freezes": 500,
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "post_delay": 0,
+        "pre_delay": 0,
+        "roi": [
+            679,
+            564,
+            121,
+            45
+        ],
+        "action": "Click",
+        "next": [
+            "碎片挑战_重置所有偏移"
+        ]
+    },
+    "碎片挑战_邪恶入侵局内": {
+        "recognition": "OCR",
+        "expected": [
+            "邪恶入侵"
+        ],
+        "roi": [
+            660,
+            59,
+            135,
+            64
+        ],
+        "next": [
+            "碎片挑战_钱袋子",
+            "碎片挑战_邪恶入侵局内"
+        ]
+    }
+}

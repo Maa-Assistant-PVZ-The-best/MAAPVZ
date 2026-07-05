@@ -1,0 +1,271 @@
+{
+    //电大种植-邪恶入侵
+    "邪恶入侵_配置电大": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "roi": [
+            22,
+            660,
+            75,
+            27
+        ],
+        "max_hit": 1,
+        "action": "Click",
+        "anchor": {
+            "下一个寻找的植物": "碎片挑战_配置植物_寻找邪恶入侵大哥"
+        },
+        "next": [
+            "[Anchor]下一个寻找的植物",
+            "寻找植物_滑动"
+        ]
+    },
+    "碎片挑战_配置植物_寻找邪恶入侵大哥": {
+        "anchor": {
+            "下一个寻找的植物": "碎片挑战_配置植物_寻找邪恶入侵电豌",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Fragment_Challenge_plant/大哥.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "碎片挑战_配置植物_寻找邪恶入侵电豌": {
+        "anchor": {
+            "下一个寻找的植物": "碎片挑战_邪恶入侵_选择多余植物进行占位",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Fragment_Challenge_plant/电豌.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "邪恶入侵_电大_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1090,
+            654,
+            139,
+            40
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": [
+            "邪恶入侵_种植大哥_1_3"
+        ]
+    },
+    "邪恶入侵_种植大哥_1_3": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/二倍速.png"
+        ],
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            469,
+            368,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植大哥_2_3"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植大哥_2_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            560,
+            368,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植大哥_1_4"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植大哥_1_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            469,
+            476,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植大哥_2_4"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植大哥_2_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            560,
+            476,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植电碗_1_3"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植电碗_1_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            48,
+            193,
+            5,
+            3
+        ],
+        "end": [
+            469,
+            368,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植电碗_2_3"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植电碗_2_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            48,
+            193,
+            5,
+            3
+        ],
+        "end": [
+            560,
+            368,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植电碗_1_4"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植电碗_1_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            48,
+            193,
+            5,
+            3
+        ],
+        "end": [
+            469,
+            476,
+            1,
+            1
+        ],
+        "next": [
+            "邪恶入侵_种植电碗_2_4"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "邪恶入侵_种植电碗_2_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            48,
+            193,
+            5,
+            3
+        ],
+        "end": [
+            560,
+            476,
+            1,
+            1
+        ],
+        "next": [
+            "碎片挑战_二倍速"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    //电大种植-邪恶入侵
+}

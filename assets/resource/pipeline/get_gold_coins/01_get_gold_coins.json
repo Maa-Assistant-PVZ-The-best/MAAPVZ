@@ -1,0 +1,57 @@
+{
+    "刷金币_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "next": [
+            "点击星系",
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "点击星系": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "get_gold_coins/星系.png"
+        ],
+        "focus": "点击星系",
+        "action": "Click",
+        "post_delay": 3000,
+        "next": []
+    },
+    "星系_进入世界": {
+        "recognition": "OCR",
+        "expected": [
+            "进入"
+        ],
+        "focus": "进入世界",
+        "action": "Click",
+        "roi": [
+            536,
+            592,
+            229,
+            69
+        ],
+        "post_wait_freezes": 2000,
+        "next": []
+    },
+    "星系滑动": {
+        "timeout": 1500,
+        "action": "Swipe",
+        "begin": [
+            637,
+            572,
+            5,
+            9
+        ],
+        "focus": "滑动",
+        "end": [
+            366,
+            576,
+            3,
+            2
+        ],
+        "end_hold": 50,
+        "post_delay": 1000,
+        "next": []
+    },
+    //埃及低配刷金币模式
+}

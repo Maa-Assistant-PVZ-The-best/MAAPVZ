@@ -49,7 +49,8 @@
         "./resource/task/test.json",
         "./resource/task/video_card.json",
         "./resource/task/Endless/Endless_Flower.json",
-        "./resource/task/Endless/Endless_Patch_Plants.json"
+        "./resource/task/Endless/Endless_Patch_Plants.json",
+        "./resource/task/Endless/Endless_Preset.json"
     ],
     "task": [
         {

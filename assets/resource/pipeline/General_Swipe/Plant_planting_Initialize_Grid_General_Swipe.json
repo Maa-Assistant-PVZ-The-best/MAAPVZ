@@ -805,11 +805,8 @@
         },
         "post_delay": 0,
         "pre_delay": 0,
-        "next": []
+        "next": [
+            "[Anchor]初始化"
+        ]
     },
-    "因为没有引用过anchor，单纯防止报错用": {
-        "anchor": {
-            "下一个种植的植物": ""
-        }
-    }
 }

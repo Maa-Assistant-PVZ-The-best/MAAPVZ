@@ -1,0 +1,530 @@
+{
+    "双人对决_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "点击竞技",
+            "双人对决_竞技",
+            "[JumpBack]检查当前是否在主界面"
+        ]
+    },
+    "点击竞技": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/竞技.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击双人对决",
+            "点击竞技",
+            "双人对决_竞技"
+        ]
+    },
+    "点击双人对决": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决.png"
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_竞技"
+        ]
+    },
+    "双人对决_竞技": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决竞技.png"
+        ],
+        "action": "Click",
+        "next": [
+            "取消一号位植物",
+            "双人对决_竞技"
+        ]
+    },
+    "取消一号位植物": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人竞技_选择植物.png"
+        ],
+        "target": [
+            60,
+            128
+        ],
+        "action": "Click",
+        "next": [
+            "取消二号位植物"
+        ]
+    },
+    "取消二号位植物": {
+        "target": [
+            58,
+            192
+        ],
+        "action": "Click",
+        "next": [
+            "取消三四号位植物(三阶植物任务)1",
+            "取消五六号位植物(五阶植物任务)1",
+            "双人对决_寻找一号位植物"
+        ]
+    },
+    "取消三四号位植物(三阶植物任务)1": {
+        "enabled": false,
+        "target": [
+            45,
+            261,
+            38,
+            17
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "取消三四号位植物(三阶植物任务)2"
+        ]
+    },
+    "取消三四号位植物(三阶植物任务)2": {
+        "target": [
+            42,
+            335,
+            22,
+            16
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "取消五六号位植物(五阶植物任务)1",
+            "双人对决_寻找一号位植物"
+        ]
+    },
+    "取消五六号位植物(五阶植物任务)1": {
+        "enabled": false,
+        "target": [
+            19,
+            401,
+            76,
+            35
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "取消五六号位植物(五阶植物任务)2"
+        ]
+    },
+    "取消五六号位植物(五阶植物任务)2": {
+        "target": [
+            26,
+            481,
+            62,
+            28
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "双人对决_寻找一号位植物"
+        ]
+    },
+    "双人对决_寻找一号位植物": {
+        "action": "DoNothing",
+        "next": [
+            "寻找植物_甜薯",
+            "寻找植物_热辣海枣",
+            "寻找植物_金蝉花",
+            "[JumpBack]双人对决_寻找植物_滑动"
+        ]
+    },
+    "双人对决_回到寻找植物最顶上_寻找二号位植物": {
+        "action": "Swipe",
+        "repeat": 10,
+        "begin": [
+            422,
+            393,
+            8,
+            2
+        ],
+        "end": [
+            417,
+            714,
+            1,
+            2
+        ],
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "双人对决_寻找二号位植物": {
+        "action": "DoNothing",
+        "next": [
+            "寻找植物_仙人掌",
+            "寻找植物_冰龙草",
+            "寻找植物_尖刺秋葵",
+            "寻找植物_虎头菇",
+            "寻找植物_雷龙草",
+            "寻找植物_熊果臼炮",
+            "寻找植物_原神",
+            "寻找植物_龙舌兰",
+            "寻找植物_苹果迫机炮",
+            "[JumpBack]双人对决_寻找植物_滑动"
+        ]
+    },
+    "寻找植物_甜薯": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_甜薯.png",
+            "pair_duel/双人对决_植物_甜薯_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_回到寻找植物最顶上_寻找二号位植物"
+        ]
+    },
+    "寻找植物_热辣海枣": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_热辣海枣.png",
+            "pair_duel/双人对决_植物_热辣海枣_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_回到寻找植物最顶上_寻找二号位植物"
+        ]
+    },
+    "寻找植物_金蝉花": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_金蝉花.png",
+            "pair_duel/双人对决_植物_金蝉花_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_回到寻找植物最顶上_寻找二号位植物"
+        ]
+    },
+    "寻找植物_仙人掌": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_仙人掌.png",
+            "pair_duel/双人对决_植物_仙人掌_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_苹果迫机炮": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_苹果迫机炮.png",
+            "pair_duel/双人对决_植物_苹果迫击炮_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_熊果臼炮": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_熊果臼炮.png",
+            "pair_duel/双人对决_植物_熊果臼炮_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_原神": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_原始豌豆射手.png",
+            "pair_duel/双人对决_植物_原始豌豆射手_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_冰龙草": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_冰龙草.png",
+            "pair_duel/双人对决_植物_冰龙草_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_虎头菇": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_虎头菇.png",
+            "pair_duel/双人对决_植物_虎头菇_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_雷龙草": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_雷龙草.png",
+            "pair_duel/双人对决_植物_雷龙草_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_龙舌兰": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_龙舌兰.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "寻找植物_尖刺秋葵": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_尖刺秋葵.png",
+            "pair_duel/双人对决_植物_尖刺秋葵_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "双人对决_寻找植物_滑动": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人竞技_选择植物.png"
+        ],
+        "timeout": 2000,
+        "max_hit": 1000,
+        "action": "Swipe",
+        "end_hold": 200,
+        "duration": 500,
+        "begin": [
+            139,
+            682,
+            2,
+            1
+        ],
+        "end": [
+            380,
+            459,
+            110,
+            5
+        ],
+        "next": [
+            "双人对决_识别一号位是否满足",
+            "双人对决_识别二号位是否满足",
+            "双人对决_寻找一号位植物",
+            "双人对决_寻找二号位植物",
+            "双人对决_寻找植物_滑动"
+        ]
+    },
+    "双人对决_识别一号位是否满足": {
+        "inverse": true,
+        "timeout": 1000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_空槽位.png"
+        ],
+        "roi": [
+            1,
+            79,
+            117,
+            80
+        ],
+        "action": "DoNothing",
+        "threshold": [
+            0.8
+        ],
+        "next": [
+            "双人对决_识别二号位是否满足",
+            "双人对决_寻找二号位植物"
+        ]
+    },
+    "双人对决_识别二号位是否满足": {
+        "inverse": true,
+        "timeout": 1000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_空槽位.png"
+        ],
+        "roi": [
+            0,
+            154,
+            119,
+            79
+        ],
+        "action": "DoNothing",
+        "threshold": [
+            0.8
+        ],
+        "next": [
+            "双人对决_识别一号位是否满足_植物任务中间节点"
+        ]
+    },
+    "双人对决_识别一号位是否满足_植物任务中间节点": {
+        "action": "Swipe",
+        "post_delay": 3000,
+        "repeat": 10,
+        "begin": [
+            422,
+            393,
+            8,
+            2
+        ],
+        "end": [
+            417,
+            714,
+            1,
+            2
+        ],
+        "next": [
+            "双人对决_回到寻找植物最顶上_3阶任务植物1",
+            "双人对决_回到寻找植物最顶上_5阶任务植物1",
+            "识别成功，启动！",
+            "重开"
+        ]
+    },
+    "双人对决_回到寻找植物最顶上_3阶任务植物1": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_土豆雷.png",
+            "pair_duel/双人对决_植物_土豆雷_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "双人对决_回到寻找植物最顶上_3阶任务植物2"
+        ]
+    },
+    "双人对决_回到寻找植物最顶上_3阶任务植物2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_坚果.png",
+            "pair_duel/双人对决_植物_坚果_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "双人对决_回到寻找植物最顶上_5阶任务植物1",
+            "识别成功，启动！"
+        ]
+    },
+    "双人对决_回到寻找植物最顶上_5阶任务植物1": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_豌豆射手.png",
+            "pair_duel/双人对决_植物_豌豆射手_新版.png"
+        ],
+        "max_hit": 1,
+        "post_wait_freezes": 500,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "next": [
+            "双人对决_回到寻找植物最顶上_5阶任务植物2"
+        ]
+    },
+    "双人对决_回到寻找植物最顶上_5阶任务植物2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_植物_卷心菜.png",
+            "pair_duel/双人对决_植物_卷心菜_新版.png"
+        ],
+        "max_hit": 1,
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "识别成功，启动！"
+        ]
+    },
+}

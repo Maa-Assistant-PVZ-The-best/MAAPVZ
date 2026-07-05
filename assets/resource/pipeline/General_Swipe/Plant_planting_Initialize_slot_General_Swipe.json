@@ -165,6 +165,24 @@
         "post_delay": 0,
         "pre_delay": 0,
         "next": [
+            "种植物_初始化_铲子位置"
+        ]
+    },
+    "种植物_初始化_铲子位置": {
+        "recognition": {
+            "type": "DirectHit",
+            "param": {
+                "roi": [
+                    1222,
+                    674,
+                    1,
+                    1
+                ]
+            }
+        },
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
             "种植物_初始化_格子1_1"
         ]
     }

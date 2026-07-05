@@ -1,0 +1,323 @@
+{
+    //猕猴桃action
+    "邪恶入侵_配置猕猴桃": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "max_hit": 1,
+        "roi": [
+            22,
+            660,
+            75,
+            27
+        ],
+        "action": "Click",
+        "anchor": {
+            "下一个寻找的植物": "碎片挑战_配置植物_寻找猕猴桃"
+        },
+        "next": [
+            "[Anchor]下一个寻找的植物",
+            "寻找植物_滑动"
+        ]
+    },
+    "碎片挑战_配置植物_寻找猕猴桃": {
+        "anchor": {
+            "下一个寻找的植物": "碎片挑战_邪恶入侵_选择多余植物进行占位",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Fragment_Challenge_plant/碎片挑战_植物_猕猴桃.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "碎片挑战_猕猴桃_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1090,
+            654,
+            139,
+            40
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": [
+            "[Anchor]自动识别所需的对局配置"
+        ]
+    },
+    "巨人危机_种植猕猴桃_1_1": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge_plant/二倍速.png"
+        ],
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            455,
+            138,
+            22,
+            19
+        ],
+        "next": "巨人危机_种植猕猴桃_1_2",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_1_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            463,
+            260,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_1_3",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_1_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            461,
+            369,
+            1,
+            4
+        ],
+        "next": "巨人危机_种植猕猴桃_1_4",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_1_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            478,
+            475,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_1_5",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_1_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            461,
+            596,
+            2,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_2_3",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_2_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            569,
+            372,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_2_4",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_2_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            559,
+            480,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_3_3",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_3_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            642,
+            388,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_3_4",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_3_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            645,
+            482,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_4_3",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_4_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            760,
+            373,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_4_4",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_4_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            736,
+            488,
+            1,
+            1
+        ],
+        "next": "巨人危机_种植猕猴桃_5_3",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_5_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            823,
+            373,
+            4,
+            2
+        ],
+        "next": "巨人危机_种植猕猴桃_5_4",
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    "巨人危机_种植猕猴桃_5_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": [
+            58,
+            114,
+            15,
+            8
+        ],
+        "end": [
+            819,
+            486,
+            1,
+            1
+        ],
+        "next": [
+            "碎片挑战_二倍速"
+        ],
+        "pre_delay": 10,
+        "post_delay": 0
+    },
+    //猕猴桃action
+}

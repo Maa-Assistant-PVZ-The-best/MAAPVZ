@@ -1,0 +1,148 @@
+{
+    "识别成功，启动！": {
+        "timeout": 500000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_开始匹配.png"
+        ],
+        "action": "Click",
+        "next": [
+            "识别局内",
+            "突发情况处理"
+        ]
+    },
+    "识别局内": {
+        "rate_limit": 2000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/双人对决_局内.png"
+        ],
+        "action": "DoNothing",
+        "focus": "[color:darkgray]开始匹配[/color]",
+        "next": [
+            "准备卡双赢"
+        ],
+        "on_error": [
+            "突发情况处理"
+        ]
+    },
+    "准备卡双赢": {
+        "action": "DoNothing",
+        "next": [
+            "下拉栏第一次"
+        ]
+    },
+    "下拉栏第一次": {
+        "action": "Swipe",
+        "pre_delay": 10,
+        "post_delay": 10,
+        "begin": [
+            665,
+            1,
+            1,
+            1
+        ],
+        "end": [
+            770,
+            460,
+            1,
+            1
+        ],
+        "next": [
+            "下拉栏第二次"
+        ]
+    },
+    "下拉栏第二次": {
+        "pre_delay": 10,
+        "action": "Swipe",
+        "post_delay": 4500,
+        "begin": [
+            665,
+            1,
+            1,
+            1
+        ],
+        "end": [
+            770,
+            456,
+            1,
+            1
+        ],
+        "next": [
+            "下拉栏返回"
+        ]
+    },
+    "下拉栏返回": {
+        "action": "Swipe",
+        "pre_delay": 10,
+        "post_delay": 100,
+        "begin": [
+            770,
+            456,
+            1,
+            1
+        ],
+        "end": [
+            665,
+            1,
+            1,
+            1
+        ],
+        "next": [
+            "下拉栏返回2"
+        ]
+    },
+    "下拉栏返回2": {
+        "action": "Swipe",
+        "pre_delay": 10,
+        "post_delay": 0,
+        "begin": [
+            770,
+            456,
+            1,
+            1
+        ],
+        "end": [
+            665,
+            1,
+            1,
+            1
+        ],
+        "next": [
+            "识别是否掉血",
+            "下拉栏第一次"
+        ]
+    },
+    "识别是否掉血": {
+        "timeout": 100,
+        "recognition": "Or",
+        "any_of": [
+            {
+                "recognition": "ColorMatch",
+                "lower": [
+                    50,
+                    245,
+                    34
+                ],
+                "upper": [
+                    195,
+                    255,
+                    87
+                ],
+                "roi": [
+                    534,
+                    367,
+                    169,
+                    27
+                ]
+            }
+        ],
+        "inverse": true,
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "放置远程一号位植物1",
+            "放置近战一号位植物1"
+        ]
+    },
+}
