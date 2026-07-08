@@ -13,6 +13,7 @@ if getattr(sys, 'frozen', False):
 else:
     ROOT_DIR = Path(__file__).parent.parent
 
+_screenshot_counter = {}
 _offset_state_map = {}
 _plant_states = {}
 SCREENSHOT_DIR = ROOT_DIR / "screenshots"
@@ -476,4 +477,48 @@ class ResetCounts(CustomAction):
         for plant_name, state in _plant_states.items():
             state["counts"] = {1: 0, 2: 0, 3: 0, 4: 0}
         print(f"[ResetCounts] 已重置所有植物的点击次数，保留运行次数")
+        return CustomAction.RunResult(success=True)
+    
+@AgentServer.custom_action("SaveScreenshot")
+class SaveScreenshot(CustomAction):
+    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+        param = json.loads(argv.custom_action_param) if argv.custom_action_param else {}
+
+        # 如果提供了 filename，直接使用（兼容旧用法）
+        filename = param.get("filename")
+        fmt = param.get("format", "png").lower()
+        if fmt not in ("png", "jpg", "jpeg"):
+            fmt = "png"
+
+        # 如果未提供 filename，则使用 base_name 自动编号
+        if filename is None:
+            base_name = param.get("base_name", "screenshot")
+            count = _screenshot_counter.get(base_name, 0)
+            if count == 0:
+                file_name = base_name
+            else:
+                file_name = f"{base_name}{count}"
+            _screenshot_counter[base_name] = count + 1
+            file_name = f"{file_name}.{fmt}"
+        else:
+            if not filename.endswith(f".{fmt}"):
+                file_name = f"{filename}.{fmt}"
+            else:
+                file_name = filename
+
+        # 处理保存路径
+        save_dir = param.get("save_path", "./screenshots")
+        save_path = Path(save_dir)
+        save_path.mkdir(parents=True, exist_ok=True)
+        filepath = save_path / file_name
+
+        # 获取截图
+        image = context.tasker.controller.cached_image
+        if image is None:
+            return CustomAction.RunResult(success=False)
+
+        # 保存图片
+        rgb_image = image[..., ::-1]  # BGR -> RGB
+        Image.fromarray(rgb_image).save(str(filepath))
+        print(f"[SaveScreenshot] 已保存: {filepath}")
         return CustomAction.RunResult(success=True)
