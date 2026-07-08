@@ -1,0 +1,260 @@
+{
+    "植物探险_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "点击日常",
+            "[JumpBack]检查当前是否在主界面"
+        ],
+        "on_error": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "点击日常": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/日常.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击植物探险",
+            "点击日常",
+            "检查_海盗/埃及"
+        ]
+    },
+    "点击植物探险": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/植物探险.png"
+        ],
+        "action": "Click",
+        "next": [
+            "检查_海盗/埃及",
+            "点击植物探险",
+            "点击日常"
+        ]
+    },
+    "检查_海盗/埃及": {
+        "recognition": "TemplateMatch",
+        "max_hit": 1,
+        "template": [
+            "plants_explore/海盗埃及.png",
+            "plants_explore/海盗埃及（灰色）.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查海盗/埃及[/color]",
+        "next": [
+            "点击探险完成",
+            "滑动",
+            "检查_西部/功夫"
+        ]
+        // "on_error": [
+        //     "滑动"
+        // ]
+    },
+    "检查_西部/功夫": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/西部功夫.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查西部/功夫[/color]",
+        "next": [
+            "点击探险完成",
+            "滑动2",
+            "检查_未来/黑暗"
+        ]
+    },
+    "检查_未来/黑暗": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/未来黑暗.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查未来/黑暗[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "滑动3",
+            "检查_海滩/冰河"
+        ]
+    },
+    "检查_海滩/冰河": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/沙滩冰河.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查海滩/冰河[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "滑动4"
+        ]
+    },
+    "检查_天空/失落": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/天空失落.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查天空/失落[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "滑动5"
+        ]
+    },
+    "检查_摇滚/恐龙": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/摇滚恐龙.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查摇滚/恐龙[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "滑动6",
+            "检查_摩登/蒸汽"
+        ]
+    },
+    "检查_摩登/蒸汽": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/摩登蒸汽.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查摩登/蒸汽[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "滑动7",
+            "检查_平安/复兴"
+        ]
+    },
+    "检查_平安/复兴": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/平安复兴.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]检查平安/复兴[/color]",
+        "post_delay": 500,
+        "next": [
+            "点击探险完成",
+            "滑动8"
+        ]
+    },
+    "检查_海底世界": {
+        "max_hit": 1,
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/海底世界.png"
+        ],
+        "pre_wait_freezes": 1000,
+        "action": "Click",
+        "focus": "[color:darkgray]检查海底世界[/color]",
+        "post_delay": 500,
+        "threshold": [
+            0.9
+        ],
+        "next": [
+            "点击探险完成",
+            "检查完成"
+        ]
+    },
+    //先检查一遍再找对应世界再找对应植物
+    "点击探险完成": {
+        "recognition": "TemplateMatch",
+        "pre_wait_freezes": 2000,
+        "template": [
+            "plants_explore/探险完成.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 700,
+        "next": [
+            "完成探险"
+        ]
+    },
+    "植物探险_使用免广告卡": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore_slide_and_click/看广告领双倍.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]植物探险_使用免广告卡[/color]",
+        "next": [
+            "完成探险"
+        ]
+    },
+    "完成探险": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/探险完成_确定.png"
+        ],
+        "action": "Click",
+        "focus": "[color:darkgray]完成探险[/color]",
+        "post_delay": 500,
+        "next": [
+            "滑动",
+            "检查_西部/功夫",
+            "滑动2",
+            "检查_未来/黑暗",
+            "滑动3",
+            "检查_海滩/冰河",
+            "滑动4",
+            "节点滑动_天空失落-平安复兴",
+            "检查_天空/失落",
+            "滑动5",
+            "检查_摇滚/恐龙",
+            "滑动6",
+            "检查_摩登/蒸汽",
+            "滑动7",
+            "检查_平安/复兴",
+            "滑动8",
+            "节点滑动_海底世界",
+            "检查_海底世界"
+        ]
+    },
+    "检查完成": {
+        "focus": "[color:darkgray]植物探险检查完成！[/color]",
+        "next": [
+            "[JumpBack]检查_滑回最顶上",
+            "探索"
+        ]
+    }
+}
