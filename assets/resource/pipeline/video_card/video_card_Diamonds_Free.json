@@ -15,6 +15,7 @@
         "threshold": [
             0.7999999
         ],
+        "post_delay": 500,
         "focus": "领取钻石",
         "green_mask": true,
         "action": "Click",
