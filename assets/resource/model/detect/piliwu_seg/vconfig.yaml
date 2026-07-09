@@ -1,0 +1,5 @@
+model_type: yolov8_seg
+model_path: best.onnx
+nc: 1
+names:
+  0: piliwu

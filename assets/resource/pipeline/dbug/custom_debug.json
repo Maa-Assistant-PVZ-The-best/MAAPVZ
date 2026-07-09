@@ -4,11 +4,11 @@
         "action": "Custom",
         "custom_action": "SaveScreenshot",
         "custom_action_param": {
-            "save_path": "C:/Users/z'j's/Desktop/霹雳舞1", //要用的话写自己需要的路径
+            "save_path": "C:/Users/z'j's/Desktop/2霹雳舞", //要用的话写自己需要的路径
             "base_name": "霹雳舞1",
             "format": "png"
         },
-        "max_hit": 501,
+        "max_hit": 1001,
         "next": [
             "截图重开"
         ]
