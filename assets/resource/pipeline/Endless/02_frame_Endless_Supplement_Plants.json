@@ -1,100 +1,304 @@
 {
     "frame_wj_卡2_补植物1": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第二个槽位",
+        "begin": [
+            100,
+            300
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡2_补植物2"
         ]
     },
     "frame_wj_卡2_补植物2": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第二个槽位",
+        "begin": [
+            100,
+            300
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡2_补植物3"
         ]
     },
     "frame_wj_卡2_补植物3": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第二个槽位",
+        "begin": [
+            100,
+            300
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡2_补植物4"
         ]
     },
     "frame_wj_卡2_补植物4": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第二个槽位",
+        "begin": [
+            100,
+            300
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡2_补植物5"
         ]
     },
     "frame_wj_卡2_补植物5": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第二个槽位",
+        "begin": [
+            100,
+            300
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡3_过渡"
+        ]
+    },
+    "frame_wj_卡3_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 10,
         "next": [
             "frame_wj_卡3_补植物1"
         ]
     },
     "frame_wj_卡3_补植物1": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第三个槽位",
+        "begin": [
+            100,
+            400
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡3_补植物2"
         ]
     },
     "frame_wj_卡3_补植物2": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第三个槽位",
+        "begin": [
+            100,
+            400
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡3_补植物3"
         ]
     },
     "frame_wj_卡3_补植物3": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第三个槽位",
+        "begin": [
+            100,
+            400
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡3_补植物4"
         ]
     },
     "frame_wj_卡3_补植物4": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第三个槽位",
+        "begin": [
+            100,
+            400
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_卡3_补植物5"
         ]
     },
     "frame_wj_卡3_补植物5": {
         "action": "Swipe",
-        "begin": "种植物_初始化_第三个槽位",
+        "begin": [
+            100,
+            400
+        ],
         "end": [],
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡4_过渡"
+        ]
+    },
+    "frame_wj_卡4_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 10,
+        "next": [
+            "frame_wj_卡4_补植物1"
+        ]
+    },
+    "frame_wj_卡4_补植物1": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            500
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡4_补植物2"
+        ]
+    },
+    "frame_wj_卡4_补植物2": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            500
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡4_补植物3"
+        ]
+    },
+    "frame_wj_卡4_补植物3": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            500
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡4_补植物4"
+        ]
+    },
+    "frame_wj_卡4_补植物4": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            500
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡4_补植物5"
+        ]
+    },
+    "frame_wj_卡4_补植物5": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            500
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡5_过渡"
+        ]
+    },
+    "frame_wj_卡5_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 10,
+        "next": [
+            "frame_wj_卡5_补植物1"
+        ]
+    },
+    "frame_wj_卡5_补植物1": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            600
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡5_补植物2"
+        ]
+    },
+    "frame_wj_卡5_补植物2": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            600
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡5_补植物3"
+        ]
+    },
+    "frame_wj_卡5_补植物3": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            600
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡5_补植物4"
+        ]
+    },
+    "frame_wj_卡5_补植物4": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            600
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
+        "next": [
+            "frame_wj_卡5_补植物5"
+        ]
+    },
+    "frame_wj_卡5_补植物5": {
+        "action": "Swipe",
+        "begin": [
+            100,
+            600
+        ],
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 10,
+        "duration": 100,
         "next": [
             "frame_wj_划飞弹"
         ]

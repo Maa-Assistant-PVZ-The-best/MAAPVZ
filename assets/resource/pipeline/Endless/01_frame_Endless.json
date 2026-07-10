@@ -17,6 +17,24 @@
             59
         ],
         "threshold": 0.75,
+        "timeout": 600000,
+        "next": [
+            "frame_wj_识别霹雳舞僵尸",
+            "frame_wj_点击开始战斗"
+        ]
+    },
+    "frame_wj_点击开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
         "action": "Click",
         "timeout": 600000,
         "next": [
@@ -356,7 +374,6 @@
         "timeout": 600000,
         "next": [
             "frame_wj_识别boss关",
-            "frame_wj_识别霹雳舞僵尸",
             "frame_wj_识别开始战斗"
         ]
     },
@@ -403,6 +420,10 @@
         "post_delay": 0,
         "next": [
             "frame_wj_神器补给_神器",
+            "frame_wj_神器补给_全部植物",
+            "frame_wj_神器补给_橙色植物",
+            "frame_wj_神器补给_蓝色植物",
+            "frame_wj_神器补给_紫色植物",
             "frame_wj_补给"
         ]
     },
@@ -414,6 +435,66 @@
             237,
             909,
             80
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "frame_wj_神器补给_确定1"
+        ]
+    },
+    "frame_wj_神器补给_全部植物": {
+        "recognition": "OCR",
+        "expected": "全部植物",
+        "roi": [
+            291,
+            356,
+            1364,
+            120
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "frame_wj_神器补给_确定1"
+        ]
+    },
+    "frame_wj_神器补给_橙色植物": {
+        "recognition": "OCR",
+        "expected": "橙色植物",
+        "roi": [
+            291,
+            356,
+            1364,
+            120
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "frame_wj_神器补给_确定1"
+        ]
+    },
+    "frame_wj_神器补给_蓝色植物": {
+        "recognition": "OCR",
+        "expected": "蓝色植物",
+        "roi": [
+            291,
+            356,
+            1364,
+            120
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "frame_wj_神器补给_确定1"
+        ]
+    },
+    "frame_wj_神器补给_紫色植物": {
+        "recognition": "OCR",
+        "expected": "紫色植物",
+        "roi": [
+            291,
+            356,
+            1364,
+            120
         ],
         "action": "Click",
         "pre_delay": 1000,
