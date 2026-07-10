@@ -30,10 +30,24 @@
         "pre_delay": 0,
         "post_delay": 15000,
         "next": [
+            "魔甘前喂豆",
+            "种三叶草",
+            "种甜薯1"
+        ]
+    },
+    "魔甘前喂豆": {
+        "enabled": false,
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": [],
+        "duration": 100,
+        "next": [
+            "种三叶草",
             "种甜薯1"
         ]
     },
     "种三叶草": {
+        "enabled": false,
         "action": "Swipe",
         "begin": "种植物_初始化_第七个槽位",
         "end": "种植物_初始化_格子5_9",

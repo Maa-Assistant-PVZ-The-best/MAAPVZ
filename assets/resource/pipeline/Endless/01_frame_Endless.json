@@ -340,10 +340,7 @@
     "frame_wj_喂豆5-3": {
         "action": "Swipe",
         "begin": "种植物_初始化_能量豆位置",
-        "end": [
-            835,
-            369
-        ],
+        "end": "种植物_初始化_格子3_5",
         "pre_delay": 100,
         "post_delay": 1000,
         "timeout": 600000,
