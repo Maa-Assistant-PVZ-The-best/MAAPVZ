@@ -243,8 +243,8 @@
     },
     "自动选择": {
         "timeout": 10000,
-        "pre_delay": 500,
-        "post_delay": 500,
+        "post_wait_freezes": 500,
+        "pre_wait_freezes": 500,
         "recognition": "TemplateMatch",
         "template": [
             "plants_explore_slide_and_click/自动选择.png"
@@ -261,8 +261,8 @@
         "focus": "[color:darkgray]探险成功！[/color]"
     },
     "开始探险": {
-        "pre_delay": 500,
-        "post_delay": 2000,
+        "pre_wait_freezes": 500,
+        "post_wait_freezes": 1000,
         "recognition": "TemplateMatch",
         "template": [
             "plants_explore_slide_and_click/开始探险.png"
@@ -274,8 +274,8 @@
         ]
     },
     "探索_检查植物探索cd": {
-        "pre_delay": 500,
-        "post_delay": 500,
+        "post_wait_freezes": 500,
+        "pre_wait_freezes": 500,
         "recognition": "TemplateMatch",
         "template": [
             "plants_explore_slide_and_click/探索_我再想想.png"
@@ -287,8 +287,8 @@
         "focus": "[color:darkgray]当前植物探险失败，有植物正在cd中[/color]"
     },
     "点叉": {
-        "pre_delay": 500,
-        "post_delay": 500,
+        "post_wait_freezes": 500,
+        "pre_wait_freezes": 500,
         "recognition": "TemplateMatch",
         "template": [
             "plants_explore_slide_and_click/叉叉.png"

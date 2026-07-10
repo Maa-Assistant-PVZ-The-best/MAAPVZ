@@ -79,10 +79,7 @@
     },
     "frame_wj_卡3_补植物1": {
         "action": "Swipe",
-        "begin": [
-            100,
-            400
-        ],
+        "begin": "种植物_初始化_第三个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -93,10 +90,7 @@
     },
     "frame_wj_卡3_补植物2": {
         "action": "Swipe",
-        "begin": [
-            100,
-            400
-        ],
+        "begin": "种植物_初始化_第三个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -107,10 +101,7 @@
     },
     "frame_wj_卡3_补植物3": {
         "action": "Swipe",
-        "begin": [
-            100,
-            400
-        ],
+        "begin": "种植物_初始化_第三个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -121,10 +112,7 @@
     },
     "frame_wj_卡3_补植物4": {
         "action": "Swipe",
-        "begin": [
-            100,
-            400
-        ],
+        "begin": "种植物_初始化_第三个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -135,10 +123,7 @@
     },
     "frame_wj_卡3_补植物5": {
         "action": "Swipe",
-        "begin": [
-            100,
-            400
-        ],
+        "begin": "种植物_初始化_第三个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -157,10 +142,7 @@
     },
     "frame_wj_卡4_补植物1": {
         "action": "Swipe",
-        "begin": [
-            100,
-            500
-        ],
+        "begin": "种植物_初始化_第四个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -171,10 +153,7 @@
     },
     "frame_wj_卡4_补植物2": {
         "action": "Swipe",
-        "begin": [
-            100,
-            500
-        ],
+        "begin": "种植物_初始化_第四个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -185,10 +164,7 @@
     },
     "frame_wj_卡4_补植物3": {
         "action": "Swipe",
-        "begin": [
-            100,
-            500
-        ],
+        "begin": "种植物_初始化_第四个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -199,10 +175,7 @@
     },
     "frame_wj_卡4_补植物4": {
         "action": "Swipe",
-        "begin": [
-            100,
-            500
-        ],
+        "begin": "种植物_初始化_第四个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -213,10 +186,7 @@
     },
     "frame_wj_卡4_补植物5": {
         "action": "Swipe",
-        "begin": [
-            100,
-            500
-        ],
+        "begin": "种植物_初始化_第四个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -235,10 +205,7 @@
     },
     "frame_wj_卡5_补植物1": {
         "action": "Swipe",
-        "begin": [
-            100,
-            600
-        ],
+        "begin": "种植物_初始化_第五个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -249,10 +216,7 @@
     },
     "frame_wj_卡5_补植物2": {
         "action": "Swipe",
-        "begin": [
-            100,
-            600
-        ],
+        "begin": "种植物_初始化_第五个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -263,10 +227,7 @@
     },
     "frame_wj_卡5_补植物3": {
         "action": "Swipe",
-        "begin": [
-            100,
-            600
-        ],
+        "begin": "种植物_初始化_第五个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -277,10 +238,7 @@
     },
     "frame_wj_卡5_补植物4": {
         "action": "Swipe",
-        "begin": [
-            100,
-            600
-        ],
+        "begin": "种植物_初始化_第五个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
@@ -291,10 +249,7 @@
     },
     "frame_wj_卡5_补植物5": {
         "action": "Swipe",
-        "begin": [
-            100,
-            600
-        ],
+        "begin": "种植物_初始化_第五个槽位",
         "end": [],
         "pre_delay": 0,
         "post_delay": 10,
