@@ -1029,22 +1029,50 @@
         ]
     },
     "没有选到准备退出": {
+        "next": [
+            "找不到植物第一次",
+            "找不到植物第二次"
+        ]
+    },
+    "找不到植物第一次": {
         "recognition": "TemplateMatch",
         "template": [
             "Fragment_Challenge/碎片挑战_叉叉.png",
             "Fragment_Challenge/叉叉.png"
         ],
         "action": "Click",
+        "max_hit": 1,
         "anchor": {
             "返回简单": "",
             "传奇难度选择植物": "",
             "困难选择模式": "",
             "普通选择模式": "",
             "普通选择模式_翻页": "",
-            "找不到退出": ""
+            "找不到退出": "",
+            "碎片挑战类型": "点击碎片挑战_邪恶入侵"
         },
         "next": [
             "点击日常_碎片挑战"
+        ]
+    },
+    "找不到植物第二次": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/碎片挑战_叉叉.png",
+            "Fragment_Challenge/叉叉.png"
+        ],
+        "action": "Click",
+        "max_hit": 1,
+        "anchor": {
+            "返回简单": "",
+            "传奇难度选择植物": "",
+            "困难选择模式": "",
+            "普通选择模式": "",
+            "普通选择模式_翻页": "",
+            "找不到退出": "",
+        },
+        "next": [
+            "确认当前是否在主界面_停止任务"
         ]
     }
 }
