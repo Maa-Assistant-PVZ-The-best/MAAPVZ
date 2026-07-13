@@ -384,6 +384,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物1": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -712,6 +802,96 @@
                     "pipeline_override": {
                         "frame_wj_卡2_补植物2": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物2": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -1044,6 +1224,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物3": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -1374,6 +1644,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物4": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -1702,6 +2062,96 @@
                     "pipeline_override": {
                         "frame_wj_卡2_补植物5": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡2_补植物5": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -2062,6 +2512,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物1": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -2390,6 +2930,96 @@
                     "pipeline_override": {
                         "frame_wj_卡3_补植物2": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物2": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -2722,6 +3352,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物3": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -3052,6 +3772,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物4": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -3380,6 +4190,96 @@
                     "pipeline_override": {
                         "frame_wj_卡3_补植物5": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡3_补植物5": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -3740,6 +4640,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物1": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -4068,6 +5058,96 @@
                     "pipeline_override": {
                         "frame_wj_卡4_补植物2": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物2": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -4400,6 +5480,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物3": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -4730,6 +5900,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物4": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -5058,6 +6318,96 @@
                     "pipeline_override": {
                         "frame_wj_卡4_补植物5": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡4_补植物5": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -5418,6 +6768,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物1": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -5746,6 +7186,96 @@
                     "pipeline_override": {
                         "frame_wj_卡5_补植物2": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物2": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
@@ -6078,6 +7608,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物3": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -6408,6 +8028,96 @@
                             "end": "种植物_初始化_格子5_7"
                         }
                     }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物4": {
+                            "end": "种植物_初始化_格子5_9"
+                        }
+                    }
                 }
             ]
         },
@@ -6736,6 +8446,96 @@
                     "pipeline_override": {
                         "frame_wj_卡5_补植物5": {
                             "end": "种植物_初始化_格子5_7"
+                        }
+                    }
+                },
+                {
+                    "name": "8-1",
+                    "label": "8-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子1_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-2",
+                    "label": "8-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子2_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-3",
+                    "label": "8-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子3_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-4",
+                    "label": "8-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子4_8"
+                        }
+                    }
+                },
+                {
+                    "name": "8-5",
+                    "label": "8-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子5_8"
+                        }
+                    }
+                },
+                {
+                    "name": "9-1",
+                    "label": "9-1",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子1_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-2",
+                    "label": "9-2",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子2_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-3",
+                    "label": "9-3",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子3_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-4",
+                    "label": "9-4",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子4_9"
+                        }
+                    }
+                },
+                {
+                    "name": "9-5",
+                    "label": "9-5",
+                    "pipeline_override": {
+                        "frame_wj_卡5_补植物5": {
+                            "end": "种植物_初始化_格子5_9"
                         }
                     }
                 }
