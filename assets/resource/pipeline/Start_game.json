@@ -486,6 +486,23 @@
                     "✖"
                 ],
                 "threshold": 0.5
+            },
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "×",
+                    "x",
+                    "X",
+                    "✕",
+                    "✖"
+                ],
+                "threshold": 0.5,
+                "roi": [
+                    631,
+                    523,
+                    17,
+                    18
+                ]
             }
         ],
         "action": "Click",
