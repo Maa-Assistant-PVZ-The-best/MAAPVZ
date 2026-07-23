@@ -1,0 +1,13 @@
+{
+    "创意庭院_点击输入_粘贴": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "PasteClipboard"
+            }
+        },
+        "next": [
+            "创意庭院_点击输入_搜索"
+        ]
+    },
+}

@@ -524,3 +524,95 @@ class SaveScreenshot(CustomAction):
         Image.fromarray(rgb_image).save(str(filepath))
         print(f"[SaveScreenshot] 已保存: {filepath}")
         return CustomAction.RunResult(success=True)
+@AgentServer.custom_action("PasteClipboard")
+class PasteClipboard(CustomAction):
+    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+        # ---------- 1. 确保 pyperclip 可用 ----------
+        try:
+            import pyperclip
+        except ImportError:
+            import subprocess, sys
+            print("[PasteClipboard] pyperclip 未安装，正在自动安装...")
+            try:
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "pyperclip"])
+                import pyperclip
+                print("[PasteClipboard] pyperclip 安装成功")
+            except Exception as e:
+                print(f"[PasteClipboard] 自动安装失败: {e}")
+                return CustomAction.RunResult(success=False)
+
+        # ---------- 2. 读取剪贴板 ----------
+        try:
+            text = pyperclip.paste()
+        except Exception as e:
+            print(f"[PasteClipboard] 读取剪贴板失败: {e}")
+            return CustomAction.RunResult(success=False)
+
+        if not text:
+            print("[PasteClipboard] 剪贴板为空")
+            return CustomAction.RunResult(success=True)
+
+        # ---------- 3. 获取 ADB 信息 ----------
+        adb_path = None
+        adb_serial = None
+
+        # 3a. 尝试从控制器信息中获取（推荐）
+        try:
+            ctrl_info = context.tasker.controller.info
+            if isinstance(ctrl_info, dict):
+                adb_path = ctrl_info.get("adb_path")
+                adb_serial = ctrl_info.get("adb_serial")
+            else:
+                adb_path = getattr(ctrl_info, "adb_path", None)
+                adb_serial = getattr(ctrl_info, "adb_serial", None)
+        except Exception as e:
+            print(f"[PasteClipboard] 从控制器获取 ADB 信息失败: {e}")
+
+        # 3b. 如果失败，尝试从系统 PATH 中查找 adb
+        if not adb_path:
+            import shutil
+            adb_path = shutil.which("adb")
+            if not adb_path:
+                print("[PasteClipboard] 未找到 adb，请确保 adb 已安装并在 PATH 中")
+                return CustomAction.RunResult(success=False)
+
+        # 如果序列号仍未获取，尝试从 adb devices 自动获取（仅当只有一个设备时）
+        if not adb_serial:
+            import subprocess
+            try:
+                result = subprocess.run([adb_path, "devices"], capture_output=True, text=True)
+                lines = result.stdout.strip().split('\n')[1:]  # 跳过标题
+                devices = [line.split('\t')[0] for line in lines if line.strip() and 'device' in line]
+                if len(devices) == 1:
+                    adb_serial = devices[0]
+                    print(f"[PasteClipboard] 自动检测到设备: {adb_serial}")
+                elif len(devices) > 1:
+                    print("[PasteClipboard] 检测到多个设备，请手动指定序列号")
+                    # 这里可以继续执行，但可能出错，由用户自行选择
+                else:
+                    print("[PasteClipboard] 未检测到已连接的设备")
+                    return CustomAction.RunResult(success=False)
+            except Exception as e:
+                print(f"[PasteClipboard] 自动检测设备失败: {e}")
+
+        # ---------- 4. 转义文本 ----------
+        escaped = text.replace('\\', '\\\\').replace('"', '\\"')
+        escaped = escaped.replace('\r\n', ' ').replace('\n', ' ')
+        if len(escaped) > 3800:
+            print(f"[PasteClipboard] 文本过长，截断至 3800 字符")
+            escaped = escaped[:3800]
+
+        # ---------- 5. 执行 ADB 命令 ----------
+        if adb_serial:
+            cmd = f'"{adb_path}" -s {adb_serial} shell input text "{escaped}"'
+        else:
+            cmd = f'"{adb_path}" shell input text "{escaped}"'
+        print(f"[PasteClipboard] 执行命令: {cmd[:200]}...")
+        import subprocess
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"[PasteClipboard] 执行失败 (code {result.returncode}): {result.stderr}")
+            return CustomAction.RunResult(success=False)
+        else:
+            print(f"[PasteClipboard] 发送成功，文本长度: {len(text)}")
+            return CustomAction.RunResult(success=True)

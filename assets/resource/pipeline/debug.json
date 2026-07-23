@@ -1,0 +1,19 @@
+{
+    "测试_输入文字": {
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "input text 砸罐子"
+            }
+        }
+    },
+    "创意庭院_粘贴文本": {
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "PasteClipboard"
+            }
+        },
+        "post_delay": 500
+    }
+}
