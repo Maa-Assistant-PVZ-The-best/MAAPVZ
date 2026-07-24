@@ -213,17 +213,47 @@
                             "enabled": true
                         },
                         "创意庭院_游玩_可刷取的代币已达上限": {
+                            "enabled": true
+                        },
+                        "创意庭院_刷币_删完关卡_退出": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "刷点赞",
+                    "option": [
+                        "点赞几次"
+                    ],
+                    "pipeline_override": {
+                        "创意庭院_刷赞_删除关卡": {
+                            "enabled": true
+                        },
+                        "创意庭院_刷赞_创建关卡": {
                             "enabled": true,
                         },
                     }
                 },
                 {
-                    "name": "刷点赞(暂不可用)"
-                },
-                {
                     "name": "刷发布关卡(暂不可用)"
                 }
             ]
+        },
+        "点赞几次": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "点赞次数",
+                    "pipeline_type": "int",
+                    "default": "1",
+                    "verify": "[1-9]\\d*$"
+                },
+            ],
+            "pipeline_override": {
+                "创意庭院_刷赞_重新创建关卡检测次数": {
+                    "max_hit": "{点赞次数}"
+                },
+            }
         },
         "高级设置": {
             "type": "switch",
