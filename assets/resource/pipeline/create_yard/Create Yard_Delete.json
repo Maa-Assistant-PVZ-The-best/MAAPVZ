@@ -1,0 +1,49 @@
+{
+    "创意庭院_删除关卡_点刷罐子": {
+        "recognition": "OCR",
+        "expected": [
+            "砸罐子"
+        ],
+        "roi": [
+            383,
+            287,
+            95,
+            42
+        ],
+        "action": "Click",
+        "next": "创意庭院_删除关卡_点删除"
+    },
+    "创意庭院_删除关卡_点删除": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "create_yard/创意庭院_删除.png"
+        ],
+        "roi": [
+            516,
+            337,
+            74,
+            73
+        ],
+        "action": "Click",
+        "next": "创意庭院_删除关卡_确定"
+    },
+    "创意庭院_删除关卡_确定": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "action": "Click",
+        "roi": [
+            507,
+            490,
+            107,
+            48
+        ],
+        "next": "创意庭院_刷币_退出"
+    },
+    "创意庭院_刷币_退出": {
+        "next": [
+            "返回主界面_停止任务"
+        ]
+    },
+}
