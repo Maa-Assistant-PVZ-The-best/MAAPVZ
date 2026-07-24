@@ -96,11 +96,12 @@
         "action": "Swipe",
         "pre_delay": 10,
         "post_delay": 0,
-        "repeat": 2,
+        "repeat": 4,
         "repeat_delay": 0,
+        "duration": 10,
         "begin": [
             628,
-            67
+            699
         ],
         "end": [
             628,
