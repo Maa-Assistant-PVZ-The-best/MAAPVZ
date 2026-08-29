@@ -1,53 +1,88 @@
-name: Build and Release APK
+name: install_apk
 
 on:
   push:
     branches:
-      - main
+      - "**"
+    paths:
+      - ".github/workflows/install_apk.yml"
+      - "assets/**"
+      - "agent/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/install_apk.yml"
+      - "assets/**"
+      - "agent/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
   workflow_dispatch:
+    inputs:
+      version:
+        description: Artifact version (leave empty to use the CI version)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Version used in artifact names
+        required: true
+        type: string
+
+concurrency:
+  group: install_apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   check_version:
     runs-on: ubuntu-latest
     outputs:
-      is_release: ${{ steps.check.outputs.is_release }}
-      tag: ${{ steps.check.outputs.tag }}
       version_tag: ${{ steps.check.outputs.version_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
       - id: check
         run: |
-          is_release=false
-          tag=""
-          FIRST_LINE=$(echo "${{ github.event.head_commit.message }}" | head -n1)
-          if [[ "$FIRST_LINE" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-            VERSION=$(echo "$FIRST_LINE" | grep -oE '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?')
-            if [ -n "$VERSION" ]; then
-              is_release=true
-              tag="$VERSION"
-            fi
+          requested_version="${{ inputs.version }}"
+          if [[ -n "$requested_version" ]]; then
+            echo "version_tag=$requested_version" | tee -a "$GITHUB_OUTPUT"
+            exit 0
           fi
-          if [ -z "$tag" ]; then
-            tag="ci-$(date +%Y%m%d-%H%M)"
+
+          latest_tag=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || true)
+          if [[ "$latest_tag" != v* ]]; then
+            latest_tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
           fi
-          echo "is_release=$is_release" >> $GITHUB_OUTPUT
-          echo "tag=$tag" >> $GITHUB_OUTPUT
-          echo "version_tag=$tag" >> $GITHUB_OUTPUT
+          if [[ "$latest_tag" != v* ]]; then
+            latest_tag="v0.0.0"
+          fi
+
+          short_sha=$(git rev-parse --short HEAD)
+          date_str=$(date +%y%m%d)
+          version_tag="${latest_tag}-ci.${date_str}-${short_sha}"
+
+          echo "version_tag=$version_tag" | tee -a "$GITHUB_OUTPUT"
 
   build:
     needs: check_version
-    if: needs.check_version.outputs.is_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
 
     steps:
       - name: Checkout resource
         uses: actions/checkout@v4
         with:
+          submodules: true
           path: resource
 
       - name: Clone MaaFwApp
@@ -219,15 +254,4 @@ jobs:
         with:
           name: MaaPVZ-android-arm64-${{ needs.check_version.outputs.version_tag }}
           path: maafwapp/app/build/outputs/apk/debug/MaaPVZ-*.apk
-
-      - name: Create Release (only for tags)
-        if: needs.check_version.outputs.is_release == 'true'
-        uses: softprops/action-gh-release@v1
-        with:
-          files: maafwapp/app/build/outputs/apk/debug/MaaPVZ-*.apk
-          tag_name: ${{ needs.check_version.outputs.tag }}
-          name: ${{ needs.check_version.outputs.tag }}
-          draft: false
-          prerelease: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          if-no-files-found: error

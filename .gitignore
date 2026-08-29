@@ -459,3 +459,4 @@ tools/ImageCropper/**/*.png
 config
 debug
 .venv
+.DS_Store

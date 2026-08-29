@@ -1,0 +1,148 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Desktop builds
+    permissions:
+      contents: read
+    uses: ./.github/workflows/install.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  android:
+    name: Android APK
+    permissions:
+      contents: read
+    uses: ./.github/workflows/install_apk.yml
+    with:
+      version: ${{ github.ref_name }}
+
+  changelog:
+    name: Generate changelog
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Detect prerelease
+        id: release_type
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc|dev|pre|preview) ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate changelog
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .github/cliff.toml
+          # 正式版：使用 tag-pattern 只匹配正式版标签，包含所有从上一个正式版以来的提交
+          # 预发布版：正常生成，只包含从上一个标签以来的提交
+          args: >-
+            -vv --latest --strip header
+            ${{ steps.release_type.outputs.is_prerelease == 'false' && '--tag-pattern "^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9]{6}-[a-f0-9]{7,})?$"' || '' }}
+        env:
+          OUTPUT: CHANGES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-changelog-${{ github.ref_name }}
+          path: CHANGES.md
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: [desktop, android, changelog]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MaaPVZ-win-*-${{ github.ref_name }}
+          path: release-assets/desktop
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MaaPVZ-macos-*-${{ github.ref_name }}
+          path: release-assets/desktop
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MaaPVZ-linux-*-${{ github.ref_name }}
+          path: release-assets/desktop
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: MaaPVZ-android-arm64-${{ github.ref_name }}
+          path: release-assets/android
+
+      - name: Download changelog
+        uses: actions/download-artifact@v4
+        with:
+          name: release-changelog-${{ github.ref_name }}
+          path: release-assets/changelog
+
+      - name: Package desktop artifacts
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for directory in release-assets/desktop/*; do
+            name=$(basename "$directory")
+            (cd "$directory" && zip -r "../../../$name.zip" .)
+          done
+
+      - name: Detect prerelease
+        id: release_type
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_name }}" =~ (alpha|beta|rc|dev|pre|preview) ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          body_path: release-assets/changelog/CHANGES.md
+          draft: false
+          prerelease: ${{ steps.release_type.outputs.is_prerelease == 'true' }}
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: |
+            MaaPVZ-*.zip
+            release-assets/android/*.apk
+
+      - name: Trigger MirrorChyan workflows
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run --repo "$GITHUB_REPOSITORY" mirrorchyan_release.yml -f tag="${{ github.ref_name }}"
+          gh workflow run --repo "$GITHUB_REPOSITORY" mirrorchyan_release_note.yml -f tag="${{ github.ref_name }}"

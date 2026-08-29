@@ -196,6 +196,10 @@ def install_chores():
         working_dir / "docs" / "imgs" / "logo.ico",
         install_path / "resource" / "logo.ico",
     )
+    shutil.copy2(
+        Path(__file__).parent / "AGENTS.md",
+        install_path,
+    )
 
 
 def install_agent():
