@@ -1,0 +1,1400 @@
+{
+    "原大_西部_不可使用": {
+        "focus": "[color:Red]当前世界不可用此阵容！[/color]",
+        "action": "StopTask"
+    },
+    "原大_西部_无尽": {
+        "action": "DoNothing",
+        "anchor": {
+            "初始化": "原大_西部_过渡"
+        },
+        "next": [
+            "种植物_初始化_植物位置"
+        ]
+    },
+    "原大_西部_识别开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            915,
+            530,
+            357,
+            181
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "timeout": -1,
+        "next": [
+            "原大_西部_判断是否进入关内"
+        ]
+    },
+    "原大_西部_判断是否进入关内": {
+        "recognition": "ColorMatch",
+        "roi": [
+            467,
+            669,
+            27,
+            27
+        ],
+        "method": 4,
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "timeout": -1,
+        "action": "Click",
+        "target": [
+            1171,
+            37
+        ],
+        "next": [
+            "原大_西部_抛花1"
+        ]
+    },
+    "原大_西部_抛花1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子9_1",
+        "pre_delay": 0,
+        "post_delay": 100,
+        "duration": 100,
+        "next": [
+            "原大_西部_抛花2"
+        ]
+    },
+    "原大_西部_抛花2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子9_2",
+        "pre_delay": 0,
+        "post_delay": 1000,
+        "duration": 100,
+        "timeout": -1,
+        "next": [
+            "原大_西部_点波1"
+        ]
+    },
+    "原大_西部_点波1": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [
+            1235,
+            217
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_大哥滑动1"
+        ]
+    },
+    "原大_西部_大哥滑动1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_大哥滑动2"
+        ]
+    },
+    "原大_西部_大哥滑动2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_4",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_大哥滑动3"
+        ]
+    },
+    "原大_西部_大哥滑动3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_3",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_原豌滑动1"
+        ]
+    },
+    "原大_西部_原豌滑动1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_原豌滑动2"
+        ]
+    },
+    "原大_西部_原豌滑动2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_原豌滑动3"
+        ]
+    },
+    "原大_西部_原豌滑动3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_大哥滑动4",
+            "原大_西部_点波2"
+        ]
+    },
+    "原大_西部_大哥滑动4": {
+        "recognition": "ColorMatch",
+        "roi": [
+            115,
+            250,
+            7,
+            45
+        ],
+        "lower": [
+            250,
+            140,
+            0
+        ],
+        "upper": [
+            255,
+            167,
+            18
+        ],
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_原豌滑动4"
+        ]
+    },
+    "原大_西部_原豌滑动4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_大哥滑动5",
+            "原大_西部_点波2"
+        ]
+    },
+    "原大_西部_大哥滑动5": {
+        "recognition": "ColorMatch",
+        "roi": [
+            115,
+            250,
+            7,
+            45
+        ],
+        "lower": [
+            250,
+            140,
+            0
+        ],
+        "upper": [
+            255,
+            167,
+            18
+        ],
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_原豌滑动5"
+        ]
+    },
+    "原大_西部_原豌滑动5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_点波2"
+        ]
+    },
+    "原大_西部_点波2": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [
+            1235,
+            217
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_芦荟滑动1"
+        ]
+    },
+    "原大_西部_卡7_补植物1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡7_补植物2"
+        ]
+    },
+    "原大_西部_卡7_补植物2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡7_补植物3"
+        ]
+    },
+    "原大_西部_卡7_补植物3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡7_补植物4"
+        ]
+    },
+    "原大_西部_卡7_补植物4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡7_补植物5"
+        ]
+    },
+    "原大_西部_卡7_补植物5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡8_过渡"
+        ]
+    },
+    "原大_西部_卡8_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_卡8_补植物1"
+        ]
+    },
+    "原大_西部_卡8_补植物1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡8_补植物2"
+        ]
+    },
+    "原大_西部_卡8_补植物2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡8_补植物3"
+        ]
+    },
+    "原大_西部_卡8_补植物3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡8_补植物4"
+        ]
+    },
+    "原大_西部_卡8_补植物4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": [],
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 100,
+        "next": [
+            "原大_西部_卡8_补植物5"
+        ]
+    },
+    "原大_西部_卡8_补植物5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": [],
+        "pre_delay": 200,
+        "post_delay": 200,
+        "duration": 500,
+        "next": [
+            "原大_西部_芦荟滑动1"
+        ]
+    },
+    "原大_西部_芦荟滑动1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子2_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_芦荟滑动2"
+        ]
+    },
+    "原大_西部_芦荟滑动2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_芦荟滑动3"
+        ]
+    },
+    "原大_西部_芦荟滑动3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_芦荟滑动4"
+        ]
+    },
+    "原大_西部_芦荟滑动4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚2_1"
+        ]
+    },
+    "原大_西部_桑葚2_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子2_1",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚3_2"
+        ]
+    },
+    "原大_西部_桑葚3_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子3_2",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_桑葚2_3"
+        ]
+    },
+    "原大_西部_桑葚2_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子2_3",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚2_4"
+        ]
+    },
+    "原大_西部_桑葚2_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子2_4",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚3_5"
+        ]
+    },
+    "原大_西部_桑葚3_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子3_5",
+        "duration": 500,
+        "pre_delay": 500,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚3_1"
+        ]
+    },
+    "原大_西部_桑葚3_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚3_3"
+        ]
+    },
+    "原大_西部_桑葚3_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚3_4"
+        ]
+    },
+    "原大_西部_桑葚3_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚4_1"
+        ]
+    },
+    "原大_西部_桑葚4_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚4_2"
+        ]
+    },
+    "原大_西部_桑葚4_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚4_3"
+        ]
+    },
+    "原大_西部_桑葚4_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚4_4"
+        ]
+    },
+    "原大_西部_桑葚4_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_桑葚4_5"
+        ]
+    },
+    "原大_西部_桑葚4_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚6_1"
+        ]
+    },
+    "原大_西部_桑葚6_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子6_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚5_2"
+        ]
+    },
+    "原大_西部_桑葚5_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚5_3"
+        ]
+    },
+    "原大_西部_桑葚5_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚6_4"
+        ]
+    },
+    "原大_西部_桑葚6_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子6_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚5_5"
+        ]
+    },
+    "原大_西部_桑葚5_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚6_2"
+        ]
+    },
+    "原大_西部_桑葚6_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子6_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚6_3"
+        ]
+    },
+    "原大_西部_桑葚6_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子6_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_桑葚6_5"
+        ]
+    },
+    "原大_西部_桑葚6_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第二个槽位",
+        "end": "种植物_初始化_格子6_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_斯巴达7_4"
+        ]
+    },
+    "原大_西部_斯巴达7_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子7_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_斯巴达7_3"
+        ]
+    },
+    "原大_西部_斯巴达7_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子7_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_斯巴达7_2"
+        ]
+    },
+    "原大_西部_斯巴达7_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子7_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_斯巴达7_1"
+        ]
+    },
+    "原大_西部_斯巴达7_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子7_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_斯巴达7_5"
+        ]
+    },
+    "原大_西部_斯巴达7_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子7_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_点波3"
+        ]
+    },
+    "原大_西部_点波3": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [
+            1235,
+            217
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_点波4"
+        ]
+    },
+    "原大_西部_点波4": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [
+            1235,
+            217
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤2_1"
+        ]
+    },
+    "原大_西部_毒藤2_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子2_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤3_2"
+        ]
+    },
+    "原大_西部_毒藤3_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子3_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤2_3"
+        ]
+    },
+    "原大_西部_毒藤2_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子2_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤2_4"
+        ]
+    },
+    "原大_西部_毒藤2_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子2_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_毒藤3_5"
+        ]
+    },
+    "原大_西部_毒藤3_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤3_1"
+        ]
+    },
+    "原大_西部_毒藤3_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子3_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤3_3"
+        ]
+    },
+    "原大_西部_毒藤3_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子3_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤3_4"
+        ]
+    },
+    "原大_西部_毒藤3_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子3_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤4_1"
+        ]
+    },
+    "原大_西部_毒藤4_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子4_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤4_2"
+        ]
+    },
+    "原大_西部_毒藤4_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子4_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤4_3"
+        ]
+    },
+    "原大_西部_毒藤4_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子4_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤4_4"
+        ]
+    },
+    "原大_西部_毒藤4_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子4_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤4_5"
+        ]
+    },
+    "原大_西部_毒藤4_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子4_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤6_1"
+        ]
+    },
+    "原大_西部_毒藤6_1": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子6_1",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_毒藤5_2"
+        ]
+    },
+    "原大_西部_毒藤5_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子5_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤5_3"
+        ]
+    },
+    "原大_西部_毒藤5_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子5_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤6_4"
+        ]
+    },
+    "原大_西部_毒藤6_4": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子6_4",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤5_5"
+        ]
+    },
+    "原大_西部_毒藤5_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子5_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤6_2"
+        ]
+    },
+    "原大_西部_毒藤6_2": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子6_2",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤6_3"
+        ]
+    },
+    "原大_西部_毒藤6_3": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子6_3",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_毒藤6_5"
+        ]
+    },
+    "原大_西部_毒藤6_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子6_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_点波5"
+        ]
+    },
+    "原大_西部_毒藤7_5": {
+        "recognition": "DirectHit",
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子7_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "anchor": {
+            "下一个动作": "原大_西部_点波5"
+        },
+        "next": [
+            "原大_西部_点波5"
+        ]
+    },
+    "原大_西部_点波5": {
+        "recognition": "DirectHit",
+        "action": "Click",
+        "target": [
+            1235,
+            217
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_识别结算",
+            "原大_西部_点波1"
+        ]
+    },
+    "原大_西部_识别结算": {
+        "recognition": "OCR",
+        "roi": [
+            716,
+            621,
+            179,
+            50
+        ],
+        "expected": "继续挑战",
+        "action": "Click",
+        "rate_limit": 1000,
+        "timeout": -1,
+        "next": [
+            "原大_西部_过渡"
+        ]
+    },
+    "原大_西部_过渡": {
+        "action": "DoNothing",
+        "timeout": -1,
+        "next": [
+            "原大_西部_识别boss关",
+            "原大_西部_识别开始战斗"
+        ]
+    },
+    "原大_西部_识别boss关": {
+        "recognition": "ColorMatch",
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "roi": [
+            723,
+            56,
+            17,
+            22
+        ],
+        "rate_limit": 10,
+        "next": [
+            "原大_西部_神器补给_查看"
+        ]
+    },
+    "原大_西部_神器补给_查看": {
+        "action": "Click",
+        "target": [
+            999,
+            351,
+            11,
+            29
+        ],
+        "pre_delay": 2000,
+        "next": [
+            "原大_西部_神器补给_判断是否有神器"
+        ]
+    },
+    "原大_西部_神器补给_判断是否有神器": {
+        "action": "DoNothing",
+        "pre_delay": 1000,
+        "post_delay": 0,
+        "next": [
+            "原大_西部_神器补给_全部植物",
+            "原大_西部_神器补给_橙色植物",
+            "原大_西部_神器补给_蓝色植物",
+            "原大_西部_神器补给_紫色植物",
+            "原大_西部_补给"
+        ]
+    },
+    "原大_西部_神器补给_全部植物": {
+        "recognition": "OCR",
+        "expected": "全部植物",
+        "roi": [
+            194,
+            237,
+            909,
+            80
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "原大_西部_神器补给_确定1"
+        ]
+    },
+    "原大_西部_神器补给_橙色植物": {
+        "recognition": "OCR",
+        "expected": "橙色植物",
+        "roi": [
+            194,
+            237,
+            909,
+            80
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "原大_西部_神器补给_确定1"
+        ]
+    },
+    "原大_西部_神器补给_蓝色植物": {
+        "recognition": "OCR",
+        "expected": "蓝色植物",
+        "roi": [
+            194,
+            237,
+            909,
+            80
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "原大_西部_神器补给_确定1"
+        ]
+    },
+    "原大_西部_神器补给_紫色植物": {
+        "recognition": "OCR",
+        "expected": "紫色植物",
+        "roi": [
+            194,
+            237,
+            909,
+            80
+        ],
+        "action": "Click",
+        "pre_delay": 1000,
+        "next": [
+            "原大_西部_神器补给_确定1"
+        ]
+    },
+    "原大_西部_神器补给_确定1": {
+        "action": "Click",
+        "target": [
+            631,
+            609
+        ],
+        "pre_delay": 1000,
+        "next": [
+            "原大_西部_神器补给_确定2"
+        ]
+    },
+    "原大_西部_神器补给_确定2": {
+        "action": "Click",
+        "target": [
+            631,
+            609
+        ],
+        "pre_delay": 2000,
+        "next": [
+            "原大_西部_神器补给_确定3"
+        ]
+    },
+    "原大_西部_神器补给_确定3": {
+        "action": "Click",
+        "target": [
+            631,
+            609
+        ],
+        "pre_delay": 2000,
+        "next": [
+            "原大_西部_boss_识别开始"
+        ]
+    },
+    "原大_西部_补给": {
+        "recognition": "ColorMatch",
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "roi": [
+            723,
+            56,
+            17,
+            22
+        ],
+        "rate_limit": 10,
+        "action": "Click",
+        "target": [
+            261,
+            375
+        ],
+        "next": [
+            "原大_西部_确定1"
+        ]
+    },
+    "原大_西部_确定1": {
+        "action": "Click",
+        "target": [
+            633,
+            614
+        ],
+        "next": [
+            "原大_西部_提示",
+            "原大_西部_确定3"
+        ]
+    },
+    "原大_西部_提示": {
+        "recognition": "OCR",
+        "expected": "提示",
+        "roi": [
+            562,
+            242,
+            95,
+            49
+        ],
+        "action": "Click",
+        "target": [
+            595,
+            526
+        ],
+        "next": [
+            "原大_西部_确定3"
+        ]
+    },
+    "原大_西部_确定3": {
+        "action": "Click",
+        "target": [
+            633,
+            614
+        ],
+        "pre_delay": 1000,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_确定4"
+        ]
+    },
+    "原大_西部_确定4": {
+        "action": "Click",
+        "target": [
+            633,
+            614
+        ],
+        "pre_delay": 1000,
+        "post_delay": 1000,
+        "next": [
+            "原大_西部_boss_识别开始",
+            "原大_西部_确定4_识别一下确定并点击"
+        ]
+    },
+    "原大_西部_确定4_识别一下确定并点击": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "action": "Click",
+        "roi": [
+            473,
+            539,
+            319,
+            145
+        ],
+        "next": [
+            "原大_西部_boss_识别开始",
+            "原大_西部_确定4_识别一下确定并点击"
+        ]
+    },
+    "原大_西部_boss_识别开始": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "next": [
+            "原大_西部_boss_判断是否进入关内"
+        ]
+    },
+    "原大_西部_boss_判断是否进入关内": {
+        "recognition": "ColorMatch",
+        "roi": [
+            467,
+            669,
+            27,
+            27
+        ],
+        "method": 4,
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "timeout": -1,
+        "action": "Click",
+        "target": [
+            1171,
+            37
+        ],
+        "next": [
+            "原大_西部_boss_喂豆"
+        ]
+    },
+    "原大_西部_boss_喂豆": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": [],
+        "pre_delay": 100,
+        "post_delay": 3000,
+        "timeout": -1,
+        "duration": 100,
+        "next": [
+            "原大_西部_boss_识别结算",
+            "原大_西部_boss_喂豆"
+        ]
+    },
+    "原大_西部_boss_识别结算": {
+        "recognition": "OCR",
+        "roi": [
+            716,
+            621,
+            179,
+            50
+        ],
+        "expected": "继续挑战",
+        "timeout": -1,
+        "rate_limit": 500,
+        "action": "Click",
+        "next": [
+            "原大_西部_识别开始战斗"
+        ]
+    }
+}
