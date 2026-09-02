@@ -330,4 +330,58 @@
             "[Anchor]下一个动作"
         ]
     },
+    "通用_过滤文字颜色": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    15,
+                    75,
+                    125
+                ],
+                "upper": [
+                    38,
+                    94,
+                    255
+                ],
+                "roi": [
+                    555,
+                    61,
+                    414,
+                    81
+                ]
+            }
+        },
+        "action": "DoNothing",
+        "next": [
+            "通用_识别天数"
+        ]
+    },
+    "通用_识别天数": {
+        "recognition": "OCR",
+        "only_rec": true,
+        "replace": [
+            [
+                "g",
+                "9"
+            ],
+            [
+                "G",
+                "6"
+            ]
+        ],
+        "roi": [
+            555,
+            61,
+            414,
+            81
+        ],
+        "color_filter": "通用_过滤文字颜色",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "[Anchor]下一个动作"
+        ]
+    },
 }

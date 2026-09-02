@@ -1,0 +1,144 @@
+{
+    // ===== 双发 =====
+    "CheckBrightness_双发": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [
+                    5,
+                    79,
+                    118,
+                    78
+                ],
+                "method": 40,
+                "lower": [
+                    101,
+                    185,
+                    230
+                ], // H 101~105, S 185~195, V >= 230
+                "upper": [
+                    105,
+                    195,
+                    255
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+    "Template_双发": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "template": [
+                    "land_gong_one/种植双发.png"
+                ],
+                "roi": [
+                    5,
+                    79,
+                    118,
+                    78
+                ],
+                "method": 1,
+                "threshold": [
+                    0.9
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+    // ===== 蓓蕾 =====
+    "CheckBrightness_蓓蕾": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [
+                    8,
+                    155,
+                    112,
+                    143
+                ],
+                "method": 40,
+                "lower": [
+                    33,
+                    128,
+                    195
+                ], // H 18~23, S 34~46, V >= 105
+                "upper": [
+                    41,
+                    225,
+                    250
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+    "Template_蓓蕾": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "template": [
+                    "Land_gong_two/阳光蓓蕾.png",
+                    "General/plant/茄子蓓蕾.png"
+                ],
+                "roi": [
+                    8,
+                    155,
+                    112,
+                    143
+                ],
+                "method": 1,
+                "threshold": [
+                    0.9
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+    // ===== 机枪 =====
+    "CheckBrightness_机枪": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "roi": [
+                    8,
+                    295,
+                    111,
+                    72
+                ],
+                "method": 40,
+                "lower": [
+                    13,
+                    190,
+                    110
+                ], // H 13~17, S 190~210, V >= 110
+                "upper": [
+                    17,
+                    210,
+                    120
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+    "Template_机枪": {
+        "recognition": {
+            "type": "TemplateMatch",
+            "param": {
+                "template": [
+                    "General/plant/机枪射手.png"
+                ],
+                "roi": [
+                    8,
+                    295,
+                    111,
+                    72
+                ],
+                "method": 1,
+                "threshold": [
+                    0.9
+                ]
+            }
+        },
+        "action": "DoNothing"
+    },
+}

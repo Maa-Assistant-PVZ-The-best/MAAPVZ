@@ -1,0 +1,409 @@
+{
+    "地宫2无尽_地宫秘境2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Land_gong_two/地宫2.png"
+        ],
+        "roi": [
+            248,
+            510,
+            100,
+            78
+        ],
+        "action": "Click",
+        "next": [
+            "地宫2无尽_立即前往",
+            "地宫2无尽_地宫秘境2"
+        ]
+    },
+    "地宫2无尽_立即前往": {
+        "recognition": "OCR",
+        "timeout": 30000,
+        "expected": [
+            "立即前往"
+        ],
+        "action": "Click",
+        "next": [
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_立即前往"
+        ]
+    },
+    "地宫2无尽_无尽模式": {
+        "recognition": "OCR",
+        "expected": [
+            "无尽模式",
+            "无",
+            "尽模式"
+        ],
+        "roi": [
+            918,
+            613,
+            112,
+            69
+        ],
+        "action": "Click",
+        "next": [
+            "地宫2无尽_无尽模式_确定",
+            "地宫2无尽_无尽模式"
+        ]
+    },
+    "地宫2无尽_无尽模式_确定": {
+        "timeout": 40000,
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "roi": [
+            596,
+            498,
+            81,
+            35
+        ],
+        "action": "Click",
+        "next": [
+            "地宫2无尽_第一关"
+        ]
+    },
+    "地宫2无尽_第一关": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1048,
+            630,
+            234,
+            84
+        ],
+        "post_delay": 500,
+        "next": [
+            "地宫2无尽_第一关_检查灵体",
+            "地宫2无尽_第一关_清空卡牌"
+        ]
+    },
+    "地宫2无尽_第一关_检查灵体": {
+        "recognition": "And",
+        "all_of": [
+            {
+                "recognition": "TemplateMatch",
+                "template": [
+                    "Land_gong_two/灵体.png",
+                    "Land_gong_two/灵体1.png"
+                ],
+                "green_mask": true,
+                "roi": [
+                    899,
+                    72,
+                    309,
+                    553
+                ],
+                "threshold": [
+                    0.6
+                ]
+            },
+            {
+                "recognition": "ColorMatch",
+                "method": 40,
+                "lower": [
+                    83,
+                    48,
+                    170
+                ],
+                "upper": [
+                    90,
+                    140,
+                    255
+                ],
+                "roi": [
+                    899,
+                    72,
+                    309,
+                    553
+                ],
+            }
+        ],
+        "next": [
+            "地宫2无尽_第一关_尝试刷掉灵体",
+            "地宫2无尽_第一关_检查灵体"
+        ]
+    },
+    "地宫2无尽_第一关_尝试刷掉灵体": {
+        "anchor": {
+            "下一个动作": "地宫2无尽_第一关"
+        },
+        "focus": "尝试刷掉灵体",
+        "next": [
+            "通用_重开_暂停"
+        ]
+    },
+    "地宫2无尽_第一关_清空卡牌": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找双发",
+            //初始化ancho
+        },
+        "roi": [
+            22,
+            660,
+            75,
+            27
+        ],
+        "action": "Click",
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找双发": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找蓓蕾",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/双发.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找蓓蕾": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找茄子",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/阳光蓓蕾.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找茄子": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_初始寻找机枪",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/变身茄子.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_初始寻找机枪": {
+        "anchor": {
+            "下一个寻找的植物": "",
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "General/plant/机枪射手.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "地宫2无尽_第一关_开始战斗"
+        ]
+    },
+    "地宫2无尽_第一关_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1048,
+            630,
+            234,
+            84
+        ],
+        "threshold": 0.75,
+        "next": [
+            "地宫2无尽_开始战斗"
+        ]
+    },
+    "地宫2无尽_第一关_种植双发1": {
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CheckBrightness_双发",
+                    "Template_双发"
+                ]
+            }
+        },
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_1;sleep:0.010;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_2;sleep:0.010;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_3;sleep:0.010;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_4;sleep:0.010;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_5;sleep:0.010",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            // "地宫2无尽_第一关_种植机枪1",
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_结算",
+            "地宫2无尽_开始战斗",
+            "地宫2无尽_第一关_种植蓓蕾1",
+            "地宫2无尽_第一关_种植双发1",
+            "[JumpBack]地宫2_局内_领取_阳光"
+        ]
+    },
+    // ========== 蓓蕾 ==========
+    "地宫2无尽_第一关_种植蓓蕾1": {
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CheckBrightness_蓓蕾",
+                    "Template_蓓蕾"
+                ]
+            }
+        },
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_2;sleep:0.010;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子2_3;sleep:0.010",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            // "地宫2无尽_第一关_种植机枪1",
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_结算",
+            "地宫2无尽_开始战斗",
+            "地宫2无尽_第一关_种植双发1",
+            "地宫2无尽_第一关_种植蓓蕾1",
+            "[JumpBack]地宫2_局内_领取_阳光"
+        ]
+    },
+    "地宫2无尽_结算": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "roi": [
+            542,
+            580,
+            213,
+            88
+        ],
+        "action": "Click",
+        "next": [
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_结算"
+        ]
+    },
+    "地宫2无尽_第一关_种植蓓蕾2": {
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CheckBrightness_蓓蕾",
+                    "Template_蓓蕾"
+                ]
+            }
+        },
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_3;sleep:0.010;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子3_3;sleep:0.010",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_结算",
+            "地宫2无尽_开始战斗",
+            "地宫2无尽_第一关_种植机枪1",
+            "地宫2无尽_第一关_种植蓓蕾2",
+            "[JumpBack]地宫2_局内_领取_阳光"
+        ]
+    },
+    // ========== 机枪 ==========
+    "地宫2无尽_第一关_种植机枪1": {
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "CheckBrightness_机枪",
+                    "Template_机枪"
+                ]
+            }
+        },
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_1;sleep:0.010;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_2;sleep:0.010;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_3;sleep:0.010;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_4;sleep:0.010;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_5;sleep:0.010",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "地宫2无尽_结算",
+            "地宫2无尽_无尽模式",
+            "地宫2无尽_开始战斗",
+            "地宫2无尽_第一关_种植蓓蕾2",
+            "地宫2无尽_第一关_种植机枪1",
+            "[JumpBack]地宫2_局内_领取_阳光"
+        ]
+    },
+    "地宫2_第三天及其以上": {}
+}
