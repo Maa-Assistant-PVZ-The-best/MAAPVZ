@@ -10,13 +10,23 @@
                             "next": [
                                 "HeartTowerEntry"
                             ]
-                        }
+                        },
+                        "wujin_确定4": {
+                            "anchor": {
+                                "下一个动作": "1关"
+                            },
+                        },
                     }
                 },
                 {
                     "name": "二号阵(推荐)",
                     "description": "推荐使用，问题更少",
                     "pipeline_override": {
+                        "wujin_确定4": {
+                            "anchor": {
+                                "下一个动作": "2_1关"
+                            },
+                        },
                         "心塔阵容选择": {
                             "next": [
                                 "HeartTowerEntry2"
