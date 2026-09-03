@@ -1,6 +1,7 @@
 import json
 import time
 import os
+import random
 from maa.custom_action import CustomAction
 from maa.context import Context
 from maa.agent.agent_server import AgentServer
@@ -140,10 +141,73 @@ class BatchSwipe(CustomAction):
             print("[BatchSwipe] 无法获取控制器")
             return False
 
-        actions = self._parse_actions(param_str)
-        if actions is None:
-            return False
+        # ---------- 新增大括号随机块处理 ----------
+        # 格式示例：act1;act2;{act3;act4;act5};act6
+        # 支持单个随机块，大括号内不可嵌套
+        if '{' in param_str or '}' in param_str:
+            # 确保大括号成对出现且只有一个块
+            if param_str.count('{') != 1 or param_str.count('}') != 1:
+                print("[BatchSwipe] 大括号必须成对且仅支持一个随机块")
+                return False
+            start = param_str.find('{')
+            end = param_str.find('}', start)
+            if start == -1 or end == -1 or end < start:
+                print("[BatchSwipe] 大括号位置错误")
+                return False
 
+            before = param_str[:start].strip()
+            random_block = param_str[start+1:end].strip()
+            after = param_str[end+1:].strip()
+
+            # 解析三个部分
+            before_actions = self._parse_actions(before) if before else []
+            random_actions = self._parse_actions(random_block) if random_block else []
+            after_actions = self._parse_actions(after) if after else []
+
+            # 检查解析结果
+            if before_actions is None or random_actions is None or after_actions is None:
+                return False
+
+            # 随机打乱中间块
+            if random_actions:
+                random.shuffle(random_actions)
+
+            # 合并动作列表
+            actions = before_actions + random_actions + after_actions
+        else:
+            # ---------- 原有 random: 前缀处理 ----------
+            if param_str.startswith('random:'):
+                param_str = param_str[7:].strip()
+                if '|' in param_str:
+                    random_part, ordered_part = param_str.split('|', 1)
+                    random_part = random_part.strip()
+                    ordered_part = ordered_part.strip()
+                else:
+                    random_part = param_str
+                    ordered_part = ""
+
+                # 解析随机部分
+                random_actions = self._parse_actions(random_part) if random_part else []
+                if random_actions is None:
+                    return False
+
+                # 随机打乱
+                if random_actions:
+                    random.shuffle(random_actions)
+
+                # 解析有序部分
+                ordered_actions = self._parse_actions(ordered_part) if ordered_part else []
+                if ordered_actions is None:
+                    return False
+
+                actions = random_actions + ordered_actions
+            else:
+                # 普通解析
+                actions = self._parse_actions(param_str)
+                if actions is None:
+                    return False
+
+        # 执行所有动作
         for act in actions:
             act_type = act.get('type', '').lower()
             if act_type == 'swipe':
