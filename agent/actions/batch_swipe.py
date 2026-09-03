@@ -141,11 +141,10 @@ class BatchSwipe(CustomAction):
             print("[BatchSwipe] 无法获取控制器")
             return False
 
-        # ---------- 新增大括号随机块处理 ----------
-        # 格式示例：act1;act2;{act3;act4;act5};act6
-        # 支持单个随机块，大括号内不可嵌套
+        # ---------- 大括号随机块处理 ----------
+        # 格式示例：act1;act2;{(act3;sleep:0.1);(act4;sleep:0.1)};act5
+        # 仅支持单个随机块，大括号内可包含分组圆括号
         if '{' in param_str or '}' in param_str:
-            # 确保大括号成对出现且只有一个块
             if param_str.count('{') != 1 or param_str.count('}') != 1:
                 print("[BatchSwipe] 大括号必须成对且仅支持一个随机块")
                 return False
@@ -159,20 +158,45 @@ class BatchSwipe(CustomAction):
             random_block = param_str[start+1:end].strip()
             after = param_str[end+1:].strip()
 
-            # 解析三个部分
             before_actions = self._parse_actions(before) if before else []
-            random_actions = self._parse_actions(random_block) if random_block else []
             after_actions = self._parse_actions(after) if after else []
 
-            # 检查解析结果
-            if before_actions is None or random_actions is None or after_actions is None:
+            if before_actions is None or after_actions is None:
                 return False
 
-            # 随机打乱中间块
-            if random_actions:
-                random.shuffle(random_actions)
+            # 解析随机块，支持圆括号分组
+            if '(' in random_block and ')' in random_block:
+                groups = []
+                current_pos = 0
+                while current_pos < len(random_block):
+                    if random_block[current_pos] == '(':
+                        close_pos = random_block.find(')', current_pos)
+                        if close_pos == -1:
+                            print("[BatchSwipe] 圆括号不匹配")
+                            return False
+                        group_content = random_block[current_pos+1:close_pos].strip()
+                        group_actions = self._parse_actions(group_content)
+                        if group_actions is None:
+                            return False
+                        groups.append(group_actions)
+                        current_pos = close_pos + 1
+                    else:
+                        # 跳过非括号字符（如空白或分号），若发现未分组内容可提示错误
+                        while current_pos < len(random_block) and random_block[current_pos] not in '(':
+                            ch = random_block[current_pos]
+                            if ch not in (' ', '\t', '\n', ';'):
+                                print(f"[BatchSwipe] 随机块内只允许圆括号分组，发现未分组字符: {ch}")
+                                return False
+                            current_pos += 1
+                random.shuffle(groups)
+                random_actions = [act for group in groups for act in group]
+            else:
+                random_actions = self._parse_actions(random_block) if random_block else []
+                if random_actions is None:
+                    return False
+                if random_actions:
+                    random.shuffle(random_actions)
 
-            # 合并动作列表
             actions = before_actions + random_actions + after_actions
         else:
             # ---------- 原有 random: 前缀处理 ----------
@@ -186,23 +210,19 @@ class BatchSwipe(CustomAction):
                     random_part = param_str
                     ordered_part = ""
 
-                # 解析随机部分
                 random_actions = self._parse_actions(random_part) if random_part else []
                 if random_actions is None:
                     return False
 
-                # 随机打乱
                 if random_actions:
                     random.shuffle(random_actions)
 
-                # 解析有序部分
                 ordered_actions = self._parse_actions(ordered_part) if ordered_part else []
                 if ordered_actions is None:
                     return False
 
                 actions = random_actions + ordered_actions
             else:
-                # 普通解析
                 actions = self._parse_actions(param_str)
                 if actions is None:
                     return False
