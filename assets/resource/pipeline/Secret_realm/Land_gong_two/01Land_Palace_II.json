@@ -119,8 +119,8 @@
     "地宫2无尽_对比天数阶段": {
         "next": [
             "地宫2_第一天",
-            "地宫2_第二天"
-            // "地宫2_第三天及其以上"
+            "地宫2_第二天",
+            "地宫2_第三天及其以上"
         ]
     },
     "地宫2_第一天": {
@@ -193,7 +193,291 @@
             "地宫2_第2关_识别蓓蕾并种植"
         ]
     },
-    "地宫2_第三天及其以上": {},
+    "地宫2_第三天及其以上": {
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "ExpressionRecognition",
+                "custom_recognition_param": {
+                    "expression": "{通用_识别天数} >= 3"
+                }
+            },
+        },
+        "action": "DoNothing",
+        "anchor": {
+            "下一个动作": "地宫2无尽_切换配置"
+        },
+        "next": [
+            "地宫2_第3+关_检查卡组是否为后期",
+            "通用_重开_暂停"
+        ]
+    },
+    "地宫2_第3+关_检查卡组是否为后期": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/plant/机枪射手.png"
+        ],
+        "roi": [
+            7,
+            80,
+            120,
+            81
+        ],
+        "next": []
+    },
+    "地宫2_第3+关_识别并种植": {},
+    "地宫2无尽_切换配置": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "roi": [
+            11,
+            654,
+            104,
+            35
+        ],
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找机枪"
+        },
+        "threshold": 0.75,
+        "action": "Click",
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找机枪": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找双发2"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/机枪.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找双发2": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找原葵"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/双发.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找原葵": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找树桩"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "General/plant/原葵.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找树桩": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找婆罗"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/树桩.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找婆罗": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找茄子2"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/婆罗.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找茄子2": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找南瓜罩"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/变身茄子.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找南瓜罩": {
+        "anchor": {
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找蓓蕾2"
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/南瓜罩.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_寻找蓓蕾2": {
+        "anchor": {
+            "下一个寻找的植物": ""
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/阳光蓓蕾.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "地宫2无尽_检查天数_开始战斗"
+        ]
+    },
     "地宫2无尽_第一关": {
         "recognition": "OCR",
         "expected": [
