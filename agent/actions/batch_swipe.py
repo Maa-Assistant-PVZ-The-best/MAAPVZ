@@ -15,7 +15,11 @@ class BatchSwipe(CustomAction):
 
     @classmethod
     def load_coords(cls, filepath: str):
-        """从 JSON 文件加载坐标映射。文件格式：{"键名": [x, y], ...}"""
+        """从 JSON 文件加载坐标映射。文件格式：{"键名": [x, y] 或 [x, y, w, h] 或 {"x":x,"y":y,"w":w,"h":h}}
+
+        [x, y]        = 单个点（点击/长按/滑动都用这个点）
+        [x, y, w, h]  = 方框范围（点击/长按用方框中心点，滑动用两个中心点）
+        """
         if not os.path.exists(filepath):
             print(f"[BatchSwipe] 坐标文件不存在: {filepath}")
             return
@@ -23,20 +27,26 @@ class BatchSwipe(CustomAction):
             data = json.load(f)
         for key, val in data.items():
             if isinstance(val, (list, tuple)) and len(val) >= 2:
-                cls.COORDS[key] = (int(val[0]), int(val[1]))
+                if len(val) >= 4:
+                    cls.COORDS[key] = (int(val[0]), int(val[1]), int(val[2]), int(val[3]))
+                else:
+                    cls.COORDS[key] = (int(val[0]), int(val[1]))
             elif isinstance(val, dict) and 'x' in val and 'y' in val:
-                cls.COORDS[key] = (int(val['x']), int(val['y']))
+                if 'w' in val and 'h' in val:
+                    cls.COORDS[key] = (int(val['x']), int(val['y']), int(val['w']), int(val['h']))
+                else:
+                    cls.COORDS[key] = (int(val['x']), int(val['y']))
             else:
                 print(f"[BatchSwipe] 忽略无效坐标项: {key}: {val}")
 
     def _get_coord(self, key):
-        """根据键名获取坐标，支持直接传入 [x, y] 列表或坐标字符串（如 'x,y'）"""
+        """根据键名获取坐标，支持直接传入 [x, y] / [x, y, w, h] 列表或坐标字符串（如 'x,y'）"""
         if key is None:
             print("[BatchSwipe] 坐标键为空")
             return None
         if isinstance(key, (list, tuple)):
             if len(key) >= 2:
-                return int(key[0]), int(key[1])
+                return tuple(int(v) for v in key)
             else:
                 print(f"[BatchSwipe] 无效的坐标数组: {key}")
                 return None
@@ -46,7 +56,7 @@ class BatchSwipe(CustomAction):
                 parts = key.split(',')
                 if len(parts) >= 2:
                     return int(parts[0].strip()), int(parts[1].strip())
-            # 从 COORDS 查找
+            # 从 COORDS 查找（可能是点或方框）
             if key in self.COORDS:
                 return self.COORDS[key]
             # 尝试解析 JSON 数组字符串
@@ -57,6 +67,13 @@ class BatchSwipe(CustomAction):
             return None
         print(f"[BatchSwipe] 无效的坐标类型: {type(key)}")
         return None
+
+    @staticmethod
+    def _coord_point(coord):
+        """把坐标（点 [x,y] 或方框 [x,y,w,h]）转成可点击/长按的中心点。"""
+        if len(coord) >= 4:
+            return int(coord[0] + coord[2] / 2), int(coord[1] + coord[3] / 2)
+        return int(coord[0]), int(coord[1])
 
     def _get_controller(self, context: Context):
         """兼容不同版本获取控制器"""
@@ -113,6 +130,14 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] click 参数不足: {cmd}")
                     return None
                 act = {'type': 'click', 'target': args[0].strip()}
+                actions.append(act)
+            elif act_type == 'longpress':
+                if len(args) < 1:
+                    print(f"[BatchSwipe] longpress 参数不足: {cmd}")
+                    return None
+                act = {'type': 'longpress', 'target': args[0].strip()}
+                if len(args) >= 2:
+                    act['duration'] = int(args[1].strip())
                 actions.append(act)
             elif act_type == 'sleep':
                 if len(args) < 1:
@@ -356,14 +381,14 @@ class BatchSwipe(CustomAction):
                 if coord_from is None:
                     print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：起点坐标键「{act.get('from')}」未定义，请确认坐标表已加载且包含该键")
                     return False
-                x1, y1 = coord_from
+                x1, y1 = self._coord_point(coord_from)
                 to_key = act.get('to')
                 if to_key:
                     coord_to = self._get_coord(to_key)
                     if coord_to is None:
                         print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：终点坐标键「{to_key}」未定义，请确认坐标表已加载且包含该键")
                         return False
-                    x2, y2 = coord_to
+                    x2, y2 = self._coord_point(coord_to)
                 else:
                     x2, y2 = x1, y1
                 duration = int(act.get('duration', 100))
@@ -373,8 +398,16 @@ class BatchSwipe(CustomAction):
                 if coord is None:
                     print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：点击坐标键「{act.get('target')}」未定义，请确认坐标表已加载且包含该键")
                     return False
-                x, y = coord
+                x, y = self._coord_point(coord)
                 controller.post_click(x, y).wait()
+            elif act_type == 'longpress':
+                coord = self._get_coord(act.get('target'))
+                if coord is None:
+                    print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：长按坐标键「{act.get('target')}」未定义，请确认坐标表已加载且包含该键")
+                    return False
+                x, y = self._coord_point(coord)
+                duration = int(act.get('duration', 1000))
+                controller.post_swipe(x, y, x, y, duration).wait()
             elif act_type == 'sleep':
                 time.sleep(float(act.get('seconds', 0.2)))
             else:
