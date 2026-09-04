@@ -44,7 +44,7 @@
             "type": "And",
             "param": {
                 "all_of": [
-                    "CheckBrightness_蓓蕾",
+                    "卡槽颜色_白卡",
                     "Template_蓓蕾"
                 ]
             }
@@ -66,7 +66,7 @@
             "type": "And",
             "param": {
                 "all_of": [
-                    "CheckBrightness_双发",
+                    "卡槽颜色_蓝卡",
                     "Template_双发"
                 ]
             }
@@ -90,7 +90,7 @@
             "type": "And",
             "param": {
                 "all_of": [
-                    "CheckBrightness_蓓蕾",
+                    "卡槽颜色_白卡",
                     "Template_蓓蕾"
                 ]
             }
@@ -113,10 +113,10 @@
             "type": "And",
             "param": {
                 "all_of": [
-                    "CheckBrightness_机枪",
+                    "卡槽颜色_橙卡",
                     "Template_机枪"
-                ]
-            }
+                ],
+            },
         },
         "action": "Custom",
         "custom_action": "BatchSwipe",

@@ -1,30 +1,123 @@
 {
-    // ===== 双发 =====
-    "CheckBrightness_双发": {
+    "卡槽颜色_白卡": {
         "recognition": {
             "type": "ColorMatch",
             "param": {
-                "roi": [
-                    5,
-                    79,
-                    118,
-                    78
-                ],
                 "method": 40,
                 "lower": [
-                    101,
-                    185,
-                    230
-                ], // H 101~105, S 185~195, V >= 230
+                    9,
+                    16,
+                    244
+                ],
                 "upper": [
-                    105,
-                    195,
+                    21,
+                    18,
+                    254
+                ]
+            }
+        }
+    },
+    // 蓝卡（明度 251~255）
+    "卡槽颜色_蓝卡": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    92,
+                    131,
+                    251
+                ],
+                "upper": [
+                    93,
+                    140,
                     255
                 ]
             }
-        },
-        "action": "DoNothing"
+        }
     },
+    // 紫卡（明度 251~255）
+    "卡槽颜色_紫卡": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    149,
+                    117,
+                    251
+                ],
+                "upper": [
+                    150,
+                    121,
+                    255
+                ]
+            }
+        }
+    },
+    // 绿卡（明度 247~254）
+    "卡槽颜色_绿卡": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    45,
+                    121,
+                    247
+                ],
+                "upper": [
+                    45,
+                    123,
+                    254
+                ]
+            }
+        }
+    },
+    // 橙卡（明度 251~255）
+    "卡槽颜色_橙卡": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    26,
+                    206,
+                    251
+                ],
+                "upper": [
+                    26,
+                    206,
+                    255
+                ]
+            }
+        }
+    },
+    "颜色_鬼火": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    92,
+                    109,
+                    255
+                ],
+                "upper": [
+                    94,
+                    115,
+                    255
+                ],
+                "roi": [
+                    316,
+                    78,
+                    43,
+                    70
+                ]
+            }
+        }
+    },
+    // ===== 双发 =====
     "Template_双发": {
         "recognition": {
             "type": "TemplateMatch",
@@ -47,31 +140,6 @@
         "action": "DoNothing"
     },
     // ===== 蓓蕾 =====
-    "CheckBrightness_蓓蕾": {
-        "recognition": {
-            "type": "ColorMatch",
-            "param": {
-                "roi": [
-                    8,
-                    155,
-                    112,
-                    143
-                ],
-                "method": 40,
-                "lower": [
-                    33,
-                    128,
-                    195
-                ], // H 18~23, S 34~46, V >= 105
-                "upper": [
-                    41,
-                    225,
-                    250
-                ]
-            }
-        },
-        "action": "DoNothing"
-    },
     "Template_蓓蕾": {
         "recognition": {
             "type": "TemplateMatch",
@@ -95,31 +163,6 @@
         "action": "DoNothing"
     },
     // ===== 机枪 =====
-    "CheckBrightness_机枪": {
-        "recognition": {
-            "type": "ColorMatch",
-            "param": {
-                "roi": [
-                    8,
-                    295,
-                    111,
-                    72
-                ],
-                "method": 40,
-                "lower": [
-                    13,
-                    190,
-                    110
-                ], // H 13~17, S 190~210, V >= 110
-                "upper": [
-                    17,
-                    210,
-                    120
-                ]
-            }
-        },
-        "action": "DoNothing"
-    },
     "Template_机枪": {
         "recognition": {
             "type": "TemplateMatch",
