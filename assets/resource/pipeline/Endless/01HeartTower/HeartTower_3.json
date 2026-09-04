@@ -222,7 +222,8 @@
         "timeout": -1,
         "next": [
             "xinta3_识别开始战斗",
-            "xinta3_识别boss关"
+            "xinta3_识别boss关",
+            "通用_无尽_识别结算"
         ]
     },
     "xinta3_识别boss关": {

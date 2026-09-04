@@ -1,0 +1,38 @@
+{
+    "xinta3_种蓓蕾1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子4_5",
+        "duration": 100,
+        "pre_delay": 300,
+        "post_delay": 0,
+        "next": [
+            "xinta3_种蓓蕾2"
+        ]
+    },
+    "xinta3_种蓓蕾2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子2_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "xinta3_种蓓蕾3"
+        ]
+    },
+    "xinta3_种蓓蕾3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子3_5",
+        "duration": 100,
+        "pre_delay": 0,
+        "post_delay": 0,
+        "anchor": {
+            "下一个动作": "2_xinta3_喂豆球果"
+        },
+        "next": [
+            "[Anchor]下一个动作"
+        ]
+    }
+}

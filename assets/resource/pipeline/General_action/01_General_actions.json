@@ -9,6 +9,7 @@
         ],
         "expected": "继续挑战",
         "action": "Click",
+        "pre_delay": 1000,
         "next": [
             "[Anchor]下一个动作"
         ]

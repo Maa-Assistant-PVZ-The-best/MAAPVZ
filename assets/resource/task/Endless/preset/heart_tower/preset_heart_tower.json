@@ -13,9 +13,14 @@
                         },
                         "wujin_确定4": {
                             "anchor": {
-                                "下一个动作": "1关"
+                                "初始化": "1关"
                             },
                         },
+                        "xinta3_种蓓蕾3": {
+                            "anchor": {
+                                "下一个动作": "xinta3_喂豆球果"
+                            }
+                        }
                     }
                 },
                 {
@@ -24,7 +29,7 @@
                     "pipeline_override": {
                         "wujin_确定4": {
                             "anchor": {
-                                "下一个动作": "2_1关"
+                                "初始化": "2_1关"
                             },
                         },
                         "心塔阵容选择": {
@@ -42,6 +47,41 @@
                             "anchor": {
                                 "下一个动作": "2_xinta3_识别开始战斗"
                             }
+                        },
+                        "2_xinta3_抛花1": {
+                            "anchor": {
+                                "下一个动作": "2_xinta3_喂豆球果"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "后期是否种蓓蕾": {
+            "type": "switch",
+            "label": "后期是否种蓓蕾",
+            "description": "没有满级瓷砖基因的玩家开启后,后期可以种出9瓷,需要手动将编队2的豆藤换成蓓蕾",
+            "cases": [
+                {
+                    "name": "No",
+                    "label": "否",
+                    "pipeline_override": {}
+                },
+                {
+                    "name": "Yes",
+                    "label": "是",
+                    "pipeline_override": {
+                        "xinta3_抛花1": {
+                            "next": "xinta3_种蓓蕾1"
+                        },
+                        "2_xinta3_抛花1": {
+                            "next": "xinta3_种蓓蕾1"
+                        },
+                        "2_xinta3_开葫芦": {
+                            "post_delay": 1000
+                        },
+                        "xinta3_开葫芦": {
+                            "post_delay": 1000
                         }
                     }
                 }
