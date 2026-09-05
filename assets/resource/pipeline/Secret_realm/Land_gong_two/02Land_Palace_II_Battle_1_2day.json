@@ -1,4 +1,5 @@
 {
+    //前期种植，1到2关会种到有一列机枪为止，具体的详细介绍请到文件04Land_Palace_II_Battle_3+days.json第106行左右观看
     "地宫2无尽_开始战斗_第1_2天": {
         "recognition": "OCR",
         "expected": [
@@ -51,7 +52,7 @@
         },
         "action": "Custom",
         "custom_action": "BatchSwipe",
-        "custom_action_param": "swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_2;sleep:0.1;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子2_3;sleep:0.1;sleep:0.01;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;sleep:0.1;sleep:0.01;swipe:1阳光起始点,1阳光终点;sleep:0.1;swipe:2阳光起始点,2阳光终点;sleep:0.1;swipe:3阳光起始点,3阳光终点;sleep:0.1;swipe:4阳光起始点,4阳光终点;sleep:0.1;swipe:5阳光起始点,5阳光终点;sleep:0.1",
+        "custom_action_param": "@0.1;swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_2;;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子2_3;;sleep:0.01;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;;sleep:0.01;swipe:1阳光起始点,1阳光终点;;swipe:2阳光起始点,2阳光终点;;swipe:3阳光起始点,3阳光终点;;swipe:4阳光起始点,4阳光终点;;swipe:5阳光起始点,5阳光终点;",
         "pre_delay": 0,
         "post_delay": 0,
         "next": [
@@ -73,7 +74,7 @@
         },
         "action": "Custom",
         "custom_action": "BatchSwipe",
-        "custom_action_param": "swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_1;sleep:0.1;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_2;sleep:0.1;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_3;sleep:0.1;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_4;sleep:0.1;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_5;sleep:0.1;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;sleep:0.1;sleep:0.1",
+        "custom_action_param": "@0.1;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_1;;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_2;;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_3;;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_4;;swipe:种植物_初始化_第一个槽位,种植物_初始化_格子1_5;;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;;;resume",
         "pre_delay": 0,
         "post_delay": 0,
         "timeout": 100000,
@@ -97,7 +98,7 @@
         },
         "action": "Custom",
         "custom_action": "BatchSwipe",
-        "custom_action_param": "swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_2;sleep:0.1;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子2_3;sleep:0.1;sleep:0.01;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;sleep:0.1;sleep:0.01;swipe:1阳光起始点,1阳光终点;sleep:0.1;swipe:2阳光起始点,2阳光终点;sleep:0.1;swipe:3阳光起始点,3阳光终点;sleep:0.1;swipe:4阳光起始点,4阳光终点;sleep:0.1;swipe:5阳光起始点,5阳光终点;sleep:0.1",
+        "custom_action_param": "@0.1;swipe:种植物_初始化_第二个槽位,种植物_初始化_格子2_2;;swipe:种植物_初始化_第三个槽位,种植物_初始化_格子2_3;;sleep:0.01;swipe:1阳光起始点,1阳光终点;swipe:2阳光起始点,2阳光终点;swipe:3阳光起始点,3阳光终点;swipe:4阳光起始点,4阳光终点;swipe:5阳光起始点,5阳光终点;;sleep:0.01;swipe:1阳光起始点,1阳光终点;;swipe:2阳光起始点,2阳光终点;;swipe:3阳光起始点,3阳光终点;;swipe:4阳光起始点,4阳光终点;;swipe:5阳光起始点,5阳光终点;",
         "pre_delay": 0,
         "post_delay": 0,
         "next": [
@@ -120,7 +121,7 @@
         },
         "action": "Custom",
         "custom_action": "BatchSwipe",
-        "custom_action_param": "swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_1;sleep:0.1;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_2;sleep:0.1;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_3;sleep:0.1;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_4;sleep:0.1;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_5;sleep:0.1;swipe:1阳光起始点,1阳光终点;sleep:0.1;swipe:2阳光起始点,2阳光终点;sleep:0.1;swipe:3阳光起始点,3阳光终点;sleep:0.1;swipe:4阳光起始点,4阳光终点;sleep:0.1;swipe:5阳光起始点,5阳光终点;sleep:0.1",
+        "custom_action_param": "swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_1;;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_2;;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_3;;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_4;;swipe:种植物_初始化_第四个槽位,种植物_初始化_格子1_5;;swipe:1阳光起始点,1阳光终点;;swipe:2阳光起始点,2阳光终点;;swipe:3阳光起始点,3阳光终点;;swipe:4阳光起始点,4阳光终点;;swipe:5阳光起始点,5阳光终点;",
         "pre_delay": 0,
         "post_delay": 0,
         "next": [

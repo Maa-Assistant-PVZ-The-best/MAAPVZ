@@ -1,4 +1,5 @@
 {
+    //and识别储存的逻辑，可以不用管，只在1——2关用到
     "卡槽颜色_白卡": {
         "recognition": {
             "type": "ColorMatch",
