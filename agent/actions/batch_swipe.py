@@ -27,9 +27,10 @@ class BatchSwipe(CustomAction):
                               若屏幕上出现任一文本，则立即停止剩余动作，
                               return True 让 MAA 跟随当前节点的 next 列表继续执行。
         roi:x,y,w,h         —— 可选，限定 OCR 识别范围（作用于本批次所有 watch）。缺省为全屏。
+        every:N             —— 可选，每 N 个动作识别一次（默认 1 = 每个动作后都识别）。输入 3 表示每 3 个动作识别一次。
         watch 可放在命令串任意位置，可重复；命中任一文本即触发。不提供 watch 时行为与原来完全一致。
     示例：
-        swipe:a,b;click:c;watch:已领取|集齐;roi:100,200,400,500
+        swipe:a,b;click:c;watch:已领取|集齐;roi:100,200,400,500;every:3
     """
 
     COORDS = {}
@@ -161,6 +162,17 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] roi 参数不是数字: {cmd}")
                     return None
                 actions.append({'type': 'roi', 'roi': roi})
+            elif act_type == 'every':
+                # 识别间隔：every:N 表示每 N 个动作识别一次（不参与执行，默认 1）
+                if len(args) < 1:
+                    print(f"[BatchSwipe] every 需要整数: {cmd}")
+                    return None
+                try:
+                    n = int(args[0].strip())
+                except ValueError:
+                    print(f"[BatchSwipe] every 参数不是整数: {cmd}")
+                    return None
+                actions.append({'type': 'every', 'n': n})
             elif act_type == 'swipe':
                 if len(args) < 2:
                     print(f"[BatchSwipe] swipe 参数不足: {cmd}")
@@ -392,6 +404,20 @@ class BatchSwipe(CustomAction):
                     missing.append(f"点击「{key}」")
         return missing
 
+    def _collect_every(self, actions):
+        """提取 every:N 识别间隔（每 N 个动作识别一次），未设置则默认 1（每动作都识别）。"""
+        for act in actions:
+            if not isinstance(act, dict):
+                continue
+            if str(act.get('type', '')).lower() != 'every':
+                continue
+            try:
+                n = int(act.get('n'))
+            except Exception:
+                continue
+            return n if n > 0 else 1
+        return 1
+
     def _watch_check(self, context, controller, expected_list, roi=None):
         """截图并在(可选的)roi范围内跑一次 OCR，命中任一文本则返回 True。任何失败都降级为 False（不中断批量）。"""
         if not _DIRECT_RECOGNITION or not expected_list or not hasattr(context, 'run_recognition_direct'):
@@ -490,13 +516,14 @@ class BatchSwipe(CustomAction):
                 if actions is None:
                     return False
 
-        # 提取 watch 识别配置与 roi（若有），并从执行列表中剔除（它们是触发/范围指令，不实际执行）
+        # 提取 watch 识别配置、roi、识别间隔（若有），并从执行列表中剔除（它们是触发/范围/间隔指令，不实际执行）
         watch_expected = self._collect_watch(actions)
         watch_roi = self._collect_roi(actions)
-        if watch_expected or watch_roi:
+        watch_every = self._collect_every(actions)
+        if watch_expected or watch_roi or watch_every != 1:
             actions = [
                 a for a in actions
-                if not (isinstance(a, dict) and str(a.get('type', '')).lower() in ('watch', 'roi'))
+                if not (isinstance(a, dict) and str(a.get('type', '')).lower() in ('watch', 'roi', 'every'))
             ]
 
         # 预检坐标：缺任何一个键就一次性列出，避免执行到一半才因坐标失败
@@ -547,8 +574,8 @@ class BatchSwipe(CustomAction):
                 print(f"[BatchSwipe] 未知动作类型: {act_type}")
                 return False
             executed += 1
-            # 每执行一个动作后识别一次：命中即停止剩余动作，跟随当前节点 next 列表执行
-            if watch_expected and self._watch_check(context, controller, watch_expected, watch_roi):
+            # 每 N 个动作识别一次（every:N，默认 1）。命中即停止剩余动作，跟随当前节点 next 列表执行
+            if watch_expected and executed % watch_every == 0 and self._watch_check(context, controller, watch_expected, watch_roi):
                 print(f"[BatchSwipe] 🔍 执行第 {executed}/{total} 个动作后识别到命中内容，停止剩余动作，跟随当前节点 next 列表执行")
                 return True
             if executed < total and interval > 0:
