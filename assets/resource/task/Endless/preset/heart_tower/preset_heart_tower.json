@@ -76,12 +76,6 @@
                         },
                         "2_xinta3_抛花1": {
                             "next": "xinta3_种蓓蕾1"
-                        },
-                        "2_xinta3_开葫芦": {
-                            "post_delay": 1200
-                        },
-                        "xinta3_开葫芦": {
-                            "post_delay": 1200
                         }
                     }
                 }
