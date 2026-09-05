@@ -1,4 +1,15 @@
 {
+    "地宫2_识别阳光数量": {
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "ExpressionRecognition",
+                "custom_recognition_param": {
+                    "expression": "{识别阳光}<= 900"
+                }
+            }
+        }
+    },
     "地宫2_局内_领取_阳光": {
         "action": "Custom",
         "custom_action": "BatchSwipe",
