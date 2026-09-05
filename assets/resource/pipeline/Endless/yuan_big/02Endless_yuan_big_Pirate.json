@@ -227,8 +227,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第三个槽位",
         "end": "种植物_初始化_格子1_1",
-        "duration": 100,
-        "pre_delay": 0,
+        "duration": 300,
+        "pre_delay": 200,
         "post_delay": 1000,
         "next": [
             "原大_海盗_原豌滑动5"

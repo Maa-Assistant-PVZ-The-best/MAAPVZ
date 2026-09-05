@@ -1,0 +1,109 @@
+{
+    "红水晶_点击入口": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_red_crystal/商店入口.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "红水晶_点击水晶商店",
+            "红水晶_点击入口"
+        ]
+    },
+    "红水晶_点击水晶商店": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_red_crystal/水晶商店.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "红水晶_点击加号",
+            "红水晶_点击水晶商店"
+        ]
+    },
+    "红水晶_点击加号": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_red_crystal/加号.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "红水晶_计数"
+        ]
+    },
+    "红水晶_计数": {
+        "max_hit": 3,
+        "post_wait_freezes": 1000,
+        "next": [
+            "红水晶_观看广告",
+            "有免广告卡_前置检查"
+        ]
+    },
+    "红水晶_观看广告": {
+        "timeout": 10000,
+        "recognition": "And",
+        "all_of": [
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "观看广告"
+                ],
+                "roi": [
+                    303,
+                    468,
+                    164,
+                    63
+                ],
+                "method": 10001,
+            },
+            {
+                "recognition": "ColorMatch",
+                "lower": [
+                    41,
+                    219,
+                    41
+                ],
+                "upper": [
+                    82,
+                    227,
+                    82
+                ],
+                "roi": [
+                    303,
+                    468,
+                    164,
+                    63
+                ],
+            }
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "红水晶_确定"
+        ]
+    },
+    "红水晶_确定": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "roi": [
+            544,
+            552,
+            192,
+            62
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "有免广告卡_前置检查"
+        ]
+    }
+}

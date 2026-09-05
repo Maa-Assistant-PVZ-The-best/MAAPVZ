@@ -86,5 +86,77 @@
                 }
             ]
         },
+        "装扮转基因": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "option": [
+                        "装扮转基因次数"
+                    ],
+                    "pipeline_override": {
+                        "免广告卡_装扮转基因": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "装扮转基因次数": {
+            "label": "转基因次数",
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "转基因次数",
+                    "pipeline_type": "int",
+                    "default": "2",
+                    "verify": "^[12]$"
+                }
+            ],
+            "pipeline_override": {
+                "装扮转基因_计数": {
+                    "max_hit": "{转基因次数}",
+                },
+            }
+        },
+        "红水晶": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "option": [
+                        "红水晶领取几次"
+                    ],
+                    "pipeline_override": {
+                        "免广告卡_红水晶": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "红水晶领取几次": {
+            "label": "领取次数",
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "领取次数",
+                    "pipeline_type": "int",
+                    "default": "3",
+                    "verify": "^[13]$"
+                }
+            ],
+            "pipeline_override": {
+                "红水晶_计数": {
+                    "max_hit": "{领取次数}",
+                },
+            }
+        },
     }
 }

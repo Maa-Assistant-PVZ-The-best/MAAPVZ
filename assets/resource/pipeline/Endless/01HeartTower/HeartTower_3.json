@@ -132,6 +132,17 @@
         "post_delay": 0,
         "duration": 100,
         "next": [
+            "xinta3_种瓷砖"
+        ]
+    },
+    "xinta3_种瓷砖": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子1_3",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 1000,
+        "next": [
             "xinta3_点葫芦"
         ]
     },
@@ -148,7 +159,7 @@
         "action": "Click",
         "target": "神器_初始化_葫芦大体型",
         "pre_delay": 0,
-        "post_delay": 1300,
+        "post_delay": 300,
         "anchor": {
             "下一个动作": "xinta3_过渡"
         },

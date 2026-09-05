@@ -1,0 +1,115 @@
+{
+    "装扮转基因_点击入口": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_costume_genetics/植物入口.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_点击转基因"
+        ]
+    },
+    "装扮转基因_点击转基因": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_costume_genetics/转基因入口.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_计数",
+            "有免广告卡_前置检查"
+        ]
+    },
+    "装扮转基因_计数": {
+        "max_hit": 1,
+        "next": [
+            "装扮转基因_第一次_点击页签"
+        ]
+    },
+    "装扮转基因_第一次_点击页签": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "装扮转基因"
+        ],
+        "roi": [
+            359,
+            117,
+            106,
+            54
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_第一次_一键选取"
+        ]
+    },
+    "装扮转基因_第一次_一键选取": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "一键选取",
+            "一键",
+            "选取"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_第一次_观看广告",
+            "有免广告卡_前置检查"
+        ]
+    },
+    "装扮转基因_第一次_观看广告": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "roi": [
+            844,
+            587,
+            166,
+            61
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_第一次_朕收下了"
+        ]
+    },
+    "装扮转基因_第一次_朕收下了": {
+        "timeout": 10000,
+        "recognition": "OCR",
+        "expected": [
+            "朕收下了"
+        ],
+        "roi": [
+            539,
+            559,
+            184,
+            68
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "装扮转基因_计数",
+            "装扮转基因_关闭"
+        ]
+    },
+    "装扮转基因_关闭": {
+        "timeout": 10000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "video_card_costume_genetics/关闭.png"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "有免广告卡_前置检查"
+        ]
+    }
+}

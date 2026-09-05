@@ -433,9 +433,12 @@
                     }
                 },
                 {
-                    "name": "到达大师锅后停止",
+                    "name": "到达宗师锅后停止",
                     "pipeline_override": {
                         "检查是否到宗师锅": {
+                            "enabled": true
+                        },
+                        "返回主界面_停止任务": {
                             "enabled": false
                         }
                     }
