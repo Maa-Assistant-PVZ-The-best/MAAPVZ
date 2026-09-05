@@ -104,7 +104,7 @@
         "duration": 100,
         "pre_delay": 0,
         "post_delay": 0,
-        "timeout": 30000,
+        "timeout": 300000,
         "next": [
             "结算-重开识别"
         ]
