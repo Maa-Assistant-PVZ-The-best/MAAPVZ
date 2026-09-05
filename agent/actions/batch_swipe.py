@@ -12,6 +12,8 @@ class BatchSwipe(CustomAction):
     COORDS = {}
     # 每个动作之间的默认间隔（秒）。可由 custom_action_param 前缀 "@0.3;" 覆盖，未设置时用此值。
     INTERVAL = 0.1
+    # 长按方框「覆盖整块」的网格间距(px)。越小越密、越能抓到框内更多独立目标，但也越慢。
+    GRID_STEP = 110
 
     @classmethod
     def load_coords(cls, filepath: str):
@@ -74,6 +76,42 @@ class BatchSwipe(CustomAction):
         if len(coord) >= 4:
             return int(coord[0] + coord[2] / 2), int(coord[1] + coord[3] / 2)
         return int(coord[0]), int(coord[1])
+
+    @staticmethod
+    def _grid_points(x, y, w, h, step=110):
+        """在方框 [x,y,w,h] 内生成覆盖整块的网格点（包含四角和边缘，无随机、确定性）。
+
+        step 是网格间距(px)：越小越密、越能抓到这个框里的更多独立目标，但也越慢。
+        """
+        n = max(1, int(round(w / step)))
+        m = max(1, int(round(h / step)))
+        xs = [x + int(i * w / n) for i in range(n + 1)]
+        ys = [y + int(j * h / m) for j in range(m + 1)]
+        return [(xx, yy) for yy in ys for xx in xs]
+
+    def _long_press_box(self, controller, box, duration, step=110):
+        """按住整块方框：在覆盖整块（含四角与边缘）的每个网格点按住一小段，合计约等于 duration。"""
+        pts = self._grid_points(int(box[0]), int(box[1]), int(box[2]), int(box[3]), step)
+        if not pts:
+            return
+        per = max(1, int(duration / len(pts)))
+        for (px, py) in pts:
+            controller.post_swipe(px, py, px, py, per).wait()
+
+    def _sweep_box(self, controller, box, duration, step):
+        """用「滑动扫过」快速覆盖整块：按行做蛇形横扫，每行一次连续滑动。比逐点按住快得多。"""
+        x, y, w, h = int(box[0]), int(box[1]), int(box[2]), int(box[3])
+        m = max(1, int(round(h / step)))
+        ys = [y + int(j * h / m) for j in range(m + 1)]
+        if not ys:
+            return
+        per = max(1, int(duration / len(ys)))
+        for i, yy in enumerate(ys):
+            if i % 2 == 0:
+                x1, x2 = x, x + w
+            else:
+                x1, x2 = x + w, x
+            controller.post_swipe(x1, yy, x2, yy, per).wait()
 
     def _get_controller(self, context: Context):
         """兼容不同版本获取控制器"""
@@ -138,6 +176,10 @@ class BatchSwipe(CustomAction):
                 act = {'type': 'longpress', 'target': args[0].strip()}
                 if len(args) >= 2:
                     act['duration'] = int(args[1].strip())
+                if len(args) >= 3:
+                    act['step'] = int(args[2].strip())
+                if len(args) >= 4:
+                    act['mode'] = args[3].strip().lower()  # grid / sweep
                 actions.append(act)
             elif act_type == 'sleep':
                 if len(args) < 1:
@@ -405,9 +447,23 @@ class BatchSwipe(CustomAction):
                 if coord is None:
                     print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：长按坐标键「{act.get('target')}」未定义，请确认坐标表已加载且包含该键")
                     return False
-                x, y = self._coord_point(coord)
                 duration = int(act.get('duration', 1000))
-                controller.post_swipe(x, y, x, y, duration).wait()
+                step = int(act.get('step', self.GRID_STEP)) or self.GRID_STEP
+                mode = act.get('mode', 'grid')
+                if len(coord) >= 4:
+                    if mode == 'quick':
+                        # 单点快速触发：只点区域中心一次（一个手势，几乎瞬时）
+                        x, y = self._coord_point(coord)
+                        controller.post_click(x, y).wait()
+                    elif mode == 'sweep':
+                        # 滑动扫过整块（快，覆盖全区域含边框）
+                        self._sweep_box(controller, coord, duration, step)
+                    else:
+                        # 网格逐个按住（细致，覆盖整块含边框，较慢）
+                        self._long_press_box(controller, coord, duration, step)
+                else:
+                    x, y = int(coord[0]), int(coord[1])
+                    controller.post_swipe(x, y, x, y, duration).wait()
             elif act_type == 'sleep':
                 time.sleep(float(act.get('seconds', 0.2)))
             else:
