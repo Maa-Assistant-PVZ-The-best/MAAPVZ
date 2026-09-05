@@ -6,14 +6,35 @@ from maa.custom_action import CustomAction
 from maa.context import Context
 from maa.agent.agent_server import AgentServer
 
+# 直接识别能力（OCR）。maa.pipeline 里提供 JRecognitionType / JOCR，
+# Context.run_recognition_direct() 可无节点地执行一次识别。若当前安装版本不支持则降级为不识别。
+try:
+    from maa.pipeline import JRecognitionType, JOCR
+    _DIRECT_RECOGNITION = True
+except Exception:
+    _DIRECT_RECOGNITION = False
+
+# 加载标记：用于确认 MAA 代理实际加载的版本（重载插件后应看到本行）
+print("[BatchSwipe] batch_swipe.py 已加载 · 版本 v2（支持 watch: / roi:）")
+
 
 @AgentServer.custom_action("BatchSwipe")
 class BatchSwipe(CustomAction):
+    """批量滑动/点击自定义动作。
+
+    参数（custom_action_param）除原有 swipe/click/sleep 与随机块语法外，新增：
+        watch:文本A|文本B   —— 执行过程中每一步动作后截图做一次 OCR，
+                              若屏幕上出现任一文本，则立即停止剩余动作，
+                              return True 让 MAA 跟随当前节点的 next 列表继续执行。
+        roi:x,y,w,h         —— 可选，限定 OCR 识别范围（作用于本批次所有 watch）。缺省为全屏。
+        watch 可放在命令串任意位置，可重复；命中任一文本即触发。不提供 watch 时行为与原来完全一致。
+    示例：
+        swipe:a,b;click:c;watch:已领取|集齐;roi:100,200,400,500
+    """
+
     COORDS = {}
     # 每个动作之间的默认间隔（秒）。可由 custom_action_param 前缀 "@0.3;" 覆盖，未设置时用此值。
     INTERVAL = 0.1
-    # 长按方框「覆盖整块」的网格间距(px)。越小越密、越能抓到框内更多独立目标，但也越慢。
-    GRID_STEP = 110
 
     @classmethod
     def load_coords(cls, filepath: str):
@@ -77,42 +98,6 @@ class BatchSwipe(CustomAction):
             return int(coord[0] + coord[2] / 2), int(coord[1] + coord[3] / 2)
         return int(coord[0]), int(coord[1])
 
-    @staticmethod
-    def _grid_points(x, y, w, h, step=110):
-        """在方框 [x,y,w,h] 内生成覆盖整块的网格点（包含四角和边缘，无随机、确定性）。
-
-        step 是网格间距(px)：越小越密、越能抓到这个框里的更多独立目标，但也越慢。
-        """
-        n = max(1, int(round(w / step)))
-        m = max(1, int(round(h / step)))
-        xs = [x + int(i * w / n) for i in range(n + 1)]
-        ys = [y + int(j * h / m) for j in range(m + 1)]
-        return [(xx, yy) for yy in ys for xx in xs]
-
-    def _long_press_box(self, controller, box, duration, step=110):
-        """按住整块方框：在覆盖整块（含四角与边缘）的每个网格点按住一小段，合计约等于 duration。"""
-        pts = self._grid_points(int(box[0]), int(box[1]), int(box[2]), int(box[3]), step)
-        if not pts:
-            return
-        per = max(1, int(duration / len(pts)))
-        for (px, py) in pts:
-            controller.post_swipe(px, py, px, py, per).wait()
-
-    def _sweep_box(self, controller, box, duration, step):
-        """用「滑动扫过」快速覆盖整块：按行做蛇形横扫，每行一次连续滑动。比逐点按住快得多。"""
-        x, y, w, h = int(box[0]), int(box[1]), int(box[2]), int(box[3])
-        m = max(1, int(round(h / step)))
-        ys = [y + int(j * h / m) for j in range(m + 1)]
-        if not ys:
-            return
-        per = max(1, int(duration / len(ys)))
-        for i, yy in enumerate(ys):
-            if i % 2 == 0:
-                x1, x2 = x, x + w
-            else:
-                x1, x2 = x + w, x
-            controller.post_swipe(x1, yy, x2, yy, per).wait()
-
     def _get_controller(self, context: Context):
         """兼容不同版本获取控制器"""
         for path in ['tasker.controller', 'controller', '_controller']:
@@ -155,7 +140,28 @@ class BatchSwipe(CustomAction):
             act_type, args_str = cmd.split(':', 1)
             act_type = act_type.strip().lower()
             args = args_str.split(',')
-            if act_type == 'swipe':
+            if act_type == 'watch':
+                # 识别指令：watch:A|B|C 表示 OCR 出现任一文本即命中（不参与执行，仅做触发）
+                expected = [t.strip() for t in args_str.split('|') if t.strip()]
+                if not expected:
+                    print(f"[BatchSwipe] watch 需要至少一个 OCR 文本: {cmd}")
+                    return None
+                actions.append({'type': 'watch', 'expected': expected})
+            elif act_type == 'roi':
+                # 识别范围：roi:x,y,w,h 限定 OCR 识别区域（作用于本批次所有 watch，不参与执行）
+                # 兼容带方括号/圆括号/多余空格，以及尾部/多余逗号（如 roi:[1048,630,234,84,]）
+                cleaned = args_str.replace('[', '').replace(']', '').replace('(', '').replace(')', '').strip()
+                parts = [p.strip() for p in cleaned.split(',') if p.strip()]
+                if len(parts) != 4:
+                    print(f"[BatchSwipe] roi 需要 x,y,w,h 四个值: {cmd}")
+                    return None
+                try:
+                    roi = tuple(int(p) for p in parts)
+                except ValueError:
+                    print(f"[BatchSwipe] roi 参数不是数字: {cmd}")
+                    return None
+                actions.append({'type': 'roi', 'roi': roi})
+            elif act_type == 'swipe':
                 if len(args) < 2:
                     print(f"[BatchSwipe] swipe 参数不足: {cmd}")
                     return None
@@ -168,18 +174,6 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] click 参数不足: {cmd}")
                     return None
                 act = {'type': 'click', 'target': args[0].strip()}
-                actions.append(act)
-            elif act_type == 'longpress':
-                if len(args) < 1:
-                    print(f"[BatchSwipe] longpress 参数不足: {cmd}")
-                    return None
-                act = {'type': 'longpress', 'target': args[0].strip()}
-                if len(args) >= 2:
-                    act['duration'] = int(args[1].strip())
-                if len(args) >= 3:
-                    act['step'] = int(args[2].strip())
-                if len(args) >= 4:
-                    act['mode'] = args[3].strip().lower()  # grid / sweep
                 actions.append(act)
             elif act_type == 'sleep':
                 if len(args) < 1:
@@ -334,6 +328,89 @@ class BatchSwipe(CustomAction):
             blocks.append(('ordered', current.strip()))
         return blocks
 
+    def _collect_watch(self, actions):
+        """从已解析的动作列表里提取 watch 识别配置（不参与实际执行）。
+
+        支持两种来源：
+        - 紧凑指令 watch:A|B|C（_parse_actions 已转成 {'type':'watch','expected':[...]}）
+        - JSON 数组里显式的 {'type':'watch','expected':'A|B' 或 ['A','B']}
+
+        返回合并去重后的列表，任一命中即触发。
+        """
+        expected = []
+        for act in actions:
+            if not isinstance(act, dict):
+                continue
+            if str(act.get('type', '')).lower() != 'watch':
+                continue
+            exp = act.get('expected')
+            if isinstance(exp, str):
+                exp = [e.strip() for e in exp.split('|') if e.strip()]
+            if isinstance(exp, (list, tuple)):
+                for e in exp:
+                    if isinstance(e, str) and e.strip():
+                        expected.append(e.strip())
+        # 去重并保持顺序
+        seen = set()
+        out = []
+        for e in expected:
+            if e not in seen:
+                seen.add(e)
+                out.append(e)
+        return out
+
+    def _collect_roi(self, actions):
+        """从动作列表里提取 roi:x,y,w,h 识别范围（无则返回 None）。"""
+        for act in actions:
+            if not isinstance(act, dict):
+                continue
+            if str(act.get('type', '')).lower() != 'roi':
+                continue
+            r = act.get('roi')
+            if isinstance(r, (list, tuple)) and len(r) == 4:
+                return tuple(int(v) for v in r)
+        return None
+
+    def _missing_coords(self, actions):
+        """预检所有 swipe/click 用到的坐标键，返回未定义键的清单（便于一次性定位问题）。
+
+        只校验需要坐标的地址：swipe 的 from/to、click 的 target。缺失则对应动作失败。
+        """
+        missing = []
+        for act in actions:
+            if not isinstance(act, dict):
+                continue
+            t = str(act.get('type', '')).lower()
+            if t == 'swipe':
+                for field in ('from', 'to'):
+                    key = act.get(field)
+                    if key and self._get_coord(key) is None:
+                        missing.append(f"{'起点' if field == 'from' else '终点'}「{key}」")
+            elif t == 'click':
+                key = act.get('target')
+                if key and self._get_coord(key) is None:
+                    missing.append(f"点击「{key}」")
+        return missing
+
+    def _watch_check(self, context, controller, expected_list, roi=None):
+        """截图并在(可选的)roi范围内跑一次 OCR，命中任一文本则返回 True。任何失败都降级为 False（不中断批量）。"""
+        if not _DIRECT_RECOGNITION or not expected_list or not hasattr(context, 'run_recognition_direct'):
+            return False
+        try:
+            image = controller.post_screencap().wait().get()
+        except Exception as e:
+            print(f"[BatchSwipe] ⚠️ 识别截图失败: {e}")
+            return False
+        try:
+            ocr = JOCR(expected=expected_list, roi=roi if roi else (0, 0, 0, 0))
+            detail = context.run_recognition_direct(JRecognitionType.OCR, ocr, image)
+            if detail is None:
+                return False
+            return bool(detail.hit)
+        except Exception as e:
+            print(f"[BatchSwipe] ⚠️ OCR 识别失败: {e}")
+            return False
+
     def run(self, context: Context, argv: CustomAction.RunArg) -> bool:
         param_str = argv.custom_action_param
         if not param_str:
@@ -413,9 +490,31 @@ class BatchSwipe(CustomAction):
                 if actions is None:
                     return False
 
+        # 提取 watch 识别配置与 roi（若有），并从执行列表中剔除（它们是触发/范围指令，不实际执行）
+        watch_expected = self._collect_watch(actions)
+        watch_roi = self._collect_roi(actions)
+        if watch_expected or watch_roi:
+            actions = [
+                a for a in actions
+                if not (isinstance(a, dict) and str(a.get('type', '')).lower() in ('watch', 'roi'))
+            ]
+
+        # 预检坐标：缺任何一个键就一次性列出，避免执行到一半才因坐标失败
+        missing = self._missing_coords(actions)
+        if missing:
+            print(f"[BatchSwipe] ❌ 坐标键未定义，本次批量不执行：总计 {len(missing)} 个缺失 → {', '.join(missing)}")
+            print("[BatchSwipe] 请确认：已加载坐标表（load_coords）；参数里的键名与坐标表中的键名完全一致。")
+            return False
+
         # 执行所有动作
         executed = 0
         total = len(actions)
+
+        # 若配置了 watch，执行前先识别一次（屏幕当前已命中则直接停止，不做任何动作）
+        if watch_expected and self._watch_check(context, controller, watch_expected, watch_roi):
+            print("[BatchSwipe] 🔍 开始前即识别到命中内容，停止本次批量，跟随当前节点 next 列表执行")
+            return True
+
         for act in actions:
             act_type = act.get('type', '').lower()
             if act_type == 'swipe':
@@ -442,34 +541,16 @@ class BatchSwipe(CustomAction):
                     return False
                 x, y = self._coord_point(coord)
                 controller.post_click(x, y).wait()
-            elif act_type == 'longpress':
-                coord = self._get_coord(act.get('target'))
-                if coord is None:
-                    print(f"[BatchSwipe] ⚠️ 执行到第 {executed+1}/{len(actions)} 个动作中断：长按坐标键「{act.get('target')}」未定义，请确认坐标表已加载且包含该键")
-                    return False
-                duration = int(act.get('duration', 1000))
-                step = int(act.get('step', self.GRID_STEP)) or self.GRID_STEP
-                mode = act.get('mode', 'grid')
-                if len(coord) >= 4:
-                    if mode == 'quick':
-                        # 单点快速触发：只点区域中心一次（一个手势，几乎瞬时）
-                        x, y = self._coord_point(coord)
-                        controller.post_click(x, y).wait()
-                    elif mode == 'sweep':
-                        # 滑动扫过整块（快，覆盖全区域含边框）
-                        self._sweep_box(controller, coord, duration, step)
-                    else:
-                        # 网格逐个按住（细致，覆盖整块含边框，较慢）
-                        self._long_press_box(controller, coord, duration, step)
-                else:
-                    x, y = int(coord[0]), int(coord[1])
-                    controller.post_swipe(x, y, x, y, duration).wait()
             elif act_type == 'sleep':
                 time.sleep(float(act.get('seconds', 0.2)))
             else:
                 print(f"[BatchSwipe] 未知动作类型: {act_type}")
                 return False
             executed += 1
+            # 每执行一个动作后识别一次：命中即停止剩余动作，跟随当前节点 next 列表执行
+            if watch_expected and self._watch_check(context, controller, watch_expected, watch_roi):
+                print(f"[BatchSwipe] 🔍 执行第 {executed}/{total} 个动作后识别到命中内容，停止剩余动作，跟随当前节点 next 列表执行")
+                return True
             if executed < total and interval > 0:
                 time.sleep(interval)
         return True
