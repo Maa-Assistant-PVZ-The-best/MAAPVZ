@@ -83,7 +83,7 @@
             }
         ],
         "action": "Click",
-        "post_wait_freezes": 500,
+        "post_delay": 500,
         "next": [
             "红水晶_确定"
         ]
@@ -101,8 +101,15 @@
             62
         ],
         "action": "Click",
-        "post_wait_freezes": 500,
+        "target": [
+            544,
+            552,
+            192,
+            62
+        ],
+        "post_delay": 500,
         "next": [
+            "红水晶_计数",
             "有免广告卡_前置检查"
         ]
     }
