@@ -18,6 +18,14 @@
             "查找埃及世界"
         ]
     },
+    "埃及1_次数入口": {
+        "recognition": "DirectHit",
+        "action": "DoNothing",
+        "focus": "胜场计数",
+        "next": [
+            "埃及1_进入关卡"
+        ]
+    },
     "埃及1_进入关卡": {
         "recognition": "TemplateMatch",
         "template": [
@@ -522,8 +530,6 @@
         "expected": [
             "继续"
         ],
-        "repeat": 5,
-        "repeat_delay": 100,
         "roi": [
             583,
             621,
@@ -531,23 +537,11 @@
             46
         ],
         "action": "Click",
-        "post_wait_freezes": 1000,
-        "next": [
-            "埃及1_重置所有偏移"
-        ]
-    },
-    "埃及1_重开": {
-        "next": [
-            "埃及1_进入关卡",
-            "埃及1_胜利",
-            "埃及1_重开"
-        ],
-    },
-    "埃及1_重开十次": {
-        "max_hit": 10,
+        "pre_delay": 1500,
+        "post_delay": 1000,
         "next": [
             "埃及1_寻找关卡特征",
-            "埃及1_跳过计数结算"
+            "埃及1_胜利"
         ]
     },
     "埃及1_寻找关卡特征": {
@@ -568,48 +562,7 @@
         },
         "focus": "重开",
         "next": [
-            "埃及1_进入关卡",
-            "埃及1_重开"
-        ]
-    },
-    "埃及1_跳过计数结算": {
-        "recognition": "OCR",
-        "expected": [
-            "继续"
-        ],
-        "repeat": 5,
-        "repeat_delay": 100,
-        "roi": [
-            583,
-            621,
-            106,
-            46
-        ],
-        "action": "Click",
-        "post_wait_freezes": 1000,
-        "next": [
-            "埃及1_寻找关卡特征",
-            "埃及1_跳过计数结算"
-        ]
-    },
-    "埃及1_返回": {
-        "recognition": "OCR",
-        "expected": [
-            "继续"
-        ],
-        "repeat": 5,
-        "repeat_delay": 100,
-        "roi": [
-            583,
-            621,
-            106,
-            46
-        ],
-        "action": "Click",
-        "post_wait_freezes": 1000,
-        "next": [
-            "埃及1_返回",
-            "检查当前是否在主界面"
+            "埃及1_重置所有偏移"
         ]
     }
     //埃及低配刷金币模式
