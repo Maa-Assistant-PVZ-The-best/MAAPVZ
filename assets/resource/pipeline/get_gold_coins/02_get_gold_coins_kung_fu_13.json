@@ -182,6 +182,15 @@
             "get_gold_coins/功夫巨人关卡特征.png"
         ],
         "next": [
+            "功夫13_次数入口",
+            "刷取次数完成"
+        ]
+    },
+    "功夫13_次数入口": {
+        "recognition": "DirectHit",
+        "action": "DoNothing",
+        "focus": "胜场计数",
+        "next": [
             "功夫13_进入关卡"
         ]
     },
@@ -333,57 +342,6 @@
         "next": [
             "功夫13_寻找关卡特征"
         ]
-    },
-    // 修改后的“重开十次”节点 - 使用 DirectHit 计数，不依赖界面识别
-    "功夫13_重开十次": {
-        "recognition": "DirectHit",
-        "max_hit": 10,
-        "action": "DoNothing",
-        "focus": "重开",
-        "next": [
-            "功夫13_寻找关卡特征",
-            "功夫13_跳过计数结算"
-        ]
-    },
-    "功夫13_跳过计数结算": {
-        "recognition": "OCR",
-        "expected": [
-            "继续"
-        ],
-        "roi": [
-            554,
-            595,
-            162,
-            90
-        ],
-        "action": "Click",
-        "pre_delay": 100,
-        "repeat_delay": 200,
-        "repeat": 3,
-        "next": [
-            "功夫13_寻找关卡特征",
-            "功夫13_跳过计数结算"
-        ]
-    },
-    "功夫13_返回": {
-        "recognition": "OCR",
-        "expected": [
-            "继续"
-        ],
-        "roi": [
-            554,
-            595,
-            162,
-            90
-        ],
-        "action": "Click",
-        "pre_delay": 100,
-        "repeat_delay": 200,
-        "repeat": 3,
-        "next": [
-            "功夫13_返回",
-            "确认当前是否在主界面"
-        ]
-    },
+    }
     //功夫世界街机神器刷胜场
 }
