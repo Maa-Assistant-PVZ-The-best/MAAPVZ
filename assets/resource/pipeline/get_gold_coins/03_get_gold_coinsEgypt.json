@@ -540,22 +540,27 @@
         "pre_delay": 1500,
         "post_delay": 1000,
         "next": [
-            "埃及1_结算后确认",
+            "埃及1_寻找关卡特征",
             "埃及1_胜利"
         ]
     },
-    "埃及1_结算后确认": {
+    "埃及1_寻找关卡特征": {
         "recognition": "TemplateMatch",
         "template": [
-            "get_gold_coins/关卡_蓝色按钮.png"
+            "get_gold_coins/埃及的房子特征.png"
         ],
-        "roi": [
-            364,
-            98,
-            440,
-            468
-        ],
-        "action": "DoNothing",
+        "pre_wait_freezes": {
+            "time": 1000,
+            "timeout": 15000,
+            "target": [
+                449,
+                230,
+                500,
+                338
+            ],
+            "threshold": 0.92
+        },
+        "focus": "重开",
         "next": [
             "埃及1_重置所有偏移"
         ]
