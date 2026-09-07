@@ -354,6 +354,8 @@
                 ]
             }
         },
+        "pre_delay": 0,
+        "post_delay": 0,
         "action": "DoNothing",
         "next": [
             "通用_识别天数"
