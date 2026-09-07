@@ -94,9 +94,9 @@
         ],
         "target_offset": [
             0,
+            0,
             -20,
-            -20,
-            0
+            -20
         ],
         "action": "Click",
         "next": [
@@ -145,7 +145,9 @@
             "地宫2_第二天",
             "地宫2_第三天及其以上",
             "通用_过滤文字颜色"
-        ]
+        ],
+        "pre_delay": 0,
+        "post_delay": 0
     },
     "地宫2_第一天": {
         "recognition": "OCR",
@@ -227,6 +229,8 @@
                 }
             },
         },
+        "pre_delay": 0,
+        "post_delay": 0,
         "action": "DoNothing",
         "anchor": {
             "下一个动作": "地宫2无尽_切换配置"
