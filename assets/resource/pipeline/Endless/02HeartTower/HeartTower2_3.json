@@ -69,8 +69,36 @@
         "begin": "种植物_初始化_能量豆位置",
         "end": "种植物_初始化_格子2_4",
         "pre_delay": 0,
-        "post_delay": 0,
+        "post_delay": 100,
         "duration": 100,
+        "next": [
+            "2_xinta3_是否缺豆",
+            "2_xinta3_种飞莲"
+        ]
+    },
+    "2_xinta3_是否缺豆": {
+        "recognition": "ColorMatch",
+        "lower": [
+            2,
+            12,
+            9
+        ],
+        "upper": [
+            32,
+            57,
+            56
+        ],
+        "roi": [
+            520,
+            678,
+            11,
+            11
+        ],
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "duration": 200,
         "next": [
             "2_xinta3_种飞莲"
         ]
@@ -114,7 +142,7 @@
         "end": "种植物_初始化_格子3_3",
         "pre_delay": 0,
         "post_delay": 0,
-        "duration": 1000,
+        "duration": 700,
         "next": [
             "2_xinta3_点葫芦"
         ]
