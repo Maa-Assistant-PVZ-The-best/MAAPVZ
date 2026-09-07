@@ -74,7 +74,7 @@
             "埃及1_滑一下全屏领取金币"
         ],
         "pre_delay": 100,
-        "post_delay": 300,
+        "post_delay": 300
     },
     "埃及1_检查向日葵冷却并点击_种植": {
         "recognition": "DirectHit",
@@ -96,7 +96,7 @@
         "post_delay": 300,
         "next": [
             "埃及1_滑一下全屏领取金币"
-        ],
+        ]
     },
     "埃及1_检查原始向日葵冷却并点击_种植": {
         "recognition": "DirectHit",
@@ -118,7 +118,7 @@
         "post_delay": 300,
         "next": [
             "埃及1_滑一下全屏领取金币"
-        ],
+        ]
     },
     "埃及1_选择多余植物进行占位": {
         "recognition": "DirectHit",
@@ -172,7 +172,14 @@
         "action": "Custom",
         "custom_action": "ResetAllOffsets",
         "next": [
-            "埃及1_重开"
+            "埃及1_次数入口",
+            "刷取次数完成"
         ]
+    },
+    "刷取次数完成": {
+        "recognition": "DirectHit",
+        "action": "StopTask",
+        "focus": "已完成指定刷取次数",
+        "next": []
     }
 }
