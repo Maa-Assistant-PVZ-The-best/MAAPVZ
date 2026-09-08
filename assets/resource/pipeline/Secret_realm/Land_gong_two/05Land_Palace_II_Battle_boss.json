@@ -30,9 +30,27 @@
         "post_delay": 500,
         "action": "Click",
         "pre_delay": 0,
+        "anchor": {
+            "下一个动作": "地宫2无尽_切换配置"
+        },
         "next": [
-            "地宫2无尽_进入到局内"
+            "地宫2无尽_进入到局内",
+            "[JumpBack]地宫2_boss_检查卡组是否为后期",
+            "通用_重开_暂停"
         ]
+    },
+    "地宫2_boss_检查卡组是否为后期": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/plant/机枪射手.png"
+        ],
+        "roi": [
+            7,
+            80,
+            120,
+            81
+        ],
+        "next": []
     },
     "地宫2无尽_进入到局内": {
         "recognition": "TemplateMatch",
