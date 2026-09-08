@@ -76,6 +76,7 @@
             113,
             254
         ],
+        "pre_wait_freezes": 500,
         "action": "Click",
         "next": [
             "地宫2无尽_检查天数_选向日葵"
@@ -86,6 +87,7 @@
         "template": [
             "land_gong_one/向日葵.png"
         ],
+        "focus": "请不要关闭任务，这一步是在检查天数！",
         "roi": [
             139,
             330,
@@ -235,6 +237,37 @@
         "anchor": {
             "下一个动作": "地宫2无尽_切换配置"
         },
+        "next": [
+            "地宫2_后期_判断是否可以加速",
+            "地宫2_后期_检查卡组是否为后期",
+            "通用_重开_暂停"
+        ]
+    },
+    //不加速稳定但比较慢，加速不稳定但比较快。推荐阵容稳定了再开
+    "地宫2_后期_判断是否可以加速": {
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "ExpressionRecognition",
+                "custom_recognition_param": {
+                    "expression": "{通用_识别天数} >= 10"
+                }
+            },
+        },
+        "next": [
+            "地宫2无尽_加速"
+        ]
+    },
+    "地宫2无尽_加速": {
+        "recognition": "TemplateMatch",
+        "template": "General/加速.png",
+        "roi": [
+            1146,
+            9,
+            56,
+            59
+        ],
+        "action": "Click",
         "next": [
             "地宫2_后期_检查卡组是否为后期",
             "通用_重开_暂停"
