@@ -86,7 +86,7 @@
         "begin": "种植物_初始化_第四个槽位",
         "end": "种植物_初始化_格子2_1",
         "duration": 300,
-        "pre_delay": 0,
+        "pre_delay": 200,
         "post_delay": 0,
         "next": [
             "2_种蓓蕾3"
@@ -97,7 +97,7 @@
         "begin": "种植物_初始化_第四个槽位",
         "end": "种植物_初始化_格子3_1",
         "duration": 300,
-        "pre_delay": 0,
+        "pre_delay": 200,
         "post_delay": 0,
         "next": [
             "2_种香蕉1"
@@ -107,8 +107,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第一个槽位",
         "end": "种植物_初始化_格子1_3",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 200,
+        "post_delay": 200,
         "duration": 400,
         "next": [
             "2_种香蕉2"
@@ -119,8 +119,8 @@
         "begin": "种植物_初始化_第一个槽位",
         "end": "种植物_初始化_格子2_3",
         "duration": 400,
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 200,
+        "post_delay": 200,
         "next": [
             "2_种香蕉3"
         ]
@@ -129,8 +129,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第一个槽位",
         "end": "种植物_初始化_格子3_3",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 200,
+        "post_delay": 200,
         "duration": 400,
         "next": [
             "2_种牛蒡"
