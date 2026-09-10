@@ -3,6 +3,7 @@
         "是否需要补植物": {
             "type": "switch",
             "label": "是否需要补植物",
+            "description": "每关的开始都会补种对应卡槽的植物，防止破阵",
             "cases": [
                 {
                     "name": "No",
