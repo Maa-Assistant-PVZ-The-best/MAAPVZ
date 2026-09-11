@@ -3,7 +3,7 @@
         "自定义布阵": {
             "type": "switch",
             "label": "自定义布阵",
-            "description": "建议手动布阵,最好不要开启此功能",
+            "description": "布置一个能够安稳度过前期的阵容，再使用编队的切换转到后期阵即可",
             "cases": [
                 {
                     "name": "No",
@@ -142,6 +142,7 @@
         "frame_wj_custom_是否使用铲子1": {
             "type": "switch",
             "label": "种守卫菇前使用铲子",
+            "description": "种植守卫菇前铲掉格子内的植物",
             "cases": [
                 {
                     "name": "No",
@@ -171,6 +172,7 @@
         "frame_wj_custom_是否使用铲子2": {
             "type": "switch",
             "label": "种守卫菇后使用铲子",
+            "description": "种植守卫菇后铲掉格子内的植物",
             "cases": [
                 {
                     "name": "No",
@@ -269,6 +271,7 @@
         "frame_wj_custom_是否种守卫菇": {
             "type": "switch",
             "label": "是否种守卫菇",
+            "description": "默认卡槽8为守卫菇，注意：只在‘第几关布好阵’设置的那一关才会种植",
             "cases": [
                 {
                     "name": "No",
@@ -307,7 +310,7 @@
         "frame_wj_custom_回到后期": {
             "type": "input",
             "label": "第几关布好阵",
-            "description": "预计第几关布好阵,开始使用上面的预设",
+            "description": "（boss关会使一些设置失效）预计第几关布好阵,开始使用自定义布阵上面的预设",
             "inputs": [
                 {
                     "name": "关卡",
@@ -331,6 +334,7 @@
         "frame_wj_custom_回到后期切换编队": {
             "type": "switch",
             "label": "布完阵切换编队",
+            "description": "切换到后期编队,如果不切换,请关闭此选项",
             "cases": [
                 {
                     "name": "No",
