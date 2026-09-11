@@ -38,6 +38,7 @@
         "是否开启点波": {
             "type": "switch",
             "label": "是否开启点波",
+            "description": "不断点击下一波",
             "cases": [
                 {
                     "name": "Yes",
@@ -416,6 +417,7 @@
         },
         "刷掉僵尸": {
             "type": "switch",
+            "description": "遇到容易破阵的僵尸可以重开关卡",
             "cases": [
                 {
                     "name": "No"

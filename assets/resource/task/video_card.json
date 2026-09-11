@@ -2,6 +2,7 @@
     "option": {
         "每日免费五十钻": {
             "type": "switch",
+            "description": "使用五次免广告次数",
             "cases": [
                 {
                     "name": "No"
@@ -18,6 +19,7 @@
         },
         "潘妮秘宝": {
             "type": "switch",
+            "description": "观看广告重置宝箱免费开启的时间，可设置次数",
             "cases": [
                 {
                     "name": "No"
@@ -72,6 +74,7 @@
         },
         "超z钥匙": {
             "type": "switch",
+            "description": "领取一把超z钥匙",
             "cases": [
                 {
                     "name": "No"

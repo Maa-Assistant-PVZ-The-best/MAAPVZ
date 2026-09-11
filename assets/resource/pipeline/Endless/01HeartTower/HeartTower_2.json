@@ -164,8 +164,8 @@
             561,
             261
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_守卫菇2"
@@ -181,8 +181,8 @@
             838,
             377
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_喂豆守卫菇1"
@@ -215,7 +215,7 @@
             838,
             377
         ],
-        "pre_delay": 0,
+        "pre_delay": 100,
         "post_delay": 0,
         "duration": 200,
         "next": [
@@ -232,8 +232,8 @@
             480,
             263
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_瓷砖2"
@@ -249,8 +249,8 @@
             553,
             377
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_瓷砖3"
@@ -266,8 +266,8 @@
             740,
             369
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_塔黄1"
@@ -283,8 +283,8 @@
             561,
             156
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_塔黄2"
@@ -300,8 +300,8 @@
             652,
             143
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_塔黄3"
@@ -317,7 +317,7 @@
             471,
             145
         ],
-        "pre_delay": 0,
+        "pre_delay": 100,
         "post_delay": 2000,
         "duration": 200,
         "next": [
@@ -368,8 +368,8 @@
             645,
             259
         ],
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 200,
         "next": [
             "xinta2_种心叶兰2"
@@ -402,7 +402,7 @@
             644,
             481
         ],
-        "pre_delay": 0,
+        "pre_delay": 100,
         "post_delay": 0,
         "duration": 200,
         "next": [
