@@ -76,7 +76,20 @@
             113,
             254
         ],
+        "pre_wait_freezes": 500,
         "action": "Click",
+        "next": [
+            "地宫2_任务开始_重置锁存"
+        ]
+    },
+    "地宫2_任务开始_重置锁存": {
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "DayLatchReset"
+            }
+        },
         "next": [
             "地宫2无尽_检查天数_选向日葵"
         ]
@@ -86,6 +99,7 @@
         "template": [
             "land_gong_one/向日葵.png"
         ],
+        "focus": "请不要关闭任务，这一步是在检查天数！",
         "roi": [
             139,
             330,
@@ -144,6 +158,7 @@
             "地宫2_第一天",
             "地宫2_第二天",
             "地宫2_第三天及其以上",
+            "地宫2无尽_识别_开始战斗",
             "通用_过滤文字颜色"
         ],
         "pre_delay": 0,
@@ -171,7 +186,7 @@
     "地宫2_第一关_检查卡组是否选完": {
         "recognition": "TemplateMatch",
         "template": [
-            "land_gong_one/向日葵.png"
+            "land_gong_one/双发.png"
         ],
         "roi": [
             7,
@@ -179,7 +194,6 @@
             120,
             81
         ],
-        "inverse": true,
         "next": [
             "地宫2_第一关_识别蓓蕾并种植"
         ]
@@ -223,11 +237,13 @@
         "recognition": {
             "type": "Custom",
             "param": {
-                "custom_recognition": "ExpressionRecognition",
+                "custom_recognition": "DayLatchCheck",
                 "custom_recognition_param": {
-                    "expression": "{通用_识别天数} >= 3"
+                    "key": "ge3",
+                    "recognition_name": "通用_识别天数",
+                    "compare": ">=3"
                 }
-            },
+            }
         },
         "pre_delay": 0,
         "post_delay": 0,
@@ -235,6 +251,39 @@
         "anchor": {
             "下一个动作": "地宫2无尽_切换配置"
         },
+        "next": [
+            "地宫2_后期_判断是否可以加速",
+            "地宫2_后期_检查卡组是否为后期",
+            "通用_重开_暂停"
+        ]
+    },
+    //不加速稳定但比较慢，加速不稳定但比较快。推荐阵容稳定了再开
+    "地宫2_后期_判断是否可以加速": {
+        "recognition": {
+            "type": "Custom",
+            "param": {
+                "custom_recognition": "DayLatchCheck",
+                "custom_recognition_param": {
+                    "key": "ge10",
+                    "recognition_name": "通用_识别天数",
+                    "compare": ">=10"
+                }
+            }
+        },
+        "next": [
+            "地宫2无尽_加速"
+        ]
+    },
+    "地宫2无尽_加速": {
+        "recognition": "TemplateMatch",
+        "template": "General/加速.png",
+        "roi": [
+            1146,
+            9,
+            56,
+            59
+        ],
+        "action": "Click",
         "next": [
             "地宫2_后期_检查卡组是否为后期",
             "通用_重开_暂停"
@@ -253,7 +302,7 @@
         ],
         "next": [
             "地宫2_后期_识别鬼火并种植",
-            "地宫2_后期_组合动作_原葵蓓蕾"
+            "地宫2_后期_组合动作_后期"
         ]
     },
     "地宫2无尽_切换配置": {
@@ -307,7 +356,7 @@
     },
     "地宫2无尽_第一关_寻找双发2": {
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找原葵"
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找阳光类"
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -334,7 +383,7 @@
             "滑回最顶上"
         ]
     },
-    "地宫2无尽_第一关_寻找原葵": {
+    "地宫2无尽_第一关_寻找阳光类": {
         "anchor": {
             "下一个寻找的植物": "地宫2无尽_第一关_寻找树桩"
         },
@@ -452,7 +501,7 @@
     },
     "地宫2无尽_第一关_寻找南瓜罩": {
         "anchor": {
-            "下一个寻找的植物": "地宫2无尽_第一关_寻找蓓蕾2"
+            "下一个寻找的植物": "地宫2无尽_第一关_寻找8槽"
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -479,7 +528,7 @@
             "滑回最顶上"
         ]
     },
-    "地宫2无尽_第一关_寻找蓓蕾2": {
+    "地宫2无尽_第一关_寻找8槽": {
         "anchor": {
             "下一个寻找的植物": ""
         },
@@ -505,7 +554,7 @@
         ],
         "post_wait_freezes": 1000,
         "next": [
-            "地宫2无尽_检查天数_开始战斗"
+            "地宫2无尽_识别_开始战斗"
         ]
     },
     "地宫2无尽_第一关": {
@@ -744,8 +793,20 @@
         ],
         "action": "Click",
         "next": [
+            "地宫2_结算_重置锁存"
+        ]
+    },
+    "地宫2_结算_重置锁存": {
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "DayLatchReset"
+            }
+        },
+        "next": [
             "地宫2无尽_无尽模式",
             "地宫2无尽_结算"
         ]
-    },
+    }
 }
