@@ -79,6 +79,18 @@
         "pre_wait_freezes": 500,
         "action": "Click",
         "next": [
+            "地宫2_任务开始_重置锁存"
+        ]
+    },
+    "地宫2_任务开始_重置锁存": {
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "DayLatchReset"
+            }
+        },
+        "next": [
             "地宫2无尽_检查天数_选向日葵"
         ]
     },
@@ -225,8 +237,9 @@
         "recognition": {
             "type": "Custom",
             "param": {
-                "custom_recognition": "returnOCRReco",
+                "custom_recognition": "DayLatchCheck",
                 "custom_recognition_param": {
+                    "key": "ge3",
                     "recognition_name": "通用_识别天数",
                     "compare": ">=3"
                 }
@@ -249,8 +262,9 @@
         "recognition": {
             "type": "Custom",
             "param": {
-                "custom_recognition": "returnOCRReco",
+                "custom_recognition": "DayLatchCheck",
                 "custom_recognition_param": {
+                    "key": "ge10",
                     "recognition_name": "通用_识别天数",
                     "compare": ">=10"
                 }
@@ -779,8 +793,20 @@
         ],
         "action": "Click",
         "next": [
+            "地宫2_结算_重置锁存"
+        ]
+    },
+    "地宫2_结算_重置锁存": {
+        "recognition": "DirectHit",
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "DayLatchReset"
+            }
+        },
+        "next": [
             "地宫2无尽_无尽模式",
             "地宫2无尽_结算"
         ]
-    },
+    }
 }

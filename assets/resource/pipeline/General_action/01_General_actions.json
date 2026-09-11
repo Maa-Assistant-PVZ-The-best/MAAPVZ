@@ -74,7 +74,7 @@
             84
         ],
         "action": "Click",
-        "timeout": 30000,
+        "timeout": 100000,
         "next": [
             "[Anchor]下一个动作"
         ]

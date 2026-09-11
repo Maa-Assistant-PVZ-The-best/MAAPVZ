@@ -2,6 +2,7 @@ import json
 import re
 import sys
 import time
+import threading
 from maa.agent.agent_server import AgentServer
 from maa.custom_action import CustomAction
 from maa.custom_recognition import CustomRecognition
@@ -111,7 +112,7 @@ def _cached_reco(context, image, recognition_name, roi=None, ttl=_OCR_CACHE_TTL)
     return (hit, text, num)
 
 
-# ==================== 旧版：CustomAction（保持原样可用） ====================
+# ==================== 旧版：CustomAction ====================
 
 @AgentServer.custom_action("returnOCR")
 class ReturnOCR(CustomAction):
@@ -225,7 +226,7 @@ class ReturnOCR(CustomAction):
     _do_compare = staticmethod(_do_compare)
 
 
-# ==================== 新版：CustomRecognition（给判断/分流节点用） ====================
+# ==================== 新版：CustomRecognition ====================
 
 @AgentServer.custom_recognition("returnOCRReco")
 class ReturnOCRRecognition(CustomRecognition):
@@ -292,3 +293,69 @@ class ReturnOCRRecognition(CustomRecognition):
             return CustomRecognition.AnalyzeResult(box=None, detail=f"{text} not {compare}")
 
         return CustomRecognition.AnalyzeResult(box=None, detail="no mode")
+
+
+# ==================== 锁存（DayLatch，支持多 key） ====================
+
+_LATCH_LOCK = threading.Lock()
+_LATCH = {}   # key -> bool
+
+
+@AgentServer.custom_recognition("DayLatchCheck")
+class DayLatchCheck(CustomRecognition):
+    """锁存判断（支持多把锁）：
+       - 该 key 已锁 → 直接 hit，不再 OCR
+       - 未锁 → OCR 比较，命中则锁定并 hit
+
+       参数：
+       {
+           "key": "ge3",                           # 锁的标识，默认 "default"
+           "recognition_name": "通用_识别天数",
+           "compare": ">=3"
+       }
+    """
+    def analyze(self, context, argv):
+        param = _parse_param(argv.custom_recognition_param) or {}
+        key = param.get("key", "default")
+        recognition_name = param.get("recognition_name", "通用_识别天数")
+        compare = param.get("compare", ">=3")
+
+        with _LATCH_LOCK:
+            if _LATCH.get(key, False):
+                return CustomRecognition.AnalyzeResult(
+                    box=(0, 0, 100, 100), detail=f"[{key}] locked"
+                )
+
+        hit, _text, num = _cached_reco(context, argv.image, recognition_name, None, _OCR_CACHE_TTL)
+        if hit and _do_compare(num, _parse_compare(compare)):
+            with _LATCH_LOCK:
+                _LATCH[key] = True
+            print(f"[DayLatch:{key}] 首次命中 {num}，已锁定", file=sys.stderr, flush=True)
+            return CustomRecognition.AnalyzeResult(
+                box=(0, 0, 100, 100), detail=f"[{key}] first hit {num}"
+            )
+
+        return CustomRecognition.AnalyzeResult(
+            box=None, detail=f"[{key}] not yet (num={num})"
+        )
+
+
+@AgentServer.custom_action("DayLatchReset")
+class DayLatchReset(CustomAction):
+    """解锁：
+       - 不传 key：清空所有锁
+       - 传 key：只清该 key 的锁
+
+       参数：{"key": "ge3"}  或  {}
+    """
+    def run(self, context, argv):
+        param = _parse_param(argv.custom_action_param) or {}
+        key = param.get("key")
+        with _LATCH_LOCK:
+            if key is None:
+                _LATCH.clear()
+                print("[DayLatch] 已清空所有锁", file=sys.stderr, flush=True)
+            else:
+                _LATCH[key] = False
+                print(f"[DayLatch:{key}] 已重置", file=sys.stderr, flush=True)
+        return CustomAction.RunResult(success=True)
