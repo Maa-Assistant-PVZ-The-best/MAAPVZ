@@ -14,7 +14,7 @@
                         "wujin_确定4": {
                             "anchor": {
                                 "初始化": "1关"
-                            },
+                            }
                         },
                         "xinta3_种蓓蕾3": {
                             "anchor": {
@@ -30,7 +30,7 @@
                         "wujin_确定4": {
                             "anchor": {
                                 "初始化": "2_1关"
-                            },
+                            }
                         },
                         "心塔阵容选择": {
                             "next": [
@@ -277,7 +277,7 @@
                         "HeartTowerEntry2": {
                             "anchor": {
                                 "初始化": "2_1关"
-                            },
+                            }
                         }
                     }
                 },
@@ -288,12 +288,12 @@
                         "HeartTowerEntry": {
                             "anchor": {
                                 "初始化": "2关"
-                            },
+                            }
                         },
                         "HeartTowerEntry2": {
                             "anchor": {
                                 "初始化": "2_2关"
-                            },
+                            }
                         }
                     }
                 },
@@ -304,16 +304,16 @@
                         "HeartTowerEntry": {
                             "anchor": {
                                 "初始化": "3_149关"
-                            },
+                            }
                         },
                         "HeartTowerEntry2": {
                             "anchor": {
                                 "初始化": "2_3_149关"
-                            },
+                            }
                         }
                     }
                 }
             ]
-        },
+        }
     }
 }

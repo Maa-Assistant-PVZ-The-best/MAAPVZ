@@ -576,7 +576,7 @@
             "检查是否到宗师锅",
             "[JumpBack]检查突发情况"
         ],
-        "focus": "[color:Gold]芜湖赢了[/color]",
+        "focus": "[color:Gold]芜湖赢了[/color]"
     },
     "游戏失败": {
         "recognition": "TemplateMatch",
@@ -660,7 +660,7 @@
                     "pair_duel/双人对决_突发情况1.png",
                     "pair_duel/双人对决_突发情况2.png",
                     "pair_duel/双人对决_数据异常_确定.png"
-                ],
+                ]
             }
         ],
         "timeout": 10,

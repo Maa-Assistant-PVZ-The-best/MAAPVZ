@@ -527,7 +527,7 @@
         "next": [
             "关闭广告通用",
             "开始游戏",
-            "点击登录",
+            "点击登录"
         ]
     },
     "小米的广告": {
@@ -613,7 +613,7 @@
                 "recognition": "TemplateMatch",
                 "template": [
                     "Start_game/叉叉.png",
-                    "Start_game/叉叉1.png",
+                    "Start_game/叉叉1.png"
                 ],
                 "roi": [
                     968,
@@ -629,14 +629,14 @@
                     "Start_game/叉叉1.png",
                     "Start_game/公告的叉叉.png",
                     "Start_game/僵尸清除_确定.png"
-                ],
-            },
+                ]
+            }
         ],
         "pre_delay": 500,
         "action": "Click",
         "next": [
             "关闭公告",
-            "再次检查是否在主界面",
+            "再次检查是否在主界面"
         ]
     },
     "再次检查是否在主界面": {

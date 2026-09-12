@@ -44,7 +44,7 @@
                     161,
                     71
                 ],
-                "method": 10001,
+                "method": 10001
             },
             {
                 "recognition": "ColorMatch",
@@ -63,7 +63,7 @@
                     464,
                     161,
                     71
-                ],
+                ]
             }
         ],
         "action": "Click",
@@ -75,8 +75,8 @@
         ],
         "next": [
             "领取钻石_确定",
-            "领取钻石",
-        ],
+            "领取钻石"
+        ]
     },
     "领取钻石_确定": {
         "recognition": "TemplateMatch",

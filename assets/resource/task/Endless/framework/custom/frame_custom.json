@@ -46,7 +46,7 @@
             "label": "前期使用编队",
             "cases": [
                 {
-                    "name": "No",
+                    "name": "No"
                 },
                 {
                     "name": "Yes",
@@ -58,7 +58,7 @@
                             "next": [
                                 "frame_wj_custom_点切换编队前期"
                             ]
-                        },
+                        }
                     }
                 }
             ]
@@ -275,7 +275,7 @@
             "cases": [
                 {
                     "name": "No",
-                    "label": "否",
+                    "label": "否"
                 },
                 {
                     "name": "Yes",
@@ -295,7 +295,7 @@
                             "next": [
                                 "frame_wj_custom_2_下8槽"
                             ]
-                        },
+                        }
                     },
                     "option": [
                         "frame_wj_custom_种守卫菇位置1",
@@ -337,7 +337,7 @@
             "description": "切换到后期编队,如果不切换,请关闭此选项",
             "cases": [
                 {
-                    "name": "No",
+                    "name": "No"
                 },
                 {
                     "name": "Yes",

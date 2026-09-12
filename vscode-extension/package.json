@@ -1,0 +1,65 @@
+{
+    "name": "jsonc-trailing-comma",
+    "displayName": "JSONC 尾随逗号清除器（MAAPVZ）",
+    "description": "删除 assets/resource/pipeline 与 assets/resource/task 下 JSON/JSONC 文件的尾随逗号，只删逗号，完整保留注释与原有排版。",
+    "version": "0.1.0",
+    "publisher": "maapvz",
+    "license": "MIT",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Formatters",
+        "Other"
+    ],
+    "keywords": [
+        "jsonc",
+        "trailing comma",
+        "maapvz",
+        "maa"
+    ],
+    "main": "./extension.js",
+    "activationEvents": [
+        "onStartupFinished"
+    ],
+    "contributes": {
+        "commands": [
+            {
+                "command": "maapvzJsonc.removeInFile",
+                "title": "清除尾随逗号：当前文件",
+                "category": "MAAPVZ"
+            },
+            {
+                "command": "maapvzJsonc.removeInWorkspace",
+                "title": "清除尾随逗号：工作区 pipeline / task 全部文件",
+                "category": "MAAPVZ"
+            },
+            {
+                "command": "maapvzJsonc.checkWorkspace",
+                "title": "检查尾随逗号（只报告，不修改）",
+                "category": "MAAPVZ"
+            }
+        ],
+        "configuration": {
+            "title": "MAAPVZ 尾随逗号",
+            "properties": {
+                "maapvzJsonc.removeOnSave": {
+                    "type": "boolean",
+                    "default": true,
+                    "markdownDescription": "保存目标目录内的 `.json` / `.jsonc` 文件时，自动删除尾随逗号。"
+                },
+                "maapvzJsonc.targetDirectories": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [
+                        "assets/resource/pipeline",
+                        "assets/resource/task"
+                    ],
+                    "markdownDescription": "生效目录，相对于仓库根目录，用 `/` 分隔。"
+                }
+            }
+        }
+    }
+}
