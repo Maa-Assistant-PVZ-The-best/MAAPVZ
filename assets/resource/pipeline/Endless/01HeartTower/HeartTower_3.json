@@ -189,7 +189,8 @@
         "pre_delay": 0,
         "post_delay": 300,
         "anchor": {
-            "下一个动作": "xinta3_过渡"
+            "下一个动作": "xinta3_过渡",
+            "断网检测": "xinta3_识别开始战斗"
         },
         "next": [
             "xinta3_点波"
@@ -207,6 +208,7 @@
         "repeat_delay": 20,
         "next": [
             "通用_无尽_识别结算",
+            "断网检测",
             "xinta3_喂豆香蕉1"
         ]
     },
@@ -239,23 +241,10 @@
         "repeat_delay": 20,
         "next": [
             "通用_无尽_识别结算",
+            "断网检测",
             "xinta3_喂豆香蕉2"
         ]
     },
-    // "xinta3_识别结算": {
-    //     "recognition": "OCR",
-    //     "roi": [
-    //         716,
-    //         621,
-    //         179,
-    //         50
-    //     ],
-    //     "expected": "继续挑战",
-    //     "action": "Click",
-    //     "next": [
-    //         "xinta3_过渡"
-    //     ]
-    // },
     "xinta3_过渡": {
         "action": "DoNothing",
         "timeout": -1,
@@ -622,10 +611,12 @@
         "post_delay": 100,
         "duration": 100,
         "anchor": {
+            "断网检测": "xinta_boss_识别开始",
             "下一个动作": "xinta3_识别开始战斗"
         },
         "next": [
-            "通用_无尽_识别结算"
+            "通用_无尽_识别结算",
+            "断网检测"
         ]
     },
     // "xinta_boss_识别结算": {
