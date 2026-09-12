@@ -11,7 +11,7 @@
                     "name": "Yes",
                     "pipeline_override": {
                         "免广告卡_免费每日50钻": {
-                            "enabled": true,
+                            "enabled": true
                         }
                     }
                 }
@@ -32,7 +32,7 @@
                     ],
                     "pipeline_override": {
                         "免广告卡_潘妮秘宝": {
-                            "enabled": true,
+                            "enabled": true
                         }
                     }
                 }
@@ -51,7 +51,7 @@
                             "next": [
                                 "潘妮秘宝_免广告卡_装扮宝物_滑动"
                             ]
-                        },
+                        }
                     }
                 }
             ]
@@ -68,8 +68,8 @@
             ],
             "pipeline_override": {
                 "免广告卡_潘妮秘宝": {
-                    "max_hit": "{使用次数}",
-                },
+                    "max_hit": "{使用次数}"
+                }
             }
         },
         "超z钥匙": {
@@ -83,7 +83,7 @@
                     "name": "Yes",
                     "pipeline_override": {
                         "免广告卡_超z钥匙": {
-                            "enabled": true,
+                            "enabled": true
                         }
                     }
                 }
@@ -121,8 +121,8 @@
             ],
             "pipeline_override": {
                 "装扮转基因_计数": {
-                    "max_hit": "{转基因次数}",
-                },
+                    "max_hit": "{转基因次数}"
+                }
             }
         },
         "红水晶": {
@@ -157,9 +157,9 @@
             ],
             "pipeline_override": {
                 "红水晶_计数": {
-                    "max_hit": "{领取次数}",
-                },
+                    "max_hit": "{领取次数}"
+                }
             }
-        },
+        }
     }
 }

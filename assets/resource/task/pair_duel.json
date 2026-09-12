@@ -54,55 +54,55 @@
                     "post_delay": "{毫秒}"
                 },
                 "打开pvz_华为": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_联想": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_360": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_九游": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_OPPO": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_应用宝_qq": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_应用宝_微信": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_b服": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_vivo": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_荣耀": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_好游快报": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_百度": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_7723": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_官服": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_taptap": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_4399": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 },
                 "打开pvz_XM": {
-                    "post_delay": "{毫秒}",
+                    "post_delay": "{毫秒}"
                 }
             }
         },
@@ -455,6 +455,6 @@
                     }
                 }
             ]
-        },
+        }
     }
 }

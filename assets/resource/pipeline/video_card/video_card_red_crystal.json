@@ -60,7 +60,7 @@
                     164,
                     63
                 ],
-                "method": 10001,
+                "method": 10001
             },
             {
                 "recognition": "ColorMatch",
@@ -79,7 +79,7 @@
                     468,
                     164,
                     63
-                ],
+                ]
             }
         ],
         "action": "Click",
