@@ -1,0 +1,37 @@
+{
+    "断网检测": {
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "roi": [
+            543,
+            406,
+            207,
+            138
+        ],
+        "action": "Click",
+        "post_delay": 5000,
+        "next": [
+            "返回选关界面"
+        ]
+    },
+    "返回选关界面": {
+        "recognition": "OCR",
+        "expected": [
+            "开始挑战"
+        ],
+        "roi": [
+            852,
+            606,
+            227,
+            65
+        ],
+        "action": "Click",
+        "repeat": 2,
+        "pre_delay": 3000,
+        "next": [
+            "[Anchor]断网检测"
+        ]
+    }
+}
