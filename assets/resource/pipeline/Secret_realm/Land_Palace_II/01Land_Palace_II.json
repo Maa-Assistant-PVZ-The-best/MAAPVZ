@@ -220,7 +220,7 @@
     "地宫2_第二关_检查卡组是否选完": {
         "recognition": "TemplateMatch",
         "template": [
-            "land_gong_one/向日葵.png"
+            "land_gong_one/双发.png"
         ],
         "roi": [
             7,
@@ -228,7 +228,6 @@
             120,
             81
         ],
-        "inverse": true,
         "next": [
             "地宫2_第2关_识别蓓蕾并种植"
         ]
