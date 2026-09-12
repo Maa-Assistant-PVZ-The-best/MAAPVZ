@@ -140,8 +140,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第七个槽位",
         "end": "种植物_初始化_格子4_3",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 400,
         "next": [
             "2_球果1"
@@ -175,8 +175,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第三个槽位",
         "end": "种植物_初始化_格子2_4",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 400,
         "next": [
             "2_种豆藤"
@@ -186,8 +186,8 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第二个槽位",
         "end": "种植物_初始化_格子2_3",
-        "pre_delay": 0,
-        "post_delay": 0,
+        "pre_delay": 100,
+        "post_delay": 100,
         "duration": 400,
         "next": [
             "2_种大哥1"
