@@ -11,6 +11,8 @@ if Path.cwd() != project_root_dir:
 
 sys.path.insert(0, str(project_root_dir))
 sys.path.insert(0, str(project_root_dir / "agent"))
+# select_plant 与 main.py 同级，都在 agent/ 下 -> project_root_dir/select_plant
+sys.path.insert(0, str(project_root_dir / "select_plant"))
 
 from maa.agent.agent_server import AgentServer
 from maa.toolkit import Toolkit
@@ -22,7 +24,8 @@ import my_reco
 import ExpressionRecognition
 import ocr_return_action
 import actions
-# import agent_icon_recognition
+import custom_select_plant
+
 
 SingleAction.load_coords('./assets/resource/coords.json')
 BatchSwipe.load_coords('./assets/resource/coords.json')

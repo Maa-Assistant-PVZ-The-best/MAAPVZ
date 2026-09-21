@@ -1,8 +1,93 @@
 {
+    "SelectPlants_Entry": {
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "植物列表": [
+                "苹果迫击炮"
+            ],
+            "搜索roi": [
+                138,
+                389,
+                595,
+                302
+            ],
+            "核对roi": [
+                269,
+                92,
+                371,
+                63
+            ],
+            "填充位置": [
+                [
+                    195,
+                    437
+                ],
+                [
+                    312,
+                    439
+                ],
+                [
+                    429,
+                    439
+                ],
+                [
+                    552,
+                    439
+                ],
+                [
+                    671,
+                    428
+                ],
+                [
+                    180,
+                    507
+                ],
+                [
+                    299,
+                    504
+                ],
+                [
+                    415,
+                    505
+                ],
+                [
+                    539,
+                    502
+                ],
+                [
+                    655,
+                    505
+                ],
+                [
+                    176,
+                    583
+                ],
+                [
+                    301,
+                    583
+                ],
+                [
+                    422,
+                    581
+                ],
+                [
+                    539,
+                    581
+                ],
+                [
+                    661,
+                    583
+                ]
+            ],
+            "选卡界面槽位检查": true,
+            "匹配阈值": 0.7
+        }
+    },
     "debug_识别一下解包植物": {
         "recognition": "TemplateMatch",
         "template": [
-            "General/plant_ref/caulipower.png"
+            "General/plant/plant_ref_card/橙卡/duckpear/duckpear.png"
         ]
     }
 }
