@@ -208,6 +208,14 @@ class SelectPlants(CustomAction):
     DEFAULT_SWIPE = {"begin": [215, 587], "end": [215, 200], "duration": 600}
     DEFAULT_BACKTOP = {"begin": [381, 401], "end": [381, 611], "repeat": 30, "duration": 80}
 
+    # 默认填充位置（滑回最顶上后依次快速点击这些坐标占位）
+    # 当 custom_action_param 没传「填充位置」时使用。
+    DEFAULT_FILL_POSITIONS = [
+        [195, 437], [312, 439], [429, 439], [552, 439], [671, 428],
+        [180, 507], [299, 504], [415, 505], [539, 502], [655, 505],
+        [176, 583], [301, 583], [422, 581], [539, 581], [661, 583],
+    ]
+
     # ------------------------------------------------------------------
     @staticmethod
     def _load_coords_slot_xy(coords_file=None, default_roi=None):
@@ -274,9 +282,11 @@ class SelectPlants(CustomAction):
             sim_threshold = float(param.get("截图相似阈值", 0.96))
             backoff_frames = int(param.get("保底连续帧", 2))
             max_retry = int(param.get("最多重试", 6))
-            # 填充位置：可选，任意长度。滑回最顶上后，依次快速点击这些坐标占位。
-            # 留空则回退到旧的"占位坐标/槽位坐标按顺序填剩余空槽"行为。
-            fill_positions = param.get("填充位置")
+            # 填充位置：可选。滑回最顶上后，依次快速点击这些坐标占位。
+            # 未传「填充位置」时，使用内置默认 DEFAULT_FILL_POSITIONS（玩家实测占位点）。
+            fill_positions = param.get("填充位置", None)
+            if fill_positions is None:
+                fill_positions = list(self.DEFAULT_FILL_POSITIONS)
             fill_click_gap = int(param.get("填充点击间隔", 100))
 
             # 解析每个目标 -> (中文名, 英文名, 品质, 模板列表, 有效槽位roi)
@@ -332,9 +342,12 @@ class SelectPlants(CustomAction):
                     slot_done[i] = True
 
             # ---- 占位填充：滑回最顶后填剩余位置 ----
-            # 若给了「填充位置」(任意长度)，直接依次快速点这些坐标；
-            # 否则回退到旧的"不足8个时填剩余空槽"行为。
-            if fill_positions is not None:
+            # ---- 占位填充：滑回最顶后，依次快速点击填充位置 ----
+            # 填充位置 = 用户传入的「填充位置」，未传则用内置默认 DEFAULT_FILL_POSITIONS。
+            if not fill_positions:
+                print("[SelectPlants] 没有可用的填充位置，跳过占位",
+                      file=sys.stderr, flush=True)
+            else:
                 self._do_swipe_backtop(ctl, backtop)
                 if self._stopped(context):
                     return CustomAction.RunResult(success=False)
@@ -356,18 +369,6 @@ class SelectPlants(CustomAction):
                     except Exception as e:
                         print(f"[SelectPlants] 填充位置点击异常 {p}: {e}",
                               file=sys.stderr, flush=True)
-            else:
-                n = len(targets)
-                if n < 8:
-                    self._do_swipe_backtop(ctl, backtop)
-                    for k in range(n, 8):
-                        if self._stopped(context):
-                            return CustomAction.RunResult(success=False)
-                        if k < len(fill_xy) and fill_xy[k] and len(fill_xy[k]) >= 2:
-                            self._click(ctl, fill_xy[k][0], fill_xy[k][1])
-                            time.sleep(post_click_wait / 1000.0)
-                            print(f"[SelectPlants] 占位填充槽位 #{k+1} ({fill_xy[k]})",
-                                  file=sys.stderr, flush=True)
 
             print("[SelectPlants] 完成", file=sys.stderr, flush=True)
             return CustomAction.RunResult(success=True)
@@ -608,17 +609,20 @@ class SelectPlants(CustomAction):
                     self._do_swipe_backtop(ctl, backtop)
                     return True
 
-                # ---- 对不上：否定这个卡位(记录其坐标框)，把拿错的植物丢回对应槽位, 再滑回顶重找 ----
+                # ---- 对不上：否定这个卡位(记录其坐标框)，把拿错的植物丢回对应槽位
+                #      然后【继续在当前画面滑动识别】，不滑回最顶上 ----
                 if found is not None:
                     rejected.append([found["x"], found["y"],
                                      found["w"], found["h"]])
                 print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 核对失败，"
-                      f"否定卡位 {rejected[-1] if rejected else None}，点击槽位 #{slot_index+1} 丢回",
+                      f"否定卡位 {rejected[-1] if rejected else None}，"
+                      f"取消(点槽位 #{slot_index+1})后继续滑动识别",
                       file=sys.stderr, flush=True)
                 if slot_xy is not None and slot_xy and len(slot_xy) >= 2:
                     self._click(ctl, slot_xy[0], slot_xy[1])
                     time.sleep(post_click_wait / 1000.0)
-                self._do_swipe_backtop(ctl, backtop)
+                # 不滑回顶上：continue 后本循环重截当前帧，已被否定的卡位会被跳过，
+                # 画面里若还有下一个候选就直接点; 没有则落到下方"滑一步继续"分支。
                 retry += 1
                 identical_run = 0
                 continue
@@ -675,12 +679,35 @@ class SelectPlants(CustomAction):
 
     @staticmethod
     def _name_match(ocr_text, tgt):
-        """OCR 文本与目标中文/英文名是否对得上（宽松子串/归一化匹配）。"""
+        """OCR 文本与目标中文/英文名是否对得上（严格对照）。
+
+        要求去掉空格/标点后与目标名【相等】才算命中，不再做"包含"模糊匹配，
+        避免「毒液豌豆射手」被当成「豌豆射手」。
+        仅额外宽容"名字后粘等级/星级数字(如 豌豆射手3)"这一种前缀情况。
+        """
         if not ocr_text:
             return False
-        t = re.sub(r"\s+", "", ocr_text)
-        zh = re.sub(r"\s+", "", str(tgt["zh"]))
-        en = re.sub(r"\s+", "", str(tgt["en"]))
-        return (zh and zh in t) or (t and t in zh) or \
-               (en and en.lower() in t.lower()) or \
-               (t.lower() and t.lower() in en.lower())
+
+        def norm(s):
+            s = re.sub(r"\s+", "", str(s))
+            # 去掉常用标点和 OCR 尾部杂物
+            s = re.sub(r"[。.;,，；:：！!？?·、\"'“”‘’()（）\[\]【】x×X*+]+", "", s)
+            return s
+
+        t = norm(ocr_text).lower()
+        zh = norm(tgt["zh"]).lower()
+        en = norm(tgt["en"]).lower()
+
+        if zh and t == zh:
+            return True
+        if en and t == en:
+            return True
+        # 兼容「名字 + 等级数字」：豌豆射手3 / peashooter3（数字粘在名字后）
+        for name in (zh, en):
+            if not name:
+                continue
+            if t.startswith(name):
+                tail = t[len(name):]
+                if tail and re.fullmatch(r"\d+x?|级|阶", tail):
+                    return True
+        return False
