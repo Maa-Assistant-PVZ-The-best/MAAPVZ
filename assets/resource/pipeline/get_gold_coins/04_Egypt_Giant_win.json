@@ -329,55 +329,35 @@
     },
     "埃及8_加速": {
         "recognition": "TemplateMatch",
-        "template": [
-            "get_gold_coins/关卡内_加速.png"
+        "template": "General/加速.png",
+        "roi": [
+            1146,
+            9,
+            56,
+            59
         ],
         "action": "Click",
-        "roi": [
-            1138,
-            5,
-            75,
-            68
+        "target": [
+            1167,
+            37
         ],
-        "post_wait_freezes": 300,
         "next": [
-            "埃及8_下一波",
-            "埃及8_胜利"
+            "埃及8_胜利",
+            "埃及8_下一波"
         ]
     },
     "埃及8_下一波": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "get_gold_coins/下一波.png"
-        ],
         "action": "Click",
         "roi": [
-            1184,
-            174,
-            93,
-            82
+            1202,
+            203,
+            43,
+            34
         ],
         "post_wait_freezes": 300,
         "next": [
-            "埃及8_下一波",
             "埃及8_胜利",
-            "埃及8_确认在局内"
-        ]
-    },
-    "埃及8_确认在局内": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "get_gold_coins/关卡内_加速（已按）.png"
-        ],
-        "roi": [
-            1135,
-            -2,
-            126,
-            140
-        ],
-        "next": [
-            "埃及8_下一波",
-            "埃及8_胜利"
+            "埃及8_下一波"
         ]
     },
     "埃及8_胜利": {

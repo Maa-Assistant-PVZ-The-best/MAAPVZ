@@ -208,11 +208,32 @@
             "param": {
                 "cmd": "input text 砸罐子"
             }
-        }, //默认为砸罐子，后续可在配置界面里面调
+        }, //默认为砸罐子，可在「创意庭院」任务的「自建关卡名」选项中配置
         "next": [
             "创意庭院_砸罐子_输入名字_确认",
-            "创意庭院_选择砸罐子_输入名字_点击白框"
+            "创意庭院_选择砸罐子_输入名字_点击白框",
+            "[JumpBack]创意庭院_Input_AndroidConfirm"
         ]
+    },
+    "创意庭院_Input_AndroidConfirm": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "expected": [
+                    "完成",
+                    "OK"
+                ],
+                "roi": [
+                    1030,
+                    20,
+                    245,
+                    670
+                ]
+            }
+        },
+        "action": {
+            "type": "Click"
+        }
     },
     "创意庭院_砸罐子_输入名字_确认": {
         "recognition": "OCR",
@@ -279,20 +300,53 @@
         ]
     },
     "创意庭院_砸罐子_挑战": {
-        "recognition": "OCR",
-        "expected": [
-            "砸罐子"
-        ],
-        "roi": [
-            369,
-            278,
-            152,
-            44
-        ],
-        "action": "Click",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "创意庭院_砸罐子_关卡类型",
+                    "创意庭院_砸罐子_关卡名"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
         "next": [
             "创意庭院_砸罐子_进入"
         ]
+    },
+    "创意庭院_砸罐子_关卡类型": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "expected": [
+                    "砸罐子"
+                ],
+                "roi": [
+                    369,
+                    278,
+                    152,
+                    44
+                ]
+            }
+        }
+    },
+    "创意庭院_砸罐子_关卡名": {
+        "recognition": {
+            "type": "OCR",
+            "param": {
+                "expected": [
+                    "砸罐子"
+                ],
+                "roi": [
+                    373,
+                    160,
+                    146,
+                    27
+                ]
+            }
+        }
     },
     "创意庭院_砸罐子_进入": {
         "recognition": "OCR",
@@ -376,17 +430,18 @@
         ]
     },
     "创意庭院_砸罐子_发布_点击关卡": {
-        "recognition": "OCR",
-        "expected": [
-            "砸罐子"
-        ],
-        "roi": [
-            369,
-            278,
-            152,
-            44
-        ],
-        "action": "Click",
+        "recognition": {
+            "type": "And",
+            "param": {
+                "all_of": [
+                    "创意庭院_砸罐子_关卡类型",
+                    "创意庭院_砸罐子_关卡名"
+                ]
+            }
+        },
+        "action": {
+            "type": "Click"
+        },
         "next": [
             "创意庭院_砸罐子_发布",
             "创意庭院_砸罐子_发布_点击关卡"
