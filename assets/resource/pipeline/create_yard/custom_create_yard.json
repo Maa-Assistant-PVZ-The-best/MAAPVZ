@@ -7,7 +7,8 @@
             }
         },
         "next": [
-            "创意庭院_点击输入_搜索"
+            "创意庭院_点击输入_搜索",
+            "[JumpBack]创意庭院_Input_AndroidConfirm"
         ]
     }
 }

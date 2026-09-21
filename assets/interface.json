@@ -360,7 +360,8 @@
                 {
                     "name": "刷点赞",
                     "option": [
-                        "点赞几次"
+                        "点赞几次",
+                        "CreateYardLevelName"
                     ],
                     "pipeline_override": {
                         "创意庭院_刷赞_删除关卡": {
@@ -386,6 +387,48 @@
             "pipeline_override": {
                 "创意庭院_刷赞_重新创建关卡检测次数": {
                     "max_hit": "{点赞次数}"
+                }
+            }
+        },
+        "CreateYardLevelName": {
+            "type": "input",
+            "label": "自建关卡名",
+            "description": "自建关卡时使用的关卡名称。刷点赞模式总是生效；刷游玩币模式仅在「使用收藏关卡 = No」时生效。建议使用纯英数字，`adb shell input text` 对中文支持较差",
+            "inputs": [
+                {
+                    "name": "LevelName",
+                    "label": "关卡名",
+                    "default": "砸罐子",
+                    "verify": "^.{1,20}$",
+                    "pattern_msg": "关卡名长度需为 1~20 个字符"
+                }
+            ],
+            "pipeline_override": {
+                "创意庭院_选择砸罐子_输入名字": {
+                    "action": {
+                        "type": "Shell",
+                        "param": {
+                            "cmd": "input text {LevelName}"
+                        }
+                    }
+                },
+                "创意庭院_砸罐子_输入名字_确认": {
+                    "recognition": {
+                        "param": {
+                            "expected": [
+                                "{LevelName}"
+                            ]
+                        }
+                    }
+                },
+                "创意庭院_砸罐子_关卡名": {
+                    "recognition": {
+                        "param": {
+                            "expected": [
+                                "{LevelName}"
+                            ]
+                        }
+                    }
                 }
             }
         },
@@ -425,7 +468,10 @@
                     }
                 },
                 {
-                    "name": "No"
+                    "name": "No",
+                    "option": [
+                        "CreateYardLevelName"
+                    ]
                 }
             ]
         },
