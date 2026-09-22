@@ -1,0 +1,77 @@
+{
+    "家族天赋_前置检查": {
+        "timeout": 10000,
+        "action": "DoNothing",
+        "max_hit": 3,
+        "next": [
+            "家族天赋_点击植物",
+            "[JumpBack]检查当前是否在主界面"
+        ],
+        "on_error": [
+            "[JumpBack]返回主界面"
+        ]
+    },
+    "家族天赋_点击植物": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Detection_Order/植物.png"
+        ],
+        "roi": [
+            875,
+            584,
+            154,
+            132
+        ],
+        "action": "Click",
+        "next": [
+            "家族天赋_点击家族入口",
+            "家族天赋_点击植物"
+        ]
+    },
+    "家族天赋_点击家族入口": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "family_talent/家族.png"
+        ],
+        "threshold": 0.9,
+        "roi": [
+            660,
+            450,
+            180,
+            140
+        ],
+        "action": "Click",
+        "next": [
+            "家族天赋_家族页确认",
+            "家族天赋_点击家族入口"
+        ]
+    },
+    // 家族页底部固定显示"已激活植物家族：xx/xx 今日免费刷新次数：N"，用它确认已进入家族页
+    // 注意：该行文字只在家族页(天赋弹窗关闭时)可见，天赋弹窗打开后会被弹窗挡住(实测截图确认)
+    // next 的三候选 = 换家族循环的第一次判断：读名字 → 判到头 → 点右箭头(详见 02_family_talent_switch.json)
+    // (MaaFW 协议：next 候选逐个识别、首个命中即执行；候选节点自身的 on_error 在未命中时不会触发，
+    //  只有"当前节点的 next 全部未命中并超时"才会走当前节点的 on_error)
+    "家族天赋_家族页确认": {
+        "timeout": 2000,
+        "recognition": "OCR",
+        "expected": [
+            "今日免费刷新次数"
+        ],
+        "roi": [
+            640,
+            515,
+            380,
+            55
+        ],
+        "only_rec": true,
+        "action": "DoNothing",
+        "next": [
+            "家族天赋_读取当前家族",
+            "家族天赋_判断到头",
+            "家族天赋_点击右箭头"
+        ],
+        "on_error": [
+            "家族天赋_家族未找到停止"
+        ]
+    }
+}

@@ -21,6 +21,7 @@ import my_action
 import my_reco
 import ExpressionRecognition
 import ocr_return_action
+import family_talent
 import actions
 # import agent_icon_recognition
 

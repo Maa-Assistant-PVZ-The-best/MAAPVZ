@@ -49,6 +49,7 @@
         "./resource/task/mini_tools.json",
         "./resource/task/test.json",
         "./resource/task/video_card.json",
+        "./resource/task/family_talent.json",
         // Endless 子目录
         "./resource/task/Endless/Endless.json", // 顶层入口
         "./resource/task/Endless/Endless_plant.json", // 预设选择器
@@ -334,6 +335,15 @@
         {
             "name": "dbug（不要开启）",
             "entry": "创意庭院_删除关卡_点刷罐子"
+        },
+        {
+            "name": "刷家族天赋",
+            "entry": "家族天赋_前置检查",
+            "option": [
+                "家族天赋设置"
+            ],
+            "default_check": false,
+            "description": "[color:Red]开启后会自动覆盖所选家族的天赋，选错家族/类型会刷掉好属性且不可撤销[/color] 自动切换家族并刷天赋；免费次数用完安全停止，绝不消耗钻石"
         }
     ],
     "option": {
