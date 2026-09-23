@@ -1,0 +1,2214 @@
+[
+ {
+  "name": "仙人掌",
+  "en": "cactus",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/cactus.webp"
+ },
+ {
+  "name": "伏僵塔黄",
+  "en": "rheumnobile",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/rheumnobile.webp"
+ },
+ {
+  "name": "保龄泡泡",
+  "en": "bowlingbulb",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/bowlingbulb.webp"
+ },
+ {
+  "name": "僵尸豆荚",
+  "en": "zoybeanpod",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/zoybeanpod.webp"
+ },
+ {
+  "name": "充能柚子",
+  "en": "citron",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/citron.webp"
+ },
+ {
+  "name": "兔极",
+  "en": "waterrabbit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/waterrabbit.webp"
+ },
+ {
+  "name": "公主弹簧草",
+  "en": "springprincess",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/springprincess.webp"
+ },
+ {
+  "name": "冬青骑士",
+  "en": "hollyknight",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/hollyknight.webp"
+ },
+ {
+  "name": "冰川菇",
+  "en": "glaciershroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/glaciershroom.webp"
+ },
+ {
+  "name": "冰西瓜投手",
+  "en": "wintermelon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/wintermelon.webp"
+ },
+ {
+  "name": "冰龙草",
+  "en": "coldsnapdragon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/coldsnapdragon.webp"
+ },
+ {
+  "name": "凤仙花射手",
+  "en": "impatiensshooter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/impatiensshooter.webp"
+ },
+ {
+  "name": "凤凰木花车",
+  "en": "phoenixfloat",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/phoenixfloat.webp"
+ },
+ {
+  "name": "凤梨链刃",
+  "en": "bromelblade",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/bromelblade.webp"
+ },
+ {
+  "name": "刺眼花艺伎",
+  "en": "boophonegeisha",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/boophonegeisha.webp"
+ },
+ {
+  "name": "剑叶龙血树",
+  "en": "dracaena",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dracaena.webp"
+ },
+ {
+  "name": "原始大王花",
+  "en": "primalrafflesia",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/primalrafflesia.webp"
+ },
+ {
+  "name": "厨师杓兰",
+  "en": "cypripedium",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/cypripedium.webp"
+ },
+ {
+  "name": "双枪松果",
+  "en": "pinecone",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pinecone.webp"
+ },
+ {
+  "name": "双生卯兔",
+  "en": "jewelrabbit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/jewelrabbit.webp"
+ },
+ {
+  "name": "吸血牛肝菌",
+  "en": "vamporcini",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/vamporcini.webp"
+ },
+ {
+  "name": "吸金磁",
+  "en": "goldmagnet",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/goldmagnet.webp"
+ },
+ {
+  "name": "喇叭花",
+  "en": "Morningglory",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/morningglory.webp"
+ },
+ {
+  "name": "地星发射井",
+  "en": "nukelauncher",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/nukelauncher.webp"
+ },
+ {
+  "name": "地锯草",
+  "en": "gardenergrass",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/gardenergrass.webp"
+ },
+ {
+  "name": "复制松果",
+  "en": "pineclone",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pineclone.webp"
+ },
+ {
+  "name": "天使星星果",
+  "en": "pinkstarfruit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pinkstarfruit.webp"
+ },
+ {
+  "name": "太极木槿",
+  "en": "peonychi",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/peonychi.webp"
+ },
+ {
+  "name": "女娲蛇尾草",
+  "en": "eywa",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/eywa.webp"
+ },
+ {
+  "name": "奶油生菜",
+  "en": "headbutterlettuce",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/headbutterlettuce.webp"
+ },
+ {
+  "name": "守卫菇",
+  "en": "guardshroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/guardshroom.webp"
+ },
+ {
+  "name": "宝石商石榴",
+  "en": "pomegranatejeweler",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pomegranatejeweler.webp"
+ },
+ {
+  "name": "寄生仙钗",
+  "en": "tristerixaphyllus",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/tristerixaphyllus.webp"
+ },
+ {
+  "name": "寒冰地刺",
+  "en": "iceweed",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/iceweed.webp"
+ },
+ {
+  "name": "寒冰菇",
+  "en": "iceshroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/iceshroom.webp"
+ },
+ {
+  "name": "寒冰醋栗",
+  "en": "icycurrant",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/icycurrant.webp"
+ },
+ {
+  "name": "寒霜白毛丹",
+  "en": "winterrambutan",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/winterrambutan.webp"
+ },
+ {
+  "name": "尖刺秋葵",
+  "en": "pokra",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pokra.webp"
+ },
+ {
+  "name": "幽暮投手",
+  "en": "dusklobber",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dusklobber.webp"
+ },
+ {
+  "name": "庆典汽水椰",
+  "en": "beercoconut",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/beercoconut.webp"
+ },
+ {
+  "name": "强酸柠檬",
+  "en": "lemon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/lemon.webp"
+ },
+ {
+  "name": "忧郁藤蔓",
+  "en": "gloomvine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/gloomvine.webp"
+ },
+ {
+  "name": "悬浮洋芋",
+  "en": "levitater",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/levitater.webp"
+ },
+ {
+  "name": "扇贝兰法师",
+  "en": "orchidmage",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/orchidmage.webp"
+ },
+ {
+  "name": "斯巴达竹",
+  "en": "spartanbamboo",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/spartanbamboo.webp"
+ },
+ {
+  "name": "日月金银花",
+  "en": "twinshoneysuckle",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/twinshoneysuckle.webp"
+ },
+ {
+  "name": "暗夜菇",
+  "en": "nightcap",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/nightcap.webp"
+ },
+ {
+  "name": "暗物质火龙果",
+  "en": "darkmatter_dragonfruit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/darkmatter_dragonfruit.webp"
+ },
+ {
+  "name": "暴君火龙果",
+  "en": "dragonbruit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dragonbruit.webp"
+ },
+ {
+  "name": "机枪豌豆",
+  "en": "gatlingpea",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/gatlingpea.webp"
+ },
+ {
+  "name": "杰克南瓜灯",
+  "en": "jackolantern",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/jackolantern.webp"
+ },
+ {
+  "name": "枫影剑客",
+  "en": "mapleblade",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/mapleblade.webp"
+ },
+ {
+  "name": "柴堆藤蔓",
+  "en": "pyrevine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/pyrevine.webp"
+ },
+ {
+  "name": "树灵护卫",
+  "en": "ents",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/ents.webp"
+ },
+ {
+  "name": "桑葚爆破手",
+  "en": "mulberry",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/mulberry.webp"
+ },
+ {
+  "name": "橄榄坑",
+  "en": "olivepit",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/olivepit.webp"
+ },
+ {
+  "name": "毁灭菇",
+  "en": "doomshroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/doomshroom.webp"
+ },
+ {
+  "name": "毒液豌豆射手",
+  "en": "poisonpeashooter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/poisonpeashooter.webp"
+ },
+ {
+  "name": "水生藤蔓",
+  "en": "aquavine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/aquavine.webp"
+ },
+ {
+  "name": "油菜花投手",
+  "en": "rapeflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/rapeflower.webp"
+ },
+ {
+  "name": "泡泡姬珊瑚",
+  "en": "bubblecoral",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/bubblecoral.webp"
+ },
+ {
+  "name": "流星花",
+  "en": "meteorflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/meteorflower.webp"
+ },
+ {
+  "name": "海神草",
+  "en": "aquaweed",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/aquaweed.webp"
+ },
+ {
+  "name": "海豌豆",
+  "en": "seashooter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/seashooter.webp"
+ },
+ {
+  "name": "深渊海葵",
+  "en": "cthulhuactinia",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/cthulhuactinia.webp"
+ },
+ {
+  "name": "深渊魔爪花",
+  "en": "devilsflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/devilsflower.webp"
+ },
+ {
+  "name": "激光皇冠花",
+  "en": "crownflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/crownflower.webp"
+ },
+ {
+  "name": "火焰花女王",
+  "en": "flamelady",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/flamelady.webp"
+ },
+ {
+  "name": "火鸡投手",
+  "en": "turkeypult",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/turkeypult.webp"
+ },
+ {
+  "name": "火龙草",
+  "en": "snapdragon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/snapdragon.webp"
+ },
+ {
+  "name": "炙热山葵",
+  "en": "wasabiwhip",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/wasabiwhip.webp"
+ },
+ {
+  "name": "烈焰火蕨",
+  "en": "inferno",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/inferno.webp"
+ },
+ {
+  "name": "熊果臼炮",
+  "en": "bearberry",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/bearberry.webp"
+ },
+ {
+  "name": "爆炸草莓",
+  "en": "strawburst",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/strawburst.webp"
+ },
+ {
+  "name": "爆裂葡萄",
+  "en": "grapeshot",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/grapeshot.webp"
+ },
+ {
+  "name": "牛蒡击球手",
+  "en": "burdockbatter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/burdockbatter.webp"
+ },
+ {
+  "name": "猫尾草",
+  "en": "nekotail",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/nekotail.webp"
+ },
+ {
+  "name": "玉米加农炮",
+  "en": "cobcannon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/cobcannon.webp"
+ },
+ {
+  "name": "球果训练家",
+  "en": "animnuts",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/animnuts.webp"
+ },
+ {
+  "name": "瓷砖萝卜",
+  "en": "powerplant",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/powerplant.webp"
+ },
+ {
+  "name": "电击钩吻",
+  "en": "wiregelsemium",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/wiregelsemium.webp"
+ },
+ {
+  "name": "电击鹰爪花",
+  "en": "eagleclaw",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/eagleclaw.webp"
+ },
+ {
+  "name": "电力绿茶",
+  "en": "electricitea",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/electricitea.webp"
+ },
+ {
+  "name": "电流醋栗",
+  "en": "electriccurrant",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/electriccurrant.webp"
+ },
+ {
+  "name": "电能藤蔓",
+  "en": "powervine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/powervine.webp"
+ },
+ {
+  "name": "电能豌豆",
+  "en": "electricpeashooter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/electricpeashooter.webp"
+ },
+ {
+  "name": "电鳗香蕉",
+  "en": "electricpeel",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/electricpeel.webp"
+ },
+ {
+  "name": "留声曼陀罗",
+  "en": "heavendatura",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/heavendatura.webp"
+ },
+ {
+  "name": "疯帽菇",
+  "en": "hatmushroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/hatmushroom.webp"
+ },
+ {
+  "name": "疯狂炮仗花",
+  "en": "firecrackerflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/firecrackerflower.webp"
+ },
+ {
+  "name": "白瓜相扑手",
+  "en": "whitemelon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/whitemelon.webp"
+ },
+ {
+  "name": "白鹭花战机",
+  "en": "egretflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/egretflower.webp"
+ },
+ {
+  "name": "百宝兜兰",
+  "en": "paphiopedilum",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/paphiopedilum.webp"
+ },
+ {
+  "name": "眩晕雏菊",
+  "en": "dazeychain",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dazeychain.webp"
+ },
+ {
+  "name": "祥云飞莲",
+  "en": "apsarlotus",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/apsarlotus.webp"
+ },
+ {
+  "name": "突击竹兵",
+  "en": "riflebamboo",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/riflebamboo.webp"
+ },
+ {
+  "name": "粉丝心叶兰",
+  "en": "hoyacordata",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/hoyacordata.webp"
+ },
+ {
+  "name": "粘液桉果",
+  "en": "gumnut",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/gumnut.webp"
+ },
+ {
+  "name": "终极番茄",
+  "en": "ultomato",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/ultomato.webp"
+ },
+ {
+  "name": "聚能山竹",
+  "en": "mangosteen",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/mangosteen.webp"
+ },
+ {
+  "name": "芦藜药师",
+  "en": "convallariachemist",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/convallariachemist.webp"
+ },
+ {
+  "name": "苹果迫击炮",
+  "en": "applemortar",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/applemortar.webp"
+ },
+ {
+  "name": "茄子忍者",
+  "en": "eggplantninja",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/eggplantninja.webp"
+ },
+ {
+  "name": "荆棘巫师",
+  "en": "wizardthorns",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/wizardthorns.webp"
+ },
+ {
+  "name": "荸荠兄弟",
+  "en": "eleocurling",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/eleocurling.webp"
+ },
+ {
+  "name": "蓄电雪松果",
+  "en": "deodarcedar",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/deodarcedar.webp"
+ },
+ {
+  "name": "蔗师父",
+  "en": "dragoncane",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dragoncane.webp"
+ },
+ {
+  "name": "藕花白龙",
+  "en": "longmalily",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/longmalily.webp"
+ },
+ {
+  "name": "虎头菇",
+  "en": "tigerstool",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/tigerstool.webp"
+ },
+ {
+  "name": "蛇妖瓶子草",
+  "en": "sarracenia",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/sarracenia.webp"
+ },
+ {
+  "name": "蛮族大黄",
+  "en": "rhubarbarian",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/rhubarbarian.webp"
+ },
+ {
+  "name": "蜜蜂铃兰",
+  "en": "maybee",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/maybee.webp"
+ },
+ {
+  "name": "蝎尾蕉机枪手",
+  "en": "heliconiagunner",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/heliconiagunner.webp"
+ },
+ {
+  "name": "警爆磁菇",
+  "en": "alarmsagittifolia",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/alarmsagittifolia.webp"
+ },
+ {
+  "name": "豌豆药剂师",
+  "en": "beanchemist",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/beanchemist.webp"
+ },
+ {
+  "name": "豌豆藤蔓",
+  "en": "peavine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/peavine.webp"
+ },
+ {
+  "name": "贪吃龙草",
+  "en": "gluttonydragon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/gluttonydragon.webp"
+ },
+ {
+  "name": "超级机枪射手",
+  "en": "megagatling",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/megagatling.webp"
+ },
+ {
+  "name": "超能花菜",
+  "en": "caulipower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/caulipower.webp"
+ },
+ {
+  "name": "逃脱树根",
+  "en": "escaperoot",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/escaperoot.webp"
+ },
+ {
+  "name": "郁金香号手",
+  "en": "tuliptrumpeter",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/tuliptrumpeter.webp"
+ },
+ {
+  "name": "酷跑曼德拉",
+  "en": "mandrake",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/mandrake.webp"
+ },
+ {
+  "name": "金缕梅女巫",
+  "en": "witchhazel",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/witchhazel.webp"
+ },
+ {
+  "name": "金蝉花",
+  "en": "goldencassia",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/goldencassia.webp"
+ },
+ {
+  "name": "钩爪嘉兰",
+  "en": "clawgloriosa",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/clawgloriosa.webp"
+ },
+ {
+  "name": "铁锤兰",
+  "en": "hammerflower",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/hammerflower.webp"
+ },
+ {
+  "name": "锯齿锦地罗",
+  "en": "chainsawburmannii",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/chainsawburmannii.webp"
+ },
+ {
+  "name": "长枪球兰",
+  "en": "lancerhoya",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/lancerhoya.webp"
+ },
+ {
+  "name": "闪耀藤蔓",
+  "en": "shinevine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/shinevine.webp"
+ },
+ {
+  "name": "防风草",
+  "en": "parsnip",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/parsnip.webp"
+ },
+ {
+  "name": "阳光菇",
+  "en": "sunshroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/sunshroom.webp"
+ },
+ {
+  "name": "阳光韭菜",
+  "en": "happyleek",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/happyleek.webp"
+ },
+ {
+  "name": "阳光鼠尾草",
+  "en": "solarsage",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/solarsage.webp"
+ },
+ {
+  "name": "雷龙草",
+  "en": "thundersnapdragon",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/thundersnapdragon.webp"
+ },
+ {
+  "name": "青蛇藤蔓",
+  "en": "poisonvine",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/poisonvine.webp"
+ },
+ {
+  "name": "飞镖洋蓟",
+  "en": "dartichoke",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/dartichoke.webp"
+ },
+ {
+  "name": "食人花豌豆",
+  "en": "snappea",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/snappea.webp"
+ },
+ {
+  "name": "香蕉火箭炮",
+  "en": "banana",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/banana.webp"
+ },
+ {
+  "name": "魔术菇",
+  "en": "magicshroom",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/magicshroom.webp"
+ },
+ {
+  "name": "魔法番红花",
+  "en": "hocuscrocus",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/hocuscrocus.webp"
+ },
+ {
+  "name": "鱼钩草",
+  "en": "fishhookgrass",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/fishhookgrass.webp"
+ },
+ {
+  "name": "鸭梨",
+  "en": "duckpear",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/duckpear.webp"
+ },
+ {
+  "name": "鹳草击剑手",
+  "en": "geraniifencer",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/geraniifencer.webp"
+ },
+ {
+  "name": "黏弹糯米",
+  "en": "stickybombrice",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/stickybombrice.webp"
+ },
+ {
+  "name": "黑法师",
+  "en": "aeonium",
+  "rarity": "橙",
+  "rare": 4,
+  "img": "static/plant/aeonium.webp"
+ },
+ {
+  "name": "刺果流星锤",
+  "en": "byttneriameteorhammer",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/byttneriameteorhammer.webp"
+ },
+ {
+  "name": "原始土豆地雷",
+  "en": "primalpotatomine",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/primalpotatomine.webp"
+ },
+ {
+  "name": "变身茄子",
+  "en": "imitater",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/imitater.webp"
+ },
+ {
+  "name": "叶子保护伞",
+  "en": "umbrellaleaf",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/umbrellaleaf.webp"
+ },
+ {
+  "name": "向日葵歌手",
+  "en": "birthsunflower",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/birthsunflower.webp"
+ },
+ {
+  "name": "吹风荚兰",
+  "en": "vanilla",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/vanilla.webp"
+ },
+ {
+  "name": "夜影龙葵",
+  "en": "nightshade",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/nightshade.webp"
+ },
+ {
+  "name": "宇宙豌豆",
+  "en": "cosmicpea",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/cosmicpea.webp"
+ },
+ {
+  "name": "小黄梨",
+  "en": "imppear",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/imppear.webp"
+ },
+ {
+  "name": "幽潭婆罗",
+  "en": "gloombara",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/gloombara.webp"
+ },
+ {
+  "name": "幽灵辣椒",
+  "en": "ghostpepper",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/ghostpepper.webp"
+ },
+ {
+  "name": "暗影荚兰",
+  "en": "shadowvanilla",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/shadowvanilla.webp"
+ },
+ {
+  "name": "暗影豌豆",
+  "en": "shadowpeashooter",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/shadowpeashooter.webp"
+ },
+ {
+  "name": "暗樱草",
+  "en": "grimrose",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/grimrose.webp"
+ },
+ {
+  "name": "杜英投手",
+  "en": "elaeocarpus",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/elaeocarpus.webp"
+ },
+ {
+  "name": "椰子加农炮",
+  "en": "coconutcannon",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/coconutcannon.webp"
+ },
+ {
+  "name": "槲寄冰仙子",
+  "en": "missiletoe",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/missiletoe.webp"
+ },
+ {
+  "name": "气流水仙花",
+  "en": "draftodil",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/draftodil.webp"
+ },
+ {
+  "name": "水仙花射手",
+  "en": "narcissusshooter",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/narcissusshooter.webp"
+ },
+ {
+  "name": "水晶兰",
+  "en": "monotropa",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/monotropa.webp"
+ },
+ {
+  "name": "海带守卫",
+  "en": "kelpguard",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/kelpguard.webp"
+ },
+ {
+  "name": "潜行开口箭",
+  "en": "tupistrastalker",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/tupistrastalker.webp"
+ },
+ {
+  "name": "火柴花拳手",
+  "en": "matchflower",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/matchflower.webp"
+ },
+ {
+  "name": "烈焰菇",
+  "en": "fireshroom",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/fireshroom.webp"
+ },
+ {
+  "name": "热辣海枣",
+  "en": "hotdate",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/hotdate.webp"
+ },
+ {
+  "name": "爆炸桔梗",
+  "en": "boomflower",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/boomflower.webp"
+ },
+ {
+  "name": "猕猴桃",
+  "en": "kiwifruit",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/kiwifruit.webp"
+ },
+ {
+  "name": "甜菜护卫",
+  "en": "chardguard",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/chardguard.webp"
+ },
+ {
+  "name": "电击蓝莓",
+  "en": "electricblueberry",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/electricblueberry.webp"
+ },
+ {
+  "name": "盒子草礼炮",
+  "en": "actinostemma",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/actinostemma.webp"
+ },
+ {
+  "name": "缩小紫罗兰",
+  "en": "shrinkingviolet",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/shrinkingviolet.webp"
+ },
+ {
+  "name": "胆小菇",
+  "en": "scaredyshroom",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/scaredyshroom.webp"
+ },
+ {
+  "name": "芦荟医师",
+  "en": "aloes",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/aloes.webp"
+ },
+ {
+  "name": "芭蕉舞蹈家",
+  "en": "plantain",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/plantain.webp"
+ },
+ {
+  "name": "莲藕射手",
+  "en": "lotusshooter",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/lotusshooter.webp"
+ },
+ {
+  "name": "蒲公英",
+  "en": "dandelion",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/dandelion.webp"
+ },
+ {
+  "name": "蚕豆突击队",
+  "en": "horsebean",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/horsebean.webp"
+ },
+ {
+  "name": "豌豆迫击炮",
+  "en": "slingpea",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/slingpea.webp"
+ },
+ {
+  "name": "逆时草",
+  "en": "thymewarp",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/thymewarp.webp"
+ },
+ {
+  "name": "野兽猕猴桃",
+  "en": "kiwibeast",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/kiwibeast.webp"
+ },
+ {
+  "name": "钟馗石蒜",
+  "en": "exorcislily",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/exorcislily.webp"
+ },
+ {
+  "name": "铜钱草鼓手",
+  "en": "hydrocotyledrummer",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/hydrocotyledrummer.webp"
+ },
+ {
+  "name": "黄油毛茛",
+  "en": "buttercup",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/buttercup.webp"
+ },
+ {
+  "name": "龙吼草",
+  "en": "dragonroar",
+  "rarity": "紫",
+  "rare": 3,
+  "img": "static/plant/dragonroar.webp"
+ },
+ {
+  "name": "三叶草",
+  "en": "blover",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/blover.webp"
+ },
+ {
+  "name": "全息坚果",
+  "en": "holonut",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/holonut.webp"
+ },
+ {
+  "name": "千金藤",
+  "en": "stephania",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/stephania.webp"
+ },
+ {
+  "name": "南瓜头",
+  "en": "pumpkin",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/pumpkin.webp"
+ },
+ {
+  "name": "南瓜巫师",
+  "en": "pumpkinwitch",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/pumpkinwitch.webp"
+ },
+ {
+  "name": "原始向日葵",
+  "en": "primalsunflower",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/primalsunflower.webp"
+ },
+ {
+  "name": "原始坚果墙",
+  "en": "primalwallnut",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/primalwallnut.webp"
+ },
+ {
+  "name": "原始豌豆射手",
+  "en": "primalpeashooter",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/primalpeashooter.webp"
+ },
+ {
+  "name": "双胞向日葵",
+  "en": "twinsunflower",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/twinsunflower.webp"
+ },
+ {
+  "name": "双重射手",
+  "en": "repeater",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/repeater.webp"
+ },
+ {
+  "name": "大力花菜",
+  "en": "broccoli",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/broccoli.webp"
+ },
+ {
+  "name": "大嘴花",
+  "en": "chomper",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/chomper.webp"
+ },
+ {
+  "name": "孢子菇",
+  "en": "sporeshroom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/sporeshroom.webp"
+ },
+ {
+  "name": "宇宙蘑菇",
+  "en": "cosmicmushroom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/cosmicmushroom.webp"
+ },
+ {
+  "name": "安息木编钟",
+  "en": "doombell",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/doombell.webp"
+ },
+ {
+  "name": "导向蓟",
+  "en": "homingthistle",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/homingthistle.webp"
+ },
+ {
+  "name": "岩浆番石榴",
+  "en": "lavaguava",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/lavaguava.webp"
+ },
+ {
+  "name": "捣蛋萝卜",
+  "en": "greenturnip",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/greenturnip.webp"
+ },
+ {
+  "name": "星星果",
+  "en": "starfruit",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/starfruit.webp"
+ },
+ {
+  "name": "板栗小队",
+  "en": "chestnut",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/chestnut.webp"
+ },
+ {
+  "name": "梅小美",
+  "en": "wintersweet",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/wintersweet.webp"
+ },
+ {
+  "name": "棉小雪",
+  "en": "cottonyeti",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/cottonyeti.webp"
+ },
+ {
+  "name": "樱桃炸弹",
+  "en": "cherry_bomb",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/cherry_bomb.webp"
+ },
+ {
+  "name": "橡木弓手",
+  "en": "oakshooter",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/oakshooter.webp"
+ },
+ {
+  "name": "毒影菇",
+  "en": "shadowshroom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/shadowshroom.webp"
+ },
+ {
+  "name": "海蘑菇",
+  "en": "seashroom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/seashroom.webp"
+ },
+ {
+  "name": "潜伏芹菜",
+  "en": "celerystalker",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/celerystalker.webp"
+ },
+ {
+  "name": "激光豆",
+  "en": "laser_bean",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/laser_bean.webp"
+ },
+ {
+  "name": "火爆辣椒",
+  "en": "jalapeno",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/jalapeno.webp"
+ },
+ {
+  "name": "火龙果",
+  "en": "dragonfruit",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/dragonfruit.webp"
+ },
+ {
+  "name": "爆浆玉露",
+  "en": "buduhboom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/buduhboom.webp"
+ },
+ {
+  "name": "玫瑰剑客",
+  "en": "roseswordman",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/roseswordman.webp"
+ },
+ {
+  "name": "番莲工程师",
+  "en": "passionflower",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/passionflower.webp"
+ },
+ {
+  "name": "石楠探索者",
+  "en": "heathseeker",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/heathseeker.webp"
+ },
+ {
+  "name": "窝瓜",
+  "en": "squash",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/squash.webp"
+ },
+ {
+  "name": "竹员外",
+  "en": "cracker",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/cracker.webp"
+ },
+ {
+  "name": "红针花",
+  "en": "redstinger",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/redstinger.webp"
+ },
+ {
+  "name": "胡萝卜导弹车",
+  "en": "carrotLauncher",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/carrotlauncher.webp"
+ },
+ {
+  "name": "能量花",
+  "en": "powerlily",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/powerlily.webp"
+ },
+ {
+  "name": "芦笋战机",
+  "en": "asparagus",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/asparagus.webp"
+ },
+ {
+  "name": "莲小蓬",
+  "en": "lotusshower",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/lotusshower.webp"
+ },
+ {
+  "name": "菜问",
+  "en": "bonkchoy",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/bonkchoy.webp"
+ },
+ {
+  "name": "辣椒投手",
+  "en": "pepperpult",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/pepperpult.webp"
+ },
+ {
+  "name": "金蟾菇",
+  "en": "toadstool",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/toadstool.webp"
+ },
+ {
+  "name": "铃儿草投手",
+  "en": "bloominghearts",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/bloominghearts.webp"
+ },
+ {
+  "name": "阿.开.木.木.",
+  "en": "akee",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/akee.webp"
+ },
+ {
+  "name": "飓风甘蓝",
+  "en": "hurrikale",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/hurrikale.webp"
+ },
+ {
+  "name": "魅惑菇",
+  "en": "hypnoshroom",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/hypnoshroom.webp"
+ },
+ {
+  "name": "魔藤",
+  "en": "moton",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/moton.webp"
+ },
+ {
+  "name": "魔音甜菜",
+  "en": "phatbeet",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/phatbeet.webp"
+ },
+ {
+  "name": "鳄梨",
+  "en": "guacodile",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/guacodile.webp"
+ },
+ {
+  "name": "龙舌兰",
+  "en": "agave",
+  "rarity": "蓝",
+  "rare": 2,
+  "img": "static/plant/agave.webp"
+ },
+ {
+  "name": "三重射手",
+  "en": "threepeater",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/threepeater.webp"
+ },
+ {
+  "name": "冬瓜守卫",
+  "en": "waxgourd",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/waxgourd.webp"
+ },
+ {
+  "name": "噗噗鱼藤",
+  "en": "seaderris",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/seaderris.webp"
+ },
+ {
+  "name": "回旋镖射手",
+  "en": "bloomerang",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/bloomerang.webp"
+ },
+ {
+  "name": "复活萝卜",
+  "en": "intensivecarrot",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/intensivecarrot.webp"
+ },
+ {
+  "name": "大王花",
+  "en": "rafflesia",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/rafflesia.webp"
+ },
+ {
+  "name": "大蒜",
+  "en": "garlic",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/garlic.webp"
+ },
+ {
+  "name": "宇宙坚果",
+  "en": "cosmicnut",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/cosmicnut.webp"
+ },
+ {
+  "name": "寒冰射手",
+  "en": "snowpea",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/snowpea.webp"
+ },
+ {
+  "name": "旋涡枇杷",
+  "en": "doublesamara",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/doublesamara.webp"
+ },
+ {
+  "name": "旋转芜菁",
+  "en": "xshot",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/xshot.webp"
+ },
+ {
+  "name": "旋转菠萝",
+  "en": "pineapple",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/pineapple.webp"
+ },
+ {
+  "name": "旋风橡果",
+  "en": "acorn",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/acorn.webp"
+ },
+ {
+  "name": "月光花",
+  "en": "moonflower",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/moonflower.webp"
+ },
+ {
+  "name": "机枪石榴",
+  "en": "pamegranate",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/pamegranate.webp"
+ },
+ {
+  "name": "树脂投手",
+  "en": "sapfling",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/sapfling.webp"
+ },
+ {
+  "name": "棱镜草",
+  "en": "magnifyinggrass",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/magnifyinggrass.webp"
+ },
+ {
+  "name": "榴莲",
+  "en": "endurian",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/endurian.webp"
+ },
+ {
+  "name": "油橄榄",
+  "en": "olive",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/olive.webp"
+ },
+ {
+  "name": "火炬树桩",
+  "en": "torchwood",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/torchwood.webp"
+ },
+ {
+  "name": "火焰豌豆射手",
+  "en": "firepeashooter",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/firepeashooter.webp"
+ },
+ {
+  "name": "爆炸坚果",
+  "en": "explodeonut",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/explodeonut.webp"
+ },
+ {
+  "name": "甜薯",
+  "en": "sweetpotato",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/sweetpotato.webp"
+ },
+ {
+  "name": "电离红掌",
+  "en": "anthurium",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/anthurium.webp"
+ },
+ {
+  "name": "眩晕洋葱",
+  "en": "stunion",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/stunion.webp"
+ },
+ {
+  "name": "石斛防风网",
+  "en": "dendrobiumguard",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/dendrobiumguard.webp"
+ },
+ {
+  "name": "竹小弟",
+  "en": "sugarcane",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/sugarcane.webp"
+ },
+ {
+  "name": "脉冲黄桃",
+  "en": "empea",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/empea.webp"
+ },
+ {
+  "name": "菠萝蜜",
+  "en": "jackfruit",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/jackfruit.webp"
+ },
+ {
+  "name": "西瓜投手",
+  "en": "melonpult",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/melonpult.webp"
+ },
+ {
+  "name": "豌豆荚",
+  "en": "peapod",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/peapod.webp"
+ },
+ {
+  "name": "重力树",
+  "en": "gravitree",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/gravitree.webp"
+ },
+ {
+  "name": "钢地刺",
+  "en": "spikerock",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/spikerock.webp"
+ },
+ {
+  "name": "闪电芦苇",
+  "en": "lightningreed",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/lightningreed.webp"
+ },
+ {
+  "name": "飞碟瓜",
+  "en": "saucer",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/saucer.webp"
+ },
+ {
+  "name": "香水蘑菇",
+  "en": "perfumeshroom",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/perfumeshroom.webp"
+ },
+ {
+  "name": "高坚果",
+  "en": "tallnut",
+  "rarity": "绿",
+  "rare": 1,
+  "img": "static/plant/tallnut.webp"
+ },
+ {
+  "name": "仙桃",
+  "en": "peach",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/peach.webp"
+ },
+ {
+  "name": "冰冻生菜",
+  "en": "iceburg",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/iceburg.webp"
+ },
+ {
+  "name": "卷心菜投手",
+  "en": "cabbagepult",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/cabbagepult.webp"
+ },
+ {
+  "name": "双向射手",
+  "en": "splitpea",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/splitpea.webp"
+ },
+ {
+  "name": "向日葵",
+  "en": "sunflower",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/sunflower.webp"
+ },
+ {
+  "name": "咖啡豆",
+  "en": "coffeebean",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/coffeebean.webp"
+ },
+ {
+  "name": "噬碑藤",
+  "en": "gravebuster",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/gravebuster.webp"
+ },
+ {
+  "name": "土豆地雷",
+  "en": "potatomine",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/potatomine.webp"
+ },
+ {
+  "name": "地刺",
+  "en": "spikeweed",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/spikeweed.webp"
+ },
+ {
+  "name": "坚果",
+  "en": "wallnut",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/wallnut.webp"
+ },
+ {
+  "name": "大丽菊",
+  "en": "stallia",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/stallia.webp"
+ },
+ {
+  "name": "大喷菇",
+  "en": "fumeshroom",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/fumeshroom.webp"
+ },
+ {
+  "name": "宇宙苔藓",
+  "en": "cosmoss",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/cosmoss.webp"
+ },
+ {
+  "name": "小喷菇",
+  "en": "puffshroom",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/puffshroom.webp"
+ },
+ {
+  "name": "巴豆",
+  "en": "chilibean",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/chilibean.webp"
+ },
+ {
+  "name": "平顶菇",
+  "en": "flattenedshroom",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/flattenedshroom.webp"
+ },
+ {
+  "name": "弹簧豆",
+  "en": "springbean",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/springbean.webp"
+ },
+ {
+  "name": "氧气海藻",
+  "en": "oxygenalgae",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/oxygenalgae.webp"
+ },
+ {
+  "name": "滴水冰莲",
+  "en": "icelotus",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/icelotus.webp"
+ },
+ {
+  "name": "火葫芦",
+  "en": "firegourd",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/firegourd.webp"
+ },
+ {
+  "name": "灯笼草",
+  "en": "groundcherry",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/groundcherry.webp"
+ },
+ {
+  "name": "烤马铃薯",
+  "en": "hotpotato",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/hotpotato.webp"
+ },
+ {
+  "name": "玉米投手",
+  "en": "kernelpult",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/kernelpult.webp"
+ },
+ {
+  "name": "白萝卜",
+  "en": "turnip",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/turnip.webp"
+ },
+ {
+  "name": "磁力菇",
+  "en": "magnetshroom",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/magnetshroom.webp"
+ },
+ {
+  "name": "竹笋",
+  "en": "bamboo",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/bamboo.webp"
+ },
+ {
+  "name": "缠绕水草",
+  "en": "tanglekelp",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/tanglekelp.webp"
+ },
+ {
+  "name": "胆小荆棘",
+  "en": "bramble",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/bramble.webp"
+ },
+ {
+  "name": "花生射手",
+  "en": "peanut",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/peanut.webp"
+ },
+ {
+  "name": "花盆",
+  "en": "flowerpot",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/flowerpot.webp"
+ },
+ {
+  "name": "草垛",
+  "en": "uncharted_haystack",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/uncharted_haystack.webp"
+ },
+ {
+  "name": "莲叶",
+  "en": "lilypad",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/lilypad.webp"
+ },
+ {
+  "name": "豌豆射手",
+  "en": "peashooter",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/peashooter.webp"
+ },
+ {
+  "name": "路灯花",
+  "en": "streetlamp",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/streetlamp.webp"
+ },
+ {
+  "name": "金盏花",
+  "en": "marigold",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/marigold.webp"
+ },
+ {
+  "name": "阳光豆",
+  "en": "sunbean",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/sunbean.webp"
+ },
+ {
+  "name": "黄金叶",
+  "en": "goldleaf",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/goldleaf.webp"
+ },
+ {
+  "name": "黄金蓓蕾",
+  "en": "goldbloom",
+  "rarity": "白",
+  "rare": 0,
+  "img": "static/plant/goldbloom.webp"
+ }
+]

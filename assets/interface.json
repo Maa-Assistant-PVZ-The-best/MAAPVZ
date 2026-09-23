@@ -53,13 +53,15 @@
         "./resource/task/Endless/Endless.json", // 顶层入口
         "./resource/task/Endless/Endless_plant.json", // 预设选择器
         "./resource/task/Endless/Endless_auto_loop.json", // 全自动循环
-        // framework 通用模块
+        // Endless framework 通用模块
         "./resource/task/Endless/framework/custom/frame_custom.json", // 自定义布阵
         "./resource/task/Endless/framework/frame/Recognition.json", // 识别
         "./resource/task/Endless/framework/frame/Flower.json", // 抛花
         "./resource/task/Endless/framework/frame/Patch_Plants.json", // 补植物
         "./resource/task/Endless/framework/frame/Magic_Gan.json", // 魔甘收尾
         "./resource/task/Endless/framework/frame/option.json", // 其他通用选项
+        //Endless ref 的文件
+        "./resource/task/Endless_ref/Endless_ref.json", //重构后的无尽入口
         // preset 预设
         "./resource/task/Endless/preset/yuan_big/preset_yuan_big.json", // 原大桑葚
         "./resource/task/Endless/preset/heart_tower/preset_heart_tower.json", // 心叶兰塔黄
@@ -164,6 +166,13 @@
                 "无尽模式"
             ],
             "description": "注意：==在进入关卡的选卡环节才能开始任务==现在主要有预设模式和无尽通用框架两个模式，预设模式的相关设置在公告里的用户文档查看，通用框架建议使用可视化配置网页辅助使用，详情请见b站maapvz官号有关无尽挑战设置的教学"
+        },
+        {
+            "name": "无尽挑战（重构）",
+            "entry": "无尽挑战_前置检查",
+            "option": [
+                "作业集模式"
+            ]
         },
         {
             "name": "创意庭院",

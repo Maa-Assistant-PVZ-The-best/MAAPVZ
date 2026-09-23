@@ -677,3 +677,97 @@ class SetRepeat(CustomAction):
 
         print(f"[SetRepeat] 已将 {nodes} 的 repeat 设置为 {repeat} (基于 {seconds} 秒，系数 {multiplier})")
         return CustomAction.RunResult(success=True)
+
+
+# ============================================================
+# 作业集（JobSet）：打开本地编辑网页
+# ============================================================
+import socket
+import subprocess
+import webbrowser
+
+# 网页工具目录：<仓库根>/game_assist_tools/endless_setup
+JOB_EDITOR_DIR = ROOT_DIR / "game_assist_tools" / "endless_setup"
+JOB_EDITOR_SERVER = JOB_EDITOR_DIR / "pvz.py"
+JOB_EDITOR_URL = "http://127.0.0.1:5000"
+
+
+def _is_port_open(host: str = "127.0.0.1", port: int = 5000, timeout: float = 1.0) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+
+def _pick_flask_python():
+    """挑一个装了 flask 的解释器（项目 .venv 可能尚未安装 flask）"""
+    candidates = [
+        sys.executable,
+        str(ROOT_DIR / ".venv" / "Scripts" / "python.exe"),
+        r"D:\ana\python.exe",
+        "python",
+    ]
+    for exe in candidates:
+        if not exe:
+            continue
+        is_path = ("\\" in exe) or ("/" in exe)
+        if is_path and not Path(exe).exists():
+            continue
+        try:
+            probe = subprocess.run([exe, "-c", "import flask"], capture_output=True, timeout=8)
+            if probe.returncode == 0:
+                return exe
+        except Exception:
+            continue
+    return None
+
+
+@AgentServer.custom_action("OpenJobEditor")
+class OpenJobEditor(CustomAction):
+    """打开作业集编辑网页；服务未启动则先拉起 Flask（game_assist_tools/endless_setup/pvz.py）"""
+
+    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+        try:
+            # 1) 服务已在运行 → 直接开浏览器
+            if _is_port_open():
+                webbrowser.open(JOB_EDITOR_URL)
+                print(f"[OpenJobEditor] 服务已在运行，已打开 {JOB_EDITOR_URL}")
+                return CustomAction.RunResult(success=True)
+
+            # 2) 校验网页工具存在
+            if not JOB_EDITOR_SERVER.exists():
+                print(f"[OpenJobEditor] 找不到网页工具: {JOB_EDITOR_SERVER}")
+                return CustomAction.RunResult(success=False)
+
+            # 3) 挑解释器（需要 flask）
+            exe = _pick_flask_python()
+            if not exe:
+                print("[OpenJobEditor] 未找到已安装 flask 的 Python，请先执行：")
+                print(r"    .venv\Scripts\python.exe -m pip install -r requirements.txt")
+                return CustomAction.RunResult(success=False)
+
+            # 4) 后台拉起服务
+            subprocess.Popen(
+                [exe, str(JOB_EDITOR_SERVER)],
+                cwd=str(JOB_EDITOR_DIR),
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+
+            # 5) 等待服务就绪（最多 12 秒）
+            for _ in range(24):
+                if _is_port_open():
+                    break
+                time.sleep(0.5)
+
+            if not _is_port_open():
+                print("[OpenJobEditor] 服务启动超时，请查看 game_assist_tools/endless_setup/flask.log")
+                return CustomAction.RunResult(success=False)
+
+            # 6) 打开浏览器
+            webbrowser.open(JOB_EDITOR_URL)
+            print(f"[OpenJobEditor] 已启动并打开 {JOB_EDITOR_URL}（解释器: {exe}）")
+            return CustomAction.RunResult(success=True)
+        except Exception as e:
+            print(f"[OpenJobEditor] 异常: {e}")
+            return CustomAction.RunResult(success=False)

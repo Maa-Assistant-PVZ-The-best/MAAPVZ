@@ -460,3 +460,4 @@ config
 debug
 .venv
 .DS_Store
+flask.log

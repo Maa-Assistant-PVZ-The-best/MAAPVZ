@@ -1,0 +1,57 @@
+{
+    "option": {
+        "作业集模式": {
+            "type": "select",
+            "default_case": "编辑作业集",
+            "cases": [
+                {
+                    "name": "编辑作业集",
+                    "pipeline_override": {
+                        "无尽挑战_前置检查": {
+                            "next": [
+                                "无尽挑战_编辑作业集"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "使用远程作业集",
+                    "option": [
+                        "作业集代码",
+                        "配置来源"
+                    ]
+                },
+                {
+                    "name": "使用本地作业集",
+                    "option": [
+                        "配置来源"
+                    ]
+                }
+            ]
+        },
+        "作业集代码": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "代码",
+                    "pipeline_type": "string",
+                    "default": ""
+                }
+            ]
+        },
+        "配置来源": {
+            "type": "select",
+            "default_case": "默认",
+            "cases": [
+                {
+                    "name": "默认",
+                    "description": "使用作业集自带的默认代码配置。"
+                },
+                {
+                    "name": "自定义配置",
+                    "description": "手动更改一些已有的配置"
+                }
+            ]
+        }
+    }
+}

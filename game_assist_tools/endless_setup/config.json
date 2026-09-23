@@ -1,0 +1,39 @@
+{
+  "CurrentControllerName": "安卓端",
+  "Resource": "",
+  "CurrentTasks": [
+    "无尽挑战（测试）<|||>无尽挑战_前置检查"
+  ],
+  "TaskItems": [
+    {
+      "name": "无尽挑战（测试）",
+      "entry": "无尽挑战_前置检查",
+      "default_check": true,
+      "option": [
+        {
+          "name": "无尽模式",
+          "index": 1,
+          "sub_options": []
+        }
+      ]
+    }
+  ],
+  "AdbDevice": {
+    "InfoHandle": {
+      "value": 0
+    },
+    "Name": "模拟器",
+    "AdbPath": "adb",
+    "AdbSerial": "127.0.0.1:5555",
+    "ScreencapMethods": 64,
+    "InputMethods": 18446744073709552000,
+    "Config": "{}",
+    "AgentPath": "./MaaAgentBinary"
+  },
+  "CurrentController": 2,
+  "RetryOnDisconnected": true,
+  "AllowAdbRestart": false,
+  "InstanceName": "无尽_前后期",
+  "ContinueRunningWhenError": true,
+  "BeforeTask": "None"
+}
