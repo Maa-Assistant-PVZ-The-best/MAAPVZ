@@ -1,0 +1,67 @@
+{
+    "无尽挑战_识别开始战斗": {
+        "recognition": "OCR",
+        "expected": "开始战斗",
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
+        "next": [
+            "无尽挑战_识别开始战斗_清空卡牌"
+        ]
+    },
+    "无尽挑战_识别开始战斗_清空卡牌": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "roi": [
+            22,
+            660,
+            75,
+            27
+        ],
+        "action": "Click",
+        "next": [
+            "无尽挑战_选取植物"
+        ]
+    },
+    "无尽挑战_选取植物": {
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": "{\"植物列表\": [\"粉丝心叶兰\", \"大喷菇\"]}",
+        "next": [
+            "无尽挑战_选取植物_开始战斗"
+        ]
+    },
+    "无尽挑战_选取植物_开始战斗": {
+        "recognition": "OCR",
+        "expected": "开始战斗",
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "next": [
+            "无尽挑战_进入到局内"
+        ]
+    },
+    "无尽挑战_进入到局内": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/能量豆.png"
+        ],
+        "roi": [
+            435,
+            640,
+            100,
+            78
+        ]
+    }
+}

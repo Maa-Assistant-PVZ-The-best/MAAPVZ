@@ -59,10 +59,248 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .tab-content { display:none; }
 .tab-content.active { display:block; }
 #gridEarly, #gridLate { display:grid; gap:4px; }
-.cell { min-width:62px; min-height:62px; background:#fff; border:2px dashed #d0d7de; border-radius:6px;
-        padding:2px; display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px;
-        cursor:pointer; position:relative; transition:background .15s; }
+/* 格子固定尺寸：植物绝对定位排布，永远不被撑开/拉伸 */
+.cell { width:68px; height:68px; box-sizing:border-box;
+        background:#fff; border:2px dashed #d0d7de; border-radius:6px;
+        padding:2px; cursor:pointer; position:relative;
+        transition:background .15s, border-color .15s, box-shadow .15s;
+        overflow:hidden; }
 .cell.has { background:#f0f9ff; border-color:#7dd3fc; border-style:solid; }
+.cell:hover { box-shadow:0 0 0 2px rgba(45,122,255,.18) inset; }
+
+/* ---- 同格多株：自动缩成缩略图（按数量分档，格子尺寸恒定） ----
+   注意：定位一律用 job-pk（第 k 株）显式类，不能用 :nth-of-type ——
+   格子里还有 .col-label/.row-label/喂豆 等 span，会把计数算错导致错序。 */
+.cell .tag.plant {
+    position:absolute; padding:0; display:flex; align-items:center; justify-content:center;
+    background-size:100% 100%; background-repeat:no-repeat;
+    border-radius:3px; box-shadow:0 1px 3px rgba(15,23,42,.22);
+    transition:width .16s ease, height .16s ease;
+}
+/* 1 株：占满整格 */
+.cell.job-n1 .tag.plant { left:3px; top:3px; width:58px; height:58px; }
+/* 2 株：左右并排 */
+.cell.job-n2 .tag.plant { width:27px; height:27px; top:50%; transform:translateY(-50%); }
+.cell.job-n2 .job-p1 { left:4px; }
+.cell.job-n2 .job-p2 { left:35px; }
+/* 3~4 株：2×2 */
+.cell.job-n3 .tag.plant, .cell.job-n4 .tag.plant { width:27px; height:27px; }
+.cell.job-n3 .job-p1, .cell.job-n4 .job-p1 { left:4px;  top:4px; }
+.cell.job-n3 .job-p2, .cell.job-n4 .job-p2 { left:35px; top:4px; }
+.cell.job-n3 .job-p3, .cell.job-n4 .job-p3 { left:4px;  top:35px; }
+.cell.job-n4 .job-p4 { left:35px; top:35px; }
+/* 5~9 株：3×3 */
+.cell.job-n5 .tag.plant, .cell.job-n6 .tag.plant, .cell.job-n7 .tag.plant,
+.cell.job-n8 .tag.plant, .cell.job-n9 .tag.plant { width:17px; height:17px; border-radius:2px; }
+.cell.job-n5 .job-p1, .cell.job-n6 .job-p1, .cell.job-n7 .job-p1,
+.cell.job-n8 .job-p1, .cell.job-n9 .job-p1 { left:4px;  top:4px; }
+.cell.job-n5 .job-p2, .cell.job-n6 .job-p2, .cell.job-n7 .job-p2,
+.cell.job-n8 .job-p2, .cell.job-n9 .job-p2 { left:25px; top:4px; }
+.cell.job-n5 .job-p3, .cell.job-n6 .job-p3, .cell.job-n7 .job-p3,
+.cell.job-n8 .job-p3, .cell.job-n9 .job-p3 { left:46px; top:4px; }
+.cell.job-n5 .job-p4, .cell.job-n6 .job-p4, .cell.job-n7 .job-p4,
+.cell.job-n8 .job-p4, .cell.job-n9 .job-p4 { left:4px;  top:25px; }
+.cell.job-n5 .job-p5, .cell.job-n6 .job-p5, .cell.job-n7 .job-p5,
+.cell.job-n8 .job-p5, .cell.job-n9 .job-p5 { left:25px; top:25px; }
+.cell.job-n6 .job-p6, .cell.job-n7 .job-p6, .cell.job-n8 .job-p6,
+.cell.job-n9 .job-p6 { left:46px; top:25px; }
+.cell.job-n7 .job-p7, .cell.job-n8 .job-p7, .cell.job-n9 .job-p7 { left:4px;  top:46px; }
+.cell.job-n8 .job-p8, .cell.job-n9 .job-p8 { left:25px; top:46px; }
+.cell.job-n9 .job-p9 { left:46px; top:46px; }
+
+/* 喂豆标记：固定居中，不参与拉伸 */
+.cell .tag.feed { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                  font-size:10px; padding:1px 6px; line-height:16px; z-index:3; }
+/* 铲子标记：与喂豆同款，居中 */
+.cell .tag.shovel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                    font-size:10px; padding:1px 6px; line-height:16px; z-index:3; }
+
+/* 种植序号角标：右上角小圆点数字 */
+.cell .job-seq {
+    position:absolute; right:-2px; top:-2px;
+    min-width:12px; height:12px; line-height:12px;
+    padding:0 2px; border-radius:6px;
+    background:#1e293b; color:#fff;
+    font-size:8px; font-weight:700; text-align:center;
+    box-shadow:0 1px 2px rgba(0,0,0,.35);
+    z-index:5; pointer-events:none; box-sizing:border-box;
+}
+/* 多株缩略图较小时，角标也缩一点，避免盖住植物 */
+.cell.job-n5 .job-seq, .cell.job-n6 .job-seq, .cell.job-n7 .job-seq,
+.cell.job-n8 .job-seq, .cell.job-n9 .job-seq {
+    min-width:10px; height:10px; line-height:10px; font-size:7px; right:-1px; top:-1px;
+}
+/* 喂豆/铲子标记上的序号：贴在标记右侧 */
+.cell .tag.feed .job-seq, .cell .tag.shovel .job-seq {
+    right:-6px; top:-6px;
+}
+/* 单次形态：序号底色变灰；循环为默认深色 */
+.cell .job-seq.job-seq-once {
+    background:#cbd5e1; color:#475569; box-shadow:0 1px 2px rgba(0,0,0,.18);
+}
+
+/* ================= 种植顺序链条（拖动整块，决定先种哪个槽） ================= */
+.seq-chain {
+    margin-bottom:9px; border:1px solid #e2e8f0; border-radius:8px;
+    background:#fff; overflow:hidden;
+    cursor:grab;
+    transition:box-shadow .12s, border-color .12s, opacity .12s;
+}
+.seq-chain:hover { border-color:#bfdbfe; box-shadow:0 2px 8px rgba(15,23,42,.08); }
+.seq-chain:active { cursor:grabbing; }
+.seq-chain.seq-dragging { opacity:.45; }
+.seq-chain.seq-over-top    { box-shadow:0 -3px 0 0 #2d7aff; }
+.seq-chain.seq-over-bottom { box-shadow:0  3px 0 0 #2d7aff; }
+.seq-chain-head {
+    display:flex; align-items:center; gap:6px; padding:5px 8px;
+    background:#f1f5f9; font-size:12px; font-weight:600; color:#334155;
+    border-bottom:1px solid #e2e8f0;
+}
+.seq-chain-head .seq-grip { color:#94a3b8; font-size:13px; letter-spacing:-1px; }
+.seq-chain-head .seq-order {
+    flex:0 0 17px; height:17px; line-height:17px; text-align:center;
+    border-radius:50%; background:#2d7aff; color:#fff;
+    font-size:10px; font-weight:700;
+}
+.seq-chain-head .seq-ico { font-size:14px; }
+.seq-chain-head .seq-count { margin-left:auto; font-weight:400; font-size:11px; color:#94a3b8; }
+.seq-chain-body { padding:5px 6px; display:flex; flex-direction:column; gap:4px; }
+.seq-node {
+    display:flex; align-items:center; gap:6px;
+    padding:3px 6px; border-radius:6px;
+    background:#f8fafc; border:1px solid #eef2f7;
+    font-size:11px; user-select:none;
+}
+.seq-node .seq-idx {
+    flex:0 0 16px; height:16px; line-height:16px; text-align:center;
+    border-radius:8px; background:#e2e8f0; color:#475569;
+    font-size:9px; font-weight:700;
+}
+.seq-node .seq-thumb {
+    position:relative; width:20px; height:20px; flex:0 0 20px;
+    background-size:100% 100%; background-repeat:no-repeat; border-radius:3px;
+}
+.seq-node .seq-thumb img {
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:74%; height:74%; object-fit:contain;
+}
+.seq-node .seq-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.seq-node .seq-cell { font-size:10px; color:#94a3b8; }
+@media (prefers-reduced-motion: reduce) { .seq-chain { transition:none !important; } }
+
+/* ---- 两条链的分区标题 ---- */
+.seq-section { margin-bottom:14px; }
+.seq-section-head {
+    font-size:12px; font-weight:600; color:#334155;
+    padding:5px 8px; margin-bottom:7px;
+    background:#eef2f7; border-radius:6px;
+    border-left:3px solid #2d7aff;
+}
+.seq-section-loop .seq-section-head { border-left-color:#94a3b8; background:#f1f5f9; color:#64748b; }
+.seq-list { display:flex; flex-direction:column; gap:8px; }
+.seq-empty { font-size:11px; color:#cbd5e1; text-align:center; padding:10px 6px; line-height:1.6; }
+
+/* ---- 循环形态：序号底色变灰 ---- */
+/* 单次形态：序号底色变灰（循环为默认深色） */
+.seq-idx.seq-idx-once { background:#cbd5e1; color:#475569; }
+
+/* ---- 形态标记 ---- */
+.seq-mode {
+    font-size:9px; padding:1px 5px; border-radius:4px;
+    background:#dbeafe; color:#1d4ed8; white-space:nowrap;
+}
+.seq-chain.m-once .seq-mode { background:#e2e8f0; color:#475569; }
+.seq-chain.m-once { border-color:#e2e8f0; background:#fcfcfd; }
+
+/* ---- 槽位芯片上的形态角标 ---- */
+.slot-mode-badge {
+    font-size:10px; line-height:14px; padding:0 4px; border-radius:7px;
+    background:#dbeafe; color:#1d4ed8; font-weight:700;
+}
+.slot-mode-badge.is-once { background:#e2e8f0; color:#475569; }
+
+/* ---- 独立等待节点 ---- */
+.seq-wait {
+    display:flex; align-items:center; gap:6px;
+    padding:5px 8px; border-radius:7px;
+    background:#fffbeb; border:1px dashed #f59e0b;
+    font-size:12px; cursor:grab; user-select:none;
+}
+.seq-wait:active { cursor:grabbing; }
+.seq-wait.seq-dragging { opacity:.45; }
+.seq-wait .seq-grip { color:#d97706; font-size:12px; }
+.seq-wait .seq-del {
+    margin-left:auto; width:18px; height:18px; border:none; border-radius:5px;
+    background:#fde68a; color:#92400e; font-size:10px; cursor:pointer; line-height:1;
+}
+.seq-wait .seq-del:hover { background:#fcd34d; }
+.seq-addwait {
+    display:block; width:100%; margin-top:7px; padding:5px;
+    border:1px dashed #cbd5e1; border-radius:7px; background:#fff;
+    color:#64748b; font-size:11px; cursor:pointer; font-family:inherit;
+}
+.seq-addwait:hover { border-color:#2d7aff; color:#2d7aff; background:#f8fbff; }
+
+/* ---- 动作后的等待按钮 ---- */
+.seq-wbtn {
+    margin-left:4px; padding:0 4px; height:16px; line-height:14px;
+    border:1px solid #e2e8f0; border-radius:4px; background:#fff;
+    color:#94a3b8; font-size:9px; cursor:pointer; font-family:inherit;
+}
+.seq-wbtn:hover { border-color:#f59e0b; color:#d97706; }
+.seq-wbtn.on { background:#fef3c7; border-color:#f59e0b; color:#92400e; font-weight:700; }
+
+/* ================= 右侧滑出面板（种植顺序） ================= */
+#seqToggle {
+    position:fixed; right:0; top:50%; transform:translateY(-50%);
+    z-index:10040; display:flex; flex-direction:column; align-items:center; gap:4px;
+    padding:12px 7px; border:none; cursor:pointer;
+    background:#2d7aff; color:#fff;
+    border-radius:10px 0 0 10px;
+    box-shadow:-2px 2px 10px rgba(15,23,42,.22);
+    font-family:inherit; font-size:11px; line-height:1.1;
+    transition:background .15s, transform .15s;
+}
+#seqToggle:hover { background:#1f66e0; transform:translateY(-50%) translateX(-2px); }
+#seqToggle .seq-toggle-ico { font-size:15px; }
+#seqToggle .seq-toggle-txt { writing-mode:vertical-rl; letter-spacing:2px; }
+#seqToggle.seq-toggle-hidden { opacity:0; pointer-events:none; }
+
+#seqDrawer {
+    position:fixed; right:0; top:0; bottom:0; width:360px; max-width:90vw;
+    z-index:10042; background:#fff;
+    border-left:1px solid #e2e8f0;
+    box-shadow:-10px 0 30px rgba(15,23,42,.18);
+    display:flex; flex-direction:column;
+    transform:translateX(102%);
+    transition:transform .26s cubic-bezier(.22,.61,.36,1);
+}
+#seqDrawer.seq-open { transform:translateX(0); }
+.seq-drawer-head {
+    display:flex; align-items:center; gap:8px;
+    padding:12px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc;
+}
+.seq-drawer-head #seqClose {
+    width:24px; height:24px; border:none; border-radius:6px; cursor:pointer;
+    background:#e9ecf0; color:#475569; font-size:12px; line-height:1;
+}
+.seq-drawer-head #seqClose:hover { background:#dbe1e8; }
+.seq-drawer-tip {
+    font-size:11px; color:#94a3b8; padding:8px 14px 4px; line-height:1.5;
+}
+.seq-drawer-body { flex:1; overflow-y:auto; padding:8px 12px 24px; }
+
+#seqBackdrop {
+    position:fixed; inset:0; z-index:10041;
+    background:rgba(15,23,42,.28);
+    opacity:0; pointer-events:none;
+    transition:opacity .26s ease;
+}
+#seqBackdrop.seq-open { opacity:1; pointer-events:auto; }
+
+@media (prefers-reduced-motion: reduce) {
+    #seqDrawer, #seqBackdrop, #seqToggle { transition:none !important; }
+}
 .cell .tag { font-size:9px; border-radius:3px; padding:0 4px; line-height:16px; white-space:nowrap; }
 .cell .tag.card { background:#bfdbfe; }
 .cell .tag.patch { background:#d1fae5; }
@@ -118,6 +356,110 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     font-weight: 400;
 }
 .tooltip-box.visible { opacity: 1; }
+
+/* ================= 动效（选取植物 / 放置植物） ================= */
+@keyframes jobCardIn {
+    from { opacity:0; transform:translateY(10px) scale(.94); }
+    to   { opacity:1; transform:translateY(0)    scale(1); }
+}
+@keyframes jobDropPop {
+    0%   { opacity:0; transform:scale(.3) rotate(-8deg); }
+    55%  { opacity:1; transform:scale(1.14) rotate(2deg); }
+    75%  { transform:scale(.96) rotate(-1deg); }
+    100% { opacity:1; transform:scale(1) rotate(0); }
+}
+@keyframes jobFlash {
+    0%   { box-shadow:0 0 0 0 rgba(45,122,255,.55); }
+    100% { box-shadow:0 0 0 14px rgba(45,122,255,0); }
+}
+@keyframes jobPulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(45,122,255,.45); }
+    50%     { box-shadow:0 0 0 6px rgba(45,122,255,.16); }
+}
+@keyframes jobHeart {
+    0%   { opacity:0; transform:translate(-50%,50%) scale(.4); }
+    60%  { opacity:1; transform:translate(-50%,50%) scale(1.22); }
+    100% { opacity:1; transform:translate(-50%,50%) scale(1); }
+}
+@keyframes jobPanelUp {
+    from { opacity:0; transform:translateY(14px) scale(.985); }
+    to   { opacity:1; transform:translateY(0)    scale(1); }
+}
+@keyframes jobFadeIn { from { opacity:0; } to { opacity:1; } }
+
+/* 选植物卡片：错峰入场 */
+#plantGrid .job-card { animation: jobCardIn .26s cubic-bezier(.22,.61,.36,1) both; }
+/* 落子：格子闪光 + 植物弹入 */
+.cell.job-flash { animation: jobFlash .5s ease-out; }
+.tag.plant.job-pop { animation: jobDropPop .34s cubic-bezier(.34,1.56,.64,1) both; }
+/* 槽位选中：脉冲呼吸 */
+#jobSlots .job-slot-armed { animation: jobPulse 1.3s ease-in-out infinite; }
+/* ♥ 收藏心形：位于卡槽下边框中央，宽度约占卡片 1/4 */
+.job-fav-heart {
+    position:absolute; left:50%; bottom:0;
+    width:24%;                         /* 略小一点 */
+    transform:translate(-50%, 42%);    /* 压在下边框上，稍微往下探出 */
+    font-size:0;
+    line-height:0;
+    z-index:3; pointer-events:none;
+    filter:drop-shadow(0 1px 1.5px rgba(15,23,42,.3));
+    animation:jobHeart .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+/* 用 SVG mask 画心形 */
+.job-fav-heart::before {
+    content:'';
+    display:block;
+    width:100%; aspect-ratio:1/0.92;
+    background:#ef4444;
+    -webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'><path d='M50 88 C50 88 4 58 4 30 C4 13 17 3 30 3 C40 3 47 9 50 15 C53 9 60 3 70 3 C83 3 96 13 96 30 C96 58 50 88 50 88 Z' fill='black'/></svg>") center/100% 100% no-repeat;
+    mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 92'><path d='M50 88 C50 88 4 58 4 30 C4 13 17 3 30 3 C40 3 47 9 50 15 C53 9 60 3 70 3 C83 3 96 13 96 30 C96 58 50 88 50 88 Z' fill='black'/></svg>") center/100% 100% no-repeat;
+}
+/* 弹层与面板 */
+#plantPicker.job-open { animation: jobFadeIn .16s ease-out both; }
+#plantPicker.job-open > div { animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both; }
+/* 卡片 hover 上浮 */
+#plantGrid .job-card { transition:transform .14s ease, box-shadow .14s ease, border-color .14s ease; }
+#plantGrid .job-card:hover { transform:translateY(-3px); box-shadow:0 8px 18px rgba(15,23,42,.16); }
+
+/* ===== 悬停 1.5 秒：该格部署详情（鼠标可移入，不消失） ===== */
+#cellDetail {
+    position:fixed; z-index:10050; display:none;
+    background:rgba(255,255,255,.985); border:1px solid #cbd5e1; border-radius:10px;
+    box-shadow:0 10px 28px rgba(15,23,42,.24); padding:8px 10px;
+    min-width:150px; max-width:250px; max-height:300px; overflow-y:auto;
+    animation:jobFadeIn .14s ease-out both;
+    pointer-events:auto;   /* 允许鼠标移进来 */
+}
+#cellDetail .cd-title { font-size:11px; font-weight:600; color:#334155; margin-bottom:6px;
+                        border-bottom:1px solid #e2e8f0; padding-bottom:4px;
+                        display:flex; align-items:center; gap:5px; }
+#cellDetail .cd-tag {
+    font-size:9px; font-weight:700; padding:1px 5px; border-radius:4px;
+}
+#cellDetail .cd-tag-once { background:#e2e8f0; color:#475569; }
+#cellDetail .cd-tag-loop { background:#dbeafe; color:#1d4ed8; }
+#cellDetail .cd-row { display:flex; align-items:center; gap:7px; padding:2px 0; }
+/* 单次的行整体偏灰，一眼区分 */
+#cellDetail .cd-row-once .cd-name { color:#64748b; }
+#cellDetail .cd-ico { position:relative; width:26px; height:26px; flex:0 0 26px;
+                      background-size:100% 100%; background-repeat:no-repeat; border-radius:3px; }
+#cellDetail .cd-ico img { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                          width:72%; height:72%; object-fit:contain; }
+#cellDetail .cd-name { font-size:12px; color:#1e293b; }
+#cellDetail .cd-mode {
+    font-size:9px; font-weight:700; padding:0 4px; line-height:13px; border-radius:4px;
+    background:#dbeafe; color:#1d4ed8; flex:0 0 auto;
+}
+#cellDetail .cd-mode-once { background:#e2e8f0; color:#475569; }
+#cellDetail .cd-meta { font-size:10px; color:#94a3b8; margin-left:auto; white-space:nowrap; }
+
+/* 尊重「减少动态效果」系统设置 */
+@media (prefers-reduced-motion: reduce) {
+    #plantGrid .job-card, .cell.job-flash, .tag.plant.job-pop,
+    #jobSlots .job-slot-armed, .job-fav-heart, #plantPicker.job-open,
+    #plantPicker.job-open > div, #cellDetail { animation:none !important; }
+    #plantGrid .job-card, .cell .tag.plant { transition:none !important; }
+}
 </style>
 <style data-load-themed-styles="true">.pickerText_563e5672{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-sizing:border-box;box-sizing:border-box;border:1px solid #a19f9d;min-width:180px;padding:1px;min-height:32px}.pickerText_563e5672:hover{border-color:#c7e0f4}.pickerInput_563e5672{height:34px;border:none;-webkit-box-flex:1;-ms-flex-positive:1;flex-grow:1;outline:0;padding:0 6px 0;margin:1px}.pickerInput_563e5672::-ms-clear{display:none}</style><style data-load-themed-styles="true">.resultContent_aea8678f{display:table-row}.resultContent_aea8678f .resultItem_aea8678f{display:table-cell;vertical-align:bottom}.peoplePickerPersona_aea8678f{width:180px}.peoplePickerPersona_aea8678f .ms-Persona-details{width:100%}.peoplePicker_aea8678f .ms-BasePicker-text{min-height:40px}.peoplePickerPersonaContent_aea8678f{display:-webkit-box;display:-ms-flexbox;display:flex;width:100%;-webkit-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-ms-flex-align:center;align-items:center}</style><style data-load-themed-styles="true">.callout_48a4edb6 .ms-Suggestions-itemButton{padding:0;border:none}.callout_48a4edb6 .ms-Suggestions{min-width:300px}</style><style data-load-themed-styles="true">.root_07ff8c4c{min-width:260px}.suggestionsItem_07ff8c4c{display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-align:stretch;-ms-flex-align:stretch;align-items:stretch;-webkit-box-sizing:border-box;box-sizing:border-box;width:100%;position:relative;overflow:hidden}.suggestionsItem_07ff8c4c:hover{background:#f3f2f1}.suggestionsItem_07ff8c4c:hover .closeButton_07ff8c4c{display:block}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c{background:#edebe9}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c:hover{background:#c8c6c4}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c:hover{background:Highlight;color:HighlightText}}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c{background:Highlight;color:HighlightText;-ms-high-contrast-adjust:none}}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c .closeButton_07ff8c4c:hover{background:#a19f9d;color:#323130}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c .itemButton_07ff8c4c{color:HighlightText}}.suggestionsItem_07ff8c4c .closeButton_07ff8c4c{display:none;color:#605e5c}.suggestionsItem_07ff8c4c .closeButton_07ff8c4c:hover{background:#edebe9}.actionButton_07ff8c4c{background-color:transparent;border:0;cursor:pointer;margin:0;position:relative;border-top:1px solid #edebe9;height:40px;width:100%;font-size:12px}[dir=ltr] .actionButton_07ff8c4c{padding-left:8px}[dir=rtl] .actionButton_07ff8c4c{padding-right:8px}html[dir=ltr] .actionButton_07ff8c4c{text-align:left}html[dir=rtl] .actionButton_07ff8c4c{text-align:right}.actionButton_07ff8c4c:hover{background-color:#edebe9;cursor:pointer}.actionButton_07ff8c4c:active,.actionButton_07ff8c4c:focus{background-color:#c7e0f4}.actionButton_07ff8c4c .ms-Button-icon{font-size:16px;width:25px}.actionButton_07ff8c4c .ms-Button-label{margin:0 4px 0 9px}html[dir=rtl] .actionButton_07ff8c4c .ms-Button-label{margin:0 9px 0 4px}.buttonSelected_07ff8c4c{background-color:#c7e0f4}.suggestionsTitle_07ff8c4c{padding:0 12px;color:#0078d4;font-size:12px;line-height:40px;border-bottom:1px solid #edebe9}.suggestionsContainer_07ff8c4c{overflow-y:auto;overflow-x:hidden;max-height:300px;border-bottom:1px solid #edebe9}.suggestionsNone_07ff8c4c{text-align:center;color:#797775;font-size:12px;line-height:30px}.suggestionsSpinner_07ff8c4c{margin:5px 0;white-space:nowrap;line-height:20px;font-size:12px}html[dir=ltr] .suggestionsSpinner_07ff8c4c{padding-left:14px}html[dir=rtl] .suggestionsSpinner_07ff8c4c{padding-right:14px}html[dir=ltr] .suggestionsSpinner_07ff8c4c{text-align:left}html[dir=rtl] .suggestionsSpinner_07ff8c4c{text-align:right}.suggestionsSpinner_07ff8c4c .ms-Spinner-circle{display:inline-block;vertical-align:middle}.suggestionsSpinner_07ff8c4c .ms-Spinner-label{display:inline-block;margin:0 10px 0 16px;vertical-align:middle}html[dir=rtl] .suggestionsSpinner_07ff8c4c .ms-Spinner-label{margin:0 16px 0 10px}.itemButton_07ff8c4c.itemButton_07ff8c4c{width:100%;padding:0;min-width:0;height:100%}@media screen and (-ms-high-contrast:active){.itemButton_07ff8c4c.itemButton_07ff8c4c{color:WindowText}}.itemButton_07ff8c4c.itemButton_07ff8c4c:hover{color:#201f1e}.closeButton_07ff8c4c.closeButton_07ff8c4c{padding:0 4px;height:auto;width:32px}@media screen and (-ms-high-contrast:active){.closeButton_07ff8c4c.closeButton_07ff8c4c{color:WindowText}}.closeButton_07ff8c4c.closeButton_07ff8c4c:hover{background:#c8c6c4;color:#201f1e}.suggestionsAvailable_07ff8c4c{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.suggestionsContainer_f38d2867{overflow-y:auto;overflow-x:hidden;max-height:300px}.suggestionsContainer_f38d2867 .ms-Suggestion-item:hover{background-color:#f3f2f1;cursor:pointer}.suggestionsContainer_f38d2867 .is-suggested{background-color:#deecf9}.suggestionsContainer_f38d2867 .is-suggested:hover{background-color:#c7e0f4;cursor:pointer}</style><style data-load-themed-styles="true">.root_8aef8ec2{min-width:260px}.actionButton_8aef8ec2{background:0 0;background-color:transparent;border:0;cursor:pointer;margin:0;padding:0;position:relative;width:100%;font-size:12px}html[dir=ltr] .actionButton_8aef8ec2{text-align:left}html[dir=rtl] .actionButton_8aef8ec2{text-align:right}.actionButton_8aef8ec2:hover{background-color:#f3f2f1;cursor:pointer}.actionButton_8aef8ec2:active,.actionButton_8aef8ec2:focus{background-color:#c7e0f4}.actionButton_8aef8ec2 .ms-Button-icon{font-size:16px;width:25px}.actionButton_8aef8ec2 .ms-Button-label{margin:0 4px 0 9px}html[dir=rtl] .actionButton_8aef8ec2 .ms-Button-label{margin:0 9px 0 4px}.buttonSelected_8aef8ec2{background-color:#deecf9}.buttonSelected_8aef8ec2:hover{background-color:#c7e0f4;cursor:pointer}@media screen and (-ms-high-contrast:active){.buttonSelected_8aef8ec2:hover{background-color:Highlight;color:HighlightText}}@media screen and (-ms-high-contrast:active){.buttonSelected_8aef8ec2{background-color:Highlight;color:HighlightText;-ms-high-contrast-adjust:none}}.suggestionsTitle_8aef8ec2{font-size:12px}.suggestionsSpinner_8aef8ec2{margin:5px 0;white-space:nowrap;line-height:20px;font-size:12px}html[dir=ltr] .suggestionsSpinner_8aef8ec2{padding-left:14px}html[dir=rtl] .suggestionsSpinner_8aef8ec2{padding-right:14px}html[dir=ltr] .suggestionsSpinner_8aef8ec2{text-align:left}html[dir=rtl] .suggestionsSpinner_8aef8ec2{text-align:right}.suggestionsSpinner_8aef8ec2 .ms-Spinner-circle{display:inline-block;vertical-align:middle}.suggestionsSpinner_8aef8ec2 .ms-Spinner-label{display:inline-block;margin:0 10px 0 16px;vertical-align:middle}html[dir=rtl] .suggestionsSpinner_8aef8ec2 .ms-Spinner-label{margin:0 16px 0 10px}.itemButton_8aef8ec2{height:100%;width:100%;padding:7px 12px}@media screen and (-ms-high-contrast:active){.itemButton_8aef8ec2{color:WindowText}}.screenReaderOnly_8aef8ec2{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.resultContent_4c5c5043{display:table-row}.resultContent_4c5c5043 .resultItem_4c5c5043{display:table-cell;vertical-align:bottom}.peoplePickerPersona_4c5c5043{width:180px}.peoplePickerPersona_4c5c5043 .ms-Persona-details{width:100%}.peoplePicker_4c5c5043 .ms-BasePicker-text{min-height:40px}.peoplePickerPersonaContent_4c5c5043{display:-webkit-box;display:-ms-flexbox;display:flex;width:100%;-webkit-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-ms-flex-align:center;align-items:center;padding:7px 12px}</style><style data-load-themed-styles="true">.pickerText_73cdfb49{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-sizing:border-box;box-sizing:border-box;border:1px solid #a19f9d;min-width:180px;min-height:30px}.pickerText_73cdfb49:hover{border-color:#323130}.pickerText_73cdfb49.inputFocused_73cdfb49{position:relative;border-color:#0078d4}.pickerText_73cdfb49.inputFocused_73cdfb49:after{pointer-events:none;content:'';position:absolute;left:-1px;top:-1px;bottom:-1px;right:-1px;border:2px solid #0078d4}@media screen and (-ms-high-contrast:active){.pickerText_73cdfb49.inputDisabled_73cdfb49{position:relative;border-color:GrayText}.pickerText_73cdfb49.inputDisabled_73cdfb49:after{pointer-events:none;content:'';position:absolute;left:0;top:0;bottom:0;right:0;background-color:Window}}.pickerInput_73cdfb49{height:34px;border:none;-webkit-box-flex:1;-ms-flex-positive:1;flex-grow:1;outline:0;padding:0 6px 0;-ms-flex-item-align:end;align-self:flex-end}.pickerItems_73cdfb49{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;max-width:100%}.screenReaderOnly_73cdfb49{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.personaContainer_acf6fc7e{border-radius:15px;display:-webkit-inline-box;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-ms-flex-align:center;align-items:center;background:#eff6fc;margin:4px;cursor:default;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;vertical-align:middle;position:relative}.personaContainer_acf6fc7e::-moz-focus-inner{border:0}.personaContainer_acf6fc7e{outline:transparent}.personaContainer_acf6fc7e{position:relative}.ms-Fabric--isFocusVisible .personaContainer_acf6fc7e:focus:after{-webkit-box-sizing:border-box;box-sizing:border-box;content:'';position:absolute;top:-2px;right:-2px;bottom:-2px;left:-2px;pointer-events:none;border:1px solid #605e5c;border-radius:0}.personaContainer_acf6fc7e .ms-Persona-primaryText{color:#005a9e;font-size:14px;font-weight:400}.personaContainer_acf6fc7e .ms-Persona-primaryText.hover_acf6fc7e{color:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e .actionButton_acf6fc7e:hover{background:#c7e0f4}.personaContainer_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:HighlightText}}.personaContainer_acf6fc7e:hover{background:#deecf9}.personaContainer_acf6fc7e:hover .ms-Persona-primaryText{color:#005a9e;font-size:14px;font-weight:400}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e:hover .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e{background:#0078d4}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .ms-Persona-primaryText{color:#ffffff}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e{color:#ffffff}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:#005a9e}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon:hover{background:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:HighlightText}}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e{border-color:Highlight;background:Highlight;-ms-high-contrast-adjust:none}}.personaContainer_acf6fc7e.validationError_acf6fc7e .ms-Persona-primaryText{color:#e81123}.personaContainer_acf6fc7e.validationError_acf6fc7e .ms-Persona-initials{font-size:20px}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e{border:1px solid WindowText}}.personaContainer_acf6fc7e .itemContent_acf6fc7e{-webkit-box-flex:0;-ms-flex:0 1 auto;flex:0 1 auto;min-width:0;max-width:100%}.personaContainer_acf6fc7e .removeButton_acf6fc7e{border-radius:15px;-webkit-box-flex:0;-ms-flex:0 0 auto;flex:0 0 auto;width:33px;height:33px;-ms-flex-preferred-size:32px;flex-basis:32px}.personaContainer_acf6fc7e .expandButton_acf6fc7e{border-radius:15px 0 0 15px;height:33px;width:44px;padding-right:16px;position:inherit;display:-webkit-box;display:-ms-flexbox;display:flex;margin-right:-17px}.personaContainer_acf6fc7e .personaWrapper_acf6fc7e{position:relative;display:inherit}.personaContainer_acf6fc7e .personaWrapper_acf6fc7e .ms-Persona-details{padding:0 8px}.personaContainer_acf6fc7e .personaDetails_acf6fc7e{-webkit-box-flex:0;-ms-flex:0 1 auto;flex:0 1 auto}.itemContainer_acf6fc7e{display:inline-block;vertical-align:top}</style></head>
 <body>
@@ -172,10 +514,6 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
                 </select>
             </label>
             <span id="tfDeckBox" style="display:none;"><label style="font-size:12px;">编队号 <input type="number" id="tfDeckNo" min="1" max="6" style="width:45px;"></label></span>
-            <label style="font-size:12px;"><input type="checkbox" id="tfLoopPlant"> 循环补种</label>
-            <label style="font-size:12px;"><input type="checkbox" id="tfOncePlant"> 每关只补一遍</label>
-            <label style="font-size:12px;"><input type="checkbox" id="tfInheritBoss" checked> 沿用上一张boss</label>
-            <label style="font-size:12px;"><input type="checkbox" id="tfWaveEnabled"> 点波启用</label>
             <span style="font-size:11px;color:#94a3b8;">（喂豆位置：点「喂豆」后在棋盘落子标记）</span>
         </div>
     </div>
@@ -197,7 +535,7 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     </div>
 
     <div class="flex-row">
-        <div class="flex-col" style="max-width:380px;">
+        <div class="flex-col" style="flex:0 0 380px;max-width:380px;">
             <div class="panel" id="slotPlantPanel">
                 <div class="panel-title">🪴 槽位植物（点击选择；「喂豆」选中后在棋盘落子标记喂豆位置）</div>
                 <div id="jobSlots" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
@@ -254,9 +592,31 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 </div>
                 </div>
             </div>
-            
+
         </div>
     </div>
+
+    <!-- 右侧呼出按钮（贴在窗口右缘中部） -->
+    <button id="seqToggle" title="种植顺序（拖动调整先种哪个槽）">
+        <span class="seq-toggle-ico">🔗</span>
+        <span class="seq-toggle-txt">种植顺序</span>
+    </button>
+
+    <!-- 右侧滑出面板：两条种植顺序链（一次性 / 循环） -->
+    <aside id="seqDrawer" aria-hidden="true">
+        <div class="seq-drawer-head">
+            <span style="font-size:14px;font-weight:600;">🔗 种植顺序</span>
+            <span style="font-size:11px;color:#94a3b8;margin-left:auto;">拖拽排序</span>
+            <button id="seqClose" title="收起">✕</button>
+        </div>
+        <div class="seq-drawer-tip">
+            上方是<b>一次性链</b>（先执行完），下方是<b>循环链</b>（之后反复执行）。<br>
+            拖动整块调整先后；拖动 ⏱ 等待节点调整间隔。<br>
+             右键槽位（左侧面板或这里）可切换<b>单次 / 循环</b>。
+        </div>
+        <div id="seqChains" class="seq-drawer-body"></div>
+    </aside>
+    <div id="seqBackdrop"></div>
 
     
 </div>
@@ -1683,6 +2043,7 @@ function placeOp(board, opId, r, c) {
 
 function renderBoard(gridId, boardData, isLate) {
     const gridEl = document.getElementById(gridId);
+    jobEnsureSeq(boardData);   // 旧数据/本地缓存恢复时补齐种植序号
     gridEl.style.gridTemplateColumns = `repeat(${cols}, 68px)`;
     gridEl.innerHTML = '';
     for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
@@ -1693,20 +2054,37 @@ function renderBoard(gridId, boardData, isLate) {
         d.setAttribute('data-tooltip', '点击放置选中的操作，右键清空该格');
         d.setAttribute('data-tooltip-delay', '1000');
 
-        if (isLate && currentValues['是否魔甘收尾(牢玩家专属)']?.index === 1 && r === 2 && c === 8) {
-            if (cellItems.length === 0) {
-                const tag = document.createElement('span');
-                tag.className = 'tag placeholder';
-                tag.textContent = '魔音(9-3)';
-                d.appendChild(tag);
-                d.classList.add('has');
-            }
-        }
-        cellItems.forEach(item => {
+        const _pc = cellItems.filter(function (it) { return it.plant; }).length;
+        if (_pc > 0) d.classList.add('job-n' + Math.min(_pc, 9));   // 同格多株 → 略缩图分档
+
+        let _pIdx = 0;   // 植物序号：决定缩略图落在 2×2 / 3×3 网格的第几格
+        // 渲染顺序：先按形态（单次在前）、再按槽号、再按槽内序号
+        const _slotOf = function (it) {
+            const m = /^(?:card|patch_slot)(\d+)$/.exec(it.id || '');
+            return m ? Number(m[1]) : 99;   // feed / shovel 排最后
+        };
+        const _ordered = cellItems.slice().sort(function (a, b) {
+            const ma = (jobItemMode(a) === 'once') ? 0 : 1;
+            const mb = (jobItemMode(b) === 'once') ? 0 : 1;
+            if (ma !== mb) return ma - mb;
+            const sa = _slotOf(a), sb = _slotOf(b);
+            if (sa !== sb) return sa - sb;
+            const qa = (typeof a.seq === 'number') ? a.seq : 9999;
+            const qb = (typeof b.seq === 'number') ? b.seq : 9999;
+            return qa - qb;
+        });
+        _ordered.forEach(item => {
+            const _im = jobItemMode(item);
+            const _mcls = (_im === 'once') ? ' is-once' : ' is-loop';
             if (item.plant) {
                 const pt = document.createElement('span');
-                pt.className = 'tag plant';
-                pt.title = item.label;
+                _pIdx++;
+                pt.className = 'tag plant job-p' + _pIdx + _mcls;   // 显式序号，避免 nth-of-type 被标签 span 算错
+                pt.title = item.label + '（' + jobModeLabel(_im) + (typeof item.seq === 'number' ? (' · 第 ' + item.seq + ' 个') : '') + '）';
+                // 只在「刚刚真正落子」的那一次播放入场动画
+                if (jobLastDrop && jobLastDrop.r === r && jobLastDrop.c === c && jobLastDrop.id === item.id) {
+                    pt.classList.add('job-pop');
+                }
                 pt.style.backgroundImage = 'url(static/card_bg/rare_' + (item.plant.rare || 0) + '.webp)';
                 if (item.plant.img) {
                     const pi = document.createElement('img');
@@ -1717,14 +2095,41 @@ function renderBoard(gridId, boardData, isLate) {
                 } else {
                     pt.textContent = item.label;
                 }
+                // 种植序号角标（单次=灰底，循环=深底）
+                if (typeof item.seq === 'number') {
+                    const sn = document.createElement('span');
+                    sn.className = 'job-seq' + (_im === 'once' ? ' job-seq-once' : '');
+                    sn.textContent = item.seq;
+                    pt.appendChild(sn);
+                }
                 d.appendChild(pt);
                 return;
             }
             const tag = document.createElement('span');
-            tag.className = `tag ${item.type}`;
+            tag.className = 'tag ' + item.type + _mcls;
             tag.textContent = item.label || item.id;
+            // 喂豆 / 铲子等标记也标序号
+            if (typeof item.seq === 'number') {
+                const sn = document.createElement('span');
+                sn.className = 'job-seq job-seq-mark' + (_im === 'once' ? ' job-seq-once' : '');
+                sn.textContent = item.seq;
+                tag.appendChild(sn);
+            }
             d.appendChild(tag);
         });
+        // 落子高亮闪光（同样只在落子那一次）
+        if (jobLastDrop && jobLastDrop.r === r && jobLastDrop.c === c) {
+            d.classList.add('job-flash');
+        }
+        // 有内容的格子改挂悬停详情（2 秒），避免与旧 tooltip 打架
+        if (cellItems.length > 0) {
+            d.removeAttribute('data-tooltip');
+            d.addEventListener('mouseenter', function () { jobScheduleCellDetail(d, cellItems); });
+            d.addEventListener('mouseleave', jobHideCellDetailSoon);
+        } else {
+            d.setAttribute('data-tooltip', '点击放置选中的操作，右键清空该格');
+            d.setAttribute('data-tooltip-delay', '1000');
+        }
         const cl = document.createElement('span');
         cl.className = 'col-label';
         cl.textContent = 'C'+(c+1);
@@ -1748,9 +2153,14 @@ function renderBoard(gridId, boardData, isLate) {
             const tc = parseInt(d.dataset.c);
             if (typeof jobArmedSlot === 'number' && jobArmedSlot > 0) {
                 if (placePlantOnBoard(boardData, jobArmedSlot, tr, tc)) {
+                    const _dropId = (jobArmedSlot === 9) ? 'feed'
+                                  : (jobArmedSlot === 10) ? 'shovel'
+                                  : 'card' + jobArmedSlot;
+                    jobLastDrop = { r: tr, c: tc, id: _dropId };
                     renderAllBoards();
                     updatePreview();
                     jobSaveLocal();
+                    jobLastDrop = null;   // 播完即清，避免后续重渲染重复播放
                 }
                 return;
             }
@@ -1782,6 +2192,110 @@ function renderBoard(gridId, boardData, isLate) {
 function renderAllBoards() {
     renderBoard('gridEarly', boardEarly, false);
     renderBoard('gridLate', boardLate, true);
+    jobRenderSeqChains();   // 棋盘变化后同步刷新顺序链条
+}
+
+// ============================================================
+// 悬停 1.5 秒 → 该格部署详情浮层（可把鼠标移进浮层，不消失）
+// ============================================================
+let jobCellDetailTimer = null;
+let jobCellDetailHideTimer = null;
+let jobCellDetailPinned = false;   // 鼠标在浮层里时固定住
+
+function jobHideCellDetail() {
+    clearTimeout(jobCellDetailTimer);
+    clearTimeout(jobCellDetailHideTimer);
+    jobCellDetailPinned = false;
+    const el = document.getElementById('cellDetail');
+    if (el) el.style.display = 'none';
+}
+
+// 延迟关闭：留出「从格子移到浮层」这段空隙的时间
+function jobHideCellDetailSoon() {
+    clearTimeout(jobCellDetailTimer);
+    clearTimeout(jobCellDetailHideTimer);
+    jobCellDetailHideTimer = setTimeout(function () {
+        if (jobCellDetailPinned) return;   // 鼠标已经进到浮层里了
+        const el = document.getElementById('cellDetail');
+        if (el) el.style.display = 'none';
+    }, 220);
+}
+
+function jobScheduleCellDetail(cellEl, items) {
+    clearTimeout(jobCellDetailTimer);
+    clearTimeout(jobCellDetailHideTimer);
+    jobCellDetailTimer = setTimeout(function () {
+        jobShowCellDetail(cellEl, items);
+    }, 1500);   // 悬停 1.5 秒才弹出
+}
+
+function jobShowCellDetail(cellEl, items) {
+    let el = document.getElementById('cellDetail');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'cellDetail';
+        document.body.appendChild(el);
+        // 鼠标进入浮层 → 固定不关；离开 → 收起
+        el.addEventListener('mouseenter', function () {
+            jobCellDetailPinned = true;
+            clearTimeout(jobCellDetailHideTimer);
+        });
+        el.addEventListener('mouseleave', function () {
+            jobCellDetailPinned = false;
+            jobHideCellDetail();
+        });
+    }
+    const modeOrder = { once: 0, loop: 1 };
+    const plants = items.filter(function (it) { return it.plant; })
+        .sort(function (a, b) {
+            const ma = modeOrder[jobItemMode(a)], mb = modeOrder[jobItemMode(b)];
+            if (ma !== mb) return ma - mb;
+            const qa = (typeof a.seq === 'number') ? a.seq : 9999;
+            const qb = (typeof b.seq === 'number') ? b.seq : 9999;
+            return qa - qb;
+        });
+    const others = items.filter(function (it) { return !it.plant; });
+
+    const nOnce = plants.filter(function (it) { return jobItemMode(it) === 'once'; }).length;
+    const nLoop = plants.length - nOnce;
+    let html = '<div class="cd-title">该格部署（' + items.length + '）'
+        + (nOnce ? '<span class="cd-tag cd-tag-once">单次 ' + nOnce + '</span>' : '')
+        + (nLoop ? '<span class="cd-tag cd-tag-loop">循环 ' + nLoop + '</span>' : '')
+        + '</div>';
+
+    plants.forEach(function (it) {
+        const rare = it.plant.rare || 0;
+        const m = jobItemMode(it);
+        html += '<div class="cd-row' + (m === 'once' ? ' cd-row-once' : '') + '">'
+            + '<span class="cd-ico" style="background-image:url(static/card_bg/rare_' + rare + '.webp)">'
+            + (it.plant.img ? '<img src="' + it.plant.img + '" alt="">' : '')
+            + '</span>'
+            + '<span class="cd-name">' + (it.label || '') + '</span>'
+            + '<span class="cd-mode' + (m === 'once' ? ' cd-mode-once' : '') + '">'
+            + (m === 'once' ? '1×' : '⟳') + '</span>'
+            + '<span class="cd-meta">' + (typeof it.seq === 'number' ? ('#' + it.seq + ' ') : '')
+            + '(' + (it.col) + ',' + (it.row) + ')</span>'
+            + '</div>';
+    });
+    others.forEach(function (it) {
+        const m = jobItemMode(it);
+        html += '<div class="cd-row' + (m === 'once' ? ' cd-row-once' : '') + '">'
+            + '<span class="cd-name">' + (it.label || it.id) + '</span>'
+            + '<span class="cd-mode' + (m === 'once' ? ' cd-mode-once' : '') + '">'
+            + (m === 'once' ? '1×' : '⟳') + '</span>'
+            + '<span class="cd-meta">(' + (it.col) + ',' + (it.row) + ')</span></div>';
+    });
+    el.innerHTML = html;
+    el.style.display = 'block';
+    // 定位：默认贴格子右侧，越界则翻到左侧 / 上移
+    const r = cellEl.getBoundingClientRect();
+    const w = el.offsetWidth, h = el.offsetHeight;
+    let x = r.right + 10, y = r.top;
+    if (x + w > window.innerWidth - 8) x = r.left - w - 10;
+    if (x < 8) x = 8;
+    if (y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
 }
 
 function clearBoard(isLate) {
@@ -3460,6 +3974,7 @@ let currentTable = 0;        // 当前编辑的表索引
 let plantCache = null;       // /plants 缓存
 let currentSlotEditing = -1; // 正在编辑的槽位号
 let jobArmedSlot = 0;        // 已选中待落子的槽位（0=未选中）
+let jobLastDrop = null;      // 最近一次落子位置 {r,c,id}：用于只播一次入场动画
 
 function jobNewTable() {
     const last = jobTables.length > 0 ? jobTables[jobTables.length - 1] : null;
@@ -3473,13 +3988,24 @@ function jobNewTable() {
         inheritBoss: true,
         waveEnabled: false,
         slots: {},
+        slotOrder: null,          // 一次性链的槽位顺序（拖动链条调整）
+        loopOrder: null,          // 循环链的槽位顺序
+        slotModes: {},            // 槽的放置形态：{ card1:'once'|'loop', feed:..., shovel:... }
+        waitAfter: {},            // 动作后的等待秒数：{ 'card1@r,c': 3, ... }
+        innerWaits: { once: {}, loop: {} },   // 槽块内部的等待节点：{ once:{card1:[{gap,sec}]}, loop:{...} }
         boardEarly: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => [])),
         boardLate: []
     };
     for (let i = 1; i <= 8; i++) t.slots[i] = '';
+    // 默认形态：循环
+    jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'loop'; });
     if (last) {
         // 新表默认复制上一张的 boss 棋盘（boardLate）
         t.boardLate = JSON.parse(JSON.stringify(last.boardLate.length ? last.boardLate : Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))));
+        // 沿用上一张表的种植顺序与形态
+        if (Array.isArray(last.slotOrder)) t.slotOrder = last.slotOrder.slice();
+        if (Array.isArray(last.loopOrder)) t.loopOrder = last.loopOrder.slice();
+        if (last.slotModes) t.slotModes = JSON.parse(JSON.stringify(last.slotModes));
     }
     jobTables.push(t);
     return t;
@@ -3511,10 +4037,7 @@ function jobFillForm() {
     document.getElementById('tfToLevel').value = t.to_level;
     document.getElementById('tfLineupMode').value = t.lineupMode;
     document.getElementById('tfDeckNo').value = t.deckNo;
-    document.getElementById('tfLoopPlant').checked = t.loopPlant;
-    document.getElementById('tfOncePlant').checked = t.oncePlant;
-    document.getElementById('tfInheritBoss').checked = t.inheritBoss;
-    document.getElementById('tfWaveEnabled').checked = t.waveEnabled === true;
+    // 四个复选框（循环补种/每关只补一遍/沿用上一张boss/点波启用）已从表单移除，改为数据字段
     document.getElementById('tfDeckBox').style.display = t.lineupMode === 'deck' ? 'inline-flex' : 'none';
 }
 
@@ -3525,10 +4048,7 @@ function jobSyncForm() {
     t.to_level = document.getElementById('tfToLevel').value.trim();
     t.lineupMode = document.getElementById('tfLineupMode').value;
     t.deckNo = Math.max(1, parseInt(document.getElementById('tfDeckNo').value) || 1);
-    t.loopPlant = document.getElementById('tfLoopPlant').checked;
-    t.oncePlant = document.getElementById('tfOncePlant').checked;
-    t.inheritBoss = document.getElementById('tfInheritBoss').checked;
-    t.waveEnabled = document.getElementById('tfWaveEnabled').checked;
+    // 四个复选框已移除：loopPlant/oncePlant/inheritBoss/waveEnabled 保留为数据字段，值不再由表单驱动
     jobRenderTabs();
 }
 
@@ -3553,27 +4073,623 @@ function jobFindPlant(name) {
 function placePlantOnBoard(board, slot, r, c) {
     const cellArr = board[r] && board[r][c];
     if (!cellArr) return false;
+    const t0 = jobTables[currentTable];
+    const key = (slot === 9) ? 'feed' : (slot === 10 ? 'shovel' : 'card' + slot);
+    const mode = jobSlotMode(t0, key);          // 当前形态：单次 / 循环
+
     if (slot === 9) {                                   // 槽9 = 喂豆位置
-        if (cellArr.some(it => it.id === 'feed')) return false;
+        // 同一格：同形态只允许一个；单次允许重复（但喂豆通常一格一个）
+        if (cellArr.some(it => it.id === 'feed' && jobItemMode(it) === mode)) return false;
         saveBoardState();
-        cellArr.push({ id: 'feed', label: '喂豆', type: 'feed', col: c + 1, row: r + 1 });
+        cellArr.push({ id: 'feed', label: '喂豆', type: 'feed', mode: mode,
+                       col: c + 1, row: r + 1, seq: jobNextSeq(board, 'feed', mode) });
         return true;
     }
-    const t = jobTables[currentTable];
-    const name = t && t.slots[slot];
+    if (slot === 10) {                                  // 槽10 = 铲子标记
+        if (cellArr.some(it => it.id === 'shovel' && jobItemMode(it) === mode)) return false;
+        saveBoardState();
+        cellArr.push({ id: 'shovel', label: '铲子', type: 'shovel', mode: mode,
+                       col: c + 1, row: r + 1, seq: jobNextSeq(board, 'shovel', mode) });
+        return true;
+    }
+    const name = t0 && t0.slots[slot];
     if (!name) return false;
-    if (cellArr.some(it => it.id === 'card' + slot)) return false;   // 同格同槽去重
+
+    // 循环形态：同格同槽只能一个；单次形态：可在同一格重复种（上限 12 次防误点）
+    const _same = cellArr.filter(it => it.id === 'card' + slot && jobItemMode(it) === mode).length;
+    if (mode === 'loop' && _same >= 1) return false;
+    if (mode === 'once' && _same >= 12) return false;
+
     const info = jobFindPlant(name) || {};
     saveBoardState();
     cellArr.push({
         id: 'card' + slot,
         label: name,
         type: 'plant',
+        mode: mode,                              // 落点形态：决定棋盘标记颜色与所属分区
         col: c + 1,
         row: r + 1,
+        seq: jobNextSeq(board, 'card' + slot, mode),   // 单次/循环各自从 1 开始
         plant: { name: name, img: info.img || null, rare: (typeof info.rare === 'number' ? info.rare : 0) }
     });
     return true;
+}
+
+// (形态, 槽) 内下一个序号：单次与循环各自独立从 1 开始
+function jobNextSeq(board, scopeId, mode) {
+    let max = 0;
+    if (!board) return 1;
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(it => {
+                if (it.id !== scopeId) return;
+                if (jobItemMode(it) !== mode) return;   // 只看同形态
+                if (typeof it.seq === 'number' && it.seq > max) max = it.seq;
+            });
+        }
+    }
+    return max + 1;
+}
+
+// 保证棋盘上每个带内容项都有 seq（旧数据 / 本地缓存恢复时补齐），并返回“id@r,c -> seq”映射
+function jobEnsureSeq(board) {
+    if (!board) return;
+    // 逐槽补齐：每个槽（card1..card8 / feed / shovel）各自从 1 开始编号
+    const maxBy = {};
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(it => {
+                if (typeof it.seq === 'number') {
+                    maxBy[it.id] = Math.max(maxBy[it.id] || 0, it.seq);
+                }
+            });
+        }
+    }
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(it => {
+                if (typeof it.seq !== 'number') {
+                    maxBy[it.id] = (maxBy[it.id] || 0) + 1;
+                    it.seq = maxBy[it.id];
+                }
+            });
+        }
+    }
+}
+
+// ============================================================
+// 种植顺序链条：拖动整块，决定「先种哪个槽」
+// 顺序存放在 t.slotOrder（该表专属），运行时按此顺序执行
+// ============================================================
+let seqDrag = null;   // { slotKey } 正在拖动的槽
+
+// 一个槽的稳定标识：植物槽是 'card<N>'，另外两条是 'feed' / 'shovel'
+function jobSlotKeyOf(s) { return (s === 'feed' || s === 'shovel') ? s : ('card' + s); }
+
+// 该槽在棋盘上是否落了子
+function jobSlotHasPlacement(board, key) {
+    return jobCollectSlot(board, key).length > 0;
+}
+
+// 某槽已落点数量
+function jobSlotCount(board, key) { return jobCollectSlot(board, key).length; }
+
+// 收集某槽在棋盘上的全部落点（按当前 seq 排序）
+function jobCollectSlot(board, scopeId) {
+    const out = [];
+    if (!board) return out;
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach((it, i) => {
+                if (it.id === scopeId) out.push({ r: r, c: c, idx: i, item: it });
+            });
+        }
+    }
+    out.sort(function (a, b) {
+        const qa = (typeof a.item.seq === 'number') ? a.item.seq : 9999;
+        const qb = (typeof b.item.seq === 'number') ? b.item.seq : 9999;
+        return qa - qb;
+    });
+    return out;
+}
+
+// 全部槽位键：槽1~8 + 喂豆 + 铲子
+function jobAllSlotKeys() {
+    const a = [];
+    for (let s = 1; s <= 8; s++) a.push('card' + s);
+    a.push('feed');
+    a.push('shovel');
+    return a;
+}
+
+// 该槽当前的放置形态：'once'（单次，灰色）| 'loop'（循环，默认）
+function jobSlotMode(t, key) {
+    const m = t && t.slotModes ? t.slotModes[key] : null;
+    return (m === 'once') ? 'once' : 'loop';
+}
+// 单次与循环是各自独立的摆放；形态只决定棋盘标记颜色与所属分区
+function jobInOnce(t, key) { return jobSlotMode(t, key) === 'once'; }
+function jobInLoop(t, key) { return jobSlotMode(t, key) === 'loop'; }
+
+// 右键：在「单次」和「循环」之间切换（只有两种）
+function jobToggleSlotMode(t, key) {
+    if (!t.slotModes) t.slotModes = {};
+    const next = (jobSlotMode(t, key) === 'once') ? 'loop' : 'once';
+    t.slotModes[key] = next;
+    return next;
+}
+
+function jobModeLabel(m) { return (m === 'once') ? '单次' : '循环'; }
+
+// 棋盘落点的形态：item.mode（'once' | 'loop'）
+function jobItemMode(it) { return (it && it.mode === 'once') ? 'once' : 'loop'; }
+
+// 取得某条链的槽位顺序（缺失/新增的自动补到末尾）
+function jobGetChainOrder(t, which) {
+    const field = (which === 'loop') ? 'loopOrder' : 'slotOrder';
+    const all = jobAllSlotKeys();
+    let order = Array.isArray(t[field]) ? t[field].filter(k => all.indexOf(k) !== -1) : [];
+    order = order.filter((k, i) => order.indexOf(k) === i);
+    all.forEach(function (k) { if (order.indexOf(k) === -1) order.push(k); });
+    t[field] = order;
+    return order;
+}
+
+// 兼容旧调用
+function jobGetSlotOrder(t) { return jobGetChainOrder(t, 'once'); }
+
+// 某槽在指定形态下的落点（按 seq 排序）—— 单次与循环各自独立
+function jobPlacementsOf(board, scopeId, selMode) {
+    const out = [];
+    if (!board) return out;
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(function (it) {
+                if (it.id !== scopeId) return;
+                if (jobItemMode(it) !== selMode) return;
+                out.push({ r: r, c: c, item: it });
+            });
+        }
+    }
+    out.sort(function (a, b) {
+        const qa = (typeof a.item.seq === 'number') ? a.item.seq : 9999;
+        const qb = (typeof b.item.seq === 'number') ? b.item.seq : 9999;
+        return qa - qb;
+    });
+    return out;
+}
+
+// 某落点的稳定键（用于挂「动作后等待」）
+function jobPlacementKey(mode, scopeId, r, c, seq) {
+    return mode + '|' + scopeId + '|' + r + ',' + c + '|' + (seq || 0);
+}
+
+// 渲染种植顺序链条
+function jobRenderSeqChains() {
+    const box = document.getElementById('seqChains');
+    if (!box) return;
+    const t = jobTables[currentTable];
+    box.innerHTML = '';
+    if (!t) return;
+
+    const isLate = (document.querySelector('.tab.active')?.dataset.tab === 'late');
+    const board = isLate ? boardLate : boardEarly;
+    jobEnsureSeq(board);
+
+    // 两条链：一次性在前，循环在后
+    jobRenderOneChain(box, t, board, 'once');
+    jobRenderOneChain(box, t, board, 'loop');
+}
+
+// 渲染一条链（which = 'once' | 'loop'）
+function jobRenderOneChain(box, t, board, which) {
+    const isLoop = (which === 'loop');
+    const order = jobGetChainOrder(t, which);
+
+    // 每条链列出「在该形态下真正落过子」的槽。
+    // 注意：不能用 jobSlotMode 判断归属 —— 形态是落子时记录的，改成单次/循环只影响新落子，
+    // 已经放到棋盘上的落点仍属于它当初的形态。
+    const visible = order.filter(function (key) {
+        if (key === 'feed' || key === 'shovel') return jobPlacementsOf(board, key, which).length > 0;
+        const s = Number(key.replace('card', ''));
+        return !!t.slots[s] && jobPlacementsOf(board, key, which).length > 0;
+    });
+
+    // 链头
+    const sec = document.createElement('div');
+    sec.className = 'seq-section' + (isLoop ? ' seq-section-loop' : '');
+    const hd = document.createElement('div');
+    hd.className = 'seq-section-head';
+    hd.textContent = isLoop ? '🔁 循环链（反复执行）' : '1️⃣ 单次链（先执行一遍）';
+    sec.appendChild(hd);
+    box.appendChild(sec);
+
+    if (!visible.length) {
+        const empty = document.createElement('div');
+        empty.className = 'seq-empty';
+        empty.textContent = isLoop
+            ? '还没有「循环」落子。（右键左侧槽位切到循环，再到棋盘落子）'
+            : '还没有「单次」落子。（右键左侧槽位切到单次，再到棋盘落子）';
+        sec.appendChild(empty);
+    }
+
+    const listBox = document.createElement('div');
+    listBox.className = 'seq-list';
+    sec.appendChild(listBox);
+
+    // 槽块顺序渲染；等待节点可以插在「槽块之间」，也可以插在「槽块内部的植物之间」
+    visible.forEach(function (key, pos) {
+        listBox.appendChild(jobBuildSlotBlock(t, board, key, which, pos));
+    });
+}
+
+// 槽块「内部」的等待节点：[{gap, sec}, ...]，gap = 插在第几个植物之前
+function jobGetInnerWaits(t, which, key) {
+    if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {} };
+    if (!t.innerWaits[which] || typeof t.innerWaits[which] !== 'object') t.innerWaits[which] = {};
+    const slot = t.innerWaits[which];
+    if (!Array.isArray(slot[key])) slot[key] = [];
+    slot[key] = slot[key].map(function (w, i) {
+        if (typeof w === 'number') return { gap: w, sec: 3 };
+        if (!w || typeof w !== 'object') return { gap: i, sec: 3 };
+        return { gap: (w.gap | 0), sec: (typeof w.sec === 'number' ? w.sec : 3) };
+    });
+    return slot[key];
+}
+
+// 构建一个「槽块内部」的等待节点（插在两个植物之间）
+function jobBuildInnerWait(t, which, key, wi) {
+    const waits = jobGetInnerWaits(t, which, key);
+    const node = document.createElement('div');
+    node.className = 'seq-wait seq-wait-inner';
+    node.draggable = true;
+    node.dataset.gap = (waits[wi] ? waits[wi].gap : 0);
+
+    const grip = document.createElement('span');
+    grip.className = 'seq-grip';
+    grip.textContent = '⠿';
+    node.appendChild(grip);
+
+    const ico = document.createElement('span');
+    ico.textContent = '⏱';
+    ico.style.cssText = 'font-size:13px;';
+    node.appendChild(ico);
+
+    const lbl = document.createElement('span');
+    lbl.textContent = '等待';
+    lbl.style.cssText = 'font-size:12px;';
+    node.appendChild(lbl);
+
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.min = '0';
+    inp.step = '0.5';
+    inp.value = waits[wi] ? waits[wi].sec : 3;
+    inp.style.cssText = 'width:56px;padding:2px 5px;border:1px solid #d0d7de;border-radius:5px;font-size:12px;';
+    inp.addEventListener('input', function () {
+        const v = Math.max(0, parseFloat(this.value) || 0);
+        const arr = jobGetInnerWaits(t, which, key);
+        if (arr[wi]) arr[wi].sec = v;
+        jobSaveLocal();
+    });
+    inp.addEventListener('click', function (e) { e.stopPropagation(); });
+    node.appendChild(inp);
+
+    const unit = document.createElement('span');
+    unit.textContent = '秒';
+    unit.style.cssText = 'font-size:11px;color:#64748b;';
+    node.appendChild(unit);
+
+    const del = document.createElement('button');
+    del.className = 'seq-del';
+    del.textContent = '✕';
+    del.title = '删除该等待节点';
+    del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        jobGetInnerWaits(t, which, key).splice(wi, 1);
+        jobSaveLocal();
+        jobRenderSeqChains();
+    });
+    node.appendChild(del);
+
+    // 拖动：在同一个槽块内部改位置
+    node.addEventListener('dragstart', function (e) {
+        seqDrag = { kind: 'innerwait', which: which, key: key, idx: wi };
+        node.classList.add('seq-dragging');
+        try { e.dataTransfer.setData('text/plain', 'innerwait'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+        e.stopPropagation();
+    });
+    node.addEventListener('dragend', function () {
+        node.classList.remove('seq-dragging');
+        seqDrag = null;
+        jobClearSeqOver();
+    });
+    return node;
+}
+
+// 构建一个槽位块（可整块拖动排序）
+function jobBuildSlotBlock(t, board, key, which, pos) {
+    const isFeed = (key === 'feed');
+    const isShovel = (key === 'shovel');
+    const slotNo = isFeed || isShovel ? null : Number(key.replace('card', ''));
+    const plantName = slotNo ? t.slots[slotNo] : null;
+    const list = jobPlacementsOf(board, key, which);   // 只看本形态的落点
+    const mode = which;                                // 块显示的是本条链的形态
+    const modeCls = (mode === 'once') ? ' m-once' : ' m-loop';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'seq-chain' + modeCls;
+    wrap.draggable = true;
+    wrap.dataset.key = key;
+    wrap.dataset.which = which;
+
+    // ---- 头部 ----
+    const head = document.createElement('div');
+    head.className = 'seq-chain-head';
+
+    const grip = document.createElement('span');
+    grip.className = 'seq-grip';
+    grip.textContent = '⠿';
+    head.appendChild(grip);
+
+    const ord = document.createElement('span');
+    ord.className = 'seq-order';
+    ord.textContent = pos + 1;
+    head.appendChild(ord);
+
+    const ico = document.createElement('span');
+    ico.className = 'seq-ico';
+    ico.textContent = isFeed ? '🫘' : (isShovel ? '🧤' : '🪴');
+    head.appendChild(ico);
+
+    const hl = document.createElement('span');
+    hl.textContent = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
+    head.appendChild(hl);
+
+    // 形态标记
+    const badge = document.createElement('span');
+    badge.className = 'seq-mode';
+    badge.textContent = jobModeLabel(mode);
+    head.appendChild(badge);
+
+    const cnt = document.createElement('span');
+    cnt.className = 'seq-count';
+    cnt.textContent = list.length + ' 个';
+    head.appendChild(cnt);
+    wrap.appendChild(head);
+
+    // ---- 主体：植物节点 + 可插在它们之间的等待节点 ----
+    const body = document.createElement('div');
+    body.className = 'seq-chain-body';
+
+    const innerWaits = jobGetInnerWaits(t, which, key);   // [{gap, sec}, ...] gap=插在第几个植物之前
+    // 按 gap 分组，便于在每个位置前插入等待
+    const waitsAt = {};
+    innerWaits.forEach(function (w, wi) {
+        const g = Math.max(0, Math.min(w.gap | 0, list.length));
+        if (!waitsAt[g]) waitsAt[g] = [];
+        waitsAt[g].push(wi);
+    });
+
+    function emitWaitsFor(gap) {
+        (waitsAt[gap] || []).forEach(function (wi) {
+            body.appendChild(jobBuildInnerWait(t, which, key, wi));
+        });
+    }
+
+    list.forEach(function (entry, i) {
+        emitWaitsFor(i);          // 先放该位置前的等待节点
+
+        const node = document.createElement('div');
+        node.className = 'seq-node';
+
+        const num = document.createElement('span');
+        // 单次的序号底色变灰（按你的要求）
+        num.className = 'seq-idx' + (which === 'once' ? ' seq-idx-once' : '');
+        num.textContent = i + 1;
+        node.appendChild(num);
+
+        if (plantName) {
+            const info = jobFindPlant(plantName) || {};
+            const th = document.createElement('span');
+            th.className = 'seq-thumb';
+            th.style.backgroundImage = 'url(static/card_bg/rare_' + (info.rare || 0) + '.webp)';
+            if (info.img) {
+                const im = document.createElement('img');
+                im.src = info.img;
+                im.alt = plantName;
+                im.onerror = function () { this.style.display = 'none'; };
+                th.appendChild(im);
+            }
+            node.appendChild(th);
+        }
+
+        const nm = document.createElement('span');
+        nm.className = 'seq-name';
+        nm.textContent = plantName || (isFeed ? '喂豆' : '铲子');
+        node.appendChild(nm);
+
+        const cellLbl = document.createElement('span');
+        cellLbl.className = 'seq-cell';
+        cellLbl.textContent = '(' + (entry.c + 1) + ',' + (entry.r + 1) + ')';
+        node.appendChild(cellLbl);
+
+        // 该动作后的等待（挂在动作上）
+        const wk = jobPlacementKey(which, key, entry.r, entry.c, entry.item.seq);
+        const wv = t.waitAfter ? t.waitAfter[wk] : null;
+        const wbtn = document.createElement('button');
+        wbtn.className = 'seq-wbtn' + (wv ? ' on' : '');
+        wbtn.textContent = wv ? ('⏱' + wv + 's') : '⏱';
+        wbtn.title = '这个动作之后等待几秒';
+        wbtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const cur = (t.waitAfter && t.waitAfter[wk]) || 0;
+            const nv = window.prompt('这个动作之后等待几秒？（0 = 不等待）', String(cur));
+            if (nv === null) return;
+            const sec = Math.max(0, parseFloat(nv) || 0);
+            if (!t.waitAfter) t.waitAfter = {};
+            if (sec > 0) t.waitAfter[wk] = sec;
+            else delete t.waitAfter[wk];
+            jobSaveLocal();
+            jobRenderSeqChains();
+        });
+        node.appendChild(wbtn);
+
+        // 在这个植物之后插入等待节点的快捷按钮
+        const addw = document.createElement('button');
+        addw.className = 'seq-wbtn';
+        addw.textContent = '＋⏱';
+        addw.title = '在这之后插入一个等待节点';
+        addw.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const arr = jobGetInnerWaits(t, which, key);
+            arr.push({ gap: i + 1, sec: 3 });
+            jobSaveLocal();
+            jobRenderSeqChains();
+        });
+        node.appendChild(addw);
+
+        body.appendChild(node);
+    });
+    emitWaitsFor(list.length);   // 末尾位置的等待
+    wrap.appendChild(body);
+
+    // ---- 整块拖拽 ----
+    wrap.addEventListener('dragstart', function (e) {
+        seqDrag = { kind: 'slot', key: key, which: which };
+        wrap.classList.add('seq-dragging');
+        try { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+        e.stopPropagation();
+    });
+    wrap.addEventListener('dragend', function () {
+        wrap.classList.remove('seq-dragging');
+        seqDrag = null;
+        jobClearSeqOver();
+    });
+    wrap.addEventListener('dragover', function (e) {
+        if (!seqDrag) return;
+        if (seqDrag.kind === 'slot' && seqDrag.which !== which) return;   // 只在自己的链里排序
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = wrap.getBoundingClientRect();
+        const below = (e.clientY - rect.top) > rect.height / 2;
+        jobClearSeqOver();
+        wrap.classList.add(below ? 'seq-over-bottom' : 'seq-over-top');
+    });
+    wrap.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!seqDrag) return;
+        const rect = wrap.getBoundingClientRect();
+        const below = (e.clientY - rect.top) > rect.height / 2;
+        const drag = seqDrag;
+        seqDrag = null;
+        jobClearSeqOver();
+        if (drag.kind === 'innerwait') {
+            // 槽块内部的等待节点：换到别的槽就移过去，同槽则保持
+            if (drag.key !== key) {
+                const from = jobGetInnerWaits(t, drag.which, drag.key);
+                const moved = from.splice(drag.idx, 1)[0];
+                if (moved) {
+                    moved.gap = 0;
+                    jobGetInnerWaits(t, which, key).push(moved);
+                }
+                jobSaveLocal();
+                jobRenderSeqChains();
+            }
+        } else if (drag.which === which && drag.key !== key) {
+            jobMoveSlotInOrder(t, drag.key, key, below, which);
+        }
+    });
+
+    // 右键：切换该槽的放置形态（单次 ↔ 循环）
+    wrap.addEventListener('contextmenu', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const nm2 = jobToggleSlotMode(t, key);
+        jobRenderSlots();
+        jobRenderSeqChains();
+        jobSaveLocal();
+        setStatus('🔄 ' + jobSlotLabel(t, key) + ' → ' + jobModeLabel(nm2));
+    });
+
+    return wrap;
+}
+
+// 把 fromKey 这个槽移动到 targetKey 之前/之后（限同一条链）
+function jobMoveSlotInOrder(t, fromKey, targetKey, after, which) {
+    which = which || 'once';
+    const order = jobGetChainOrder(t, which).slice();
+    const fi = order.indexOf(fromKey);
+    let ti = order.indexOf(targetKey);
+    if (fi === -1 || ti === -1 || fi === ti) return;
+    order.splice(fi, 1);
+    ti = order.indexOf(targetKey);
+    order.splice(after ? ti + 1 : ti, 0, fromKey);
+    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    jobSaveCurrentBoard();
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('🔗 已调整顺序：' + jobSlotLabel(t, fromKey) + (after ? ' 排到 ' : ' 排到 ') + jobSlotLabel(t, targetKey) + (after ? ' 之后' : ' 之前'));
+}
+
+function jobSlotLabel(t, key) {
+    if (key === 'feed') return '喂豆';
+    if (key === 'shovel') return '铲子';
+    const s = Number(key.replace('card', ''));
+    return '槽' + s + (t.slots[s] ? ('（' + t.slots[s] + '）') : '');
+}
+
+function jobClearSeqOver() {
+    document.querySelectorAll('.seq-chain.seq-over-top, .seq-chain.seq-over-bottom').forEach(function (el) {
+        el.classList.remove('seq-over-top', 'seq-over-bottom');
+    });
+}
+
+// ---- 右侧抽屉开关 ----
+function jobOpenSeqDrawer() {
+    const d = document.getElementById('seqDrawer');
+    const b = document.getElementById('seqBackdrop');
+    const t = document.getElementById('seqToggle');
+    if (!d) return;
+    jobRenderSeqChains();          // 打开时刷新一次，确保内容最新
+    d.classList.add('seq-open');
+    if (b) b.classList.add('seq-open');
+    if (t) t.classList.add('seq-toggle-hidden');
+    d.setAttribute('aria-hidden', 'false');
+}
+
+function jobCloseSeqDrawer() {
+    const d = document.getElementById('seqDrawer');
+    const b = document.getElementById('seqBackdrop');
+    const t = document.getElementById('seqToggle');
+    if (!d) return;
+    d.classList.remove('seq-open');
+    if (b) b.classList.remove('seq-open');
+    if (t) t.classList.remove('seq-toggle-hidden');
+    d.setAttribute('aria-hidden', 'true');
+}
+
+function jobToggleSeqDrawer() {
+    const d = document.getElementById('seqDrawer');
+    if (!d) return;
+    if (d.classList.contains('seq-open')) jobCloseSeqDrawer();
+    else jobOpenSeqDrawer();
+}
+
+function jobInitSeqDrawer() {
+    const t = document.getElementById('seqToggle');
+    const c = document.getElementById('seqClose');
+    const b = document.getElementById('seqBackdrop');
+    if (t) t.addEventListener('click', jobOpenSeqDrawer);
+    if (c) c.addEventListener('click', jobCloseSeqDrawer);
+    if (b) b.addEventListener('click', jobCloseSeqDrawer);
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        const d = document.getElementById('seqDrawer');
+        if (d && d.classList.contains('seq-open')) jobCloseSeqDrawer();
+    });
 }
 
 function jobRenderSlots() {
@@ -3594,6 +4710,7 @@ function jobRenderSlots() {
             box.appendChild(brk);
             chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
                 + (armed ? '#2d7aff' : '#fca5a5') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
+            if (armed) chip.className = 'job-slot-armed';
             const dot = document.createElement('span');
             dot.textContent = '🫘';
             dot.style.cssText = 'font-size:15px;';
@@ -3602,17 +4719,76 @@ function jobRenderSlots() {
             lbl.textContent = '喂豆';
             chip.appendChild(dot);
             chip.appendChild(lbl);
-            chip.title = '点击选中后在棋盘落子，标记喂豆位置（普通关=小关喂豆，boss关=boss喂豆）';
+            chip.title = '点击选中后在棋盘落子（右键切换单次/循环：' + jobModeLabel(jobSlotMode(t, 'feed')) + '）';
             chip.addEventListener('click', () => {
                 jobArmedSlot = (jobArmedSlot === 9) ? 0 : 9;
                 jobRenderSlots();
                 setStatus(jobArmedSlot ? '已选中「喂豆」，点击棋盘格子标记喂豆位置' : '');
             });
+            chip.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const m = jobToggleSlotMode(t, 'feed');
+                jobRenderSlots();
+                jobRenderSeqChains();
+                jobSaveLocal();
+                setStatus('🔄 喂豆 → ' + jobModeLabel(m));
+            });
+            {
+                const _fm = jobSlotMode(t, 'feed');
+                {
+                    const fb = document.createElement('span');
+                    fb.className = 'slot-mode-badge' + (_fm === 'once' ? ' is-once' : ' is-loop');
+                    fb.textContent = (_fm === 'once') ? '1×' : '⟳';
+                    fb.title = '放置形态：' + jobModeLabel(_fm) + '（右键切换）';
+                    chip.appendChild(fb);
+                }
+            }
             box.appendChild(chip);
+
+            // ---- 铲子：与喂豆同一行，选中后在棋盘落子作为标记 ----
+            const shovel = document.createElement('div');
+            const sArmed = (jobArmedSlot === 10);
+            shovel.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
+                + (sArmed ? '#2d7aff' : '#c4b5fd') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
+            if (sArmed) shovel.className = 'job-slot-armed';
+            const sDot = document.createElement('span');
+            sDot.textContent = '🧤';
+            sDot.style.cssText = 'font-size:15px;';
+            const sLbl = document.createElement('span');
+            sLbl.style.cssText = 'font-size:12px;';
+            sLbl.textContent = '铲子';
+            shovel.appendChild(sDot);
+            shovel.appendChild(sLbl);
+            shovel.title = '点击选中后在棋盘落子（右键切换单次/循环：' + jobModeLabel(jobSlotMode(t, 'shovel')) + '）';
+            shovel.addEventListener('click', () => {
+                jobArmedSlot = (jobArmedSlot === 10) ? 0 : 10;
+                jobRenderSlots();
+                setStatus(jobArmedSlot ? '已选中「铲子」，点击棋盘格子标记铲除位置' : '');
+            });
+            shovel.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const m = jobToggleSlotMode(t, 'shovel');
+                jobRenderSlots();
+                jobRenderSeqChains();
+                jobSaveLocal();
+                setStatus('🔄 铲子 → ' + jobModeLabel(m));
+            });
+            {
+                const _sm = jobSlotMode(t, 'shovel');
+                {
+                    const sb = document.createElement('span');
+                    sb.className = 'slot-mode-badge' + (_sm === 'once' ? ' is-once' : ' is-loop');
+                    sb.textContent = (_sm === 'once') ? '1×' : '⟳';
+                    sb.title = '放置形态：' + jobModeLabel(_sm) + '（右键切换）';
+                    shovel.appendChild(sb);
+                }
+            }
+            box.appendChild(shovel);
             continue;
         }
         chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
             + (armed ? '#2d7aff' : '#d0d7de') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
+        if (armed) chip.className = 'job-slot-armed';
 
         const frame = document.createElement('span');
         frame.style.cssText = 'position:relative;width:30px;height:30px;flex:0 0 30px;background-size:100% 100%;background-repeat:no-repeat;'
@@ -3637,7 +4813,32 @@ function jobRenderSlots() {
         chip.appendChild(frame);
         chip.appendChild(label);
         chip.appendChild(edit);
-        chip.title = name ? ('点击选中后在棋盘落子：' + name) : '点击选择植物';
+
+        // 清空按钮（原来右键清空，现在右键让位给「切换形态」）
+        const clr = document.createElement('span');
+        clr.textContent = '✕';
+        clr.title = '清空该槽位';
+        clr.style.cssText = 'font-size:11px;color:#ef4444;padding:0 2px;';
+        clr.addEventListener('click', (e) => {
+            e.stopPropagation();
+            t.slots[i] = '';
+            if (jobArmedSlot === i) jobArmedSlot = 0;
+            jobRenderSlots();
+            jobSaveLocal();
+        });
+        chip.appendChild(clr);
+
+        // 形态角标：单次（灰）/ 循环（蓝）
+        const _mode = jobSlotMode(t, jobSlotKeyOf(i));
+        {
+            const mb = document.createElement('span');
+            mb.className = 'slot-mode-badge' + (_mode === 'once' ? ' is-once' : ' is-loop');
+            mb.textContent = (_mode === 'once') ? '1×' : '⟳';
+            mb.title = '放置形态：' + jobModeLabel(_mode) + '（右键切换）';
+            chip.appendChild(mb);
+        }
+
+        chip.title = name ? ('点击选中后在棋盘落子：' + name + '　|　右键切换单次/循环：' + jobModeLabel(_mode)) : '点击选择植物';
         chip.addEventListener('click', () => {
             if (!name) { jobOpenPicker(i); return; }
             jobArmedSlot = (jobArmedSlot === i) ? 0 : i;
@@ -3645,12 +4846,14 @@ function jobRenderSlots() {
             const st = document.getElementById('jobStatus');
             if (st) st.textContent = jobArmedSlot ? ('已选中 槽' + i + '（' + name + '），点击棋盘格子落子') : '';
         });
+        // 右键：切换单次 / 循环 / 单次+循环
         chip.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            t.slots[i] = '';
-            if (jobArmedSlot === i) jobArmedSlot = 0;
+            const m = jobToggleSlotMode(t, jobSlotKeyOf(i));
             jobRenderSlots();
+            jobRenderSeqChains();
             jobSaveLocal();
+            setStatus('🔄 槽' + i + '（' + (name || '未设置') + '）→ ' + jobModeLabel(m));
         });
         box.appendChild(chip);
     }
@@ -3672,24 +4875,91 @@ async function jobLoadPlants() {
 function jobOpenPicker(slot) {
     currentSlotEditing = slot;
     const modal = document.getElementById('plantPicker');
-    modal.style.display = 'flex';
     document.getElementById('plantSearch').value = '';
     plantPickIndex = 0;
     jobRenderRarityFilter();
     jobRenderPlantGrid();
+    // 入场动画：先加类再显示（重排一次确保动画重新触发）
+    modal.classList.remove('job-open');
+    modal.style.display = 'flex';
+    void modal.offsetWidth;
+    modal.classList.add('job-open');
 }
 
 function jobClosePicker() {
-    document.getElementById('plantPicker').style.display = 'none';
+    const modal = document.getElementById('plantPicker');
+    modal.classList.remove('job-open');
+    modal.style.display = 'none';
+    jobHideCellDetail();
 }
 
 // ---- 卡槽品质过滤（rare_0=白 1=绿 2=蓝 3=紫 4=橙）----
-const PLANT_RARITY_TABS = ['全部', '橙', '紫', '蓝', '绿', '白'];
+const PLANT_RARITY_TABS = ['全部', '收藏', '橙', '紫', '蓝', '绿', '白'];
 const RARITY_TO_RARE = { '橙': 4, '紫': 3, '蓝': 2, '绿': 1, '白': 0 };
 let plantRarityFilter = '全部';
 let plantPickList = [];     // 当前筛选后的植物列表（供 W/S 切换）
 let plantPickIndex = 0;    // 当前高亮项
 let plantPickAvailable = [];   // 当前可选项索引（排除已被其它槽位占用的植物）
+
+// ---- 右键收藏（存 localStorage，刷新不丢）----
+const PLANT_FAV_KEY = 'maapvz_plant_favs_v1';
+let plantFavs = new Set();
+
+function jobLoadFavs() {
+    try {
+        const raw = localStorage.getItem(PLANT_FAV_KEY);
+        if (raw) plantFavs = new Set(JSON.parse(raw));
+    } catch (e) { plantFavs = new Set(); }
+}
+
+function jobSaveFavs() {
+    try { localStorage.setItem(PLANT_FAV_KEY, JSON.stringify(Array.from(plantFavs))); } catch (e) {}
+}
+
+// 以英文名为主键（中文名可能重名/改写），无英文名时退回中文名
+function jobFavKey(p) { return p.en || p.name; }
+function jobIsFav(p) { return plantFavs.has(jobFavKey(p)); }
+
+function jobToggleFav(p) {
+    const k = jobFavKey(p);
+    const nowFav = !plantFavs.has(k);
+    if (nowFav) plantFavs.add(k);
+    else plantFavs.delete(k);
+    jobSaveFavs();
+    setStatus(nowFav ? ('♥ 已收藏「' + p.name + '」') : ('已取消收藏「' + p.name + '」'));
+    // 只更新这一张卡的心形，不整页重渲染（避免闪一下 + 入场动画重播）
+    jobRefreshFavMark(p, nowFav);
+    return nowFav;
+}
+
+// 就地切换某张卡的收藏标记：不动其它 DOM，无闪烁
+function jobRefreshFavMark(p, isFav) {
+    const grid = document.getElementById('plantGrid');
+    if (!grid) return;
+    const idx = (plantPickList || []).indexOf(p);
+    if (idx < 0) return;
+    const card = grid.children[idx];
+    if (!card) return;
+    const frame = card.firstElementChild;
+    if (!frame) return;
+    const old = frame.querySelector('.job-fav-heart');
+    if (isFav && !old) {
+        frame.appendChild(jobBuildHeart());
+    } else if (!isFav && old) {
+        old.remove();
+    }
+    card.title = (p.name + '（' + (p.rarity || '?') + '卡）')
+        + '\u2003右键' + (isFav ? '取消收藏' : '收藏');
+}
+
+// 卡槽下边框中央的心形（宽度约占卡片 1/4，压在下边框上）
+function jobBuildHeart() {
+    const heart = document.createElement('span');
+    heart.className = 'job-fav-heart';
+    heart.textContent = '♥';
+    return heart;
+}
+
 
 function jobRenderRarityFilter() {
     const box = document.getElementById('plantRarityFilter');
@@ -3767,8 +5037,14 @@ function jobRenderPlantGrid() {
         const hitKw = !kw
             || (p.name || '').toLowerCase().includes(kw)
             || (p.en || '').toLowerCase().includes(kw);
-        const hitRarity = (plantRarityFilter === '全部') || (p.rarity === plantRarityFilter);
+        const hitRarity = (plantRarityFilter === '全部') || (p.rarity === plantRarityFilter)
+            || (plantRarityFilter === '收藏' && jobIsFav(p));
         return hitKw && hitRarity;
+    });
+    // 收藏项排最前（同组内保持原顺序）
+    list.sort(function (a, b) {
+        const fa = jobIsFav(a) ? 0 : 1, fb = jobIsFav(b) ? 0 : 1;
+        return fa - fb;
     });
     plantPickList = list;
     // 1~8 槽不允许重复：算出已被其它槽位占用的植物
@@ -3797,12 +5073,15 @@ function jobRenderPlantGrid() {
     list.forEach((p, idx) => {
         const dupSlot = usedBy[p.name] || 0;
         const cell = document.createElement('div');
-        cell.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px;'
+        cell.className = 'job-card';
+        cell.style.animationDelay = Math.min(idx, 20) * 9 + 'ms';   // 错峰入场（不超过 20 项）
+        cell.style.cssText += 'display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px;'
             + (dupSlot ? 'cursor:not-allowed;opacity:0.38;' : 'cursor:pointer;')
             + (!dupSlot && idx === plantPickIndex ? 'outline:3px solid #2d7aff;outline-offset:2px;background:#eff6ff;' : '');
-        cell.title = dupSlot
+        cell.title = (dupSlot
             ? (p.name + '（已被 槽' + dupSlot + ' 使用，不能重复选择）')
-            : (p.name + '（' + (p.rarity || '?') + '卡）');
+            : (p.name + '（' + (p.rarity || '?') + '卡）'))
+            + '\u2003右键' + (jobIsFav(p) ? '取消收藏' : '收藏');
 
         // 品质底图铺底（网页端铺，不改图）
         const rare = (typeof p.rare === 'number') ? p.rare : (RARITY_TO_RARE[p.rarity] || 0);
@@ -3823,6 +5102,10 @@ function jobRenderPlantGrid() {
             badge.style.cssText = 'position:absolute;right:2px;top:2px;background:#ef4444;color:#fff;font-size:9px;line-height:14px;border-radius:4px;padding:0 4px;z-index:2;';
             frame.appendChild(badge);
         }
+        // ♥ 收藏标记（下边框中央，被边框"咬断"）
+        if (jobIsFav(p)) {
+            frame.appendChild(jobBuildHeart());
+        }
 
         const nm = document.createElement('span');
         nm.textContent = p.name;
@@ -3834,8 +5117,40 @@ function jobRenderPlantGrid() {
             plantPickIndex = idx;
             jobConfirmPick();
         });
+        // 右键收藏 / 取消收藏
+        cell.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            jobToggleFav(p);
+        });
         grid.appendChild(cell);
     });
+}
+
+// 导出种植顺序：先按槽号，再按槽内序号（每个槽各自从 1 开始）
+function jobExtractSequence(board, slots) {
+    const out = [];
+    if (!board) return out;
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(item => {
+                const m = /^card(\d+)$/.exec(item.id || '');
+                out.push({
+                    slot: m ? Number(m[1]) : null,          // 植物槽号；feed/shovel 无槽号
+                    order: (typeof item.seq === 'number') ? item.seq : 9999,   // 槽内序号
+                    type: item.type,
+                    label: item.label || item.id,
+                    cell: `格子${c + 1}_${r + 1}`
+                });
+            });
+        }
+    }
+    out.sort((a, b) => {
+        const sa = (a.slot === null) ? 99 : a.slot;
+        const sb = (b.slot === null) ? 99 : b.slot;
+        if (sa !== sb) return sa - sb;
+        return a.order - b.order;
+    });
+    return out;
 }
 
 // ---- 导出 / 保存 ----
@@ -3990,6 +5305,20 @@ function jobLoadLocal() {
             for (let i = 1; i <= 8; i++) if (t.slots[i] === undefined) t.slots[i] = '';
             if (!Array.isArray(t.boardEarly)) t.boardEarly = [];
             if (!Array.isArray(t.boardLate)) t.boardLate = [];
+            if (!Array.isArray(t.slotOrder)) t.slotOrder = null;   // 旧数据：用默认槽号顺序
+            if (!Array.isArray(t.loopOrder)) t.loopOrder = null;
+            if (!t.slotModes || typeof t.slotModes !== 'object') t.slotModes = {};
+            // 缺失的槽一律按默认「循环」
+            for (let s = 1; s <= 8; s++) {
+                const k = 'card' + s;
+                if (!t.slotModes[k]) t.slotModes[k] = 'loop';
+            }
+            if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
+            if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+            if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
+            if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {} };
+            if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
+            if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
         });
         const m = data.meta || {};
         const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
@@ -4023,6 +5352,7 @@ function jobInit() {
     const restored = jobLoadLocal();
     if (!restored) jobNewTable();
     jobLoadTable(currentTable, true);   // skipSave：避免用空棋盘覆盖已恢复的数据
+    jobLoadFavs();                      // 恢复右键收藏（localStorage）
     jobRenderSlots();
     jobLoadPlants().then(function () {
         jobRenderSlots();                 // 头像需要 plantCache，加载完成后再渲染一次
@@ -4044,8 +5374,9 @@ function jobInit() {
         jobLoadTable(currentTable);
         jobSaveLocal();
     });
-    ['tfFromLevel','tfToLevel','tfLineupMode','tfDeckNo','tfLoopPlant','tfOncePlant','tfInheritBoss','tfWaveEnabled'].forEach(id => {
+    ['tfFromLevel','tfToLevel','tfLineupMode','tfDeckNo'].forEach(id => {
         const el = document.getElementById(id);
+        if (!el) return;
         el.addEventListener('input', jobSyncForm);
         el.addEventListener('change', jobSyncForm);
     });
@@ -4059,6 +5390,8 @@ function jobInit() {
     }
     document.getElementById('jobSaveBtn').addEventListener('click', jobSave);
     document.getElementById('jobUseBtn').addEventListener('click', jobUse);
+    jobInitSeqDrawer();   // 右侧「种植顺序」抽屉
+    jobRenderSeqChains();
     document.getElementById('plantPickerClose').addEventListener('click', jobClosePicker);
     document.getElementById('plantSearch').addEventListener('input', jobRenderPlantGrid);
     document.getElementById('plantPicker').addEventListener('click', (e) => {
