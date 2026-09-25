@@ -94,6 +94,55 @@ def save_job():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 
+@app.route('/load_job', methods=['GET'])
+def load_job():
+    """读取单个作业集的完整 JSON（供网页「选择作业集」把内容载回棋盘）"""
+    code = str(request.args.get('code', '')).strip()
+    if not code or not re.fullmatch(r'[A-Za-z0-9_-]+', code):
+        return jsonify({'status': 'error', 'msg': '作业集代码不合法'}), 400
+    ensure_jobs_dir()
+    path = os.path.join(JOBS_DIR, code + '.json')
+    if not os.path.exists(path):
+        return jsonify({'status': 'error', 'msg': '作业集不存在: ' + code}), 404
+    try:
+        with open(path, encoding='utf-8') as f:
+            job = json.load(f)
+        return jsonify({'status': 'success', 'job': job})
+    except Exception as e:
+        return jsonify({'status': 'error', 'msg': str(e)}), 500
+
+
+@app.route('/delete_job', methods=['POST'])
+def delete_job():
+    """删除 jobs/<code>.json；若它正是 current，则一并把 current 清掉"""
+    try:
+        data = request.get_json()
+        code = str(data.get('code', '')).strip()
+        if not code or not re.fullmatch(r'[A-Za-z0-9_-]+', code):
+            return jsonify({'status': 'error', 'msg': '作业集代码不合法'}), 400
+        ensure_jobs_dir()
+        path = os.path.join(JOBS_DIR, code + '.json')
+        if not os.path.exists(path):
+            return jsonify({'status': 'error', 'msg': '作业集不存在: ' + code}), 404
+        os.remove(path)
+        # 若删掉的正是「当前作业集」，清空 current.json，避免指向不存在的文件
+        cur_path = os.path.join(JOBS_DIR, 'current.json')
+        cleared = False
+        if os.path.exists(cur_path):
+            try:
+                with open(cur_path, encoding='utf-8') as f:
+                    if str(json.load(f).get('code', '')) == code:
+                        with open(cur_path, 'w', encoding='utf-8') as w:
+                            json.dump({'code': ''}, w, ensure_ascii=False)
+                        cleared = True
+            except Exception:
+                pass
+        msg = '已删除作业集 ' + code + ('（同时清空当前作业集）' if cleared else '')
+        return jsonify({'status': 'success', 'msg': msg})
+    except Exception as e:
+        return jsonify({'status': 'error', 'msg': str(e)}), 500
+
+
 @app.route('/set_current_job', methods=['POST'])
 def set_current_job():
     """写 jobs/current.json = {"code": ...}（供 agent「使用本地作业集」读取）"""

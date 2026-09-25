@@ -164,6 +164,37 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 }
 .seq-chain-head .seq-ico { font-size:14px; }
 .seq-chain-head .seq-count { margin-left:auto; font-weight:400; font-size:11px; color:#94a3b8; }
+/* 拆分 / 合并按钮 */
+.seq-chain-head .seq-split {
+    width:18px; height:18px; border:1px solid #e2e8f0; border-radius:5px;
+    background:#fff; color:#64748b; font-size:10px; line-height:1;
+    cursor:pointer; padding:0; flex:0 0 auto;
+}
+.seq-chain-head .seq-split:hover { border-color:#2d7aff; color:#2d7aff; background:#f8fbff; }
+/* 「拖出」按钮：勾选后出现 */
+.seq-chain-head .seq-pull {
+    width:auto; padding:0 7px; height:18px; font-size:10px; font-weight:700;
+    background:#2d7aff; border-color:#2d7aff; color:#fff;
+}
+.seq-chain-head .seq-pull:hover { background:#1f66e0; border-color:#1f66e0; color:#fff; }
+/* 单株前面的勾选框 */
+.seq-node .seq-pick {
+    width:13px; height:13px; margin:0 2px 0 0; flex:0 0 13px;
+    cursor:pointer; accent-color:#2d7aff;
+}
+.seq-node[draggable="true"] { cursor:grab; }
+.seq-node[draggable="true"]:active { cursor:grabbing; }
+
+/* 阵容表的关卡区间显示（两端只读，中间那个数字可改） */
+.tf-range-edge {
+    display:inline-block; min-width:34px; text-align:center;
+    padding:2px 8px; border-radius:6px;
+    background:#f1f5f9; color:#475569;
+    font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;
+}
+#tfBoundary {
+    font-weight:700; color:#1d4ed8; border-color:#93c5fd; background:#f8fbff;
+}
 .seq-chain-body { padding:5px 6px; display:flex; flex-direction:column; gap:4px; }
 .seq-node {
     display:flex; align-items:center; gap:6px;
@@ -468,30 +499,23 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 <div class="app">
     <h1>🧩 无尽通用框架-可视化编辑界面</h1>
     <div class="toolbar">
-        <label>配置名称 <input type="text" id="configName" value="无尽_前后期" style="width:140px;" data-tooltip="JSON 中的 InstanceName 字段"></label>
-        <label>文件名 <input type="text" id="fileName" value="无尽_前后期" style="width:140px;" data-tooltip="下载的文件名（不含 .json）"></label>
-        <label>控制器 <input type="text" id="controllerName" value="安卓端" style="width:100px;" data-tooltip="控制器名称，对应 CurrentControllerName"></label>
-        <label>资源 <input type="text" id="resourceName" value="PVZ_2_国服通用" style="width:120px;" data-tooltip="资源名称（当前强制为空）"></label>
-        <label>入口 <input type="text" id="taskEntry" value="无尽挑战_前置检查" style="width:140px;" data-tooltip="任务入口节点"></label>
-        <button class="btn btn-primary" id="exportBtn" data-tooltip="导出配置为 JSON 文件">📥 导出 JSON</button>
-        <button class="btn btn-success" id="loadDefaultBtn" data-tooltip="重置所有配置到默认状态">↺ 默认选项</button>
-        <button class="btn" id="copyBtn" data-tooltip="复制预览区 JSON 到剪贴板">📋 复制</button>
-        <button class="btn" id="importBtn" data-tooltip="从 JSON 文件导入配置">📂 导入 JSON</button>
         <button class="btn" id="undoBtn" data-tooltip="'ctrl+z'撤销上一步棋盘操作">↩ 撤销</button>
         <button class="btn" id="redoBtn" data-tooltip="'ctrl+y'重做棋盘操作">↪ 重做</button>
-        <input type="file" id="importFileInput" accept=".json,application/json" style="display:none;">
     </div>
 
     <!-- ====== 作业集编辑器（JobSet）====== -->
     <div id="jobsetPanel" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:14px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
             <b style="font-size:14px;">📚 作业集</b>
-            <label style="font-size:12px;">代码 <input type="text" id="jobCode" placeholder="PVZ-001" style="width:90px;"></label>
-            <label style="font-size:12px;">名称 <input type="text" id="jobName" placeholder="三段阵容" style="width:110px;"></label>
-            <label style="font-size:12px;">版本 <input type="text" id="jobVersion" value="1.0" style="width:50px;"></label>
-            <label style="font-size:12px;">最大关卡 <input type="number" id="jobMaxLevel" value="149" min="1" max="149" style="width:70px;"></label>
-            <button class="btn btn-success" id="jobSaveBtn">💾 保存作业集</button>
-            <button class="btn btn-primary" id="jobUseBtn">✓ 使用这个作业集</button>
+            <label style="font-size:12px;">选择作业集
+                <select id="jobSelect" style="min-width:190px;max-width:260px;">
+                    <option value="">— 请选择 —</option>
+                </select>
+            </label>
+            <button class="btn btn-success" id="jobSaveBtn">💾 保存此作业集</button>
+            <button class="btn btn-danger" id="jobDeleteBtn">🗑 删除作业集</button>
+            <button class="btn btn-primary" id="jobDownloadBtn">⬇ 下载远程作业集</button>
+            <button class="btn" id="jobRefreshBtn" title="重新读取本地作业集列表">↻</button>
             <span id="jobStatus" style="color:#22a65e;font-size:13px;"></span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
@@ -499,22 +523,31 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
             <div id="jobWorlds" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;border-top:1px solid #e2e8f0;padding-top:8px;">
-            <b style="font-size:13px;">行为表：</b>
+            <b style="font-size:13px;">阵容表：</b>
             <div id="jobTableTabs" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;"></div>
-            <button class="btn" id="jobAddTable">＋ 新建表</button>
-            <button class="btn btn-danger" id="jobDelTable">× 删除表</button>
+            <button class="btn" id="jobAddTable">＋ 新建阵容</button>
+            <button class="btn btn-danger" id="jobDelTable">× 删除阵容</button>
         </div>
         <div id="jobTableForm" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
-            <label style="font-size:12px;">起始关 <input type="number" id="tfFromLevel" value="1" min="1" max="149" style="width:55px;"></label>
-            <label style="font-size:12px;">结束关 <input type="text" id="tfToLevel" placeholder="空=直到换阵" style="width:80px;"></label>
-            <label style="font-size:12px;">换阵
+            <span style="font-size:12px;color:#64748b;">关卡区间：</span>
+            <span id="tfRangeFrom" class="tf-range-edge" title="起始关（由上一段决定，不可直接改）">1</span>
+            <span style="font-size:12px;color:#94a3b8;">–</span>
+            <span id="tfRangeTo" class="tf-range-edge" title="结束关（由下一段决定，不可直接改）">149</span>
+            <span style="font-size:11px;color:#94a3b8;">（只改中间的数字，两边同时跟着变）</span>
+
+            <label style="font-size:12px;margin-left:8px;">转阵容关
+                <input type="number" id="tfBoundary" min="2" max="149" style="width:62px;"
+                       title="本阵容的结束关 = 下一阵容的起始关；像关键帧一样改一处两边同步">
+            </label>
+            <span id="tfBoundaryHint" style="font-size:11px;color:#94a3b8;"></span>
+
+            <label style="font-size:12px;margin-left:8px;">换阵
                 <select id="tfLineupMode" style="max-width:90px;">
                     <option value="plants">选卡</option>
                     <option value="deck">编队</option>
                 </select>
             </label>
             <span id="tfDeckBox" style="display:none;"><label style="font-size:12px;">编队号 <input type="number" id="tfDeckNo" min="1" max="6" style="width:45px;"></label></span>
-            <span style="font-size:11px;color:#94a3b8;">（喂豆位置：点「喂豆」后在棋盘落子标记）</span>
         </div>
     </div>
     <!-- 植物选择器弹层 -->
@@ -1495,8 +1528,11 @@ function renderOps(phase) {
     latePatch.innerHTML = ''; lateShovel.innerHTML = ''; lateFeed.innerHTML = ''; lateBossFeed.innerHTML = '';
     lateFlower.innerHTML = ''; lateBossFlower.innerHTML = ''; lateMagic.innerHTML = '';
 
-    document.getElementById('opEarlySection').style.display = (phase === 'early') ? 'block' : 'none';
-    document.getElementById('opLateSection').style.display = (phase === 'late') ? 'block' : 'none';
+    // 面板已移除 → 空值保护（不要直接 .style，缺元素会抛错中断后续逻辑）
+    const _opES = document.getElementById('opEarlySection');
+    if (_opES) _opES.style.display = (phase === 'early') ? 'block' : 'none';
+    const _opLS = document.getElementById('opLateSection');
+    if (_opLS) _opLS.style.display = (phase === 'late') ? 'block' : 'none';
 
     EARLY_CARDS.forEach(op => { const el = createOpElement(op); earlyCards.appendChild(el); });
     EARLY_GUARD.forEach(op => { const el = createOpElement(op); earlyGuard.appendChild(el); });
@@ -2307,8 +2343,9 @@ function clearBoard(isLate) {
 function resizeBoards() {
     if (!document.getElementById('colN') || !document.getElementById('rowN')) return;   // 棋盘尺寸控件已移除
     saveBoardState();
-    const nc = Math.max(1, Math.min(9, parseInt(document.getElementById('colN').value) || 9));
-    const nr = Math.max(1, Math.min(5, parseInt(document.getElementById('rowN').value) || 5));
+    const _cn = document.getElementById('colN'), _rn = document.getElementById('rowN');
+    const nc = Math.max(1, Math.min(9, parseInt((_cn && _cn.value) || '') || 9));
+    const nr = Math.max(1, Math.min(5, parseInt((_rn && _rn.value) || '') || 5));
     const oldEarly = boardEarly, oldLate = boardLate;
     const newEarly = [], newLate = [];
     for (let r=0; r<nr; r++) {
@@ -3063,9 +3100,15 @@ currentValues['自定义布阵'] = shouldEnableCustom ? { index: 1 } : { index: 
     };
 
     // ===== 7. 构建最终实例 =====
-    const instanceName = document.getElementById('configName').value.trim() || "无尽_前后期";
-    const controller = document.getElementById('controllerName').value.trim() || "安卓端";
-    const entry = document.getElementById('taskEntry').value.trim() || "无尽挑战_前置检查";
+    // 旧的「配置名称/控制器/入口」输入框已随旧工具栏移除 → 必须做空值保护，
+    // 否则 buildFullInstance 会在 updatePreview 里抛错，中断整个 onload（后面所有绑定失效）
+    const _val = function (id, dflt) {
+        const el = document.getElementById(id);
+        return (el && typeof el.value === 'string') ? (el.value.trim() || dflt) : dflt;
+    };
+    const instanceName = _val('configName', "无尽_前后期");
+    const controller = _val('controllerName', "安卓端");
+    const entry = _val('taskEntry', "无尽挑战_前置检查");
 
     return {
         "CurrentControllerName": controller,
@@ -3115,10 +3158,14 @@ function importFromJSONText(jsonText) {
     // 重置 currentValues 为默认
     initDefaultValues();
 
-    // 填充基本字段
-    document.getElementById('configName').value = data.InstanceName || '';
-    document.getElementById('controllerName').value = data.CurrentControllerName || '';
-    document.getElementById('taskEntry').value = (data.TaskItems?.[0]?.entry) || '';
+    // 填充基本字段（旧输入框已移除 → 空值保护）
+    const _setv = function (id, v) {
+        const el = document.getElementById(id);
+        if (el) el.value = v;
+    };
+    _setv('configName', data.InstanceName || '');
+    _setv('controllerName', data.CurrentControllerName || '');
+    _setv('taskEntry', (data.TaskItems && data.TaskItems[0] && data.TaskItems[0].entry) || '');
 
     // 查找无尽模式的 option 树：遍历 TaskItems，找到包含 '无尽模式' 选项的任务项
     let optionTree = null;
@@ -3514,7 +3561,8 @@ function showExportNoteModal(onYes, onNo) {
 
 function exportJSON() {
     const data = buildFullInstance();
-    const name = document.getElementById('fileName').value.trim() || data.InstanceName || "无尽配置";
+    const _fn = document.getElementById('fileName');
+    const name = (_fn && _fn.value.trim()) || data.InstanceName || "无尽配置";
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -3919,11 +3967,14 @@ window.onload = function() {
         });
     }
 
-    // 导入按钮事件
-    document.getElementById('importBtn').addEventListener('click', function() {
-        document.getElementById('importFileInput').click();
+    // 导入按钮事件（导入/导出/复制等旧工具栏按钮已移除，保留空值保护）
+    const _impBtn = document.getElementById('importBtn');
+    if (_impBtn) _impBtn.addEventListener('click', function() {
+        const f = document.getElementById('importFileInput');
+        if (f) f.click();
     });
-    document.getElementById('importFileInput').addEventListener('change', function(e) {
+    const _impFile = document.getElementById('importFileInput');
+    if (_impFile) _impFile.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
@@ -3935,17 +3986,23 @@ window.onload = function() {
     });
 
     // 撤销/重做按钮
-    document.getElementById('undoBtn').addEventListener('click', undoBoard);
-    document.getElementById('redoBtn').addEventListener('click', redoBoard);
+    const _undo = document.getElementById('undoBtn');
+    if (_undo) _undo.addEventListener('click', undoBoard);
+    const _redo = document.getElementById('redoBtn');
+    if (_redo) _redo.addEventListener('click', redoBoard);
 
-    // 其他按钮
-    document.getElementById('exportBtn').addEventListener('click', exportJSON);
-    document.getElementById('loadDefaultBtn').addEventListener('click', loadDefaults);
-    document.getElementById('copyBtn').addEventListener('click', copyPreview);
-    // 重置/尺寸按钮已移除（棋盘尺寸固定 9×5）
+    // 旧工具栏的 导出/默认选项/复制 已移除；对应的输入框也没了，
+    // 这里一律补空值保护，避免任何一个缺失元素中断 onload（后面所有绑定都会失效）
+    const _exp = document.getElementById('exportBtn');
+    if (_exp) _exp.addEventListener('click', exportJSON);
+    const _def = document.getElementById('loadDefaultBtn');
+    if (_def) _def.addEventListener('click', loadDefaults);
+    const _cp = document.getElementById('copyBtn');
+    if (_cp) _cp.addEventListener('click', copyPreview);
 
     ['configName','controllerName','resourceName','taskEntry'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updatePreview);
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updatePreview);
     });
 
     currentValues['无尽模式'] = { index: 1 };
@@ -4022,45 +4079,160 @@ function jobLoadTable(idx, skipSave) {
     if (!skipSave) jobSaveCurrentBoard();        // 先把旧表棋盘存回去
     currentTable = idx;
     const t = jobTables[idx];
-    boardEarly = t.boardEarly.length ? JSON.parse(JSON.stringify(t.boardEarly)) : Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []));
-    boardLate = t.boardLate.length ? JSON.parse(JSON.stringify(t.boardLate)) : Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []));
+    boardEarly = jobBoardOrBlank(t.boardEarly);
+    boardLate = jobBoardOrBlank(t.boardLate);
     renderAllBoards();
     jobFillForm();
     jobRenderTabs();
     jobRenderSlots();
 }
 
+// 用存档棋盘，结构不对时退化为空白棋盘（不能只看 .length：空棋盘也是合法数据）
+function jobBoardOrBlank(saved) {
+    const blank = function () {
+        return Array.from({ length: rows }, function () {
+            return Array.from({ length: cols }, function () { return []; });
+        });
+    };
+    if (!Array.isArray(saved) || saved.length !== rows) return blank();
+    for (let r = 0; r < rows; r++) {
+        if (!Array.isArray(saved[r]) || saved[r].length !== cols) return blank();
+    }
+    return JSON.parse(JSON.stringify(saved));
+}
+
+// ============================================================
+// 关卡链：表1 从 1 开始；表N 从表N-1 的结束关开始（线性推进）
+// ============================================================
+// 阵容表：关卡区间由「相邻阵容之间的一个转阵容关」决定（像关键帧）
+//   阵容1 = 1 → B1，阵容2 = B1 → B2，……，最后一个阵容 = B(n-1) → MAX
+//   中间那个数字（B）同时是「上一阵容的结束关」和「下一阵容的起始关」，
+//   所以改一处，两边同步变。
+// ============================================================
+const JOB_MAX_LEVEL = 149;
+
+// 取某个阵容的区间 [from, to)
+function jobRangeOfTable(i) {
+    const n = jobTables.length;
+    let from = 1;
+    if (i > 0) {
+        const p = Number(jobTables[i - 1].to_level);
+        from = (p > 0) ? p : 1;
+    }
+    let to;
+    if (i < n - 1) {
+        const c = Number(jobTables[i].to_level);
+        to = (c > 0) ? c : JOB_MAX_LEVEL;
+    } else {
+        to = JOB_MAX_LEVEL;      // 最后一个阵容一直到最大关卡
+    }
+    return { from: from, to: to };
+}
+
+// 删表/新增/改数字后统一重算所有区间，保证首尾相接、不越界
+function jobRenumberTables() {
+    if (!jobTables.length) return;
+    for (let i = 0; i < jobTables.length; i++) {
+        if (i === 0) {
+            jobTables[i].from_level = 1;
+        } else {
+            const prevTo = Number(jobTables[i - 1].to_level);
+            jobTables[i].from_level = (prevTo > 0) ? prevTo : 1;
+        }
+        if (i === jobTables.length - 1) {
+            // 最后一个阵容没有「转阵容关」→ 一直到最后
+            jobTables[i].to_level = '';
+        } else {
+            let v = Number(jobTables[i].to_level);
+            const lo = Number(jobTables[i].from_level) + 1;          // 至少比起始关大 1
+            if (!(v > 0)) v = Math.min(JOB_MAX_LEVEL, lo);           // 没设就用最小合法值
+            if (v < lo) v = lo;
+            if (v > JOB_MAX_LEVEL) v = JOB_MAX_LEVEL;
+            jobTables[i].to_level = String(v);
+        }
+    }
+}
+
 function jobFillForm() {
     const t = jobTables[currentTable];
     if (!t) return;
-    document.getElementById('tfFromLevel').value = t.from_level;
-    document.getElementById('tfToLevel').value = t.to_level;
-    document.getElementById('tfLineupMode').value = t.lineupMode;
-    document.getElementById('tfDeckNo').value = t.deckNo;
-    // 四个复选框（循环补种/每关只补一遍/沿用上一张boss/点波启用）已从表单移除，改为数据字段
-    document.getElementById('tfDeckBox').style.display = t.lineupMode === 'deck' ? 'inline-flex' : 'none';
+    const r = jobRangeOfTable(currentTable);
+    const isLast = (currentTable === jobTables.length - 1);
+
+    const elFrom = document.getElementById('tfRangeFrom');
+    const elTo = document.getElementById('tfRangeTo');
+    if (elFrom) elFrom.textContent = r.from;
+    if (elTo) elTo.textContent = isLast ? (r.to + '（到最后）') : r.to;
+
+    // 中间那个「转阵容关」：最后一个阵容没有
+    const bd = document.getElementById('tfBoundary');
+    const hint = document.getElementById('tfBoundaryHint');
+    if (bd) {
+        bd.style.display = isLast ? 'none' : '';
+        if (!isLast) {
+            bd.value = Number(t.to_level) || '';
+            bd.min = String(r.from + 1);
+            bd.max = String(JOB_MAX_LEVEL);
+        }
+    }
+    if (hint) {
+        hint.textContent = isLast
+            ? '（最后一个阵容，一直执行到最大关卡）'
+            : ('改这个数字 → 阵容' + (currentTable + 1) + ' 的起始关同步变成它');
+    }
+
+    const lm = document.getElementById('tfLineupMode');
+    if (lm) lm.value = t.lineupMode;
+    const dn = document.getElementById('tfDeckNo');
+    if (dn) dn.value = t.deckNo;
+    const dbx = document.getElementById('tfDeckBox');
+    if (dbx) dbx.style.display = t.lineupMode === 'deck' ? 'inline-flex' : 'none';
 }
 
 function jobSyncForm() {
     const t = jobTables[currentTable];
     if (!t) return;
-    t.from_level = Math.max(1, parseInt(document.getElementById('tfFromLevel').value) || 1);
-    t.to_level = document.getElementById('tfToLevel').value.trim();
-    t.lineupMode = document.getElementById('tfLineupMode').value;
-    t.deckNo = Math.max(1, parseInt(document.getElementById('tfDeckNo').value) || 1);
-    // 四个复选框已移除：loopPlant/oncePlant/inheritBoss/waveEnabled 保留为数据字段，值不再由表单驱动
+    // 关卡不在表单里直接改（由 jobRenumberTables + 转阵容关输入框负责）
+    const lm = document.getElementById('tfLineupMode');
+    if (lm) t.lineupMode = lm.value;
+    const dn = document.getElementById('tfDeckNo');
+    if (dn) t.deckNo = Math.max(1, parseInt(dn.value) || 1);
     jobRenderTabs();
+}
+
+// 改「转阵容关」：像关键帧一样，只改这一个数，两边同时生效
+function jobSetBoundary(v) {
+    const t = jobTables[currentTable];
+    if (!t) return;
+    if (currentTable >= jobTables.length - 1) return;   // 最后一个阵容没有转阵容关
+
+    const r = jobRangeOfTable(currentTable);
+    let n = parseInt(v);
+    const lo = r.from + 1;
+    if (!(n > 0)) { jobFillForm(); return; }             // 空值 → 还原显示，不写入
+    if (n < lo) n = lo;
+    if (n > JOB_MAX_LEVEL) n = JOB_MAX_LEVEL;
+
+    t.to_level = String(n);
+    jobRenumberTables();          // 重算全部区间（本阵容结束关 = 下一阵容起始关）
+    jobRenderTabs();
+    jobFillForm();
+    jobSaveLocal();
+    setStatus('🔀 阵容' + (currentTable + 1) + ' 结束关 = 阵容' + (currentTable + 2) + ' 起始关 = ' + n);
 }
 
 function jobRenderTabs() {
     const box = document.getElementById('jobTableTabs');
+    if (!box) return;
     box.innerHTML = '';
-    jobTables.forEach((t, i) => {
+    jobTables.forEach(function (t, i) {
+        const r = jobRangeOfTable(i);
         const el = document.createElement('span');
         el.style.cssText = 'padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;user-select:none;'
             + (i === currentTable ? 'background:#2d7aff;color:#fff;' : 'background:#e9ecf0;color:#333;');
-        el.textContent = `表${i + 1}(${t.from_level}→${t.to_level || '∞'})`;
-        el.addEventListener('click', () => jobLoadTable(i));
+        el.textContent = '阵容' + (i + 1) + '（' + r.from + '-' + r.to + '）';
+        el.title = '关卡 ' + r.from + ' ~ ' + r.to;
+        el.addEventListener('click', function () { jobLoadTable(i); });
         box.appendChild(el);
     });
 }
@@ -4161,7 +4333,8 @@ function jobEnsureSeq(board) {
 // 种植顺序链条：拖动整块，决定「先种哪个槽」
 // 顺序存放在 t.slotOrder（该表专属），运行时按此顺序执行
 // ============================================================
-let seqDrag = null;   // { slotKey } 正在拖动的槽
+let seqDrag = null;   // { kind, key, which, ... } 正在拖动的槽 / 等待 / 单株
+let jobSeqSel = {};   // 顺序链里勾选的落点：{ 'once:card1#3': {key,gidx,which}, ... }（用于批量拖出）
 
 // 一个槽的稳定标识：植物槽是 'card<N>'，另外两条是 'feed' / 'shovel'
 function jobSlotKeyOf(s) { return (s === 'feed' || s === 'shovel') ? s : ('card' + s); }
@@ -4224,15 +4397,66 @@ function jobModeLabel(m) { return (m === 'once') ? '单次' : '循环'; }
 // 棋盘落点的形态：item.mode（'once' | 'loop'）
 function jobItemMode(it) { return (it && it.mode === 'once') ? 'once' : 'loop'; }
 
-// 取得某条链的槽位顺序（缺失/新增的自动补到末尾）
+// 取得某条链的顺序。每一段是 {key, from, to}：
+//   key  = 槽位键（card1 / feed / shovel）
+//   from = 从该槽的第几个落点开始（0 起算）
+//   to   = 到第几个落点为止（不含）；null = 到最后
+// 支持同一个槽在链里出现多次 —— 这样才能把「槽1 的 2 株」拆成两块，
+// 中间插进别的槽（例如：种槽1 → 喂豆 → 再种槽1）。
 function jobGetChainOrder(t, which) {
     const field = (which === 'loop') ? 'loopOrder' : 'slotOrder';
     const all = jobAllSlotKeys();
-    let order = Array.isArray(t[field]) ? t[field].filter(k => all.indexOf(k) !== -1) : [];
-    order = order.filter((k, i) => order.indexOf(k) === i);
-    all.forEach(function (k) { if (order.indexOf(k) === -1) order.push(k); });
-    t[field] = order;
-    return order;
+    let raw = Array.isArray(t[field]) ? t[field] : [];
+
+    // 兼容旧数据：以前存的是裸键名字符串数组 → 转成 {key, from:0, to:null}
+    let segs = raw.map(function (e) {
+        if (typeof e === 'string') return { key: e, from: 0, to: null };
+        if (e && typeof e === 'object' && e.key) {
+            const o = {
+                key: String(e.key),
+                from: e.from | 0,
+                to: (e.to === null || e.to === undefined) ? null : (e.to | 0)
+            };
+            if (Array.isArray(e.picked) && e.picked.length) o.picked = e.picked.map(Number);
+            return o;
+        }
+        return null;
+    }).filter(function (e) { return e && all.indexOf(e.key) !== -1; });
+
+    // 补齐：每个槽至少要有一段；没有任何段的槽补到末尾
+    all.forEach(function (k) {
+        if (!segs.some(function (s) { return s.key === k; })) segs.push({ key: k, from: 0, to: null });
+    });
+
+    t[field] = segs;
+    return segs;
+}
+
+// 该槽在这一段里包含哪些落点。每项带 gidx = 它在「本槽全部落点」里的真实下标。
+// picked 存在时用它（融合/拆出的块可能是若干不连续的株），否则用 [from, to) 区间。
+function jobSegPlacements(board, seg, which) {
+    const all = jobPlacementsOf(board, seg.key, which);
+    let idxs;
+    if (Array.isArray(seg.picked) && seg.picked.length) {
+        idxs = seg.picked.slice();
+    } else if (seg.from === 0 && (seg.to === null || seg.to === undefined)) {
+        idxs = all.map(function (_, i) { return i; });
+    } else {
+        const to = (seg.to === null || seg.to === undefined) ? all.length : seg.to;
+        idxs = [];
+        for (let g = (seg.from | 0); g < to; g++) idxs.push(g);
+    }
+    return idxs.map(function (g) {
+        const e = all[g];
+        if (!e) return null;
+        // 把真实下标挂在返回项上：调用方不必再靠 seg.from + i 去猜（融合后下标不连续）
+        return { r: e.r, c: e.c, item: e.item, gidx: g };
+    }).filter(Boolean);
+}
+
+// 某槽在链里分成了几段（用于判断是否已被拆开）
+function jobSegCountFor(t, which, key) {
+    return jobGetChainOrder(t, which).filter(function (s) { return s.key === key; }).length;
 }
 
 // 兼容旧调用
@@ -4284,15 +4508,14 @@ function jobRenderSeqChains() {
 // 渲染一条链（which = 'once' | 'loop'）
 function jobRenderOneChain(box, t, board, which) {
     const isLoop = (which === 'loop');
-    const order = jobGetChainOrder(t, which);
+    const segs = jobGetChainOrder(t, which);
 
-    // 每条链列出「在该形态下真正落过子」的槽。
-    // 注意：不能用 jobSlotMode 判断归属 —— 形态是落子时记录的，改成单次/循环只影响新落子，
-    // 已经放到棋盘上的落点仍属于它当初的形态。
-    const visible = order.filter(function (key) {
-        if (key === 'feed' || key === 'shovel') return jobPlacementsOf(board, key, which).length > 0;
-        const s = Number(key.replace('card', ''));
-        return !!t.slots[s] && jobPlacementsOf(board, key, which).length > 0;
+    // 每条链列出「在该形态下真正落过子」的段。
+    // 同一个槽可以被拆成多段（例如 种槽1 → 喂豆 → 再种槽1），所以按段过滤而非按槽去重。
+    const visible = segs.filter(function (seg) {
+        if (seg.key === 'feed' || seg.key === 'shovel') return jobSegPlacements(board, seg, which).length > 0;
+        const s = Number(String(seg.key).replace('card', ''));
+        return !!t.slots[s] && jobSegPlacements(board, seg, which).length > 0;
     });
 
     // 链头
@@ -4317,9 +4540,9 @@ function jobRenderOneChain(box, t, board, which) {
     listBox.className = 'seq-list';
     sec.appendChild(listBox);
 
-    // 槽块顺序渲染；等待节点可以插在「槽块之间」，也可以插在「槽块内部的植物之间」
-    visible.forEach(function (key, pos) {
-        listBox.appendChild(jobBuildSlotBlock(t, board, key, which, pos));
+    // 逐段渲染；同一槽的多段各自是独立块，可在链里任意穿插
+    visible.forEach(function (seg, pos) {
+        listBox.appendChild(jobBuildSlotBlock(t, board, seg, which, pos, visible));
     });
 }
 
@@ -4407,14 +4630,17 @@ function jobBuildInnerWait(t, which, key, wi) {
     return node;
 }
 
-// 构建一个槽位块（可整块拖动排序）
-function jobBuildSlotBlock(t, board, key, which, pos) {
+// 构建一个槽位块（可整块拖动排序）。seg = {key, from, to}
+function jobBuildSlotBlock(t, board, seg, which, pos, visible) {
+    const key = seg.key;
     const isFeed = (key === 'feed');
     const isShovel = (key === 'shovel');
-    const slotNo = isFeed || isShovel ? null : Number(key.replace('card', ''));
+    const slotNo = isFeed || isShovel ? null : Number(String(key).replace('card', ''));
     const plantName = slotNo ? t.slots[slotNo] : null;
-    const list = jobPlacementsOf(board, key, which);   // 只看本形态的落点
-    const mode = which;                                // 块显示的是本条链的形态
+    const allOfSlot = jobPlacementsOf(board, key, which);       // 该槽本形态的全部落点
+    const list = jobSegPlacements(board, seg, which);           // 本段包含的落点
+    const segCount = jobSegCountFor(t, which, key);             // 该槽被拆成了几段
+    const mode = which;                                         // 块显示的是本条链的形态
     const modeCls = (mode === 'once') ? ' m-once' : ' m-loop';
 
     const wrap = document.createElement('div');
@@ -4422,6 +4648,8 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
     wrap.draggable = true;
     wrap.dataset.key = key;
     wrap.dataset.which = which;
+    wrap.dataset.segFrom = seg.from;
+    wrap.dataset.segTo = (seg.to === null || seg.to === undefined) ? '' : seg.to;
 
     // ---- 头部 ----
     const head = document.createElement('div');
@@ -4443,7 +4671,9 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
     head.appendChild(ico);
 
     const hl = document.createElement('span');
-    hl.textContent = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
+    let title = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
+    if (segCount > 1) title += ' (第' + (seg.from + 1) + '~' + (seg.from + list.length) + '株)';
+    hl.textContent = title;
     head.appendChild(hl);
 
     // 形态标记
@@ -4456,13 +4686,33 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
     cnt.className = 'seq-count';
     cnt.textContent = list.length + ' 个';
     head.appendChild(cnt);
+
+    // 勾选本槽若干株后：拖到同槽其它块 = 融合；拖到其它槽 = 变成独立块（不融合）
+    const selPrefix = which + ':' + key + '#';
+    const selHere = Object.keys(jobSeqSel || {}).filter(function (k) {
+        return k.indexOf(selPrefix) === 0;
+    });
+    if (selHere.length >= 1) {
+        const out = document.createElement('button');
+        out.className = 'seq-split';
+        out.textContent = '⇱ 拖出 ' + selHere.length;
+        out.title = '把这 ' + selHere.length + ' 株变成独立块（然后拖到链里任意位置）';
+        out.addEventListener('click', function (e) {
+            e.stopPropagation();
+            jobPullPicked(t, which, key);
+        });
+        head.appendChild(out);
+    }
     wrap.appendChild(head);
 
     // ---- 主体：植物节点 + 可插在它们之间的等待节点 ----
     const body = document.createElement('div');
     body.className = 'seq-chain-body';
 
-    const innerWaits = jobGetInnerWaits(t, which, key);   // [{gap, sec}, ...] gap=插在第几个植物之前
+    // 等待槽内的 gap 是「段内」的下标；同一槽被拆成多段时用 key@from 区分，
+    // 否则两块会共用同一组等待位置而互相干扰。
+    const _wkey = key + '@' + (seg.from | 0);
+    const innerWaits = jobGetInnerWaits(t, which, _wkey);   // [{gap, sec}, ...] gap=插在第几个植物之前
     // 按 gap 分组，便于在每个位置前插入等待
     const waitsAt = {};
     innerWaits.forEach(function (w, wi) {
@@ -4473,7 +4723,7 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
 
     function emitWaitsFor(gap) {
         (waitsAt[gap] || []).forEach(function (wi) {
-            body.appendChild(jobBuildInnerWait(t, which, key, wi));
+            body.appendChild(jobBuildInnerWait(t, which, _wkey, wi));
         });
     }
 
@@ -4482,9 +4732,28 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
 
         const node = document.createElement('div');
         node.className = 'seq-node';
+        // ★ 用落点自带的真实下标（seg.from + i 在融合块里会重复 → 勾选会串号）
+        const gIdx = (typeof entry.gidx === 'number') ? entry.gidx : (seg.from + i);
+        node.dataset.gidx = gIdx;
+
+        // 勾选框：勾选同一个槽的若干株后，点块头「⇲ 融合」并成一块
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.className = 'seq-pick';
+        cb.checked = !!(jobSeqSel && jobSeqSel[which + ':' + key + '#' + gIdx]);
+        cb.title = '勾选本槽的若干株后，点块头「⇲ 融合」可并成同一个块';
+        cb.addEventListener('click', function (e) { e.stopPropagation(); });
+        cb.addEventListener('change', function (e) {
+            e.stopPropagation();
+            if (!jobSeqSel) jobSeqSel = {};
+            const k = which + ':' + key + '#' + gIdx;
+            if (this.checked) jobSeqSel[k] = { key: key, gidx: gIdx, which: which };
+            else delete jobSeqSel[k];
+            jobRenderSeqChains();
+        });
+        node.appendChild(cb);
 
         const num = document.createElement('span');
-        // 单次的序号底色变灰（按你的要求）
         num.className = 'seq-idx' + (which === 'once' ? ' seq-idx-once' : '');
         num.textContent = i + 1;
         node.appendChild(num);
@@ -4542,12 +4811,33 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
         addw.title = '在这之后插入一个等待节点';
         addw.addEventListener('click', function (e) {
             e.stopPropagation();
-            const arr = jobGetInnerWaits(t, which, key);
+            const arr = jobGetInnerWaits(t, which, _wkey);
             arr.push({ gap: i + 1, sec: 3 });
             jobSaveLocal();
             jobRenderSeqChains();
         });
         node.appendChild(addw);
+
+        // 整株拖拽：拖到别的块上 → 把它（或所有勾选的）变独立块插到那里
+        node.draggable = true;
+        node.addEventListener('dragstart', function (e) {
+            const picked = Object.keys(jobSeqSel || {})
+                .filter(function (k) { return k.indexOf(which + ':' + key + '#') === 0; })
+                .map(function (k) { return parseInt(k.split('#')[1], 10); })
+                .filter(function (n) { return !isNaN(n); });
+            seqDrag = {
+                kind: 'plant', key: key, which: which,
+                gidxs: picked.length ? picked : [gIdx]
+            };
+            node.classList.add('seq-dragging');
+            try { e.dataTransfer.setData('text/plain', 'plant'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+            e.stopPropagation();
+        });
+        node.addEventListener('dragend', function () {
+            node.classList.remove('seq-dragging');
+            seqDrag = null;
+            jobClearSeqOver();
+        });
 
         body.appendChild(node);
     });
@@ -4556,7 +4846,7 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
 
     // ---- 整块拖拽 ----
     wrap.addEventListener('dragstart', function (e) {
-        seqDrag = { kind: 'slot', key: key, which: which };
+        seqDrag = { kind: 'slot', key: key, which: which, seg: seg };   // 记录是哪一段（整段对象）
         wrap.classList.add('seq-dragging');
         try { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
         e.stopPropagation();
@@ -4569,6 +4859,7 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
     wrap.addEventListener('dragover', function (e) {
         if (!seqDrag) return;
         if (seqDrag.kind === 'slot' && seqDrag.which !== which) return;   // 只在自己的链里排序
+        if (seqDrag.kind === 'plant' && seqDrag.which !== which) return;
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
@@ -4598,8 +4889,17 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
                 jobSaveLocal();
                 jobRenderSeqChains();
             }
-        } else if (drag.which === which && drag.key !== key) {
-            jobMoveSlotInOrder(t, drag.key, key, below, which);
+        } else if (drag.kind === 'plant') {
+            // 拖出的植物 → 变成独立块，插到目标块之前/之后
+            jobDropPlantsAsBlock(t, which, drag, seg, below);
+        } else if (drag.which === which) {
+            // 整块拖动：若拖的是「拆出来的块」且目标块是同槽的 → 融合；否则仅排序
+            if (drag.seg && seg && drag.seg.key === seg.key &&
+                !jobSameSeg(drag.seg, seg)) {
+                jobMergeSegs(t, which, drag.seg, seg);
+            } else {
+                jobMoveSegInOrder(t, drag.seg, seg, below, which);
+            }
         }
     });
 
@@ -4617,16 +4917,229 @@ function jobBuildSlotBlock(t, board, key, which, pos) {
     return wrap;
 }
 
-// 把 fromKey 这个槽移动到 targetKey 之前/之后（限同一条链）
+// 拖出：把勾选的若干株变成独立块（插在本槽现有块的后面），之后可拖到链里任意位置
+function jobPullPicked(t, which, key) {
+    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
+    const total = jobPlacementsOf(board, key, which).length;
+
+    const picked = Object.keys(jobSeqSel || {})
+        .filter(function (k) { return k.indexOf(which + ':' + key + '#') === 0; })
+        .map(function (k) { return parseInt(k.split('#')[1], 10); })
+        .filter(function (n) { return !isNaN(n) && n >= 0 && n < total; })
+        .sort(function (a, b) { return a - b; });
+    if (!picked.length) return;
+
+    const take = {};
+    picked.forEach(function (g) { take[g] = true; });
+
+    const order = jobGetChainOrder(t, which);
+
+    // 找出包含被勾选株的段
+    const affected = [];
+    order.forEach(function (s, i) {
+        if (s.key !== key) return;
+        const sf = s.from | 0;
+        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+        const mine = Array.isArray(s.picked) ? s.picked : null;
+        const hits = mine
+            ? mine.filter(function (g) { return take[g]; }).length
+            : picked.filter(function (g) { return g >= sf && g < st; }).length;
+        if (hits) affected.push({ i: i, seg: s, mine: mine });
+    });
+    if (!affected.length) return;
+
+    // 每个受影响段里「没被拖出的株」保持成一个块（中间被抽走不要裂成多块）
+    const repl = {};
+    affected.forEach(function (a) {
+        const s = a.seg;
+        const sf = s.from | 0;
+        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+        const keep = [];
+        if (a.mine) {
+            a.mine.forEach(function (g) { if (!take[g]) keep.push(g); });
+        } else {
+            for (let g = sf; g < st; g++) if (!take[g]) keep.push(g);
+        }
+        keep.sort(function (x, y) { return x - y; });
+        if (!keep.length) { repl[a.i] = []; return; }
+        let contiguous = true;
+        for (let k = 1; k < keep.length; k++) {
+            if (keep[k] !== keep[k - 1] + 1) { contiguous = false; break; }
+        }
+        if (contiguous) {
+            repl[a.i] = [{ key: key, from: keep[0], to: keep[keep.length - 1] + 1 }];
+        } else {
+            repl[a.i] = [{ key: key, from: -1, to: -1, picked: keep.slice() }];
+        }
+    });
+
+    // 重建链：受影响段换成剩余段，拖出的株作为新块插在最后一个受影响段之后
+    const lastAffected = affected[affected.length - 1].i;
+    const rebuilt = [];
+    order.forEach(function (s, i) {
+        if (i in repl) {
+            repl[i].forEach(function (r) { rebuilt.push(r); });
+            if (i === lastAffected) rebuilt.push({ key: key, from: -1, to: -1, picked: picked.slice() });
+            return;
+        }
+        rebuilt.push(s);
+    });
+
+    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = rebuilt;
+
+    jobSeqSel = {};
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('⇱ 已拖出 ' + picked.length + ' 株成为独立块（可拖到链里其他位置）');
+}
+
+// 把拖出的植物作为一个新块插到目标段之前/之后（拖出 = 变成独立块）
+function jobDropPlantsAsBlock(t, which, drag, targetSeg, after) {
+    const picked = (drag.gidxs || []).slice().sort(function (a, b) { return a - b; });
+    if (!picked.length) return;
+
+    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
+    const total = jobPlacementsOf(board, drag.key, which).length;
+    const take = {};
+    picked.forEach(function (g) { if (g >= 0 && g < total) take[g] = true; });
+    const taken = Object.keys(take).map(Number).sort(function (a, b) { return a - b; });
+    if (!taken.length) return;
+
+    const order = jobGetChainOrder(t, which).slice();
+
+    // 找出包含被拖株的段
+    const affected = [];
+    order.forEach(function (s, i) {
+        if (s.key !== drag.key) return;
+        const sf = s.from | 0;
+        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+        const mine = Array.isArray(s.picked) ? s.picked : null;
+        const hits = mine
+            ? mine.filter(function (g) { return take[g]; }).length
+            : taken.filter(function (g) { return g >= sf && g < st; }).length;
+        if (hits) affected.push({ i: i, seg: s, mine: mine });
+    });
+    if (!affected.length) return;
+
+    // 剩余株（受影响段里没被拖走的）—— 保持成「一个块」，不要因中间被抽走而裂成多块
+    const repl = {};
+    affected.forEach(function (a) {
+        const s = a.seg;
+        const sf = s.from | 0;
+        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+        const keep = [];
+        if (a.mine) a.mine.forEach(function (g) { if (!take[g]) keep.push(g); });
+        else for (let g = sf; g < st; g++) if (!take[g]) keep.push(g);
+        keep.sort(function (x, y) { return x - y; });
+        if (!keep.length) { repl[a.i] = []; return; }
+        // 判断是否连续：连续就保留 from/to；有空洞就用 picked 合并成一个块
+        let contiguous = true;
+        for (let k = 1; k < keep.length; k++) {
+            if (keep[k] !== keep[k - 1] + 1) { contiguous = false; break; }
+        }
+        if (contiguous) {
+            repl[a.i] = [{ key: drag.key, from: keep[0], to: keep[keep.length - 1] + 1 }];
+        } else {
+            repl[a.i] = [{ key: drag.key, from: -1, to: -1, picked: keep.slice() }];
+        }
+    });
+
+    // 先重建（受影响段换成剩余段）
+    const mid = [];
+    order.forEach(function (s, i) {
+        if (i in repl) { repl[i].forEach(function (r) { mid.push(r); }); return; }
+        mid.push(s);
+    });
+    // 再把新块插到目标段附近
+    let ti = mid.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
+    if (ti === -1) ti = mid.length - 1;
+    mid.splice(after ? ti + 1 : ti, 0, { key: drag.key, from: -1, to: -1, picked: taken });
+
+    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = mid;
+
+    jobSeqSel = {};
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('⇱ 已把 ' + taken.length + ' 株变成独立块并插入到指定位置');
+}
+
+// 把某一段移动到目标段之前/之后（限同一条链）
+// 段身份用 key + picked/from 指纹判断：融合块的 from 是 -1、不唯一，不能只靠 from
+function jobSegFingerprint(s) {
+    if (!s) return '';
+    return s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
+         + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '');
+}
+function jobSameSeg(a, b) { return a === b || (!!a && !!b && jobSegFingerprint(a) === jobSegFingerprint(b)); }
+
+function jobMoveSegInOrder(t, fromSeg, targetSeg, after, which) {
+    which = which || 'once';
+    const order = jobGetChainOrder(t, which).slice();
+    const src = order.findIndex(function (s) { return jobSameSeg(s, fromSeg); });
+    const ti = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
+    if (src === -1 || ti === -1 || src === ti) return;
+    const moved = order.splice(src, 1)[0];
+    let t2 = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
+    if (t2 === -1) t2 = order.length - 1;
+    order.splice(after ? t2 + 1 : t2, 0, moved);
+    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    jobSaveCurrentBoard();
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('🔗 已调整顺序');
+}
+
+// 把两个同槽的段并成一个块（拖整块「拖回」= 融合）
+function jobMergeSegs(t, which, fromSeg, targetSeg) {
+    const order = jobGetChainOrder(t, which).slice();
+    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
+    const key = fromSeg.key;
+
+    function segGidxs(s) {
+        const total = jobPlacementsOf(board, key, which).length;
+        const out = [];
+        if (Array.isArray(s.picked) && s.picked.length) return s.picked.slice();
+        const sf = s.from | 0;
+        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+        for (let g = sf; g < st; g++) out.push(g);
+        return out;
+    }
+
+    const srcIdx = order.findIndex(function (s) { return jobSameSeg(s, fromSeg); });
+    const tgtIdx = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
+    if (srcIdx === -1 || tgtIdx === -1 || srcIdx === tgtIdx) return;
+
+    const union = {};
+    segGidxs(order[srcIdx]).forEach(function (g) { union[g] = true; });
+    segGidxs(order[tgtIdx]).forEach(function (g) { union[g] = true; });
+    const merged = Object.keys(union).map(Number).sort(function (a, b) { return a - b; });
+    if (!merged.length) return;
+
+    const mergedSeg = { key: key, from: -1, to: -1, picked: merged };
+
+    // 用融合块替换「靠前」那个段，删掉另一个段
+    const lo = Math.min(srcIdx, tgtIdx);
+    const hi = Math.max(srcIdx, tgtIdx);
+    order.splice(lo, 1, mergedSeg);
+    order.splice(hi, 1);
+
+    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    jobSaveCurrentBoard();
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('🔗 已把两块融合成一个块');
+}
+
+// 旧接口保留（按槽名移动，取该槽第一段）
 function jobMoveSlotInOrder(t, fromKey, targetKey, after, which) {
     which = which || 'once';
     const order = jobGetChainOrder(t, which).slice();
-    const fi = order.indexOf(fromKey);
-    let ti = order.indexOf(targetKey);
+    const fi = order.findIndex(function (s) { return s.key === fromKey; });
+    const ti = order.findIndex(function (s) { return s.key === targetKey; });
     if (fi === -1 || ti === -1 || fi === ti) return;
-    order.splice(fi, 1);
-    ti = order.indexOf(targetKey);
-    order.splice(after ? ti + 1 : ti, 0, fromKey);
+    const moved = order.splice(fi, 1)[0];
+    let t2 = order.findIndex(function (s) { return s.key === targetKey; });
+    order.splice(after ? t2 + 1 : t2, 0, moved);
     t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
     jobSaveCurrentBoard();
     jobSaveLocal();
@@ -5201,34 +5714,87 @@ function jobBuild() {
             to_level: t.to_level === '' ? null : Number(t.to_level),
             lineup: t.lineupMode === 'deck' ? { plants: [], deck: String(t.deckNo) } : { plants, deck: null },
             slots: { ...t.slots },
+
+            // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
+            // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢
+            slotModes: Object.assign({}, t.slotModes || {}),
+            slotOrder: Array.isArray(t.slotOrder) ? t.slotOrder.slice() : null,
+            loopOrder: Array.isArray(t.loopOrder) ? t.loopOrder.slice() : null,
+            waitAfter: Object.assign({}, t.waitAfter || {}),
+            innerWaits: JSON.parse(JSON.stringify(t.innerWaits || { once: {}, loop: {} })),
+
+            // ---- 棋盘本体（必须导出！否则保存后载入/切换作业集时阵容全丢）----
+            boardEarly: JSON.parse(JSON.stringify(t.boardEarly || [])),
+            boardLate: JSON.parse(JSON.stringify(t.boardLate || [])),
+
             non_boss: {
                 plant: jobExtractPlantOps(t.boardEarly, t.slots),
                 feed: jobExtractCells(t.boardEarly, 'feed'),
+                shovel: jobExtractCells(t.boardEarly, 'shovel'),
                 wave: t.waveEnabled === true,
                 loop: t.loopPlant,
-                once: t.oncePlant
+                once: t.oncePlant,
+                sequence: jobExtractSequence(t.boardEarly, t.slots)
             },
             boss: {
                 plant: jobExtractPlantOps(bossBoard, t.slots),
                 feed: jobExtractCells(bossBoard, 'feed'),
-                wave: t.waveEnabled === true
+                shovel: jobExtractCells(bossBoard, 'shovel'),
+                wave: t.waveEnabled === true,
+                sequence: jobExtractSequence(bossBoard, t.slots)
             }
         };
     });
     return {
-        code: document.getElementById('jobCode').value.trim(),
-        name: document.getElementById('jobName').value.trim(),
-        version: document.getElementById('jobVersion').value.trim() || '1.0',
+        code: jobCurrentCode(),
+        name: jobCurrentName(),
+        version: '1.0',            // 版本不再让用户填，固定 1.0
         worlds,
-        max_level: parseInt(document.getElementById('jobMaxLevel').value) || 149,
+        max_level: 149,            // 最大关卡固定 149
         tables
     };
 }
 
+// 当前作业集的名字：输入框已移除，改由下拉里选中的项 / 本地缓存记录
+let jobMeta = { code: '', name: '' };
+
+function jobCurrentName() { return (jobMeta.name || '').trim(); }
+
+// 由名字推导一个「文件系统安全」的 code（后端要求仅字母数字_-）
+// 中文名无法直接做文件名，所以：有中文/符号时用时间戳兜底，纯英文名则清洗后直接用
+function jobCodeFromName(name) {
+    const raw = (name || '').trim();
+    if (!raw) return '';
+    const ascii = raw.replace(/[^A-Za-z0-9_-]/g, '');
+    if (ascii && /^[A-Za-z0-9_-]+$/.test(ascii) && ascii.length >= 2) return ascii;
+    // 含中文等非 ASCII：用 pvz_ + 时间戳，保证唯一且合法
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return 'pvz_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate())
+         + '_' + pad(d.getHours()) + pad(d.getMinutes()) + pad(d.getSeconds());
+}
+
+function jobCurrentCode() {
+    if (jobMeta.code) return jobMeta.code;
+    return jobCodeFromName(jobMeta.name);
+}
+
 async function jobSave() {
+    const msg = document.getElementById('jobStatus');
+    // 名字必填：保存前问用户
+    let name = jobCurrentName();
+    const input = window.prompt('为这个作业集取一个名字吧', name || '');
+    if (input === null) return;               // 取消
+    name = String(input).trim();
+    if (!name) { if (msg) { msg.textContent = '❌ 名字不能为空'; msg.style.color = '#dc2626'; } return; }
+
+    // 名字变了 → code 要跟着变（除非是已下载的远程作业集，它有自己的 code）
+    if (name !== jobMeta.name) {
+        jobMeta.name = name;
+        jobMeta.code = jobCodeFromName(name);
+    }
     const job = jobBuild();
-    if (!job.code) { alert('请填写作业集代码'); return; }
-    var msg = document.getElementById('jobStatus');
+    if (!job.code) { if (msg) { msg.textContent = '❌ 无法生成作业集代码'; msg.style.color = '#dc2626'; } return; }
     try {
         const res = await fetch('/save_job', {
             method: 'POST',
@@ -5236,31 +5802,249 @@ async function jobSave() {
             body: JSON.stringify(job)
         });
         const data = await res.json();
-        msg.textContent = data.msg || (data.status === 'success' ? '已保存' : '保存失败');
-        msg.style.color = data.status === 'success' ? '#22a65e' : '#dc2626';
+        if (msg) {
+            msg.textContent = data.status === 'success' ? ('✅ 已保存「' + name + '」') : ('❌ ' + (data.msg || '保存失败'));
+            msg.style.color = data.status === 'success' ? '#22a65e' : '#dc2626';
+        }
+        if (data.status === 'success') {
+            await jobLoadList(job.code);          // 保存后加入下拉栏并选中
+            await jobSetCurrent(job.code);        // 同时设为当前（供 agent 使用）
+            jobSaveLocal();
+        }
     } catch (e) {
-        msg.textContent = '❌ 保存失败：' + e;
-        msg.style.color = '#dc2626';
+        if (msg) { msg.textContent = '❌ 保存失败：' + e; msg.style.color = '#dc2626'; }
     }
 }
 
-async function jobUse() {
-    const code = document.getElementById('jobCode').value.trim();
-    var msg = document.getElementById('jobStatus');
-    if (!code) { alert('请先填写作业集代码'); return; }
+// 设为当前作业集（Endless_ref.json 的「使用本地作业集」据此读取）
+async function jobSetCurrent(code) {
     try {
-        await jobSave();
-        const res = await fetch('/set_current_job', {
+        await fetch('/set_current_job', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code })
+            body: JSON.stringify({ code: code || '' })
+        });
+    } catch (e) { console.warn('[jobset] 设为当前失败', e); }
+}
+
+// ============================================================
+// 作业集下拉栏：列出本地作业集 / 载入某个作业集 / 下载远程作业集
+// ============================================================
+
+// ⚠️ 远程作业集来源（GitPages）。留空 = 未配置，点下载会提示。
+const JOB_REMOTE_BASE = '';
+
+async function jobLoadList(selectCode) {
+    const sel = document.getElementById('jobSelect');
+    if (!sel) return;
+    // selectCode 明确给了什么就用什么（包括 '' = 请选择）；
+    // 只有「完全没传参」时才沿用当前选中项 / 句柄里的 current。
+    const hasArg = (selectCode !== undefined);
+    const keep = hasArg ? String(selectCode || '') : (sel.value || '');
+    let current = keep;
+    try {
+        const res = await fetch('/list_jobs');
+        const data = await res.json();
+        const jobs = (data && data.jobs) || [];
+        // 仅在「没传参且下拉本来就是空的」时才回退到服务器 current，
+        // 否则会把你手动选的「— 请选择 —」又弹回上一个作业集（残留 bug）
+        if (!hasArg && !keep && data && data.current) current = data.current;
+
+        sel.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = jobs.length ? '— 请选择 —' : '（本地还没有作业集）';
+        sel.appendChild(ph);
+
+        jobs.forEach(function (j) {
+            const op = document.createElement('option');
+            op.value = j.code;
+            op.textContent = (j.name || j.code) + (j.current ? ' ★当前' : '');
+            sel.appendChild(op);
+        });
+        sel.value = (current && jobs.some(function (j) { return j.code === current; })) ? current : '';
+    } catch (e) {
+        console.warn('[jobset] 读取作业集列表失败', e);
+    }
+}
+
+// 选中下拉项 → 载入该作业集到棋盘，并设为当前（供 Endless_ref.json 使用）
+// 选中「— 请选择 —」（空值）→ 清空编辑器，避免上一个作业集残留在场上
+async function jobOnSelect() {
+    const sel = document.getElementById('jobSelect');
+    const code = sel ? sel.value : '';
+    const msg = document.getElementById('jobStatus');
+
+    if (!code) {                       // ★ 切到「请选择」= 清空所有设置
+        jobResetEditor();
+        await jobSetCurrent('');
+        if (msg) { msg.textContent = '已清空（未选择作业集）'; msg.style.color = '#94a3b8'; }
+        return;
+    }
+
+    try {
+        const res = await fetch('/load_job?code=' + encodeURIComponent(code));
+        const data = await res.json();
+        if (data.status !== 'success' || !data.job) {
+            if (msg) { msg.textContent = '❌ ' + (data.msg || '载入失败'); msg.style.color = '#dc2626'; }
+            return;
+        }
+        // 先整体清空，再装载 —— 避免新作业集没有的字段沿用上一个作业集的残留
+        jobResetEditor(true);
+        jobApplyLoaded(data.job, code);
+        await jobSetCurrent(code);
+        await jobLoadList(code);
+        if (msg) { msg.textContent = '✅ 已载入「' + (jobMeta.name || code) + '」'; msg.style.color = '#22a65e'; }
+    } catch (e) {
+        if (msg) { msg.textContent = '❌ 载入失败：' + e; msg.style.color = '#dc2626'; }
+    }
+}
+
+// 清空编辑器到「空白作业集」状态（并写进本地缓存，刷新后依然是空白）
+// quiet=true 时不清 localStorage（供「载入前先清空」用，随后会由 jobApplyLoaded 覆盖）
+function jobResetEditor(quiet) {
+    jobMeta.code = '';
+    jobMeta.name = '';
+    jobArmedSlot = 0;
+    currentSlotEditing = -1;
+    jobLastDrop = null;
+    currentTable = 0;
+
+    jobTables = [];
+    jobNewTable();                     // 建一张干净的空白表
+    jobRenumberTables();
+
+    // 世界复选框全不勾
+    document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = false; });
+    // 阵容表表单恢复默认（关卡区间由 jobRenumberTables 统一算，不在表单里）
+    const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
+    set('tfLineupMode', 'plants'); set('tfDeckNo', '1');
+    const bd0 = document.getElementById('tfBoundary');
+    if (bd0) bd0.value = '';
+
+    boardEarly = jobBoardOrBlank([]);
+    boardLate = jobBoardOrBlank([]);
+
+    jobLoadTable(0, true);
+    jobRenderTabs();
+    jobRenderSlots();
+    jobRenderSeqChains();
+    jobHideCellDetail();
+
+    if (!quiet) jobSaveLocal();        // 把「空白配置」写进缓存
+}
+
+// 把一份作业集数据装进编辑器
+function jobApplyLoaded(job, code) {
+    jobMeta.code = code || job.code || '';
+    jobMeta.name = job.name || '';
+    jobTables = Array.isArray(job.tables) ? job.tables : [];
+    jobTables.forEach(function (t) {
+        if (!t.slots) t.slots = {};
+        for (let i = 1; i <= 8; i++) if (t.slots[i] === undefined) t.slots[i] = '';
+        if (!Array.isArray(t.boardEarly)) t.boardEarly = [];
+        if (!Array.isArray(t.boardLate)) t.boardLate = [];
+        if (!t.slotModes || typeof t.slotModes !== 'object') t.slotModes = {};
+        for (let s = 1; s <= 8; s++) { const k = 'card' + s; if (!t.slotModes[k]) t.slotModes[k] = 'loop'; }
+        if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
+        if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+        if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
+        if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {} };
+        if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
+        if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
+        // 两条链的顺序（缺了会让链条顺序错乱 / 循环链看起来是空的）
+        if (!Array.isArray(t.slotOrder)) t.slotOrder = null;
+        if (!Array.isArray(t.loopOrder)) t.loopOrder = null;
+        // 棋盘落点补齐 mode/seq（旧数据没有这两个字段）
+        ['boardEarly', 'boardLate'].forEach(function (bk) {
+            (t[bk] || []).forEach(function (rowArr) {
+                (rowArr || []).forEach(function (cellItems) {
+                    (cellItems || []).forEach(function (it) {
+                        if (it && typeof it.mode !== 'string') it.mode = 'loop';
+                    });
+                });
+            });
+        });
+    });
+    if (!jobTables.length) jobNewTable();
+    jobRenumberTables();          // 载入后重算关卡区间，保证首尾相接
+    currentTable = 0;
+    const worlds = Array.isArray(job.worlds) ? job.worlds : [];
+    document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = worlds.includes(cb.value); });
+    jobLoadTable(0, true);
+    jobRenderTabs();
+    jobFillForm();
+    jobRenderSlots();
+    jobRenderSeqChains();
+    jobSaveLocal();
+}
+
+// 删除当前选中的作业集
+async function jobDelete() {
+    const sel = document.getElementById('jobSelect');
+    const msg = document.getElementById('jobStatus');
+    const code = sel ? sel.value : '';
+    if (!code) { window.alert('请先在下拉栏选择一个作业集'); return; }
+    const label = jobMeta.name || code;
+    if (!window.confirm('确定删除作业集「' + label + '」？\n此操作不可恢复。')) return;
+    try {
+        const res = await fetch('/delete_job', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
         });
         const data = await res.json();
-        msg.textContent = data.msg || '已设为当前';
-        msg.style.color = '#22a65e';
+        if (data.status !== 'success') {
+            if (msg) { msg.textContent = '❌ ' + (data.msg || '删除失败'); msg.style.color = '#dc2626'; }
+            return;
+        }
+        // 清空编辑器，避免还显示着已删除作业集的内容
+        jobMeta.code = '';
+        jobMeta.name = '';
+        jobTables = [];
+        jobNewTable();
+        currentTable = 0;
+        jobLoadTable(0, true);
+        jobRenderTabs();
+        jobRenderSlots();
+        jobRenderSeqChains();
+        jobClearLocal();
+        await jobLoadList('');
+        if (msg) { msg.textContent = '✅ 已删除「' + label + '」'; msg.style.color = '#22a65e'; }
     } catch (e) {
-        msg.textContent = '❌ 设置失败：' + e;
-        msg.style.color = '#dc2626';
+        if (msg) { msg.textContent = '❌ 删除失败：' + e; msg.style.color = '#dc2626'; }
+    }
+}
+
+// 下载远程作业集：提示输入代码 → 从 GitPages 取 → 载入棋盘
+async function jobDownloadRemote() {
+    const msg = document.getElementById('jobStatus');
+    if (!JOB_REMOTE_BASE) {
+        window.alert('远程作业集来源还没配置（JOB_REMOTE_BASE 为空）。\n等 GitPages 建好后把地址填上即可。');
+        return;
+    }
+    const input = window.prompt('请输入远程作业集代码');
+    if (input === null) return;
+    const code = String(input).trim();
+    if (!code) return;
+    try {
+        const url = JOB_REMOTE_BASE.replace(/\/+$/, '') + '/' + encodeURIComponent(code) + '.json';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const job = await res.json();
+        if (!job || !Array.isArray(job.tables)) throw new Error('内容不是有效的作业集');
+        // 落地到本地 jobs/，这样「使用本地作业集」也能读到
+        await fetch('/save_job', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.assign({}, job, { code: code }))
+        });
+        jobApplyLoaded(job, code);
+        await jobSetCurrent(code);
+        await jobLoadList(code);
+        if (msg) { msg.textContent = '✅ 已下载并载入「' + (jobMeta.name || code) + '」'; msg.style.color = '#22a65e'; }
+    } catch (e) {
+        if (msg) { msg.textContent = '❌ 下载失败：' + e; msg.style.color = '#dc2626'; }
     }
 }
 
@@ -5278,10 +6062,10 @@ function jobSaveLocal() {
             jobSaveCurrentBoard();
             const data = {
                 meta: {
-                    code: (document.getElementById('jobCode') || {}).value || '',
-                    name: (document.getElementById('jobName') || {}).value || '',
-                    version: (document.getElementById('jobVersion') || {}).value || '',
-                    maxLevel: (document.getElementById('jobMaxLevel') || {}).value || '149',
+                    code: jobMeta.code || '',
+                    name: jobMeta.name || '',
+                    version: '1.0',
+                    maxLevel: '149',
                     worlds: Array.from(document.querySelectorAll('#jobWorlds input:checked')).map(cb => cb.value)
                 },
                 currentTable: currentTable,
@@ -5321,8 +6105,9 @@ function jobLoadLocal() {
             if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
         });
         const m = data.meta || {};
-        const set = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.value = v; };
-        set('jobCode', m.code); set('jobName', m.name); set('jobVersion', m.version); set('jobMaxLevel', m.maxLevel);
+        // 元信息只有「名字 + 代码」（代码/版本/最大关卡输入框已移除）
+        jobMeta.name = m.name || '';
+        jobMeta.code = m.code || '';
         if (Array.isArray(m.worlds)) {
             document.querySelectorAll('#jobWorlds input').forEach(cb => { cb.checked = m.worlds.includes(cb.value); });
         }
@@ -5354,27 +6139,67 @@ function jobInit() {
     jobLoadTable(currentTable, true);   // skipSave：避免用空棋盘覆盖已恢复的数据
     jobLoadFavs();                      // 恢复右键收藏（localStorage）
     jobRenderSlots();
+    // ⚠️ 必须带 catch：jobLoadPlants 内部是 fetch('/plants')，一旦失败 Promise 会静默 reject，
+    //    .then 永不执行 → 槽位面板就一直是空的（不报错，只是没内容）。
     jobLoadPlants().then(function () {
         jobRenderSlots();                 // 头像需要 plantCache，加载完成后再渲染一次
         if (restored) jobRenderPlantGrid();
+    }).catch(function (e) {
+        console.warn('[jobset] 植物列表加载失败', e);
+        jobRenderSlots();                 // 至少把槽位框架渲染出来（没有头像也要能选中/落子）
+        setStatus('⚠️ 植物列表加载失败（仅缺头像）—— 请确认 Flask 在运行，然后 Ctrl+F5');
     });
+    jobLoadList(jobMeta.code || '');    // 下拉栏与「恢复出来的配置」保持一致（不传 current，避免弹回旧作业集）
     if (restored) setStatus('已恢复上次编辑的配置（本地缓存）');
 
-    // 事件绑定
-    document.getElementById('jobAddTable').addEventListener('click', () => {
-        jobNewTable();
+    // 事件绑定：新建阵容 → 先问「转阵容关卡」，再建
+    document.getElementById('jobAddTable').addEventListener('click', function () {
+        const last = jobTables[jobTables.length - 1];
+        if (last) jobSaveCurrentBoard();
+        // 提示输入「转阵容关」——这就是新阵容的起点 = 上一阵容的终点
+        const curTo = Number(last && last.to_level) || JOB_MAX_LEVEL;
+        const tip = (jobTables.length + 1) + '：请输入转阵容关卡\n'
+                  + '（关卡 1~? 用阵容1，?~149 用阵容' + (jobTables.length + 1) + '）';
+        const ans = window.prompt(tip, String(Math.min(JOB_MAX_LEVEL, curTo)));
+        if (ans === null) return;                       // 取消 → 不新建
+        let b = parseInt(ans);
+        const lo = jobRangeOfTable(jobTables.length - 1).from + 1;
+        if (!(b > 0)) { alert('请输入合法关卡数字'); return; }
+        if (b < lo) b = lo;
+        if (b > JOB_MAX_LEVEL) b = JOB_MAX_LEVEL;
+
+        // 上一阵容的结束关 = 新阵容的起始关 = b
+        if (last) last.to_level = String(b);
+        const nt = jobNewTable();
+        nt.from_level = b;
+        nt.to_level = '';                               // 新阵容默认到最大关卡
+        jobRenumberTables();
         jobLoadTable(jobTables.length - 1);
+        jobRenderTabs();
+        jobFillForm();
         jobSaveLocal();
+        setStatus('✅ 已新建阵容' + jobTables.length + '：' + b + ' ~ 149');
     });
+
     document.getElementById('jobDelTable').addEventListener('click', () => {
-        if (jobTables.length <= 1) { alert('至少保留一张行为表'); return; }
-        if (!confirm('删除当前行为表？')) return;
+        if (jobTables.length <= 1) { alert('至少保留一个阵容'); return; }
+        if (!confirm('删除当前阵容？')) return;
         jobTables.splice(currentTable, 1);
         currentTable = Math.min(currentTable, jobTables.length - 1);
+        jobRenumberTables();          // ★ 删表后重接关卡链条
         jobLoadTable(currentTable);
+        jobRenderTabs();
+        jobFillForm();
         jobSaveLocal();
     });
-    ['tfFromLevel','tfToLevel','tfLineupMode','tfDeckNo'].forEach(id => {
+
+    // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
+    const bdEl = document.getElementById('tfBoundary');
+    if (bdEl) {
+        bdEl.addEventListener('change', function () { jobSetBoundary(this.value); });
+        bdEl.addEventListener('input', function () { /* 打字中不校验，避免打断输入 */ });
+    }
+    ['tfLineupMode','tfDeckNo'].forEach(function (id) {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', jobSyncForm);
@@ -5385,11 +6210,26 @@ function jobInit() {
     });
     const _jp = document.getElementById('jobsetPanel');
     if (_jp) {
-        _jp.addEventListener('input', jobSaveLocal);
-        _jp.addEventListener('change', jobSaveLocal);
+        // 注意：#jobSelect 也在这个面板里，它的 change 会冒泡到这里。
+        // 若不过滤，「切换作业集」会先触发 jobSaveLocal → 把当前(?旧)棋盘写回 → 覆盖刚载入的数据。
+        const _panelGuard = function (e) {
+            const t = e.target;
+            if (t && (t.id === 'jobSelect' || t.id === 'jobSaveBtn' || t.id === 'jobDeleteBtn' || t.id === 'jobDownloadBtn' || t.id === 'jobRefreshBtn')) return;
+            jobSaveLocal();
+        };
+        _jp.addEventListener('input', _panelGuard);
+        _jp.addEventListener('change', _panelGuard);
     }
     document.getElementById('jobSaveBtn').addEventListener('click', jobSave);
-    document.getElementById('jobUseBtn').addEventListener('click', jobUse);
+    const _sel = document.getElementById('jobSelect');
+    if (_sel) _sel.addEventListener('change', jobOnSelect);
+    const _del = document.getElementById('jobDeleteBtn');
+    if (_del) _del.addEventListener('click', jobDelete);
+    const _dl = document.getElementById('jobDownloadBtn');
+    if (_dl) _dl.addEventListener('click', jobDownloadRemote);
+    const _rf = document.getElementById('jobRefreshBtn');
+    if (_rf) _rf.addEventListener('click', function () { jobLoadList(); });
+    jobLoadList();        // 载入本地作业集列表到下拉栏
     jobInitSeqDrawer();   // 右侧「种植顺序」抽屉
     jobRenderSeqChains();
     document.getElementById('plantPickerClose').addEventListener('click', jobClosePicker);
