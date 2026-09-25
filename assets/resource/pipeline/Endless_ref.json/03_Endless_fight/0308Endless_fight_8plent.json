@@ -1,4 +1,27 @@
 {
-    "无尽挑战_八槽组合动作_单次": {},
-    "无尽挑战_八槽组合动作_循环": {}
+    // ⚠️ 本文件的 custom_action_param 与 next 都会在运行时被 JobSetFight 覆盖。
+    //    这里写的是「首帧兜底」形态。next 结构 = [无尽局内_继续挑战, 顺序链下一个动作]
+
+    "无尽挑战_八槽组合动作_单次": {
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽局内_继续挑战",
+            "无尽局内_循环种植"
+        ]
+    },
+    "无尽挑战_八槽组合动作_循环": {
+        "action": "Custom",
+        "custom_action": "BatchSwipe",
+        "custom_action_param": "",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽局内_继续挑战",
+            "无尽挑战_八槽组合动作_循环"
+        ]
+    }
 }

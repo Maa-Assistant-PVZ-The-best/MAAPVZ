@@ -32,7 +32,7 @@
     "无尽挑战_选取植物": {
         "action": "Custom",
         "custom_action": "SelectPlants",
-        "custom_action_param": "{\"植物列表\": [\"粉丝心叶兰\", \"大喷菇\"]}",
+        "custom_action_param": "{}",
         "next": [
             "无尽挑战_选取植物_开始战斗"
         ]
@@ -52,6 +52,11 @@
             "无尽挑战_进入到局内"
         ]
     },
+    //==========================================================
+    //进入局内后：先识别天数（计数器融合）→ 再识别是否 boss 关 → 进种植
+    //天数 ROI / 颜色过滤沿用旧版实测值（General_action 的 通用_识别天数 同源）
+    //==========================================================
+
     "无尽挑战_进入到局内": {
         "recognition": "TemplateMatch",
         "template": [
@@ -62,6 +67,130 @@
             640,
             100,
             78
+        ],
+        "next": [
+            "无尽挑战_局内过滤文字颜色"
+        ]
+    },
+
+    "无尽挑战_局内过滤文字颜色": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    15,
+                    75,
+                    125
+                ],
+                "upper": [
+                    38,
+                    94,
+                    255
+                ],
+                "roi": [
+                    555,
+                    61,
+                    414,
+                    81
+                ]
+            }
+        },
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽挑战_局内识别天数"
+        ]
+    },
+
+    "无尽挑战_局内识别天数": {
+        "recognition": "OCR",
+        "only_rec": true,
+        "replace": [
+            [
+                "g",
+                "9"
+            ],
+            [
+                "G",
+                "6"
+            ],
+            [
+                "《",
+                "8"
+            ]
+        ],
+        "roi": [
+            555,
+            61,
+            414,
+            81
+        ],
+        "color_filter": "无尽挑战_局内过滤文字颜色",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽挑战_局内计数融合"
+        ]
+    },
+
+    //计数器融合：把 OCR 原始值喂给 LevelTracker，得到可信关卡号
+    //「识别节点」让引擎自己再识别一次拿原始值（走 run_recognition_direct）
+
+    "无尽挑战_局内计数融合": {
+        "action": "Custom",
+        "custom_action": "JobSetLevel",
+        "custom_action_param": {
+            "识别节点": "无尽挑战_局内识别天数",
+            "识别roi": [
+                555,
+                61,
+                414,
+                81
+            ]
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽挑战_局内识别boss关",
+            "无尽局内_单次种植"
+        ]
+    },
+
+    //boss 判定：沿用新版通用框架（僵王的头 / 功夫僵王），不再用旧的世界专属模板
+    //命中 => 走 boss 关种植；未命中 => 走普通关种植（由 next 的第二个分支兜底）
+
+    "无尽挑战_局内识别boss关": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Endless/frame/boss/僵王的头.png",
+            "Endless/frame/boss/功夫僵王.png"
+        ],
+        "roi": [
+            169,
+            8,
+            335,
+            69
+        ],
+        "threshold": [
+            0.8
+        ],
+        "green_mask": true,
+        "focus": "boss关",
+        "next": [
+            "无尽局内_BOSS关种植"
+        ]
+    },
+
+    "无尽局内_BOSS关种植": {
+        "action": "Custom",
+        "custom_action": "JobSetFight",
+        "custom_action_param": {
+            "是boss关": true
+        },
+        "next": [
+            "无尽局内_单次种植"
         ]
     }
 }

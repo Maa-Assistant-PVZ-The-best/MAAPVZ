@@ -1391,6 +1391,9 @@ function redoBoard() {
 
 function getVisibleOpItems() {
     const container = document.getElementById('opPanel');
+    // opPanel 已在早期 UI 清理中移除 —— 这里返回空数组而不是抛错，
+    // 避免调用方（键盘导航等）中断 window.onload 后续的事件绑定。
+    if (!container) return [];
     const items = container.querySelectorAll('.op-item');
     const visible = [];
     items.forEach(el => {
@@ -4327,6 +4330,32 @@ function jobEnsureSeq(board) {
             });
         }
     }
+    // 全局落子序号 ord：只用于「同一槽内 seq 相同时」的稳定排序兜底，
+    // **不写进 JSON**（见 jobBuild）。跨槽的真实先后由 slotOrder/loopOrder 表达。
+    jobEnsureOrd(board);
+}
+
+// 给棋盘上每个 chip 补一个全局递增的 ord（内存态，不持久化）。
+// 目的：jobPlacementsOf 的排序在 seq 相同/缺失时仍能保持稳定。
+function jobEnsureOrd(board) {
+    if (!board) return;
+    let next = 0;
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(function (it) {
+                if (typeof it.ord === 'number' && it.ord >= 0) {
+                    next = Math.max(next, it.ord + 1);
+                }
+            });
+        }
+    }
+    for (let r = 0; r < board.length; r++) {
+        for (let c = 0; c < board[r].length; c++) {
+            (board[r][c] || []).forEach(function (it) {
+                if (typeof it.ord !== 'number') { it.ord = next++; }
+            });
+        }
+    }
 }
 
 // ============================================================
@@ -4478,7 +4507,11 @@ function jobPlacementsOf(board, scopeId, selMode) {
     out.sort(function (a, b) {
         const qa = (typeof a.item.seq === 'number') ? a.item.seq : 9999;
         const qb = (typeof b.item.seq === 'number') ? b.item.seq : 9999;
-        return qa - qb;
+        if (qa !== qb) return qa - qb;
+        // seq 相同/缺失时用全局落子序号兜底，保证顺序稳定
+        const oa = (typeof a.item.ord === 'number') ? a.item.ord : 999999;
+        const ob = (typeof b.item.ord === 'number') ? b.item.ord : 999999;
+        return oa - ob;
     });
     return out;
 }
@@ -5639,29 +5672,79 @@ function jobRenderPlantGrid() {
     });
 }
 
-// 导出种植顺序：先按槽号，再按槽内序号（每个槽各自从 1 开始）
-function jobExtractSequence(board, slots) {
+// 导出种植顺序：**以链条（slotOrder / loopOrder）为唯一权威**。
+//
+// 旧版实现（已废弃）按「槽号 + 槽内 seq」排序，会把物理落子顺序彻底打乱：
+// 它先排槽1 全部、再排槽2 全部、最后把 feed/shovel 扔到末尾，
+// 于是「铲→种菇→喂豆」会被导成「种菇×N → 铲×N → 喂豆×N」。
+// 而 item.seq 只是**槽内**序号，跨槽没有可比性。
+//
+// 正确做法：复用链解析（jobGetChainOrder + jobSegPlacements）——链条里段的先后
+// 就是执行先后，同一槽可被拆成多段穿插（种槽1 → 喂豆 → 再种槽1）。
+function jobBuildChain(t, board, which) {
     const out = [];
-    if (!board) return out;
-    for (let r = 0; r < board.length; r++) {
-        for (let c = 0; c < board[r].length; c++) {
-            (board[r][c] || []).forEach(item => {
-                const m = /^card(\d+)$/.exec(item.id || '');
+    if (!t || !board) return out;
+    jobEnsureSeq(board);
+    const segs = jobGetChainOrder(t, which);
+
+    segs.forEach(function (seg) {
+        // 该段实际包含的落点（已按 seq 排序，且同一槽内保持落子先后）
+        const places = jobSegPlacements(board, seg, which);
+        if (!places.length) return;
+        // 该段是「单次」还是「循环」形态的落子 —— 由 chip 自己的 mode 决定
+        const mode = (which === 'loop') ? 'loop' : 'once';
+        const m = /^card(\d+)$/.exec(seg.key);
+        const slot = m ? Number(m[1]) : null;
+
+        // 植物槽要带上「这一段用的是哪个植物」（槽位植物表 + 段所属形态）
+        let label = seg.key;
+        if (slot !== null) {
+            label = (t.slots && t.slots[slot]) ? t.slots[slot] : seg.key;
+        } else if (seg.key === 'feed') {
+            label = '喂豆';
+        } else if (seg.key === 'shovel') {
+            label = '铲子';
+        }
+
+        const type = (seg.key === 'feed') ? 'feed'
+            : (seg.key === 'shovel') ? 'shovel'
+                : 'plant';
+
+        out.push({
+            key: seg.key,
+            slot: slot,                 // 植物槽号；feed/shovel 为 null
+            type: type,                 // plant | feed | shovel
+            label: label,               // 植物名 / 喂豆 / 铲子
+            mode: mode,                 // once | loop
+            cells: places.map(function (p) { return '格子' + (p.c + 1) + '_' + (p.r + 1); })
+        });
+    });
+
+    return out;
+}
+
+// 兼容保留：展平成 [{slot,order,type,label,cell}] 形式（旧字段 sequence 用）。
+// 顺序 = 单次链在前、循环链在后，与运行时「先单次、再循环」一致。
+function jobExtractSequence(board, slots, t) {
+    const out = [];
+    if (!board || !t) return out;
+    const chains = [
+        { which: 'once', list: jobBuildChain(t, board, 'once') },
+        { which: 'loop', list: jobBuildChain(t, board, 'loop') }
+    ];
+    chains.forEach(function (ch) {
+        ch.list.forEach(function (seg) {
+            seg.cells.forEach(function (cell, i) {
                 out.push({
-                    slot: m ? Number(m[1]) : null,          // 植物槽号；feed/shovel 无槽号
-                    order: (typeof item.seq === 'number') ? item.seq : 9999,   // 槽内序号
-                    type: item.type,
-                    label: item.label || item.id,
-                    cell: `格子${c + 1}_${r + 1}`
+                    slot: seg.slot,
+                    order: i + 1,
+                    type: seg.type,
+                    label: seg.label,
+                    cell: cell,
+                    mode: seg.mode
                 });
             });
-        }
-    }
-    out.sort((a, b) => {
-        const sa = (a.slot === null) ? 99 : a.slot;
-        const sb = (b.slot === null) ? 99 : b.slot;
-        if (sa !== sb) return sa - sb;
-        return a.order - b.order;
+        });
     });
     return out;
 }
@@ -5734,14 +5817,20 @@ function jobBuild() {
                 wave: t.waveEnabled === true,
                 loop: t.loopPlant,
                 once: t.oncePlant,
-                sequence: jobExtractSequence(t.boardEarly, t.slots)
+                // ★ 权威的两条链（顺序由 slotOrder / loopOrder 决定）
+                once_chain: jobBuildChain(t, t.boardEarly, 'once'),
+                loop_chain: jobBuildChain(t, t.boardEarly, 'loop'),
+                // 兼容旧字段：展平视图（单次链在前、循环链在后）
+                sequence: jobExtractSequence(t.boardEarly, t.slots, t)
             },
             boss: {
                 plant: jobExtractPlantOps(bossBoard, t.slots),
                 feed: jobExtractCells(bossBoard, 'feed'),
                 shovel: jobExtractCells(bossBoard, 'shovel'),
                 wave: t.waveEnabled === true,
-                sequence: jobExtractSequence(bossBoard, t.slots)
+                once_chain: jobBuildChain(t, bossBoard, 'once'),
+                loop_chain: jobBuildChain(t, bossBoard, 'loop'),
+                sequence: jobExtractSequence(bossBoard, t.slots, t)
             }
         };
     });

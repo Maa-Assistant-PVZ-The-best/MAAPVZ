@@ -1,4 +1,144 @@
 {
-    "无尽局内_单次种植": {},
-    "无尽局内_循环种植": {}
+    //==========================================================
+    //无尽局内种植调度（作业集驱动）
+    //
+    //★ 本文件的 custom_action_param / next **全部由 JobSetFight 在运行时重写**。
+    //  下面写的是「首帧兜底」形态，只为让 pipeline 能解析、节点存在。
+    //
+    //执行流程：
+    //  无尽局内_单次种植  (链首，按 slotOrder 顺序)
+    //     └─ 各槽组合动作_单次 → next: [无尽局内_继续挑战, 链里下一个动作]
+    //  无尽局内_循环种植  (单次链跑完后进入)
+    //     └─ 各槽组合动作_循环 → next: [无尽局内_继续挑战, 循环链下一个动作]
+    //  无尽局内_继续挑战  = 结算画面出现「继续挑战」→ 点击 → 判断是否换阵容
+    //
+    //★ 不用 on_error：它靠「识别超时」触发，每次都要等满 timeout 并反复截图。
+    //  「继续挑战」放在 next 第一位，识别不到就自然落到第二位（链里下一个动作）。
+    //==========================================================
+
+    "无尽局内_单次种植": {
+        "action": "Custom",
+        "custom_action": "JobSetFight",
+        "custom_action_param": {
+            "是boss关": false
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽挑战_铲子组合动作_单次"
+        ]
+    },
+
+    "无尽局内_循环种植": {
+        "action": "Custom",
+        "custom_action": "JobSetFight",
+        "custom_action_param": {
+            "是boss关": false
+        },
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽挑战_一槽组合动作_循环"
+        ]
+    },
+
+    //==========================================================
+    //结算画面：识别到「继续挑战」就点击，然后去判断是否要换阵容。
+    //这是一局结束时才出现的画面，所以**不需要分单次/循环**。
+    //==========================================================
+
+    "无尽局内_继续挑战": {
+        "recognition": "OCR",
+        "expected": "继续挑战",
+        "roi": [
+            716,
+            621,
+            179,
+            50
+        ],
+        "action": "Click",
+        "pre_delay": 800,
+        "post_delay": 300,
+        "next": [
+            "无尽局内_判断是否换阵容"
+        ]
+    },
+
+    //==========================================================
+    //换阵容判断：跨过锚点则重开并重选植物
+    //★ 重开后计数器要回退（count-1，分数不变），否则会多推一格
+    //
+    //用「正向 + 反向」两个兄弟节点，避免 on_error 超时截图。
+    //JobSetStageChanged 是幂等的（无副作用），正反各调一次不会互相干扰。
+    //==========================================================
+
+    "无尽局内_判断是否换阵容": {
+        "recognition": "Custom",
+        "custom_recognition": "JobSetStageChanged",
+        "custom_recognition_param": {
+            "是boss关": false
+        },
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽局内_判断是否换阵容_反向"
+        ]
+    },
+
+    "无尽局内_判断是否换阵容_反向": {
+        "recognition": "Custom",
+        "custom_recognition": "JobSetStageChanged",
+        "custom_recognition_param": {
+            "是boss关": false
+        },
+        "inverse": true,
+        "action": "DoNothing",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "无尽局内_单次种植"
+        ]
+    },
+
+    //JobSetRollback 先回退计数器（count-1，分数不变），再调通用重开。
+    //通用_重开 结束后由它的 [Anchor]下一个动作 返回「无尽局内_回选卡」。
+
+    "无尽局内_换阵容重开": {
+        "action": "Custom",
+        "custom_action": "JobSetRollback",
+        "custom_action_param": {
+            "次数": 1
+        },
+        "next": [
+            "通用_重开_暂停"
+        ]
+    },
+
+    //重开后必须「重新选卡」而不是继续种植，否则新阵容不生效。
+    //JobSetFight 会按新表重新注入各槽位的 DSL 与 next 顺序。
+
+    "无尽局内_回选卡": {
+        "action": "Custom",
+        "custom_action": "JobSetFight",
+        "custom_action_param": {
+            "是boss关": false
+        },
+        "next": [
+            "无尽挑战_选取植物"
+        ]
+    },
+
+    //==========================================================
+    //「选择补给」占位：目前不启用，留壳待填
+    //真实逻辑在 General_action/01_General_actions.json 的 通用_无尽_补给识别
+    //enabled:false 让它不参与匹配
+    //==========================================================
+
+    "无尽局内_补给占位": {
+        "enabled": false,
+        "recognition": "DirectHit",
+        "action": "DoNothing",
+        "next": []
+    }
 }

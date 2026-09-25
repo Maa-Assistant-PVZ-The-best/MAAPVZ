@@ -25,6 +25,8 @@ import ExpressionRecognition
 import ocr_return_action
 import actions
 import custom_select_plant
+# 无尽挑战重构：作业集运行时（JobSetLoad / JobSetLevel / JobSetSlot ...）
+import jobset.runtime  # noqa: F401
 
 
 SingleAction.load_coords('./assets/resource/coords.json')

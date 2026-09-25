@@ -5,9 +5,15 @@
         ]
     },
     "无尽挑战_加载作业集代码": {
+        "action": "Custom",
+        "custom_action": "JobSetLoad",
+        "custom_action_param": {
+            "重置": true
+        },
         "repeat_delay": 0,
         "post_delay": 0,
         "next": [
+            "无尽挑战_识别开始战斗",
             "无尽挑战_点击竞技",
             "[JumpBack]检查当前是否在主界面"
         ]
