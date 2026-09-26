@@ -253,9 +253,11 @@ class SelectPlants(CustomAction):
         try:
             param = _parse_param(argv.custom_action_param) or {}
             plants = _norm_list(param.get("植物列表") or param.get("plants"))
-            if not plants:
-                print("[SelectPlants] 缺少 植物列表", file=sys.stderr, flush=True)
-                return CustomAction.RunResult(success=False)
+            # ★ 植物列表为空 = 「不指定选哪些卡，直接占位填充」。
+            #   用途：作业集里某张表没配植物时（例如表2 故意留空测试换阵容），
+            #   仍然要清空卡牌后把卡槽填满再开始战斗，而不是直接失败。
+            #   所以这里不 return，而是把 targets 留空，跳到下面的「占位填充」。
+            fill_only = not plants
 
             tdir = param.get("模板目录") or PL.DEFAULT_TEMPLATE_DIR
             table = param.get("对照表")
@@ -305,11 +307,15 @@ class SelectPlants(CustomAction):
                 targets.append({
                     "zh": zh, "en": en, "quality": q, "templates": tpls,
                 })
-            if not targets:
+            if not targets and not fill_only:
                 print("[SelectPlants] 没有可执行的植物", file=sys.stderr, flush=True)
                 return CustomAction.RunResult(success=False)
 
             ctl = context.tasker.controller
+
+            if fill_only:
+                print("[SelectPlants] 植物列表为空 -> 跳过选卡，直接占位填充",
+                      file=sys.stderr, flush=True)
 
             # ---- 槽位状态：-1=跳过/未用 0=未就绪 1=已就绪 ----
             slot_done = [False] * min(8, len(targets))

@@ -39,21 +39,28 @@ try:
               f"seq={len(t.non_boss['sequence'])}")
         print(f"      boss    : plant={len(t.boss['plant'])} seq={len(t.boss['sequence'])}")
     check("载入成功", js.code == "pvz_20260926_015808", js.name)
-    check("有植物列表", len(js.tables[0].plants) == 2, str(js.tables[0].plants))
+    # 至少有一张表配了植物（哪张表配的会随作者调整，不做硬编码）
+    any_plants = any(t.plants for t in js.tables)
+    check("至少一张表有植物列表", any_plants,
+          str([t.plants for t in js.tables]))
 except Exception as e:
     check("载入作业集", False, f"{type(e).__name__}: {e}")
     js = None
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 2. 选表 pick_table ===")
+print("\n=== 2. 选表 pick_table（用真实作业集，表区间会随作者调整） ===")
 if js:
     t0 = js.pick_table(1)
-    check("L=1 -> 表1", t0.index == 0)
-    t50 = js.pick_table(50)
-    check("L=50 -> 表1", t50.index == 0)
+    check("L=1 -> 第一张表", t0.index == 0, f"got=表{t0.index + 1}")
+    t99 = js.pick_table(99)
+    check("L=99 -> 最后一张表", t99.index == len(js.tables) - 1,
+          f"got=表{t99.index + 1}")
     t999 = js.pick_table(200)
     check("L=200 仍在有效表内", t999 is not None)
+    print(f"  表区间: " + ", ".join(
+        f"表{t.index + 1}[{t.from_level}~{t.to_level if t.to_level is not None else '末'}]"
+        for t in js.tables))
     print(f"  lineup@1   = {js.lineup_at(1)['plants']}")
     print(f"  rules@1    = non_boss seq={len(js.rules_at(1, False)['sequence'])}")
     print(f"  transition_levels = {js.transition_levels()}")
@@ -73,13 +80,16 @@ raw = {
     ],
 }
 js2 = JobSet(raw, code="t")
-cases = [(1, 0), (49, 0), (50, 0), (51, 1), (69, 1), (70, 1), (71, 2), (149, 2)]
+# ★ 区间上半是开区间：表1 的 to_level=50 表示「50 关开始归表2」
+cases = [(1, 0), (49, 0), (50, 1), (51, 1), (69, 1), (70, 2), (71, 2), (149, 2)]
 for lv, want in cases:
     got = js2.pick_table(lv).index
     check(f"L={lv} -> 表{want + 1}", got == want, f"got=表{got + 1}")
 check("锚点列表", js2.transition_levels() == [50, 70], str(js2.transition_levels()))
-check("换阵容后 plant 变了", js2.lineup_at(51)["plants"] == ["C", "D"],
-      str(js2.lineup_at(51)["plants"]))
+check("换阵容后 plant 变了", js2.lineup_at(50)["plants"] == ["C", "D"],
+      str(js2.lineup_at(50)["plants"]))
+check("边界 L=50 归表2", js2.pick_table(50).index == 1)
+check("边界 L=49 归表1", js2.pick_table(49).index == 0)
 
 # 边界：单表 to_level=None
 js3 = JobSet({"name": "单表", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="s")
@@ -92,7 +102,7 @@ check("单表 L=0 兜底", js3.pick_table(0).index == 0)
 print("\n=== 4. 关卡计数器 · 你给的场景（实际55，错认57） ===")
 lt = LevelTracker()
 print(f"  初始: {lt.describe()}")
-c = lt.observe(57)
+c = lt.observe(57, first=True)      # ★ 基准帧
 print(f"  首次 OCR=57 -> count={c} score={lt.score}  {lt.state.last_verdict}")
 check("首次采信 OCR", c == 57, f"count={c}")
 check("初始分 50", lt.score == 50, f"score={lt.score}")
@@ -106,7 +116,7 @@ check("抖动扣分 40", lt.score == 40, f"score={lt.score}")
 # ---------------------------------------------------------------------------
 print("\n=== 5. 连续识别正确 -> 进入纯计数器 ===")
 lt = LevelTracker()
-lt.observe(10)          # count=10, score=50
+lt.observe(10, first=True)      # 基准
 for i in range(11, 14):
     lt.observe(i)
     print(f"  OCR={i} -> count={lt.count} score={lt.score} locked={lt.locked}")
@@ -121,18 +131,40 @@ check("锁定后仍能推进", c == before + 1, f"{before} -> {c}")
 # ---------------------------------------------------------------------------
 print("\n=== 6. 大幅偏差 -> 信任计数器 / 分数触底回头信 OCR ===")
 lt = LevelTracker()
-lt.observe(30)                 # count=30 score=50
+lt.observe(30, first=True)     # 基准
 c = lt.observe(35)             # 预测31，偏差4 > 容差2，扣到40 -> 信计数器
 print(f"  30 -> OCR=35: count={c} score={lt.score} {lt.state.last_verdict}")
 check("偏差大信计数器", c == 31, f"count={c}")
 check("扣分后 40", lt.score == 40, f"score={lt.score}")
 
 lt2 = LevelTracker(init_score=10, penalty=10, tolerance=2)  # 一次就触底
-lt2.observe(30)
+lt2.observe(30, first=True)
 c = lt2.observe(99)
 print(f"  触底场景: count={c} score={lt2.score} {lt2.state.last_verdict}")
 check("触底回头信 OCR", c == 99, f"count={c}")
 check("触底后分数回初始", lt2.score == 10, f"score={lt2.score}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 6b. 跳关：中途从 12 直接到 49（OCR 连续，基准应跟上） ===")
+lt = LevelTracker()
+lt.observe(12, first=True)
+print(f"  基准 OCR=12 -> count={lt.count} anchor={lt.state.last_anchor}")
+for raw in (49, 50, 51):
+    c = lt.observe(raw)
+    print(f"  OCR={raw} -> count={c} anchor={lt.state.last_anchor} "
+          f"score={lt.score} {lt.state.last_verdict}")
+check("跳关后基准跟上真实关卡", lt.state.last_anchor == 51, f"anchor={lt.state.last_anchor}")
+check("跳关后 count 正确", lt.count == 51, f"count={lt.count}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 6c. 中途进入：本次任务第一次识别 40 关 -> count=40 ===")
+lt = LevelTracker()
+c = lt.observe(40, first=True)
+print(f"  基准帧 OCR=40 -> count={c} score={lt.score}")
+check("基准帧直接采信", c == 40, f"count={c}")
+check("基准帧重置分数", lt.score == 50, f"score={lt.score}")
 
 
 # ---------------------------------------------------------------------------

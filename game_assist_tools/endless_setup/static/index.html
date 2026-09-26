@@ -491,10 +491,351 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     #plantPicker.job-open > div, #cellDetail { animation:none !important; }
     #plantGrid .job-card, .cell .tag.plant { transition:none !important; }
 }
+
+/* ============================================================
+   补给选取（boss 关专属，每个阵容独立）
+   ------------------------------------------------------------
+   美术参考：错位堆叠卡片 + 悬停抽牌。
+   与参考实现的差别：**位移阶梯改成变量驱动**，不再手写 N² 条 :has() 规则 ——
+   每张卡只声明自己的序号 --i，位移由 (--i - --hover-i) 一次算出，
+   增删卡片都不用改 CSS。
+   ============================================================ */
+.supply-card-section {
+    /* ---- 尺寸配置（改这几个数即可整体缩放）---- */
+    --sc-card-w: 118px;          /* 单卡宽度（越小整体越紧凑）*/
+    --sc-card-ratio: 1.318;      /* 卡面高宽比（= 素材 446×588 的实测比例）*/
+    --sc-overlap: 36px;          /* 相邻卡重叠量：越小露出的越多、越好点 */
+    --sc-gap: 8px;               /* 标题与首卡的间距 */
+    --sc-step: calc(var(--sc-card-w) - var(--sc-overlap));  /* 每张实际位移 */
+    --sc-shift: 30px;            /* 悬停时左右让位的基准位移 */
+    --sc-title-w: 4px;           /* 起始留白（弹窗里不需要给标题让位，留小一点）*/
+
+    position: relative;
+    padding: 4px 0 6px;
+    background: transparent;
+    border: none;
+    border-radius: 12px;
+}
+/* 弹窗内的堆叠区固定展开（不再是可折叠面板） */
+.supply-card-section.sc-open { display: block; }
+
+.supply-card-head {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+}
+.supply-card-head .sc-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #d81e06; flex: 0 0 auto;   /* currentColor 的简化版：固定品牌红 */
+}
+.supply-card-head .sc-title {
+    font-size: 15px; font-weight: 700; color: #d81e06;
+    letter-spacing: 1px; text-transform: uppercase;
+}
+.supply-card-head .sc-sub { font-size: 12px; color: #86868b; margin-left: auto; }
+
+/* 舞台：子元素全绝对定位，flex 只用来撑高度 */
+.supply-stage {
+    position: relative;
+    display: flex;
+    min-height: calc(var(--sc-card-w) * var(--sc-card-ratio) + 34px);
+    padding-top: 8px;
+}
+
+/* ---- 单张卡：位置由自己的 --i 算出（让位叠加 --shift-x）---- */
+.supply-card {
+    position: absolute;
+    top: 10px;
+    left: calc(
+        var(--sc-title-w)
+        + var(--sc-gap)
+        + var(--sc-step) * var(--i, 0)
+        + var(--shift-x, 0px)          /* 悬停让位：由 JS 写入 */
+    );
+    width: var(--sc-card-w);
+    z-index: calc(var(--i, 0) + 1);
+    cursor: grab;
+    /* ⚠️ 这里**故意不加 transition**。
+       实测教训：只要给被 JS 改的属性（transform 或 left）加 transition，
+       Chromium 在过渡期间会把「计算值」冻在起点，卡片在屏幕上纹丝不动
+       （inline 变量/值都对，位置就是不变）。
+       去掉过渡后让位是瞬时的，但行为 100% 可靠。
+       想要平滑感用「抽牌」那张的动画来表达（.sc-lifted）。*/
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.08));
+}
+.supply-card:active { cursor: grabbing; }
+
+/* 卡面 */
+.supply-card .sc-img {
+    width: 100%;
+    height: calc(var(--sc-card-w) * var(--sc-card-ratio));
+    border-radius: 14px;
+    overflow: hidden;
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;                       /* 无图时的占位 emoji 大小 */
+    /* translateZ + backface 消掉缩放时的亚像素抖动 */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    transition: transform .3s cubic-bezier(.16,1,.3,1);
+}
+.supply-card .sc-img img {
+    width: 100%; height: 100%;
+    /* contain：保证整张卡面完整显示不裁切（素材已按 446×588 统一裁好） */
+    object-fit: contain;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+.supply-card .sc-name {
+    margin-top: 4px;
+    font-size: 10px; font-weight: 600; color: #1d1d1f;
+    text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.supply-card .sc-order {
+    position: absolute; top: 4px; left: 4px;
+    font-size: 9px; font-weight: 700; color: #fff;
+    background: rgba(29,29,31,.72);
+    border-radius: 5px; padding: 0 4px;
+    pointer-events: none;
+}
+/* 删除按钮 */
+.supply-card .sc-del {
+    position: absolute; top: 4px; right: 4px;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: none; cursor: pointer;
+    background: rgba(29,29,31,.60); color: #fff;
+    font-size: 10px; line-height: 1;
+    display: none; align-items: center; justify-content: center;
+}
+.supply-card:hover .sc-del { display: flex; }
+.supply-card .sc-del:hover { background: #dc2626; }
+
+/* ---- 悬停抽牌：位移按「距离」算（变量驱动，无需逐张写规则）----
+   左侧卡（--i < --hover-i）：往左退，越远退越多
+   右侧卡（--i > --hover-i）：往右退
+   被悬停卡：上浮 + 微旋 + 放大，并抬到最上层
+
+   ⚠️ 这里是**JS 直接驱动 transform**，不依赖 :has() ——
+      因为 :has() 只在「真实鼠标悬停」时命中，JS 想程序化控制（比如键盘
+      操作、或自动化测试）时无法触发。
+      另外实测：`transform: translateX(var(--x))` 配合 transition 时，
+      变量更新不会让 transform 重新解析（矩阵恒为 0），所以必须直接写
+      element.style.transform。 */
+/* 被程序化「抽出」的那张（JS 加 .sc-lifted） */
+.supply-card.sc-lifted {
+    z-index: 100 !important;
+    /* 抽出幅度按卡片尺寸缩放，小卡也能明显看出被选中 */
+    transform: translateY(-22px) rotate(-3deg) scale(1.08) !important;
+}
+.supply-card.sc-lifted .sc-img {
+    transform: scale(1.03) translateZ(0);
+    /* 抽出的那张加一圈高亮环，让「哪张被选中」一目了然 */
+    box-shadow: 0 0 0 3px #60a5fa, 0 12px 26px rgba(37,99,235,.28);
+}
+/* 悬停时给个手型，明确这是可交互的 */
+.supply-card:hover { cursor: pointer; }
+/* 悬停时名字加粗，进一步强化反馈 */
+.supply-card.sc-lifted .sc-name { color: #1d4ed8; }
+
+/* ---- 固定项（如「查看」）：蓝色描边 ---- */
+.supply-card.sp-pinned .sc-img {
+    border: 2px solid #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+    background: #eff6ff;
+}
+.supply-card.sp-pinned .sc-order {
+    background: #2563eb;             /* 固定项角标用蓝色 */
+}
+/* 固定项不可拖，鼠标样式也换掉 */
+.supply-card.sp-pinned { cursor: pointer; }
+
+/* 空状态 */
+.supply-empty {
+    position: absolute; left: var(--sc-title-w); top: 40%;
+    font-size: 12px; color: #94a3b8;
+}
+
+/* 入口按钮 */
+.supply-entry { margin-top: 10px; }
+.supply-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; cursor: pointer;
+    background: #fff; border: 1px solid #cbd5e1; border-radius: 8px;
+    font-size: 12px; font-weight: 600; color: #334155;
+    transition: background .14s ease, border-color .14s ease;
+}
+.supply-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+.supply-btn.sc-on { background: #eff6ff; border-color: #60a5fa; color: #1d4ed8; }
+.supply-btn-ico { font-size: 13px; }
+.supply-btn-badge {
+    min-width: 18px; padding: 0 5px; border-radius: 9px;
+    background: #e2e8f0; color: #475569;
+    font-size: 10px; font-weight: 700; text-align: center;
+}
+.supply-btn.sc-on .supply-btn-badge { background: #60a5fa; color: #fff; }
+
+/* 「添加 / 恢复」小按钮 */
+.supply-add {
+    padding: 5px 10px; cursor: pointer;
+    background: #fff; border: 1px dashed #cbd5e1; border-radius: 7px;
+    font-size: 11px; color: #475569;
+    transition: background .14s ease, border-color .14s ease;
+}
+.supply-add:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+/* ============ 补给项选择弹窗 ============ */
+#supplyPicker {
+    position: fixed; inset: 0; z-index: 10060;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#supplyPicker.sp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#supplyPicker .sp-panel {
+    width: min(860px, 92vw);
+    max-height: 86vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#supplyPicker .sp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0;
+    flex: 0 0 auto;
+}
+#supplyPicker .sp-head .sp-dot {
+    width: 6px; height: 6px; border-radius: 50%; background: #d81e06;
+}
+#supplyPicker .sp-head .sp-title {
+    font-size: 14px; font-weight: 700; color: #d81e06;
+    letter-spacing: 1px;
+}
+#supplyPicker .sp-head .sp-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#supplyPicker .sp-close {
+    width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer;
+    font-size: 15px; line-height: 1; margin-left: 8px;
+}
+#supplyPicker .sp-close:hover { background: #e2e8f0; }
+
+#supplyPicker .sp-body {
+    padding: 16px 18px; overflow-y: auto; flex: 1 1 auto;
+}
+/* 图库小标题 */
+#supplyPicker .sp-lib-title {
+    margin: 14px 0 10px;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+    font-size: 11px; font-weight: 700; color: #64748b;
+    letter-spacing: .5px;
+}
+#supplyPicker .sp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+    gap: 12px;
+}
+#supplyPicker .sp-item {
+    cursor: pointer; border-radius: 10px; padding: 6px;
+    border: 2px solid transparent; background: #f8fafc;
+    transition: border-color .14s ease, background .14s ease,
+                transform .14s ease, box-shadow .14s ease;
+}
+#supplyPicker .sp-item:hover {
+    background: #eff6ff; border-color: #93c5fd;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(15,23,42,.14);
+}
+/* 已被选中的项：打勾 + 半透明，点了就移除 */
+#supplyPicker .sp-item.sp-picked { border-color: #22a65e; background: #f0fdf4; }
+#supplyPicker .sp-item.sp-picked::after {
+    content: '✓ 已添加'; position: absolute; top: 8px; right: 8px;
+    font-size: 9px; font-weight: 700; color: #fff;
+    background: #22a65e; border-radius: 5px; padding: 1px 5px;
+}
+/* 固定项（如「查看」）：蓝色描边 + 固定角标 */
+#supplyPicker .sp-item.sp-pinned { border-color: #3b82f6; }
+#supplyPicker .sp-item.sp-pinned.sp-picked { background: #eff6ff; }
+#supplyPicker .sp-item.sp-pinned.sp-picked::after { display: none; }
+#supplyPicker .sp-pin-tag {
+    position: absolute; top: 8px; right: 8px;
+    font-size: 9px; font-weight: 700; color: #fff;
+    background: #2563eb; border-radius: 5px; padding: 1px 5px;
+}
+#supplyPicker .sp-item { position: relative; }
+#supplyPicker .sp-item img {
+    width: 100%; display: block;
+    border-radius: 8px;
+    aspect-ratio: 446 / 588;
+    object-fit: contain;
+    pointer-events: none;      /* 点击落在 item 上 */
+}
+#supplyPicker .sp-item .sp-name {
+    margin-top: 4px; font-size: 11px; font-weight: 600;
+    color: #334155; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#supplyPicker .sp-foot {
+    padding: 10px 18px; border-top: 1px solid #e2e8f0;
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+}
+#supplyPicker .sp-foot .sp-tip { font-size: 11px; color: #94a3b8; }
+#supplyPicker .sp-foot .sp-reset {
+    margin-left: auto;
+    padding: 6px 12px; cursor: pointer;
+    background: #fff; border: 1px dashed #cbd5e1; border-radius: 8px;
+    font-size: 11px; color: #475569;
+}
+#supplyPicker .sp-foot .sp-reset:hover { background: #f1f5f9; border-color: #94a3b8; }
+#supplyPicker .sp-foot button:not(.sp-reset) {
+    margin-left: 10px; padding: 6px 16px; cursor: pointer;
+    background: #1d4ed8; color: #fff; border: none; border-radius: 8px;
+    font-size: 12px; font-weight: 600;
+}
+#supplyPicker .sp-foot button:not(.sp-reset):hover { background: #1e40af; }
+
+/* 窄屏：整体再缩一档（基准卡宽 118px） */
+@media (max-width: 1400px) {
+    .supply-card-section { --sc-card-w: 110px; --sc-overlap: 34px; --sc-shift: 28px; }
+}
+@media (max-width: 1200px) {
+    .supply-card-section { --sc-card-w: 102px; --sc-overlap: 32px; --sc-shift: 26px; }
+}
+@media (max-width: 1024px) {
+    .supply-card-section { --sc-card-w: 94px;  --sc-overlap: 30px; --sc-shift: 24px; }
+}
 </style>
 <style data-load-themed-styles="true">.pickerText_563e5672{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-sizing:border-box;box-sizing:border-box;border:1px solid #a19f9d;min-width:180px;padding:1px;min-height:32px}.pickerText_563e5672:hover{border-color:#c7e0f4}.pickerInput_563e5672{height:34px;border:none;-webkit-box-flex:1;-ms-flex-positive:1;flex-grow:1;outline:0;padding:0 6px 0;margin:1px}.pickerInput_563e5672::-ms-clear{display:none}</style><style data-load-themed-styles="true">.resultContent_aea8678f{display:table-row}.resultContent_aea8678f .resultItem_aea8678f{display:table-cell;vertical-align:bottom}.peoplePickerPersona_aea8678f{width:180px}.peoplePickerPersona_aea8678f .ms-Persona-details{width:100%}.peoplePicker_aea8678f .ms-BasePicker-text{min-height:40px}.peoplePickerPersonaContent_aea8678f{display:-webkit-box;display:-ms-flexbox;display:flex;width:100%;-webkit-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-ms-flex-align:center;align-items:center}</style><style data-load-themed-styles="true">.callout_48a4edb6 .ms-Suggestions-itemButton{padding:0;border:none}.callout_48a4edb6 .ms-Suggestions{min-width:300px}</style><style data-load-themed-styles="true">.root_07ff8c4c{min-width:260px}.suggestionsItem_07ff8c4c{display:-webkit-box;display:-ms-flexbox;display:flex;-webkit-box-align:stretch;-ms-flex-align:stretch;align-items:stretch;-webkit-box-sizing:border-box;box-sizing:border-box;width:100%;position:relative;overflow:hidden}.suggestionsItem_07ff8c4c:hover{background:#f3f2f1}.suggestionsItem_07ff8c4c:hover .closeButton_07ff8c4c{display:block}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c{background:#edebe9}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c:hover{background:#c8c6c4}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c:hover{background:Highlight;color:HighlightText}}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c{background:Highlight;color:HighlightText;-ms-high-contrast-adjust:none}}.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c .closeButton_07ff8c4c:hover{background:#a19f9d;color:#323130}@media screen and (-ms-high-contrast:active){.suggestionsItem_07ff8c4c.suggestionsItemIsSuggested_07ff8c4c .itemButton_07ff8c4c{color:HighlightText}}.suggestionsItem_07ff8c4c .closeButton_07ff8c4c{display:none;color:#605e5c}.suggestionsItem_07ff8c4c .closeButton_07ff8c4c:hover{background:#edebe9}.actionButton_07ff8c4c{background-color:transparent;border:0;cursor:pointer;margin:0;position:relative;border-top:1px solid #edebe9;height:40px;width:100%;font-size:12px}[dir=ltr] .actionButton_07ff8c4c{padding-left:8px}[dir=rtl] .actionButton_07ff8c4c{padding-right:8px}html[dir=ltr] .actionButton_07ff8c4c{text-align:left}html[dir=rtl] .actionButton_07ff8c4c{text-align:right}.actionButton_07ff8c4c:hover{background-color:#edebe9;cursor:pointer}.actionButton_07ff8c4c:active,.actionButton_07ff8c4c:focus{background-color:#c7e0f4}.actionButton_07ff8c4c .ms-Button-icon{font-size:16px;width:25px}.actionButton_07ff8c4c .ms-Button-label{margin:0 4px 0 9px}html[dir=rtl] .actionButton_07ff8c4c .ms-Button-label{margin:0 9px 0 4px}.buttonSelected_07ff8c4c{background-color:#c7e0f4}.suggestionsTitle_07ff8c4c{padding:0 12px;color:#0078d4;font-size:12px;line-height:40px;border-bottom:1px solid #edebe9}.suggestionsContainer_07ff8c4c{overflow-y:auto;overflow-x:hidden;max-height:300px;border-bottom:1px solid #edebe9}.suggestionsNone_07ff8c4c{text-align:center;color:#797775;font-size:12px;line-height:30px}.suggestionsSpinner_07ff8c4c{margin:5px 0;white-space:nowrap;line-height:20px;font-size:12px}html[dir=ltr] .suggestionsSpinner_07ff8c4c{padding-left:14px}html[dir=rtl] .suggestionsSpinner_07ff8c4c{padding-right:14px}html[dir=ltr] .suggestionsSpinner_07ff8c4c{text-align:left}html[dir=rtl] .suggestionsSpinner_07ff8c4c{text-align:right}.suggestionsSpinner_07ff8c4c .ms-Spinner-circle{display:inline-block;vertical-align:middle}.suggestionsSpinner_07ff8c4c .ms-Spinner-label{display:inline-block;margin:0 10px 0 16px;vertical-align:middle}html[dir=rtl] .suggestionsSpinner_07ff8c4c .ms-Spinner-label{margin:0 16px 0 10px}.itemButton_07ff8c4c.itemButton_07ff8c4c{width:100%;padding:0;min-width:0;height:100%}@media screen and (-ms-high-contrast:active){.itemButton_07ff8c4c.itemButton_07ff8c4c{color:WindowText}}.itemButton_07ff8c4c.itemButton_07ff8c4c:hover{color:#201f1e}.closeButton_07ff8c4c.closeButton_07ff8c4c{padding:0 4px;height:auto;width:32px}@media screen and (-ms-high-contrast:active){.closeButton_07ff8c4c.closeButton_07ff8c4c{color:WindowText}}.closeButton_07ff8c4c.closeButton_07ff8c4c:hover{background:#c8c6c4;color:#201f1e}.suggestionsAvailable_07ff8c4c{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.suggestionsContainer_f38d2867{overflow-y:auto;overflow-x:hidden;max-height:300px}.suggestionsContainer_f38d2867 .ms-Suggestion-item:hover{background-color:#f3f2f1;cursor:pointer}.suggestionsContainer_f38d2867 .is-suggested{background-color:#deecf9}.suggestionsContainer_f38d2867 .is-suggested:hover{background-color:#c7e0f4;cursor:pointer}</style><style data-load-themed-styles="true">.root_8aef8ec2{min-width:260px}.actionButton_8aef8ec2{background:0 0;background-color:transparent;border:0;cursor:pointer;margin:0;padding:0;position:relative;width:100%;font-size:12px}html[dir=ltr] .actionButton_8aef8ec2{text-align:left}html[dir=rtl] .actionButton_8aef8ec2{text-align:right}.actionButton_8aef8ec2:hover{background-color:#f3f2f1;cursor:pointer}.actionButton_8aef8ec2:active,.actionButton_8aef8ec2:focus{background-color:#c7e0f4}.actionButton_8aef8ec2 .ms-Button-icon{font-size:16px;width:25px}.actionButton_8aef8ec2 .ms-Button-label{margin:0 4px 0 9px}html[dir=rtl] .actionButton_8aef8ec2 .ms-Button-label{margin:0 9px 0 4px}.buttonSelected_8aef8ec2{background-color:#deecf9}.buttonSelected_8aef8ec2:hover{background-color:#c7e0f4;cursor:pointer}@media screen and (-ms-high-contrast:active){.buttonSelected_8aef8ec2:hover{background-color:Highlight;color:HighlightText}}@media screen and (-ms-high-contrast:active){.buttonSelected_8aef8ec2{background-color:Highlight;color:HighlightText;-ms-high-contrast-adjust:none}}.suggestionsTitle_8aef8ec2{font-size:12px}.suggestionsSpinner_8aef8ec2{margin:5px 0;white-space:nowrap;line-height:20px;font-size:12px}html[dir=ltr] .suggestionsSpinner_8aef8ec2{padding-left:14px}html[dir=rtl] .suggestionsSpinner_8aef8ec2{padding-right:14px}html[dir=ltr] .suggestionsSpinner_8aef8ec2{text-align:left}html[dir=rtl] .suggestionsSpinner_8aef8ec2{text-align:right}.suggestionsSpinner_8aef8ec2 .ms-Spinner-circle{display:inline-block;vertical-align:middle}.suggestionsSpinner_8aef8ec2 .ms-Spinner-label{display:inline-block;margin:0 10px 0 16px;vertical-align:middle}html[dir=rtl] .suggestionsSpinner_8aef8ec2 .ms-Spinner-label{margin:0 16px 0 10px}.itemButton_8aef8ec2{height:100%;width:100%;padding:7px 12px}@media screen and (-ms-high-contrast:active){.itemButton_8aef8ec2{color:WindowText}}.screenReaderOnly_8aef8ec2{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.resultContent_4c5c5043{display:table-row}.resultContent_4c5c5043 .resultItem_4c5c5043{display:table-cell;vertical-align:bottom}.peoplePickerPersona_4c5c5043{width:180px}.peoplePickerPersona_4c5c5043 .ms-Persona-details{width:100%}.peoplePicker_4c5c5043 .ms-BasePicker-text{min-height:40px}.peoplePickerPersonaContent_4c5c5043{display:-webkit-box;display:-ms-flexbox;display:flex;width:100%;-webkit-box-pack:justify;-ms-flex-pack:justify;justify-content:space-between;-webkit-box-align:center;-ms-flex-align:center;align-items:center;padding:7px 12px}</style><style data-load-themed-styles="true">.pickerText_73cdfb49{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;-webkit-box-align:center;-ms-flex-align:center;align-items:center;-webkit-box-sizing:border-box;box-sizing:border-box;border:1px solid #a19f9d;min-width:180px;min-height:30px}.pickerText_73cdfb49:hover{border-color:#323130}.pickerText_73cdfb49.inputFocused_73cdfb49{position:relative;border-color:#0078d4}.pickerText_73cdfb49.inputFocused_73cdfb49:after{pointer-events:none;content:'';position:absolute;left:-1px;top:-1px;bottom:-1px;right:-1px;border:2px solid #0078d4}@media screen and (-ms-high-contrast:active){.pickerText_73cdfb49.inputDisabled_73cdfb49{position:relative;border-color:GrayText}.pickerText_73cdfb49.inputDisabled_73cdfb49:after{pointer-events:none;content:'';position:absolute;left:0;top:0;bottom:0;right:0;background-color:Window}}.pickerInput_73cdfb49{height:34px;border:none;-webkit-box-flex:1;-ms-flex-positive:1;flex-grow:1;outline:0;padding:0 6px 0;-ms-flex-item-align:end;align-self:flex-end}.pickerItems_73cdfb49{display:-webkit-box;display:-ms-flexbox;display:flex;-ms-flex-wrap:wrap;flex-wrap:wrap;max-width:100%}.screenReaderOnly_73cdfb49{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}</style><style data-load-themed-styles="true">.personaContainer_acf6fc7e{border-radius:15px;display:-webkit-inline-box;display:-ms-inline-flexbox;display:inline-flex;-webkit-box-align:center;-ms-flex-align:center;align-items:center;background:#eff6fc;margin:4px;cursor:default;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;vertical-align:middle;position:relative}.personaContainer_acf6fc7e::-moz-focus-inner{border:0}.personaContainer_acf6fc7e{outline:transparent}.personaContainer_acf6fc7e{position:relative}.ms-Fabric--isFocusVisible .personaContainer_acf6fc7e:focus:after{-webkit-box-sizing:border-box;box-sizing:border-box;content:'';position:absolute;top:-2px;right:-2px;bottom:-2px;left:-2px;pointer-events:none;border:1px solid #605e5c;border-radius:0}.personaContainer_acf6fc7e .ms-Persona-primaryText{color:#005a9e;font-size:14px;font-weight:400}.personaContainer_acf6fc7e .ms-Persona-primaryText.hover_acf6fc7e{color:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e .actionButton_acf6fc7e:hover{background:#c7e0f4}.personaContainer_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:HighlightText}}.personaContainer_acf6fc7e:hover{background:#deecf9}.personaContainer_acf6fc7e:hover .ms-Persona-primaryText{color:#005a9e;font-size:14px;font-weight:400}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e:hover .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e{background:#0078d4}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .ms-Persona-primaryText{color:#ffffff}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .ms-Persona-primaryText{color:HighlightText}}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e{color:#ffffff}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:#005a9e}.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon:hover{background:#005a9e}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e .actionButton_acf6fc7e .ms-Button-icon{color:HighlightText}}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e.personaContainerIsSelected_acf6fc7e{border-color:Highlight;background:Highlight;-ms-high-contrast-adjust:none}}.personaContainer_acf6fc7e.validationError_acf6fc7e .ms-Persona-primaryText{color:#e81123}.personaContainer_acf6fc7e.validationError_acf6fc7e .ms-Persona-initials{font-size:20px}@media screen and (-ms-high-contrast:active){.personaContainer_acf6fc7e{border:1px solid WindowText}}.personaContainer_acf6fc7e .itemContent_acf6fc7e{-webkit-box-flex:0;-ms-flex:0 1 auto;flex:0 1 auto;min-width:0;max-width:100%}.personaContainer_acf6fc7e .removeButton_acf6fc7e{border-radius:15px;-webkit-box-flex:0;-ms-flex:0 0 auto;flex:0 0 auto;width:33px;height:33px;-ms-flex-preferred-size:32px;flex-basis:32px}.personaContainer_acf6fc7e .expandButton_acf6fc7e{border-radius:15px 0 0 15px;height:33px;width:44px;padding-right:16px;position:inherit;display:-webkit-box;display:-ms-flexbox;display:flex;margin-right:-17px}.personaContainer_acf6fc7e .personaWrapper_acf6fc7e{position:relative;display:inherit}.personaContainer_acf6fc7e .personaWrapper_acf6fc7e .ms-Persona-details{padding:0 8px}.personaContainer_acf6fc7e .personaDetails_acf6fc7e{-webkit-box-flex:0;-ms-flex:0 1 auto;flex:0 1 auto}.itemContainer_acf6fc7e{display:inline-block;vertical-align:top}</style></head>
 <body>
 <div id="tooltip" class="tooltip-box"></div>
+
+<!-- ============ 补给选取弹窗（堆叠卡片 + 图库，都在这里） ============ -->
+<div id="supplyPicker">
+    <div class="sp-panel">
+        <div class="sp-head">
+            <span class="sp-dot"></span>
+            <span class="sp-title">补给选取</span>
+            <span class="sp-sub" id="supplyHint">拖拽卡片可调整顺序</span>
+            <button class="sp-close" id="supplyPickerClose" title="关闭">✕</button>
+        </div>
+        <div class="sp-body">
+            <!-- 上半：当前已选的堆叠卡片（悬停抽牌） -->
+            <div class="supply-card-section sc-open" id="supplySection">
+                <div class="supply-stage" id="supplyStage"><!-- 卡片由 JS 渲染 --></div>
+            </div>
+            <!-- 下半：可选图库（点图添加／再点移除） -->
+            <div class="sp-lib-title">可选补给项</div>
+            <div class="sp-grid" id="supplyPickerGrid"><!-- 由 JS 渲染 --></div>
+        </div>
+        <div class="sp-foot">
+            <span class="sp-tip" id="supplyPickerTip">已选 0 项</span>
+            <button class="sp-reset" id="supplyReset">↺ 恢复默认</button>
+            <button id="supplyPickerDone">完成</button>
+        </div>
+    </div>
+</div>
 
 <div class="app">
     <h1>🧩 无尽通用框架-可视化编辑界面</h1>
@@ -606,23 +947,15 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
                 <div class="tab-content" id="tabLate">
                     <div id="gridLate" style="grid-template-columns: repeat(9, 68px);"><div class="cell" data-r="0" data-c="0" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C1</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="1" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C2</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="2" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C3</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="3" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C4</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="4" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C5</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="5" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C6</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="6" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C7</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="7" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C8</span><span class="row-label">R1</span></div><div class="cell" data-r="0" data-c="8" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C9</span><span class="row-label">R1</span></div><div class="cell" data-r="1" data-c="0" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C1</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="1" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C2</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="2" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C3</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="3" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C4</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="4" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C5</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="5" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C6</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="6" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C7</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="7" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C8</span><span class="row-label">R2</span></div><div class="cell" data-r="1" data-c="8" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C9</span><span class="row-label">R2</span></div><div class="cell" data-r="2" data-c="0" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C1</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="1" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C2</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="2" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C3</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="3" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C4</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="4" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C5</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="5" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C6</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="6" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C7</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="7" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C8</span><span class="row-label">R3</span></div><div class="cell" data-r="2" data-c="8" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C9</span><span class="row-label">R3</span></div><div class="cell" data-r="3" data-c="0" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C1</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="1" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C2</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="2" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C3</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="3" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C4</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="4" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C5</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="5" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C6</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="6" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C7</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="7" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C8</span><span class="row-label">R4</span></div><div class="cell" data-r="3" data-c="8" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C9</span><span class="row-label">R4</span></div><div class="cell" data-r="4" data-c="0" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C1</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="1" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C2</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="2" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C3</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="3" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C4</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="4" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C5</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="5" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C6</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="6" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C7</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="7" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C8</span><span class="row-label">R5</span></div><div class="cell" data-r="4" data-c="8" data-tooltip="点击放置选中的操作，右键清空该格" data-tooltip-delay="1000"><span class="col-label">C9</span><span class="row-label">R5</span></div></div>
                 </div>
-                <div id="lateFeedIntervals" style="display:none; margin-top:10px; padding:8px; background:#f0fdf4; border-radius:6px; border:1px solid #bbf7d0;">
-    <div style="font-size:13px; font-weight:600; margin-bottom:4px;">⏱️ boss关喂豆间隔设置</div>
-    <div style="display:flex; flex-wrap:wrap; gap:12px;">
-        <div id="lateSmallFeedInterval" style="display:flex; align-items:center; gap:6px;">
-            <label style="font-size:12px;">小关喂豆间隔（秒）：</label>
-            <input type="text" id="lateSmallFeedIntervalInput" style="width:60px; padding:3px 4px; border:1px solid #d0d7de; border-radius:4px; font-size:12px;" placeholder="秒" value="4">
-        </div>
-        <div id="lateBossFeedInterval" style="display:flex; align-items:center; gap:6px;">
-            <label style="font-size:12px;">Boss关喂豆间隔（秒）：</label>
-            <input type="number" id="lateBossFeedIntervalInput" style="width:60px; padding:3px 4px; border:1px solid #d0d7de; border-radius:4px; font-size:12px;" min="1" max="10" value="4">
-        </div>
-        <div id="lateBossFeed2Interval" style="display:flex; align-items:center; gap:6px;">
-            <label style="font-size:12px;">Boss关喂豆2间隔（毫秒）：</label>
-            <input type="number" id="lateBossFeed2IntervalInput" style="width:80px; padding:3px 4px; border:1px solid #d0d7de; border-radius:4px; font-size:12px;" min="1" value="4000">
-        </div>
-    </div>
-</div>
+                <!-- ⏱️ 喂豆间隔设置面板已整体移除（小关/Boss关/Boss关2 间隔都不再用） -->
+                <!-- ============ 补给选取（boss 关专属，每个阵容独立） ============
+                     点按钮直接弹窗；堆叠卡片与图库都放在弹窗里。 -->
+                <div class="supply-entry">
+                    <button id="supplyToggle" class="supply-btn" title="设置 boss 关的补给选取顺序">
+                        <span class="supply-btn-ico">📦</span>
+                        <span class="supply-btn-txt">补给选取</span>
+                        <span class="supply-btn-badge" id="supplyCount">0</span>
+                    </button>
                 </div>
             </div>
 
@@ -3655,84 +3988,22 @@ function copyPreview() {
 
 // ============================================================
 // 13. 动态间隔区域相关函数
+//
+// ⏱️ 「喂豆间隔设置」面板（小关 / Boss关 / Boss关2）已整体移除，用不到了。
+//    下面两个函数保留为空实现，只是为了不打断既有的调用点
+//    （tab 切换、棋盘重渲染等处会调），避免 window.onload 里抛错。
 // ============================================================
 function initLateFeedIntervals() {
-    // 小关喂豆间隔（自由输入，单位秒，支持小数）
-    const smallInp = document.getElementById('lateSmallFeedIntervalInput');
-    smallInp.value = currentValues['小关喂豆间隔']?.data?.seconds || '4';
-    smallInp.addEventListener('input', function() {
-        let val = this.value.trim();
-        if (val === '') val = '4';
-        if (!currentValues['小关喂豆间隔']) currentValues['小关喂豆间隔'] = { data: {} };
-        currentValues['小关喂豆间隔'].data.seconds = val;
-        updatePreview();
-    });
-
-    // Boss关喂豆间隔（单位秒）
-    const inp = document.getElementById('lateBossFeedIntervalInput');
-    inp.value = currentValues['fw_boss关喂豆间隔']?.data?.秒 || '4';
-    inp.addEventListener('input', function() {
-        let val = this.value.trim();
-        if (val === '') val = '4';
-        if (!currentValues['fw_boss关喂豆间隔']) currentValues['fw_boss关喂豆间隔'] = { data: {} };
-        currentValues['fw_boss关喂豆间隔'].data.秒 = val;
-        updatePreview();
-    });
-
-    // Boss关喂豆2间隔（单位毫秒）
-    const inp2 = document.getElementById('lateBossFeed2IntervalInput');
-    inp2.value = currentValues['fw_boss关喂豆2间隔']?.data?.毫秒 || '4000';
-    inp2.addEventListener('input', function() {
-        let val = this.value.trim();
-        if (val === '') val = '4000';
-        if (!currentValues['fw_boss关喂豆2间隔']) currentValues['fw_boss关喂豆2间隔'] = { data: {} };
-        currentValues['fw_boss关喂豆2间隔'].data.毫秒 = val;
-        updatePreview();
-    });
+    // 面板已移除，无需初始化
 }
 
 function updateLateFeedIntervalsVisibility() {
-    const container = document.getElementById('lateFeedIntervals');
-    if (!container) return;
-    const currentTab = document.querySelector('.tab.active')?.dataset.tab;
-    if (currentTab !== 'late') {
-        container.style.display = 'none';
-        return;
-    }
-    let hasSmallFeed = false;
-    let hasBossFeed = false;
-    let hasBossFeed2 = false;
-    for (let r = 0; r < boardLate.length; r++) {
-        for (let c = 0; c < boardLate[r].length; c++) {
-            const cell = boardLate[r][c];
-            for (let item of cell) {
-                if (item.id === 'feed' || item.id === 'feed_late') hasSmallFeed = true;
-                if (item.id === 'bossfeed' || item.id === 'bossfeed_late') hasBossFeed = true;
-                if (item.id === 'bossfeed2_late') hasBossFeed2 = true;
-            }
-        }
-    }
-    const shouldShow = hasSmallFeed || hasBossFeed || hasBossFeed2;
-    container.style.display = shouldShow ? 'block' : 'none';
-    document.getElementById('lateSmallFeedInterval').style.display = hasSmallFeed ? 'flex' : 'none';
-    document.getElementById('lateBossFeedInterval').style.display = hasBossFeed ? 'flex' : 'none';
-    document.getElementById('lateBossFeed2Interval').style.display = hasBossFeed2 ? 'flex' : 'none';
-    if (hasSmallFeed) {
-        const inp = document.getElementById('lateSmallFeedIntervalInput');
-        if (inp) inp.value = currentValues['小关喂豆间隔']?.data?.seconds || '4';
-    }
-    if (hasBossFeed) {
-        const inp = document.getElementById('lateBossFeedIntervalInput');
-        if (inp) inp.value = currentValues['fw_boss关喂豆间隔']?.data?.秒 || '4';
-    }
-    if (hasBossFeed2) {
-        const inp2 = document.getElementById('lateBossFeed2IntervalInput');
-        if (inp2) inp2.value = currentValues['fw_boss关喂豆2间隔']?.data?.毫秒 || '4000';
-    }
+    // 面板已移除，无需更新可见性
 }
 // ===== 前期自定义Boss喂豆间隔动态显示 =====
 function initEarlyFeedIntervals() {
     const inp = document.getElementById('earlyBossFeedIntervalInput');
+    if (!inp) return;
     inp.value = currentValues['frame_wj_boss_custom_喂豆间隔']?.data?.秒数 || '3';
     inp.addEventListener('input', function() {
         let val = this.value.trim();
@@ -3813,6 +4084,11 @@ renderAllBoards = function() {
 document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', function() {
         setTimeout(updateLateFeedIntervalsVisibility, 50);
+        // 补给入口只在 boss tab 显示，并刷新卡片数据（每个阵容独立）
+        setTimeout(function () {
+            jobSyncSupplyVisibility();
+            jobRenderSupply();
+        }, 60);
     });
 });
 
@@ -4037,6 +4313,11 @@ let jobArmedSlot = 0;        // 已选中待落子的槽位（0=未选中）
 let jobLastDrop = null;      // 最近一次落子位置 {r,c,id}：用于只播一次入场动画
 
 function jobNewTable() {
+    // ★ 新建之前先把「当前正在编辑的棋盘」存回它所属的表。
+    //   否则新表会把全局 boardEarly 覆盖，上一个阵容的布阵就丢了。
+    //   （jobSaveCurrentBoard 依赖 currentTable，所以必须在切 before 表之前调）
+    if (jobTables.length > 0) jobSaveCurrentBoard();
+
     const last = jobTables.length > 0 ? jobTables[jobTables.length - 1] : null;
     const t = {
         from_level: last ? (Number(last.to_level) || 0) + 1 : 1,
@@ -4048,26 +4329,43 @@ function jobNewTable() {
         inheritBoss: true,
         waveEnabled: false,
         slots: {},
+        // ---- 普通关配置 ----
         slotOrder: null,          // 一次性链的槽位顺序（拖动链条调整）
         loopOrder: null,          // 循环链的槽位顺序
         slotModes: {},            // 槽的放置形态：{ card1:'once'|'loop', feed:..., shovel:... }
-        waitAfter: {},            // 动作后的等待秒数：{ 'card1@r,c': 3, ... }
+        waitAfter: {},            // 动作后的等待秒数：{ 'once|card2|r,c|seq': 3, ... }
+        // ---- boss 关配置（与普通关完全独立；null = 未配置 -> boss 关只等结算）----
+        bossSlotOrder: null,      // boss 关一次性链顺序
+        bossLoopOrder: null,      // boss 关循环链顺序
+        bossSlotModes: {},        // boss 关槽位形态
+        bossWaitAfter: {},        // boss 关动作后等待
+        supplyPicks: null,        // 补给选取顺序（每个阵容独立；null -> 首次渲染时填默认）
         innerWaits: { once: {}, loop: {} },   // 槽块内部的等待节点：{ once:{card1:[{gap,sec}]}, loop:{...} }
         boardEarly: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => [])),
-        boardLate: []
+        boardLate: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))
     };
     for (let i = 1; i <= 8; i++) t.slots[i] = '';
     // 默认形态：循环
     jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'loop'; });
     if (last) {
         // 新表默认复制上一张的 boss 棋盘（boardLate）
-        t.boardLate = JSON.parse(JSON.stringify(last.boardLate.length ? last.boardLate : Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))));
-        // 沿用上一张表的种植顺序与形态
+        // ★ boardLate 统一用 rows×cols 的二维数组，避免 length 判断在
+        //   空数组（[]）和完整空棋盘之间反复横跳。
+        t.boardLate = JSON.parse(JSON.stringify(
+            jobBoardOrBlank(last.boardLate)));
+        // 沿用上一张表的普通关种植顺序与形态
         if (Array.isArray(last.slotOrder)) t.slotOrder = last.slotOrder.slice();
         if (Array.isArray(last.loopOrder)) t.loopOrder = last.loopOrder.slice();
         if (last.slotModes) t.slotModes = JSON.parse(JSON.stringify(last.slotModes));
+        // boss 关配置：上一张表配过才沿用（没配就保持 null -> boss 关只等结算）
+        if (Array.isArray(last.bossSlotOrder)) t.bossSlotOrder = last.bossSlotOrder.slice();
+        if (Array.isArray(last.bossLoopOrder)) t.bossLoopOrder = last.bossLoopOrder.slice();
+        if (last.bossSlotModes) t.bossSlotModes = JSON.parse(JSON.stringify(last.bossSlotModes));
+        if (last.bossWaitAfter) t.bossWaitAfter = JSON.parse(JSON.stringify(last.bossWaitAfter));
     }
     jobTables.push(t);
+    // ★ 新表成为当前编辑对象 —— 否则后续 jobSaveCurrentBoard 会写错表
+    currentTable = jobTables.length - 1;
     return t;
 }
 
@@ -4161,6 +4459,9 @@ function jobFillForm() {
     if (!t) return;
     const r = jobRangeOfTable(currentTable);
     const isLast = (currentTable === jobTables.length - 1);
+
+    // 补给选取是每个阵容独立的，切阵容时要重渲染
+    try { jobRenderSupply(); } catch (e) {}
 
     const elFrom = document.getElementById('tfRangeFrom');
     const elTo = document.getElementById('tfRangeTo');
@@ -4405,8 +4706,10 @@ function jobAllSlotKeys() {
 }
 
 // 该槽当前的放置形态：'once'（单次，灰色）| 'loop'（循环，默认）
+// ★ 普通关与 boss 关各自独立的形态表（跟当前编辑的 tab 走）
 function jobSlotMode(t, key) {
-    const m = t && t.slotModes ? t.slotModes[key] : null;
+    const f = jobModesField();
+    const m = (t && t[f]) ? t[f][key] : null;
     return (m === 'once') ? 'once' : 'loop';
 }
 // 单次与循环是各自独立的摆放；形态只决定棋盘标记颜色与所属分区
@@ -4415,9 +4718,10 @@ function jobInLoop(t, key) { return jobSlotMode(t, key) === 'loop'; }
 
 // 右键：在「单次」和「循环」之间切换（只有两种）
 function jobToggleSlotMode(t, key) {
-    if (!t.slotModes) t.slotModes = {};
+    const f = jobModesField();
+    if (!t[f]) t[f] = {};
     const next = (jobSlotMode(t, key) === 'once') ? 'loop' : 'once';
-    t.slotModes[key] = next;
+    t[f][key] = next;
     return next;
 }
 
@@ -4432,8 +4736,9 @@ function jobItemMode(it) { return (it && it.mode === 'once') ? 'once' : 'loop'; 
 //   to   = 到第几个落点为止（不含）；null = 到最后
 // 支持同一个槽在链里出现多次 —— 这样才能把「槽1 的 2 株」拆成两块，
 // 中间插进别的槽（例如：种槽1 → 喂豆 → 再种槽1）。
-function jobGetChainOrder(t, which) {
-    const field = (which === 'loop') ? 'loopOrder' : 'slotOrder';
+function jobGetChainOrder(t, which, board) {
+    // ★ 普通关与 boss 关各自独立的链条字段
+    const field = jobChainField(which, board);
     const all = jobAllSlotKeys();
     let raw = Array.isArray(t[field]) ? t[field] : [];
 
@@ -4457,8 +4762,122 @@ function jobGetChainOrder(t, which) {
         if (!segs.some(function (s) { return s.key === k; })) segs.push({ key: k, from: 0, to: null });
     });
 
-    t[field] = segs;
+    // ★ 覆盖率修复：链条里若有落点没被任何段覆盖（常见于「拖出成独立块」
+    //   之后那个块又被删掉/拖走），这些植物就永远不会被种 ->
+    //   游戏里表现成「某一格种不上」。
+    //   这里把「没被覆盖的下标」补成一个附加段，保证链路与棋盘一致。
+    //
+    //   板子来源：优先用调用方传进来的 board；没传就按当前编辑的 tab 推断
+    //   （'late' tab = boss 棋盘 boardLate，否则普通关 boardEarly）。
+    //
+    // ★ 写回策略：只有「正在编辑的那块棋盘」才把修复结果写回 t[field]。
+    //   导出 boss 链时会用 bossBoard 调本函数，如果也写回 slotOrder，
+    //   就会把 boss 的段覆盖到普通关链条上 —— 这是必须避免的。
+    let _board = board;
+    if (!_board) {
+        try {
+            const _tab = document.querySelector('.tab.active')?.dataset.tab;
+            _board = (_tab === 'late') ? boardLate : boardEarly;
+        } catch (e) { _board = null; }
+    }
+    segs = jobRepairChainCoverage(segs, _board, which, all);
+
+    // 只有传进来的 board 就是「当前编辑棋盘」时才写回
+    let _editingBoard = null;
+    try {
+        const _tab = document.querySelector('.tab.active')?.dataset.tab;
+        _editingBoard = (_tab === 'late') ? boardLate : boardEarly;
+    } catch (e) { _editingBoard = null; }
+    if (!board || board === _editingBoard) {
+        t[field] = segs;
+    }
     return segs;
+}
+
+// 找出「棋盘上有、但链里没覆盖」的落点下标，补成一个附加段加在末尾。
+// 返回（可能被修正过的）段数组；调用方负责写回 t[field]。
+function jobRepairChainCoverage(segs, board, which, allKeys) {
+    if (!board) return segs;
+    (allKeys || jobAllSlotKeys()).forEach(function (key) {
+        const total = jobPlacementsOf(board, key, which).length;
+        if (!total) return;
+
+        // 统计该槽已被覆盖的下标
+        const covered = {};
+        segs.forEach(function (s) {
+            if (s.key !== key) return;
+            if (Array.isArray(s.picked) && s.picked.length) {
+                s.picked.forEach(function (g) { if (g >= 0 && g < total) covered[g] = true; });
+                return;
+            }
+            const sf = s.from | 0;
+            const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
+            for (let g = sf; g < st; g++) if (g >= 0 && g < total) covered[g] = true;
+        });
+
+        // 收集漏掉的下标
+        const miss = [];
+        for (let g = 0; g < total; g++) if (!covered[g]) miss.push(g);
+        if (!miss.length) return;
+
+        // 补一段：连续的用 from/to，离散的用 picked
+        let contiguous = true;
+        for (let k = 1; k < miss.length; k++) {
+            if (miss[k] !== miss[k - 1] + 1) { contiguous = false; break; }
+        }
+        if (contiguous) {
+            segs.push({ key: key, from: miss[0], to: miss[miss.length - 1] + 1 });
+        } else {
+            segs.push({ key: key, from: -1, to: -1, picked: miss.slice() });
+        }
+        if (window.console && console.warn) {
+            console.warn('[jobset] 链条补全：槽 ' + key + ' 有 ' + miss.length
+                + ' 个落点未被任何段覆盖，已补为附加段 -> ' + JSON.stringify(miss));
+        }
+    });
+    return segs;
+}
+
+// ============================================================
+// 普通关 / boss 关 的配置字段映射
+//
+// ★ 需求：boss 关的组合动作配置（链条顺序、动作后等待、槽位形态）
+//   必须与普通关**完全独立** —— 除了槽位植物（slots/lineup）共用。
+//
+//   普通关（boardEarly）用：slotOrder / loopOrder / waitAfter / slotModes
+//   boss 关（boardLate） 用：bossSlotOrder / bossLoopOrder / bossWaitAfter / bossSlotModes
+//
+//   旧数据没有 boss* 字段 —— 按用户要求**不自动拷贝**，boss 关直接等结算
+//   （即 boss 链为空 -> 只跑「继续挑战」识别，不做任何种植）。
+// ============================================================
+const JOB_FIELD_MAP = {
+    once: { normal: 'slotOrder', boss: 'bossSlotOrder' },
+    loop: { normal: 'loopOrder', boss: 'bossLoopOrder' },
+    wait: { normal: 'waitAfter', boss: 'bossWaitAfter' },
+    modes: { normal: 'slotModes', boss: 'bossSlotModes' }
+};
+
+// 当前编辑的是不是 boss 棋盘（'late' tab = boss）
+function jobIsBossBoard() {
+    try {
+        return (document.querySelector('.tab.active')?.dataset.tab === 'late');
+    } catch (e) { return false; }
+}
+
+// 取某条链在指定 board 上对应的字段名
+function jobChainField(which, board) {
+    const isBoss = (board === boardLate) || (board === undefined && jobIsBossBoard());
+    return isBoss ? JOB_FIELD_MAP[which].boss : JOB_FIELD_MAP[which].normal;
+}
+
+// 「动作后等待」的字段名（跟当前编辑的 tab 走）
+function jobWaitField() {
+    return jobIsBossBoard() ? JOB_FIELD_MAP.wait.boss : JOB_FIELD_MAP.wait.normal;
+}
+
+// 「槽位形态」的字段名（跟当前编辑的 tab 走）
+function jobModesField() {
+    return jobIsBossBoard() ? JOB_FIELD_MAP.modes.boss : JOB_FIELD_MAP.modes.normal;
 }
 
 // 该槽在这一段里包含哪些落点。每项带 gidx = 它在「本槽全部落点」里的真实下标。
@@ -4519,6 +4938,337 @@ function jobPlacementsOf(board, scopeId, selMode) {
 // 某落点的稳定键（用于挂「动作后等待」）
 function jobPlacementKey(mode, scopeId, r, c, seq) {
     return mode + '|' + scopeId + '|' + r + ',' + c + '|' + (seq || 0);
+}
+
+// ============================================================
+// 补给选取（boss 关专属，每个阵容独立）
+//
+// 每张卡 = 一个补给选项，顺序即「优先拿哪个」。
+// 拖拽调整顺序；数据存在 t.supplyPicks（每个阵容一份）。
+// 导出 JSON 暂不接，先把 UI 做出来。
+// ============================================================
+
+// 默认补给项（与 static/supply/ 下的中文名图片一一对应）
+const SUPPLY_DEFAULTS = [
+    { id: 'all',      name: '全部植物', img: '全部植物.png' },
+    { id: 'orange',   name: '橙色植物', img: '橙色植物.png' },
+    { id: 'purple',   name: '紫色植物', img: '紫色植物.png' },
+    { id: 'blue',     name: '蓝色植物', img: '蓝色植物.png' },
+    { id: 'green',    name: '绿色植物', img: '绿色植物.png' },
+    { id: 'white',    name: '白色植物', img: '白色植物.png' },
+    { id: 'artifact', name: '神器',     img: '神器.png' },
+    { id: 'sun',      name: '能量豆',   img: '能量豆.png' }
+];
+
+// 补给图片目录（Flask static 挂在 /static/...，见 HANDOFF 约定）
+const SUPPLY_IMG_DIR = 'static/supply/';
+
+// 候选补给项（「可选补给项」图库里能选的全部图片）
+// 「查看」放在最后，且是**固定项**：点它只会置顶，不能移除（见 jobToggleSupplyItem）
+const SUPPLY_CANDIDATES = SUPPLY_DEFAULTS.concat([
+    { id: 'cucumber', name: '黄瓜', img: 'bomb.png' },
+    { id: 'view',     name: '查看', img: '查看.png', pinned: true }
+]);
+
+// 「查看」是固定项：点它 = 放到链首（已在首位则不动），不能删
+const SUPPLY_PINNED_ID = 'view';
+
+// 取当前阵容的补给列表（没有就按默认初始化）
+function jobSupplyList(t) {
+    if (!t) return [];
+    if (!Array.isArray(t.supplyPicks)) {
+        // 默认给前 5 项（与参考实现的 5 张卡一致）
+        t.supplyPicks = SUPPLY_DEFAULTS.slice(0, 5).map(function (d) {
+            return { id: d.id, name: d.name, img: d.img };
+        });
+    }
+    return t.supplyPicks;
+}
+
+function jobSupplyIsPinned(it) {
+    return !!it && (it.id === SUPPLY_PINNED_ID || it.pinned === true);
+}
+
+// 点图库项：固定项 -> 置顶；普通项 -> 添加／移除切换
+function jobToggleSupplyItem(cand) {
+    const t = jobTables[currentTable];
+    if (!t) return;
+    const list = jobSupplyList(t);
+    const key = jobSupplyItemKey(cand);
+    const at = list.findIndex(function (x) { return jobSupplyItemKey(x) === key; });
+
+    if (cand.pinned) {
+        // 「查看」是固定项，但允许取消：
+        //   · 不在列表里        -> 插到最前面（置顶）
+        //   · 在列表里但不在首位 -> 移到最前面
+        //   · 已在首位          -> 再点一次取消（移除）
+        if (at < 0) {
+            list.unshift({ id: cand.id, name: cand.name, img: cand.img, pinned: true });
+            setStatus('📌 已把「' + cand.name + '」固定到最前');
+        } else if (at > 0) {
+            list.splice(at, 1);
+            list.unshift({ id: cand.id, name: cand.name, img: cand.img, pinned: true });
+            setStatus('📌 已把「' + cand.name + '」固定到最前');
+        } else {
+            list.splice(at, 1);
+            setStatus('－ 已取消「' + cand.name + '」');
+        }
+    } else if (at >= 0) {
+        list.splice(at, 1);
+        setStatus('－ 已移除补给项：' + cand.name);
+    } else {
+        list.push({ id: cand.id, name: cand.name, img: cand.img });
+        setStatus('＋ 已添加补给项：' + cand.name);
+    }
+    jobSaveLocal();
+    jobRenderSupply();
+    jobRenderSupplyPicker();
+}
+
+// 渲染卡片堆叠
+function jobRenderSupply() {
+    const stage = document.getElementById('supplyStage');
+    const badge = document.getElementById('supplyCount');
+    if (!stage) return;
+
+    const t = jobTables[currentTable];
+    stage.innerHTML = '';
+    if (!t) return;
+
+    const list = jobSupplyList(t);
+    if (badge) badge.textContent = String(list.length);
+
+    if (!list.length) {
+        const empty = document.createElement('div');
+        empty.className = 'supply-empty';
+        empty.textContent = '还没有补给项，点下面的图库添加';
+        stage.appendChild(empty);
+        return;
+    }
+
+    list.forEach(function (item, i) {
+        const card = document.createElement('div');
+        const isPinned = jobSupplyIsPinned(item);
+        // 固定项加 sp-pinned -> 蓝色描边（见 CSS）
+        card.className = 'supply-card' + (isPinned ? ' sp-pinned' : '');
+        // 固定项不许拖走（拖了也会被置顶逻辑拉回来，不如直接禁用）
+        card.draggable = !isPinned;
+        card.dataset.idx = String(i);
+        // ★ 关键：把序号写进 CSS 变量，位移由 CSS 一次算出
+        card.style.setProperty('--i', String(i));
+        card.title = isPinned
+            ? (item.name + '（固定项，始终在最前）')
+            : (item.name + '（拖拽调整顺序）');
+
+        const img = document.createElement('div');
+        img.className = 'sc-img';
+        if (item.img) {
+            const el = document.createElement('img');
+            el.src = SUPPLY_IMG_DIR + encodeURIComponent(item.img);
+            el.alt = item.name || '';
+            el.draggable = false;          // 让拖拽事件落在卡片上，不是图片上
+            el.onerror = function () {
+                // 图片缺失时退化成 emoji，不显示破图
+                this.style.display = 'none';
+                img.textContent = item.icon || '📦';
+            };
+            img.appendChild(el);
+        } else {
+            img.textContent = item.icon || '📦';
+        }
+        card.appendChild(img);
+
+        const ord = document.createElement('span');
+        ord.className = 'sc-order';
+        ord.textContent = isPinned ? '📌' : String(i + 1);
+        card.appendChild(ord);
+
+        // 固定项（「查看」）不给删除按钮 —— 它的取消入口在弹窗图库里
+        // （再点一次「查看」= 取消），避免误触把置顶项删掉
+        if (!isPinned) {
+            const del = document.createElement('button');
+            del.className = 'sc-del';
+            del.textContent = '×';
+            del.title = '删除这一项';
+            del.addEventListener('click', function (e) {
+                e.stopPropagation();
+                list.splice(i, 1);
+                jobSaveLocal();
+                jobRenderSupply();
+                jobRenderSupplyPicker();
+            });
+            card.appendChild(del);
+        }
+
+        const nm = document.createElement('div');
+        nm.className = 'sc-name';
+        nm.textContent = item.name;
+        card.appendChild(nm);
+
+        // ---- 拖拽排序 ----
+        card.addEventListener('dragstart', function (e) {
+            e.dataTransfer.setData('text/plain', String(i));
+            e.dataTransfer.effectAllowed = 'move';
+            card.style.opacity = '0.4';
+        });
+        card.addEventListener('dragend', function () { card.style.opacity = ''; });
+        card.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+        card.addEventListener('drop', function (e) {
+            e.preventDefault();
+            const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+            const to = i;
+            if (isNaN(from) || from === to) return;
+            const moved = list.splice(from, 1)[0];
+            list.splice(to, 0, moved);
+            jobSaveLocal();
+            jobRenderSupply();
+            setStatus('↔ 已调整补给顺序：' + moved.name + ' → 第 ' + (to + 1) + ' 位');
+        });
+
+        // 悬停时按「距离」给所有卡下发位移：离得越远退得越多（扇子张开）
+        // 被悬停那张单独加 .sc-lifted（上浮 + 微旋 + 放大）
+        card.addEventListener('mouseenter', function () { jobSupplyHover(i, true); });
+        card.addEventListener('mouseleave', function () { jobSupplyHover(i, false); });
+
+        // 点卡片 -> 打开选择弹窗（便于换掉这一项）
+        card.addEventListener('click', function () {
+            jobOpenSupplyPicker();
+        });
+
+        stage.appendChild(card);
+    });
+
+    // 空白区提示
+    const hint = document.getElementById('supplyHint');
+    if (hint) hint.textContent = list.length ? '拖拽卡片可调整顺序' : '';
+}
+
+// 悬停/离开时重算所有卡片的让位
+//   hoverIdx 那张：加 .sc-lifted（CSS 负责上浮+旋转+放大）
+//   其余：shift = (自己的序号 - hoverIdx) * 基准位移
+//         负数往左退、正数往右退，越远退越多 -> 整叠像扇子张开
+//
+// ⚠️ 为什么用 left 而不是 transform：
+//   实测 `transition: transform` + JS 写 transform 时，inline 值虽然对了，
+//   但卡片在屏幕上的渲染位置完全不变（Chromium 的合成层问题）。
+//   改成过渡 `left`（布局属性）实测可靠，且视觉上同样是平滑位移。
+function jobSupplyHover(hoverIdx, on) {
+    const stage = document.getElementById('supplyStage');
+    if (!stage) return;
+    const sec = document.getElementById('supplySection');
+    let shiftBase = 34;
+    if (sec) {
+        const parsed = parseFloat(getComputedStyle(sec).getPropertyValue('--sc-shift'));
+        if (!isNaN(parsed)) shiftBase = parsed;
+    }
+
+    Array.from(stage.querySelectorAll('.supply-card')).forEach(function (c) {
+        const i = parseInt(c.style.getPropertyValue('--i'), 10) || 0;
+        if (!on || i === hoverIdx) {
+            // 复位；抽出那张的位移交给 .sc-lifted
+            if (on && i === hoverIdx) c.classList.add('sc-lifted');
+            else c.classList.remove('sc-lifted');
+            c.style.setProperty('--shift-x', '0px');
+        } else {
+            c.classList.remove('sc-lifted');
+            c.style.setProperty('--shift-x', ((i - hoverIdx) * shiftBase) + 'px');
+        }
+    });
+}
+
+// ============================================================
+// 补给项选择弹窗
+//
+// 点图片 = 添加；再点同张 = 移除（来回切换）。
+// 相比原来的「输入序号」prompt，这里能直接看到图，不用记数字。
+// ============================================================
+function jobSupplyItemKey(it) {
+    return String(it && (it.id || it.img || it.name) || '');
+}
+
+function jobRenderSupplyPicker() {
+    const grid = document.getElementById('supplyPickerGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const t = jobTables[currentTable];
+    const list = jobSupplyList(t);
+    const picked = {};
+    list.forEach(function (it) { picked[jobSupplyItemKey(it)] = true; });
+
+    SUPPLY_CANDIDATES.forEach(function (cand) {
+        const item = document.createElement('div');
+        const isPicked = !!picked[jobSupplyItemKey(cand)];
+        item.className = 'sp-item'
+            + (isPicked ? ' sp-picked' : '')
+            + (cand.pinned ? ' sp-pinned' : '');
+        item.title = cand.pinned
+            ? (cand.name + (isPicked ? '（点击取消）' : '（点击固定到最前）'))
+            : cand.name;
+
+        const img = document.createElement('img');
+        img.src = SUPPLY_IMG_DIR + encodeURIComponent(cand.img);
+        img.alt = cand.name;
+        img.onerror = function () { this.style.visibility = 'hidden'; };
+        item.appendChild(img);
+
+        const nm = document.createElement('div');
+        nm.className = 'sp-name';
+        nm.textContent = cand.name;
+        item.appendChild(nm);
+
+        // 固定项补一个角标，说明它的状态
+        if (cand.pinned && isPicked) {
+            const tag = document.createElement('span');
+            tag.className = 'sp-pin-tag';
+            tag.textContent = '📌 已固定';
+            item.appendChild(tag);
+        }
+
+        item.addEventListener('click', function () {
+            jobToggleSupplyItem(cand);
+        });
+
+        grid.appendChild(item);
+    });
+
+    const tip = document.getElementById('supplyPickerTip');
+    if (tip) tip.textContent = '已选 ' + list.length + ' 项';
+}
+
+// 打开弹窗（同时渲染堆叠卡片与图库）
+function jobOpenSupplyPicker() {
+    const p = document.getElementById('supplyPicker');
+    if (!p) return;
+    jobRenderSupply();
+    jobRenderSupplyPicker();
+    p.classList.add('sp-open');
+    const btn = document.getElementById('supplyToggle');
+    if (btn) btn.classList.add('sc-on');
+}
+
+function jobCloseSupplyPicker() {
+    const p = document.getElementById('supplyPicker');
+    if (p) p.classList.remove('sp-open');
+    const btn = document.getElementById('supplyToggle');
+    if (btn) btn.classList.remove('sc-on');
+}
+
+// 兼容旧调用：现在「补给选取」按钮直接弹窗，不再有内联折叠面板
+function jobToggleSupply(force) {
+    if (force === false) jobCloseSupplyPicker();
+    else jobOpenSupplyPicker();
+}
+
+// 只在 boss tab 显示入口（补给是 boss 关专属）
+function jobSyncSupplyVisibility() {
+    const entry = document.querySelector('.supply-entry');
+    if (!entry) return;
+    entry.style.display = jobIsBossBoard() ? '' : 'none';
+    if (!jobIsBossBoard()) jobCloseSupplyPicker();   // 切回普通关就关掉弹窗
 }
 
 // 渲染种植顺序链条
@@ -4817,21 +5567,23 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible) {
         node.appendChild(cellLbl);
 
         // 该动作后的等待（挂在动作上）
+        // ★ 普通关与 boss 关各自独立的等待表
+        const _wf = jobWaitField();
         const wk = jobPlacementKey(which, key, entry.r, entry.c, entry.item.seq);
-        const wv = t.waitAfter ? t.waitAfter[wk] : null;
+        const wv = (t[_wf] && t[_wf][wk]) || null;
         const wbtn = document.createElement('button');
         wbtn.className = 'seq-wbtn' + (wv ? ' on' : '');
         wbtn.textContent = wv ? ('⏱' + wv + 's') : '⏱';
         wbtn.title = '这个动作之后等待几秒';
         wbtn.addEventListener('click', function (e) {
             e.stopPropagation();
-            const cur = (t.waitAfter && t.waitAfter[wk]) || 0;
+            const cur = (t[_wf] && t[_wf][wk]) || 0;
             const nv = window.prompt('这个动作之后等待几秒？（0 = 不等待）', String(cur));
             if (nv === null) return;
             const sec = Math.max(0, parseFloat(nv) || 0);
-            if (!t.waitAfter) t.waitAfter = {};
-            if (sec > 0) t.waitAfter[wk] = sec;
-            else delete t.waitAfter[wk];
+            if (!t[_wf]) t[_wf] = {};
+            if (sec > 0) t[_wf][wk] = sec;
+            else delete t[_wf][wk];
             jobSaveLocal();
             jobRenderSeqChains();
         });
@@ -5018,7 +5770,7 @@ function jobPullPicked(t, which, key) {
         rebuilt.push(s);
     });
 
-    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = rebuilt;
+    t[jobChainField(which)] = rebuilt;
 
     jobSeqSel = {};
     jobSaveLocal();
@@ -5088,7 +5840,7 @@ function jobDropPlantsAsBlock(t, which, drag, targetSeg, after) {
     if (ti === -1) ti = mid.length - 1;
     mid.splice(after ? ti + 1 : ti, 0, { key: drag.key, from: -1, to: -1, picked: taken });
 
-    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = mid;
+    t[jobChainField(which)] = mid;
 
     jobSeqSel = {};
     jobSaveLocal();
@@ -5115,7 +5867,7 @@ function jobMoveSegInOrder(t, fromSeg, targetSeg, after, which) {
     let t2 = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
     if (t2 === -1) t2 = order.length - 1;
     order.splice(after ? t2 + 1 : t2, 0, moved);
-    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    t[jobChainField(which)] = order;
     jobSaveCurrentBoard();
     jobSaveLocal();
     jobRenderSeqChains();
@@ -5156,7 +5908,7 @@ function jobMergeSegs(t, which, fromSeg, targetSeg) {
     order.splice(lo, 1, mergedSeg);
     order.splice(hi, 1);
 
-    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    t[jobChainField(which)] = order;
     jobSaveCurrentBoard();
     jobSaveLocal();
     jobRenderSeqChains();
@@ -5173,7 +5925,7 @@ function jobMoveSlotInOrder(t, fromKey, targetKey, after, which) {
     const moved = order.splice(fi, 1)[0];
     let t2 = order.findIndex(function (s) { return s.key === targetKey; });
     order.splice(after ? t2 + 1 : t2, 0, moved);
-    t[(which === 'loop') ? 'loopOrder' : 'slotOrder'] = order;
+    t[jobChainField(which)] = order;
     jobSaveCurrentBoard();
     jobSaveLocal();
     jobRenderSeqChains();
@@ -5685,7 +6437,9 @@ function jobBuildChain(t, board, which) {
     const out = [];
     if (!t || !board) return out;
     jobEnsureSeq(board);
-    const segs = jobGetChainOrder(t, which);
+    // ★ 传入 board：让 jobGetChainOrder 的覆盖率修复用**正确的棋盘**
+    //   （导出 boss 链时要用 bossBoard，不能靠 tab 猜）
+    const segs = jobGetChainOrder(t, which, board);
 
     segs.forEach(function (seg) {
         // 该段实际包含的落点（已按 seq 排序，且同一槽内保持落子先后）
@@ -5800,10 +6554,19 @@ function jobBuild() {
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢
+            // ★ 普通关与 boss 关**各自独立**（除槽位植物外）
             slotModes: Object.assign({}, t.slotModes || {}),
             slotOrder: Array.isArray(t.slotOrder) ? t.slotOrder.slice() : null,
             loopOrder: Array.isArray(t.loopOrder) ? t.loopOrder.slice() : null,
             waitAfter: Object.assign({}, t.waitAfter || {}),
+            // boss 关配置：null = 未配置 -> 运行时 boss 关不做种植，只等结算
+            bossSlotModes: Object.assign({}, t.bossSlotModes || {}),
+            bossSlotOrder: Array.isArray(t.bossSlotOrder) ? t.bossSlotOrder.slice() : null,
+            bossLoopOrder: Array.isArray(t.bossLoopOrder) ? t.bossLoopOrder.slice() : null,
+            bossWaitAfter: Object.assign({}, t.bossWaitAfter || {}),
+            // 补给选取顺序（boss 关专属，每个阵容独立）
+            supplyPicks: Array.isArray(t.supplyPicks)
+                ? JSON.parse(JSON.stringify(t.supplyPicks)) : null,
             innerWaits: JSON.parse(JSON.stringify(t.innerWaits || { once: {}, loop: {} })),
 
             // ---- 棋盘本体（必须导出！否则保存后载入/切换作业集时阵容全丢）----
@@ -6038,6 +6801,15 @@ function jobApplyLoaded(job, code) {
         if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
         if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
         if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
+        // ---- boss 关独立配置 ----
+        // ★ 旧作业集没有 boss* 字段 -> **保持 null**，boss 关只会等结算、不做种植。
+        //   不自动从普通关拷贝（用户明确要求）。
+        if (t.bossSlotModes === undefined) t.bossSlotModes = {};
+        if (!Array.isArray(t.bossSlotOrder)) t.bossSlotOrder = null;
+        if (!Array.isArray(t.bossLoopOrder)) t.bossLoopOrder = null;
+        if (!t.bossWaitAfter || typeof t.bossWaitAfter !== 'object') t.bossWaitAfter = {};
+        // 补给选取：数组（null/缺失都留空，由 jobSupplyList 填默认）
+        if (!Array.isArray(t.supplyPicks)) t.supplyPicks = null;
         if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {} };
         if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
         if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
@@ -6189,6 +6961,11 @@ function jobLoadLocal() {
             if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
             if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
             if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
+            // boss 关独立配置（旧缓存没有 -> 保持 null，boss 关只等结算）
+            if (t.bossSlotModes === undefined) t.bossSlotModes = {};
+            if (!Array.isArray(t.bossSlotOrder)) t.bossSlotOrder = null;
+            if (!Array.isArray(t.bossLoopOrder)) t.bossLoopOrder = null;
+            if (!t.bossWaitAfter || typeof t.bossWaitAfter !== 'object') t.bossWaitAfter = {};
             if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {} };
             if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
             if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
@@ -6252,13 +7029,33 @@ function jobInit() {
         const ans = window.prompt(tip, String(Math.min(JOB_MAX_LEVEL, curTo)));
         if (ans === null) return;                       // 取消 → 不新建
         let b = parseInt(ans);
-        const lo = jobRangeOfTable(jobTables.length - 1).from + 1;
-        if (!(b > 0)) { alert('请输入合法关卡数字'); return; }
-        if (b < lo) b = lo;
-        if (b > JOB_MAX_LEVEL) b = JOB_MAX_LEVEL;
+        // ★ 新区间的起点必须**严格大于**上一阵容的起始关，
+        //   否则会输入一个落在前面阵容区间里的数，导致区间重叠/冲突。
+        //   lo = 上一阵容的起始关 + 1（不是「上一阵容结束关 + 1」，
+        //   因为「上一阵容结束关」正是这次要设置的那个数）。
+        const prevRange = jobRangeOfTable(jobTables.length - 1);
+        const lo = prevRange.from + 1;
+        if (!(b > 0)) {
+            alert('请输入合法关卡数字');
+            return;
+        }
+        if (b < lo) {
+            alert('转阵容关必须大于 ' + prevRange.from + '（阵容' + jobTables.length
+                + ' 占用了 ' + prevRange.from + ' ~ ' + prevRange.to + '）。\n'
+                + '请输入 ' + lo + ' ~ ' + JOB_MAX_LEVEL + ' 之间的数。');
+            return;
+        }
+        if (b > JOB_MAX_LEVEL) {
+            alert('转阵容关不能超过最大关卡 ' + JOB_MAX_LEVEL);
+            return;
+        }
 
         // 上一阵容的结束关 = 新阵容的起始关 = b
         if (last) last.to_level = String(b);
+        // ★ 关键：新建之前必须先把「当前正在编辑的棋盘」存回它所属的表。
+        //   否则 jobLoadTable 会用新表的空棋盘覆盖全局 boardEarly，
+        //   上一个阵容的布阵数据就永久丢了（踩过的坑）。
+        jobSaveCurrentBoard();
         const nt = jobNewTable();
         nt.from_level = b;
         nt.to_level = '';                               // 新阵容默认到最大关卡
@@ -6273,14 +7070,59 @@ function jobInit() {
     document.getElementById('jobDelTable').addEventListener('click', () => {
         if (jobTables.length <= 1) { alert('至少保留一个阵容'); return; }
         if (!confirm('删除当前阵容？')) return;
+
+        // ★ 关键：删之前必须先把「当前正在编辑的棋盘」存回它所属的表。
+        //   否则 splice 之后 currentTable 变了，jobLoadTable 内部的
+        //   jobSaveCurrentBoard() 会把旧棋盘写进**另一张表**，
+        //   把那边的布阵覆盖掉（踩过的坑：删阵容1 毁掉阵容2）。
+        jobSaveCurrentBoard();
+
         jobTables.splice(currentTable, 1);
         currentTable = Math.min(currentTable, jobTables.length - 1);
         jobRenumberTables();          // ★ 删表后重接关卡链条
-        jobLoadTable(currentTable);
+        // currentTable 已指向正确的表，且棋盘刚刚存过，用 skipSave 避免再存一次
+        jobLoadTable(currentTable, true);
         jobRenderTabs();
         jobFillForm();
         jobSaveLocal();
+        setStatus('🗑 已删除阵容，剩余 ' + jobTables.length + ' 个');
     });
+
+    // ============ 补给选取（boss 关专属）============
+    const spToggle = document.getElementById('supplyToggle');
+    if (spToggle) {
+        // 点「补给选取」直接弹窗（与「可选补给项」同一个窗）
+        spToggle.addEventListener('click', function () { jobOpenSupplyPicker(); });
+    }
+    // 弹窗：关闭 / 完成 / 点遮罩关闭 / Esc 关闭
+    const spClose = document.getElementById('supplyPickerClose');
+    if (spClose) spClose.addEventListener('click', jobCloseSupplyPicker);
+    const spDone = document.getElementById('supplyPickerDone');
+    if (spDone) spDone.addEventListener('click', jobCloseSupplyPicker);
+    const spModal = document.getElementById('supplyPicker');
+    if (spModal) {
+        spModal.addEventListener('click', function (e) {
+            if (e.target === spModal) jobCloseSupplyPicker();   // 点遮罩关闭
+        });
+    }
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') jobCloseSupplyPicker();
+    });
+    const spReset = document.getElementById('supplyReset');
+    if (spReset) {
+        spReset.addEventListener('click', function () {
+            const t = jobTables[currentTable];
+            if (!t) return;
+            if (!window.confirm('恢复默认补给顺序？当前设置会丢失。')) return;
+            t.supplyPicks = SUPPLY_DEFAULTS.slice(0, 5).map(function (d) {
+                return { id: d.id, name: d.name, img: d.img };
+            });
+            jobSaveLocal();
+            jobRenderSupply();
+            setStatus('↺ 已恢复默认补给顺序');
+        });
+    }
+    jobSyncSupplyVisibility();
 
     // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
     const bdEl = document.getElementById('tfBoundary');
