@@ -184,6 +184,12 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 }
 .seq-node[draggable="true"] { cursor:grab; }
 .seq-node[draggable="true"]:active { cursor:grabbing; }
+/* 块内重排：拖到同块另一株上时的高亮 */
+.seq-node.seq-over-inside {
+    border-color:#2d7aff;
+    background:#eff6ff;
+    box-shadow:0 0 0 2px rgba(45,122,255,.22);
+}
 
 /* 阵容表的关卡区间显示（两端只读，中间那个数字可改） */
 .tf-range-edge {
@@ -4752,6 +4758,8 @@ function jobGetChainOrder(t, which, board) {
                 to: (e.to === null || e.to === undefined) ? null : (e.to | 0)
             };
             if (Array.isArray(e.picked) && e.picked.length) o.picked = e.picked.map(Number);
+            // ★ 段内自定义顺序（拖动 chip 打乱块内先后时写入）
+            if (Array.isArray(e.order) && e.order.length) o.order = e.order.map(Number);
             return o;
         }
         return null;
@@ -4882,6 +4890,12 @@ function jobModesField() {
 
 // 该槽在这一段里包含哪些落点。每项带 gidx = 它在「本槽全部落点」里的真实下标。
 // picked 存在时用它（融合/拆出的块可能是若干不连续的株），否则用 [from, to) 区间。
+//
+// ★ 段内顺序（seg.order）：
+//   默认按棋盘上的 seq（= 格子1_1 → 1_2 → 1_3 …）。
+//   作者可以在链条里拖动 chip 打乱块内顺序，此时 seg.order 记录「落点下标」的
+//   自定义先后（如 [2,0,1]）。order 的长度与 picked/区间展开的落点一致；
+//   对不上的部分（增删落点后）按 seq 追加到末尾，保证不丢落点。
 function jobSegPlacements(board, seg, which) {
     const all = jobPlacementsOf(board, seg.key, which);
     let idxs;
@@ -4894,6 +4908,16 @@ function jobSegPlacements(board, seg, which) {
         idxs = [];
         for (let g = (seg.from | 0); g < to; g++) idxs.push(g);
     }
+
+    // ★ 应用自定义块内顺序
+    if (Array.isArray(seg.order) && seg.order.length) {
+        const want = seg.order.map(Number).filter(function (g) {
+            return idxs.indexOf(g) !== -1;
+        });
+        const rest = idxs.filter(function (g) { return want.indexOf(g) === -1; });
+        idxs = want.concat(rest);      // 自定义在前，新增的落点按 seq 追加
+    }
+
     return idxs.map(function (g) {
         const e = all[g];
         if (!e) return null;
@@ -5271,6 +5295,64 @@ function jobSyncSupplyVisibility() {
     if (!jobIsBossBoard()) jobCloseSupplyPicker();   // 切回普通关就关掉弹窗
 }
 
+// ============================================================
+// 段内重排：把某个落点拖到同段另一个落点的位置
+//
+// 默认块内顺序 = 棋盘上的 seq（格子1_1 → 1_2 → 1_3 …）。
+// 拖拽后把「自定义顺序」写进 seg.order（存的是落点下标 gidx 的数组）。
+//
+// 参数：
+//   seg     —— 该段的规范化对象（jobGetChainOrder 已写回 t[field]，改它即生效）
+//   dragGidxs —— 被拖的落点下标（可能多个，取第一个参与换位）
+//   targetGidx —— 落到的那个落点下标
+// ============================================================
+function jobReorderInSeg(t, which, key, seg, dragGidxs, targetGidx) {
+    const board = jobIsBossBoard() ? boardLate : boardEarly;
+    const all = jobPlacementsOf(board, key, which);
+    const total = all.length;
+    if (!total) return;
+
+    // 当前段包含哪些落点（按现有顺序）
+    const current = jobSegPlacements(board, seg, which).map(function (p) { return p.gidx; });
+    if (current.length < 2) return;                 // 只有一个落点，排不了
+
+    const from = (dragGidxs && dragGidxs.length) ? dragGidxs[0] : null;
+    if (from === null || current.indexOf(from) === -1) return;
+    const to = targetGidx;
+    if (to === null || current.indexOf(to) === -1 || from === to) return;
+
+    // 在 current 里把 from 挪到 to 的位置
+    const next = current.slice();
+    const fi = next.indexOf(from);
+    const ti = next.indexOf(to);
+    next.splice(fi, 1);
+    next.splice(ti, 0, from);
+
+    // ★ 写回自定义顺序
+    seg.order = next.slice();
+
+    // 也把「段本身」写回存储数组，保证刷新/导出不丢
+    const field = jobChainField(which, board);
+    const arr = Array.isArray(t[field]) ? t[field] : null;
+    if (arr) {
+        // 找到与 seg 对应的那一项（key + picked/from 指纹）
+        const hit = arr.find(function (s) {
+            if (!s || s.key !== key) return false;
+            if (Array.isArray(seg.picked) && seg.picked.length) {
+                return Array.isArray(s.picked)
+                    && s.picked.join(',') === seg.picked.join(',');
+            }
+            return (!Array.isArray(s.picked) || !s.picked.length)
+                && (s.from | 0) === (seg.from | 0);
+        });
+        if (hit) hit.order = next.slice();
+    }
+
+    jobSaveLocal();
+    jobRenderSeqChains();
+    setStatus('↔ 已调整块内顺序：第 ' + (fi + 1) + ' 株 → 第 ' + (ti + 1) + ' 位');
+}
+
 // 渲染种植顺序链条
 function jobRenderSeqChains() {
     const box = document.getElementById('seqChains');
@@ -5622,6 +5704,28 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible) {
             node.classList.remove('seq-dragging');
             seqDrag = null;
             jobClearSeqOver();
+        });
+
+        // ★ 块内重排：把 chip 拖到**同一个块里**的另一个 chip 上 -> 交换先后。
+        //   拖到别的块上仍然是「拖出成独立块」（由外面的 drop 处理）。
+        node.addEventListener('dragover', function (e) {
+            if (!seqDrag || seqDrag.kind !== 'plant') return;
+            if (seqDrag.which !== which || seqDrag.key !== key) return;   // 只认同槽同链
+            e.preventDefault();
+            e.stopPropagation();
+            node.classList.add('seq-over-inside');
+        });
+        node.addEventListener('dragleave', function () {
+            node.classList.remove('seq-over-inside');
+        });
+        node.addEventListener('drop', function (e) {
+            if (!seqDrag || seqDrag.kind !== 'plant') return;
+            if (seqDrag.which !== which || seqDrag.key !== key) return;
+            e.preventDefault();
+            e.stopPropagation();
+            node.classList.remove('seq-over-inside');
+            // 把被拖的那一株移到当前这一株的位置
+            jobReorderInSeg(t, which, key, seg, seqDrag.gidxs, gIdx);
         });
 
         body.appendChild(node);

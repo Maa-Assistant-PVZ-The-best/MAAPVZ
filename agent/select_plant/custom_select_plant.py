@@ -14,6 +14,7 @@ custom_select_plant.py —— custom 选植物逻辑（MAA CustomAction / Custom
     3. 皮肤/多模板：放在子文件夹里的植物（有 `_newrare_*` 皮肤），命中任意一个模板就算命中。
     4. 对不上就点槽位：寻找第 N 个植物时点错了，就点击第 N 个槽位把拿错的植物放回去，再滑回顶重找。
     5. 保底机制：滑动后连续两帧截图相似（基本没滚动），判定本轮没找到，滑回最顶上重找。
+       回顶次数**不写死**：等于「本轮实际下滑了几次 + 3」（见 DEFAULT_BACKTOP 注释）。
     6. 不足 8 个植物：全部找完后滑回最顶上，把剩余空槽按顺序依次点一遍占位。
 
 实现依赖：
@@ -165,12 +166,13 @@ class SelectPlants(CustomAction):
           "搜索roi":  [x,y,w,h],                     // 可选，植物列表滚动区
           "匹配阈值": 0.70,                          // 可选
           "滑动":  {"begin":[x,y],"end":[x,y],"duration":600},
-          "回顶":  {"begin":[x,y],"end":[x,y],"repeat":8,"duration":80},
+          "回顶":  {"begin":[x,y],"end":[x,y],"duration":600},   // 次数=本轮下滑次数+3
           "滑动后等待": 300,
           "点击后等待": 900,
           "截图相似阈值": 0.96,       // 单次滑动前后几乎一致才视为“没滚动”
           "保底连续帧": 2,           // 连续多少帧相似判定到达列表尽头
-          "最多重试": 6,             // 单个植物最多重试轮次
+          "最多重试": 6,             // 回顶重扫最多几轮
+          "最多滑动步数": 40,         // ★ 单轮向下扫描最多滑几次（到列表尽头由保底机制判定）
         }
     """
 
@@ -206,7 +208,18 @@ class SelectPlants(CustomAction):
     # 植物列表滚动搜索区（玩家实测选卡界面植物卡列表范围）
     DEFAULT_SEARCH_ROI = [138, 389, 595, 302]
     DEFAULT_SWIPE = {"begin": [215, 587], "end": [215, 200], "duration": 600}
-    DEFAULT_BACKTOP = {"begin": [381, 401], "end": [381, 611], "repeat": 30, "duration": 80}
+
+    # ★ 回顶（往上翻回列表最顶）：次数**不再写死**，由「本轮实际下滑了几次 + 3」动态决定。
+    #   旧默认值 {"begin":[381,401],"end":[381,611],"repeat":30,"duration":80} 已删除：
+    #   repeat=30 是 Python 内部硬编码，每次回顶无条件连刷 30 次（≈2.4s+IPC），
+    #   列表短时白刷、列表长时又不够，且和「这次到底滑了几屏」完全脱钩。
+    #
+    #   注意方向：回顶用**自己这组坐标**（381,401 -> 381,611，往下刷 = 列表往上翻），
+    #   ⚠️ 不要图省事复用 DEFAULT_SWIPE 的反向坐标（215,200 -> 215,587），实测有 bug。
+    #   duration 缺省 600（旧的 80 是给 30 次连刷用的；次数变成动态后单次滑稳一点更好）。
+    #   若参数里显式给了 "回顶":{"repeat":N}，则仍按旧行为固定滑 N 次（兼容旧作业集）。
+    DEFAULT_BACKTOP = {"begin": [381, 401], "end": [381, 611], "duration": 100}
+    BACKTOP_EXTRA_STEPS = 3   # 回顶次数 = 本轮下滑次数 + 本值
 
     # 默认填充位置（滑回最顶上后依次快速点击这些坐标占位）
     # 当 custom_action_param 没传「填充位置」时使用。
@@ -284,6 +297,11 @@ class SelectPlants(CustomAction):
             sim_threshold = float(param.get("截图相似阈值", 0.96))
             backoff_frames = int(param.get("保底连续帧", 2))
             max_retry = int(param.get("最多重试", 6))
+            # ★ 单轮「向下扫描」最多滑几次：和重试轮数解耦。
+            #   旧版把两者塞在同一个 retry 计数器里（默认 6），所以一个植物最多只下滑 6 屏，
+            #   根本够不到列表深处 —— 那时候是靠 回顶.repeat=30 硬顶着。现在分开：
+            #     slide_count 管「这一轮往下滑多远」，retry 只管「回顶重扫几轮」。
+            max_slides = int(param.get("最多滑动步数", 40))
             # 填充位置：可选。滑回最顶上后，依次快速点击这些坐标占位。
             # 未传「填充位置」时，使用内置默认 DEFAULT_FILL_POSITIONS（玩家实测占位点）。
             fill_positions = param.get("填充位置", None)
@@ -343,7 +361,7 @@ class SelectPlants(CustomAction):
                     slot_xy[i] if i < len(slot_xy) else None,
                     backtop, swipe, threshold, post_swipe_wait,
                     post_click_wait, sim_threshold, backoff_frames,
-                    max_retry)
+                    max_retry, max_slides)
                 if placed:
                     slot_done[i] = True
 
@@ -438,12 +456,31 @@ class SelectPlants(CustomAction):
         except Exception as e:
             print(f"[SelectPlants] 滑动失败: {e}", file=sys.stderr, flush=True)
 
-    def _do_swipe_backtop(self, ctl, backtop):
-        # 连续重复上滑直到顶上
-        repeat = int(backtop.get("repeat", 8))
-        dur = int(backtop.get("duration", 80))
-        b = backtop.get("begin", [381, 401])
-        e = backtop.get("end", [381, 611])
+    def _do_swipe_backtop(self, ctl, backtop, steps=None):
+        """回顶：把植物列表往上翻回最顶端。
+
+        ★ 次数是**动态**的：steps = 本轮实际往下滑了几次 -> 回顶 steps + 3 次。
+          传 steps=None（还没滑过 / 独立调用）时按 1+3 次刷，保证至少翻得到顶。
+
+        兼容：参数里显式给了 回顶.repeat 时，仍按固定次数滑（老作业集行为不变）。
+
+        方向：用 backtop 自己的 begin/end（381,401 -> 381,611），
+              ⚠️ 不要改成滑动的反向坐标，实测有 bug。
+        """
+        b = backtop.get("begin", self.DEFAULT_BACKTOP["begin"])
+        e = backtop.get("end", self.DEFAULT_BACKTOP["end"])
+        dur = int(backtop.get("duration", self.DEFAULT_BACKTOP["duration"]))
+
+        forced = backtop.get("repeat")
+        if forced is not None:
+            # 旧写法：显式 repeat -> 固定次数（兼容）
+            repeat = max(1, int(forced))
+            why = f"固定 {repeat} 次(参数指定 repeat)"
+        else:
+            # 动态：本轮下滑 N 次 -> 回顶 N+3 次
+            repeat = max(1, int(steps or 0) + self.BACKTOP_EXTRA_STEPS)
+            why = f"本轮下滑 {int(steps or 0)} 次 + {self.BACKTOP_EXTRA_STEPS}"
+
         for _ in range(repeat):
             try:
                 ctl.post_swipe(int(b[0]), int(b[1]), int(e[0]), int(e[1]),
@@ -451,6 +488,9 @@ class SelectPlants(CustomAction):
             except Exception as ex:
                 print(f"[SelectPlants] 回顶滑动失败: {ex}",
                       file=sys.stderr, flush=True)
+        print(f"[SelectPlants] 回顶: 上滑 {repeat} 次 ({why})",
+              file=sys.stderr, flush=True)
+        return repeat
 
     @staticmethod
     def _image_similarity(img_a, img_b):
@@ -536,13 +576,21 @@ class SelectPlants(CustomAction):
             self, context, ctl, tgt, slot_index, search_roi, verify_roi,
             slot_roi, slot_xy, backtop, swipe, threshold,
             post_swipe_wait, post_click_wait, sim_threshold,
-            backoff_frames, max_retry):
-        """返回 True=该槽已正确放入目标植物。"""
+            backoff_frames, max_retry, max_slides):
+        """返回 True=该槽已正确放入目标植物。
 
-        # 顶点重启扫描
-        self._do_swipe_backtop(ctl, backtop)
+        两个计数器分工（旧版是一个，所以最多只能下滑 6 屏）：
+            slide_count —— 本轮已经往下滑了几次；回顶次数 = slide_count + 3。
+            retry       —— 回顶重扫了几轮（只有「滑到底」或「核验失败」才涨）。
+        每轮回顶后 slide_count 归零，于是回顶次数始终贴合列表真实长度。
+        """
+        max_slides = max(1, int(max_slides))
+
+        # 顶点重启扫描（还没滑过 -> 按 0+3 次刷）
+        self._do_swipe_backtop(ctl, backtop, 0)
 
         retry = 0
+        slide_count = 0          # 本轮回顶之后，已经向下扫了几屏
         identical_run = 0
 
         # 位置否定记忆：点错/核验失败过一次的卡位坐标框，后续扫描跳过，
@@ -611,8 +659,8 @@ class SelectPlants(CustomAction):
                 if ok:
                     print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 核对通过",
                           file=sys.stderr, flush=True)
-                    # 通过 -> 滑回最顶上，继续下一个
-                    self._do_swipe_backtop(ctl, backtop)
+                    # 通过 -> 滑回最顶上（次数=本轮下滑次数+3），继续下一个
+                    self._do_swipe_backtop(ctl, backtop, slide_count)
                     return True
 
                 # ---- 对不上：否定这个卡位(记录其坐标框)，把拿错的植物丢回对应槽位
@@ -639,6 +687,7 @@ class SelectPlants(CustomAction):
             # 这样正常滑动时画面明显变化，不会误判。
             img_before = PL.bgr_to_gray(img) if img is not None else None
             self._do_swipe(ctl, swipe)
+            slide_count += 1          # ★ 记下这一轮到底滑了几屏，回顶次数由它决定
             time.sleep(post_swipe_wait / 1000.0)
             img_after = self._screen(ctl)   # 滑动后的一帧，作为下一轮识别用
             if img_after is None:
@@ -650,12 +699,23 @@ class SelectPlants(CustomAction):
                 identical_run = identical_run + 1 if sim >= sim_threshold else 0
             else:
                 identical_run = 0
-            if identical_run >= backoff_frames:
-                print(f"[SelectPlants] 保底: 连续 {identical_run} 次滑动无明显变化"
-                      f"(sim={sim:.3f})，判断本轮没找到，滑回最顶上重找",
-                      file=sys.stderr, flush=True)
-                self._do_swipe_backtop(ctl, backtop)
+
+            # 判「到底」的两条路：
+            #   a) 连续 backoff_frames 次滑动画面无变化 -> 列表已到尽头
+            #   b) 滑动步数达到上限 -> 兜底，防止搜索区不滚动时无限滑下去
+            reached_end = identical_run >= backoff_frames
+            too_many = slide_count >= max_slides
+            if reached_end or too_many:
+                if reached_end:
+                    print(f"[SelectPlants] 保底: 连续 {identical_run} 次滑动无明显变化"
+                          f"(sim={sim:.3f})，判断本轮没找到，滑回最顶上重找",
+                          file=sys.stderr, flush=True)
+                else:
+                    print(f"[SelectPlants] 本轮已下滑 {slide_count} 次(上限 {max_slides})，"
+                          f"滑回最顶上重扫", file=sys.stderr, flush=True)
+                self._do_swipe_backtop(ctl, backtop, slide_count)
                 retry += 1
+                slide_count = 0       # ★ 新的一轮，回顶次数重新按「本轮」计
                 identical_run = 0
                 img_after = None
                 continue
@@ -663,11 +723,8 @@ class SelectPlants(CustomAction):
             # 用滑动后的帧继续识别
             img = img_after
 
-            if retry > max_retry:
-                break
-
-        print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 达到重试上限，放弃",
-              file=sys.stderr, flush=True)
+        print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 达到重试上限"
+              f"({max_retry} 轮)，放弃", file=sys.stderr, flush=True)
         return False
 
     @staticmethod
