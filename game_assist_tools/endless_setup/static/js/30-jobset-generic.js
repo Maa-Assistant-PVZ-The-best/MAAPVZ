@@ -29,7 +29,7 @@ function jobOpenGenPicker(gaId) {
     const ico = document.getElementById('gpIco');
     const nm = document.getElementById('gpName');
     const desc = document.getElementById('gpDesc');
-    if (ico) ico.textContent = ga.icon;
+    if (ico) jobAppendIconImg(ico, ga.img, { cls: 'ga-ico-img', size: 56, alt: ga.name, fallbackText: ga.icon || '⚡' });
     if (nm) nm.textContent = ga.name;
     if (desc) desc.textContent = ga.desc || '';
 
@@ -120,7 +120,7 @@ function jobRenderGenActionsInto(hostId) {
 
         const ico = document.createElement('span');
         ico.className = 'ga-ico';
-        ico.textContent = ga.icon || '⚡';
+        jobAppendIconImg(ico, ga.img, { cls: 'ga-ico-img', size: 56, alt: ga.name, fallbackText: ga.icon || '⚡' });
         btn.appendChild(ico);
 
         const nm = document.createElement('span');

@@ -36,6 +36,18 @@ const JOB_CHAIN_META = {
 const JOB_SLOT_MODES = ['once', 'loop', 'end'];
 
 // ============================================================
+// UI 图标资源（原先用 emoji，现改为 button/ 下的 .webp 图片）
+//   集中定义，避免到处写死路径。
+// ============================================================
+const JOB_UI_IMG = {
+    feed:   'static/button/能量豆绿底.webp',   // 喂豆（绿底能量豆）
+    bean:   'static/button/能量豆白色.webp',   // 捡豆（白色能量豆）
+    wave:   'static/button/下一波.webp',       // 点波
+    speed:  'static/button/二倍速.webp',       // 加速
+    shovel: 'static/button/铲子.webp'          // 铲子
+};
+
+// ============================================================
 // 通用动作（不需要格子，直接插进顺序链）
 //
 //   · 放在棋盘右侧的按钮组里，点一下弹窗确认插入哪条链。
@@ -44,9 +56,9 @@ const JOB_SLOT_MODES = ['once', 'loop', 'end'];
 //   · ⚠️ 运行时尚未消费这些段（作业集里暂时不生效）。
 // ============================================================
 const JOB_GENERIC_ACTIONS = [
-    { id: 'wave',  name: '点波', icon: '🌊', desc: '点一次波（催僵尸）' },
-    { id: 'bean',  name: '捡豆', icon: '🫘', desc: '捡一次能量豆' },
-    { id: 'speed', name: '加速', icon: '⏩', desc: '切换加速' }
+    { id: 'wave',  name: '点波', icon: '🌊', img: JOB_UI_IMG.wave,  desc: '点一次波（催僵尸）' },
+    { id: 'bean',  name: '捡豆', icon: '🫘', img: JOB_UI_IMG.bean,  desc: '捡一次能量豆' },
+    { id: 'speed', name: '加速', icon: '⏩', img: JOB_UI_IMG.speed, desc: '切换加速' }
 ];
 
 // 通用动作的段前缀
@@ -61,6 +73,46 @@ function jobGenericActionOfKey(key) {
     const k = String(key || '');
     if (k.indexOf(JOB_GA_PREFIX) !== 0) return null;
     return jobGenericActionById(k.slice(JOB_GA_PREFIX.length));
+}
+
+// ============================================================
+// 图标渲染辅助：把 emoji 图标统一改成 .webp 图片
+//
+//   jobAppendIconImg(container, imgPath, opts)
+//     container: 要挂图片的父元素（span / div）
+//     imgPath:   图片路径（JOB_UI_IMG.* / ga.img），空则用 fallbackText
+//     opts: { cls, size, alt, fallbackText }
+//        - cls          图片的 class（如 'ga-ico-img' / 'seq-ico-img'）
+//        - size         边长 px（默认 18）
+//        - alt          alt 文案
+//        - fallbackText 图片加载失败时兜底显示的 emoji / 文字
+//
+//   图片失败自动回退到 fallbackText，保证不出现破图。
+// ============================================================
+function jobAppendIconImg(container, imgPath, opts) {
+    if (!container) return;
+    opts = opts || {};
+    const cls = opts.cls || 'job-ui-img';
+    const size = opts.size || 18;
+    const fallbackText = opts.fallbackText || '';
+    const alt = opts.alt || '';
+
+    // 没有图片（旧数据 / 未定义）→ 直接用兜底文字，保持原样
+    if (!imgPath) {
+        container.textContent = fallbackText;
+        return;
+    }
+
+    const img = document.createElement('img');
+    img.className = cls;
+    img.src = imgPath;
+    img.alt = alt;
+    img.draggable = false;
+    img.style.width = size + 'px';
+    img.style.height = size + 'px';
+    img.onerror = function () { container.textContent = fallbackText; };
+    container.textContent = '';
+    container.appendChild(img);
 }
 
 // 通用动作段没有棋盘落点，永远算「可见」

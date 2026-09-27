@@ -111,8 +111,11 @@ function renderBoard(gridId, boardData, isLate) {
         d.setAttribute('data-tooltip', '点击放置选中的操作，右键清空该格');
         d.setAttribute('data-tooltip-delay', '1000');
 
-        const _pc = cellItems.filter(function (it) { return it.plant; }).length;
-        if (_pc > 0) d.classList.add('job-n' + Math.min(_pc, 9));   // 同格多株 → 略缩图分档
+        // 同格图标总数（植物 + 喂豆 + 铲子）→ 决定缩略图分档
+        const _pc = cellItems.filter(function (it) {
+            return it.plant || it.type === 'feed' || it.type === 'shovel';
+        }).length;
+        if (_pc > 0) d.classList.add('job-n' + Math.min(_pc, 9));   // 同格多图标 → 略缩图分档
 
         let _pIdx = 0;   // 植物序号：决定缩略图落在 2×2 / 3×3 网格的第几格
         // 渲染顺序：先按形态（单次在前）、再按槽号、再按槽内序号
@@ -165,8 +168,35 @@ function renderBoard(gridId, boardData, isLate) {
                 return;
             }
             const tag = document.createElement('span');
-            tag.className = 'tag ' + item.type + _mcls;
-            tag.textContent = item.label || item.id;
+            // 喂豆 / 铲子 也参与缩略图排序：与植物一样带 job-p{序号}
+            const _isFeed = (item.type === 'feed');
+            const _isShovel = (item.type === 'shovel');
+            if (_isFeed || _isShovel) {
+                _pIdx++;
+                tag.className = 'tag ' + item.type + ' job-p' + _pIdx + _mcls;
+            } else {
+                tag.className = 'tag ' + item.type + _mcls;
+            }
+            // 喂豆 / 铲子等标记：图片展示（喂豆→绿底能量豆，铲子→铲子）
+            if (_isFeed) {
+                const fi = document.createElement('img');
+                fi.src = (typeof JOB_UI_IMG !== 'undefined' && JOB_UI_IMG.feed) ? JOB_UI_IMG.feed : '';
+                fi.className = 'tag-feed-img';
+                fi.alt = '喂豆';
+                fi.draggable = false;
+                fi.onerror = function () { tag.textContent = item.label || item.id; };
+                tag.appendChild(fi);
+            } else if (_isShovel) {
+                const si = document.createElement('img');
+                si.src = (typeof JOB_UI_IMG !== 'undefined' && JOB_UI_IMG.shovel) ? JOB_UI_IMG.shovel : '';
+                si.className = 'tag-shovel-img';
+                si.alt = '铲子';
+                si.draggable = false;
+                si.onerror = function () { tag.textContent = item.label || item.id; };
+                tag.appendChild(si);
+            } else {
+                tag.textContent = item.label || item.id;
+            }
             // 喂豆 / 铲子等标记也标序号
             if (typeof item.seq === 'number') {
                 const sn = document.createElement('span');

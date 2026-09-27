@@ -30,8 +30,13 @@ function jobPickItemsToCancel(r, c, items, onDone) {
 
         const ico = document.createElement('span');
         ico.className = 'cc-ico';
-        ico.textContent = (it.type === 'feed') ? '🫘'
-            : (it.type === 'shovel') ? '🧹' : '🌿';
+        if (it.type === 'feed') {
+            jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'cc-ico-img', size: 40, alt: '喂豆', fallbackText: '🫘' });
+        } else if (it.type === 'shovel') {
+            jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'cc-ico-img', size: 40, alt: '铲子', fallbackText: '🧹' });
+        } else {
+            ico.textContent = '🌿';
+        }
         lab.appendChild(ico);
 
         const nm = document.createElement('span');
@@ -298,7 +303,7 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    ico.textContent = ga.icon || '⚡';
+    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 44, alt: ga.name, fallbackText: ga.icon || '⚡' });
     head.appendChild(ico);
 
     const hl = document.createElement('span');
@@ -324,9 +329,9 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
 
     wrap.appendChild(head);
 
-    // 整块拖拽（复用槽块的拖拽语义：拖到别处 = 移动位置）
+    // 整块拖拽（与槽块同语义：拖到别的块之前/之后 = 调整链内顺序）
     wrap.addEventListener('dragstart', function (e) {
-        seqDrag = { kind: 'generic', key: seg.key, which: which, ga: ga.id };
+        seqDrag = { kind: 'generic', key: seg.key, which: which, ga: ga.id, seg: seg };
         wrap.classList.add('seq-dragging');
         try {
             e.dataTransfer.setData('text/plain', 'generic');
@@ -339,8 +344,52 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
         seqDrag = null;
         jobClearSeqOver();
     });
+    wrap.addEventListener('dragover', function (e) {
+        if (!seqDrag) return;
+        if (seqDrag.which !== which) return;   // 只在自己的链里排序
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = wrap.getBoundingClientRect();
+        const below = (e.clientY - rect.top) > rect.height / 2;
+        jobClearSeqOver();
+        wrap.classList.add(below ? 'seq-over-bottom' : 'seq-over-top');
+    });
+    wrap.addEventListener('drop', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!seqDrag) return;
+        const drag = seqDrag;
+        seqDrag = null;
+        jobClearSeqOver();
+        if (drag.kind === 'generic' && drag.which === which) {
+            const rect = wrap.getBoundingClientRect();
+            const below = (e.clientY - rect.top) > rect.height / 2;
+            jobMoveGenericInOrder(t, which, drag.key, seg.key, below);
+        }
+    });
 
     return wrap;
+}
+
+// 把通用动作段移动到目标段之前/之后（限同一条链，按段 key 定位）
+function jobMoveGenericInOrder(t, which, fromKey, targetKey, after) {
+    which = which || 'once';
+    const field = jobChainField(which);
+    const order = jobGetChainOrder(t, which).slice();
+    const src = order.findIndex(function (s) { return String(s.key) === fromKey; });
+    const ti = order.findIndex(function (s) { return String(s.key) === targetKey; });
+    if (src === -1 || ti === -1 || src === ti) return;
+    const moved = order.splice(src, 1)[0];
+    // 重排后重新定位目标（因为删除会改变下标）
+    let t2 = order.findIndex(function (s) { return String(s.key) === targetKey; });
+    if (t2 === -1) t2 = order.length - 1;
+    order.splice(after ? t2 + 1 : t2, 0, moved);
+    t[field] = order;
+    jobSaveLocal();
+    jobRenderSeqChains();
+    const ga = jobGenericActionOfKey(fromKey);
+    setStatus('🔗 已调整顺序：' + (ga ? ga.name : fromKey));
 }
 
 // 从链里移除某个通用动作段
@@ -399,7 +448,13 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    ico.textContent = isFeed ? '🫘' : (isShovel ? '🧤' : '🪴');
+    if (isFeed) {
+        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 44, alt: '喂豆', fallbackText: '🫘' });
+    } else if (isShovel) {
+        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 44, alt: '铲子', fallbackText: '🧤' });
+    } else {
+        ico.textContent = '🪴';
+    }
     head.appendChild(ico);
 
     const hl = document.createElement('span');
@@ -990,8 +1045,8 @@ function jobRenderSlots() {
                 + (armed ? '#2d7aff' : '#fca5a5') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
             if (armed) chip.className = 'job-slot-armed';
             const dot = document.createElement('span');
-            dot.textContent = '🫘';
             dot.style.cssText = 'font-size:15px;';
+            jobAppendIconImg(dot, JOB_UI_IMG.feed, { cls: 'slot-ico-img', size: 44, alt: '喂豆', fallbackText: '🫘' });
             const lbl = document.createElement('span');
             lbl.style.cssText = 'font-size:12px;';
             lbl.textContent = '喂豆';
@@ -1031,8 +1086,8 @@ function jobRenderSlots() {
                 + (sArmed ? '#2d7aff' : '#c4b5fd') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
             if (sArmed) shovel.className = 'job-slot-armed';
             const sDot = document.createElement('span');
-            sDot.textContent = '🧤';
             sDot.style.cssText = 'font-size:15px;';
+            jobAppendIconImg(sDot, JOB_UI_IMG.shovel, { cls: 'slot-ico-img', size: 44, alt: '铲子', fallbackText: '🧤' });
             const sLbl = document.createElement('span');
             sLbl.style.cssText = 'font-size:12px;';
             sLbl.textContent = '铲子';

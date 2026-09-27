@@ -100,12 +100,31 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .cell.job-n8 .job-p8, .cell.job-n9 .job-p8 { left:25px; top:46px; }
 .cell.job-n9 .job-p9 { left:46px; top:46px; }
 
-/* 喂豆标记：固定居中，不参与拉伸 */
-.cell .tag.feed { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-                  font-size:10px; padding:1px 6px; line-height:16px; z-index:3; }
-/* 铲子标记：与喂豆同款，居中 */
-.cell .tag.shovel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-                    font-size:10px; padding:1px 6px; line-height:16px; z-index:3; }
+/* 喂豆 / 铲子标记：与植物一样参与缩略图排布（job-n 分档 + job-p 序号定位） */
+.cell .tag.feed, .cell .tag.shovel {
+    position:absolute; padding:0; line-height:0;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; z-index:3;
+    transition:width .16s ease, height .16s ease;
+}
+/* 尺寸与定位：完全复用植物的 job-n 分档 + job-p 序号 */
+.cell.job-n1 .tag.feed, .cell.job-n1 .tag.shovel { left:3px; top:3px; width:58px; height:58px; }
+.cell.job-n2 .tag.feed, .cell.job-n2 .tag.shovel { width:27px; height:27px; top:50%; transform:translateY(-50%); }
+.cell.job-n3 .tag.feed, .cell.job-n3 .tag.shovel,
+.cell.job-n4 .tag.feed, .cell.job-n4 .tag.shovel { width:27px; height:27px; }
+.cell.job-n5 .tag.feed, .cell.job-n5 .tag.shovel,
+.cell.job-n6 .tag.feed, .cell.job-n6 .tag.shovel,
+.cell.job-n7 .tag.feed, .cell.job-n7 .tag.shovel,
+.cell.job-n8 .tag.feed, .cell.job-n8 .tag.shovel,
+.cell.job-n9 .tag.feed, .cell.job-n9 .tag.shovel { width:17px; height:17px; border-radius:2px; }
+
+/* 格内喂豆/铲子图片：撑满标记容器 */
+.cell .tag.feed .tag-feed-img,
+.cell .tag.shovel .tag-shovel-img {
+    display:block; width:100%; height:100%;
+    object-fit:contain; object-position:center;
+    user-select:none; -webkit-user-drag:none; pointer-events:none;
+}
 
 /* 种植序号角标：右上角小圆点数字 */
 .cell .job-seq {
@@ -121,10 +140,6 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .cell.job-n5 .job-seq, .cell.job-n6 .job-seq, .cell.job-n7 .job-seq,
 .cell.job-n8 .job-seq, .cell.job-n9 .job-seq {
     min-width:10px; height:10px; line-height:10px; font-size:7px; right:-1px; top:-1px;
-}
-/* 喂豆/铲子标记上的序号：贴在标记右侧 */
-.cell .tag.feed .job-seq, .cell .tag.shovel .job-seq {
-    right:-6px; top:-6px;
 }
 /* 单次形态：序号底色变灰；循环为默认深色 */
 .cell .job-seq.job-seq-once {
@@ -382,9 +397,9 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .cell .tag { font-size:9px; border-radius:3px; padding:0 4px; line-height:16px; white-space:nowrap; }
 .cell .tag.card { background:#bfdbfe; }
 .cell .tag.patch { background:#d1fae5; }
-.cell .tag.shovel { background:#e9d5ff; }
+.cell .tag.shovel { background:transparent; padding:0; line-height:0; }
 .cell .tag.guard { background:#fde68a; }
-.cell .tag.feed { background:#fca5a5; }
+.cell .tag.feed { background:transparent; padding:0; line-height:0; }
 .cell .tag.bossfeed { background:#fca5a5; }
 .cell .tag.sweet { background:#fbcfe8; }
 .cell .tag.ganlan { background:#a7f3d0; }
@@ -952,7 +967,7 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 }
 .gen-act {
     display: flex; flex-direction: column; align-items: center; gap: 2px;
-    width: 54px; padding: 7px 4px; cursor: pointer;
+    width: 72px; padding: 7px 4px; cursor: pointer;
     background: #fff; border: 1px solid #cbd5e1; border-radius: 9px;
     transition: background .14s ease, border-color .14s ease, transform .14s ease;
     font-family: inherit;
@@ -1024,3 +1039,29 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #genPicker .gp-cancel:hover { background: #f1f5f9; }
 #genPicker .gp-ok { background: #1d4ed8; border: none; color: #fff; }
 #genPicker .gp-ok:hover { background: #1e40af; }
+
+/* ============================================================
+   UI 图标图片（替换原 emoji：喂豆/铲子/点波/捡豆/加速）
+   ------------------------------------------------------------
+   这些 <img> 统一 object-fit:contain，居中、可随尺寸缩放，
+   且不参与文字基线对齐（消除 emoji 换图带来的错位）。
+   ============================================================ */
+.job-ui-img,
+.ga-ico-img, .seq-ico-img, .slot-ico-img, .cc-ico-img {
+    display: inline-block;
+    object-fit: contain;
+    object-position: center;
+    vertical-align: middle;
+    border: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
+}
+/* 顺序链条头里的图标容器——原来靠字体大小占位，换成图片后保持居中 */
+.seq-chain-head .seq-ico { display: inline-flex; align-items: center; justify-content: center; }
+/* 通用动作按钮里的图标容器 */
+.gen-act .ga-ico { display: inline-flex; align-items: center; justify-content: center; }
+/* 弹窗顶部图标容器 */
+#genPicker .gp-act .ga-ico { display: inline-flex; align-items: center; justify-content: center; }
+/* 取消弹窗条目图标 */
+#cellCancelPicker .cc-ico { display: inline-flex; align-items: center; justify-content: center; }
