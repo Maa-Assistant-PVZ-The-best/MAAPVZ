@@ -458,7 +458,16 @@ class JobSetReset(CustomAction):
 
 # 组合动作节点名模板（03_Endless_fight/）
 FIGHT_NODE_TPL = "无尽挑战_{slot}组合动作_{kind}"
+# 通用动作（点波/捡豆/加速）：无格子的虚拟槽位，节点名独立
+GA_NODE_TPL = "无尽挑战_通用动作_{kind}"
+# ★ 三条链各一个节点（见 0301Endless_fight_1.json）
+CHAIN_NODE_TPL = "无尽挑战_组合动作_{kind}"
 KIND_CN = {"once": "单次", "loop": "循环", "end": "收尾"}
+
+# ★ 组合动作里的 ref 触发节点（识别命中即停本批、跟随 next）
+REF_SETTLE = "无尽局内_继续挑战"      # 结算画面（正赛）
+REF_LAST_WAVE = "无尽挑战_收尾"       # 最后一波（僵尸头像）-> 跳收尾链
+REF_TRAIN = "无尽训练_继续训练"       # 结算画面（训练模式）
 
 # 槽位 key -> 节点里的中文序数
 _SLOT_NODE_NAME = {
@@ -649,34 +658,37 @@ class JobSetFight(CustomAction):
         if not coords:
             _log("坐标表为空（agent/assets/resource/coords.json 未找到）")
 
-        # ★ 每「段」一个节点（不再按槽位聚合）
+        # ★ 三条链各一个节点（不再按段拆分）
         #
-        # 为什么：链条里同一个槽可以多次出现且**不相邻**，
-        #   例如「铲子(格子1_3) → 种心叶兰 → 铲子(2_2,2_3,2_4) → 种大喷菇」。
-        #   如果按槽位聚合成一个节点，两段铲子会被合并、节点排在 card1 之前，
-        #   实际就变成「先铲完所有，再种」—— 与顺序链不符。
-        #   所以这里改成：链里第 i 段 -> 独立节点（名字带段号），
-        #   节点之间的 next 严格按链的先后串起来。
-        seg_nodes = self._build_seg_nodes(rules, coords, swipe_ms, interval)
+        # 整条链的动作拼成一条 BatchSwipe DSL，一次跑完。
+        # 中途靠 every:N 定期识别「有没有结算」，命中即停本批、跟随 next。
+        # ★ 识别结算速率（网页端「高级设置」，默认 10）
+        every_n = int(table.raw.get("everyN") or 10)
+        if every_n < 1:
+            every_n = 10
 
-        # 各链的节点序列（按链里段的先后）
-        once_seq = seg_nodes.get("once", [])
-        loop_seq = seg_nodes.get("loop", [])
-        end_seq = seg_nodes.get("end", [])
-        once_order = [s["key"] for s in once_seq]
-        loop_order = [s["key"] for s in loop_seq]
+        # 收尾链是否存在（决定组合动作里要不要挂「最后一波」触发）
+        # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
+        _end_chain = rules.get("end_chain") or []
+        has_end = bool(_end_chain) and not is_boss
+
+        chain_nodes = self._build_chain_nodes(
+            rules, coords, swipe_ms, interval, every_n, has_end)
+
+        once_node = chain_nodes.get("once")
+        loop_node = chain_nodes.get("loop")
+        end_node = chain_nodes.get("end")
 
         # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
-        #   收尾只对普通关生效，所以 boss 关把 end_seq 清空。
         if is_boss:
-            end_seq = []
-        has_end = bool(end_seq)
+            end_node = None
+        # has_end 已在上面（构建组合动作前）算过，用于决定 ref 触发
 
         # ★ 收尾链的可调参数（网页端「棋盘下侧」编辑，作业集导出）：
-        #   · 「收尾前等待」 = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms）
-        #   · 「收尾超时时间」 = 收尾链最后一个动作节点的 post_delay（默认 6000ms）
+        #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms）
+        #   · 「收尾超时时间」 = **收尾链末尾追加的 sleep 秒数**（默认 6000ms -> 6s）
         #   · 「收尾超时后动作」 = sub（执行子动作）/ restart（重开）
-        #   · 「子动作」 = once（单次动作）/ loop（循环动作）/ end（收尾动作）
+        #   · 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
         def _num(v: Any, default: int) -> int:
             try:
                 return int(float(v))
@@ -692,85 +704,71 @@ class JobSetFight(CustomAction):
 
         override: Dict[str, Any] = {}
 
-        # ---- 1) 组合动作节点：每个链段一个节点 ----
+        # ---- 1) 三个组合动作节点 ----
         #
         # next 结构：
-        #     ["无尽局内_继续挑战",       <- 识别不到结算，说明这局还没结束
-        #      "无尽挑战_收尾",           <- 收到最后一波了吗？（仅当配了收尾链）
-        #      "链里的下一个段节点"]       <- 继续做链里的下一步
+        #     ["无尽局内_继续挑战",   <- 结算出现了就点它（放第一位，命中即走）
+        #      "无尽挑战_收尾",       <- 没结算但检测到最后一波 -> 跳收尾链
+        #      <跑完这条链之后去哪>]  <- 没结算也没到最后一波 -> 继续下一环
         #
-        # 「继续挑战」放**第一个**：命中了就点它去结算流程；
-        # 没命中就自然落到第二个，不需要 on_error、不等超时。
-        #
-        # 链尾：单次链最后一段 -> 无尽局内_循环种植
-        #       循环链最后一段 -> 循环链第一段（自循环）
-        for kind, seq in (("once", once_seq), ("loop", loop_seq)):
-            for i, seg in enumerate(seq):
-                if i + 1 < len(seq):
-                    next_node = seq[i + 1]["node"]
-                elif kind == "once":
-                    next_node = "无尽局内_循环种植"
-                else:
-                    next_node = seq[0]["node"] if seq else "无尽局内_循环种植"
-
-                # 收尾触发器夹在「继续挑战」与「下一个段」之间：
-                # 结算没出现、但检测到最后一波 -> 跳去收尾链（不再循环种植）。
-                nxt = ["无尽局内_继续挑战"]
-                if has_end:
-                    nxt.append("无尽挑战_收尾")
-                nxt.append(next_node)
-
-                override[seg["node"]] = {
-                    "action": "Custom",
-                    "custom_action": "BatchSwipe",
-                    "custom_action_param": seg["dsl"],
-                    "pre_delay": 0,
-                    "post_delay": 0,
-                    "next": nxt,
-                }
-
-        # ---- 1b) 收尾链组合动作节点 ----
-        #
-        # 收尾链只在「无尽挑战_收尾」命中（最后一波）时执行一次，
-        # 所以中间节点不需要再夹「无尽挑战_收尾」触发器。
-        # next 结构（与 once/loop 一致）：
-        #     ["无尽局内_继续挑战", 下一个收尾段]
-        #
-        # 链尾（最后一个收尾动作）：
-        #     ["无尽局内_继续挑战", <收尾超时后动作>]
-        #   —— 先识别「继续挑战」（结算画面）点它过关；识别不到（收尾超时）时，
-        #      落到「收尾超时后动作」：
-        #       · sub  + once → 无尽局内_单次种植
-        #       · sub  + loop → 无尽局内_循环种植
-        #       · sub  + end  → 无尽挑战_收尾（再收尾一遍）
-        #       · restart    → 无尽挑战_收尾重开（重开当前关卡）
-        for i, seg in enumerate(end_seq):
-            is_last = (i + 1 == len(end_seq))
-            if is_last:
-                if end_after_action == "restart":
-                    nxt = ["无尽局内_继续挑战", "无尽挑战_收尾重开"]
-                elif end_sub_action == "once":
-                    nxt = ["无尽局内_继续挑战", "无尽局内_单次种植"]
-                elif end_sub_action == "end":
-                    nxt = ["无尽局内_继续挑战", "无尽挑战_收尾"]
-                else:
-                    nxt = ["无尽局内_继续挑战", "无尽局内_循环种植"]
-                post_delay = end_last_post_delay
-            else:
-                nxt = ["无尽局内_继续挑战", end_seq[i + 1]["node"]]
-                post_delay = 0
-            override[seg["node"]] = {
+        #   单次链 -> 无尽局内_循环种植
+        #   循环链 -> 自己（自循环）
+        #   收尾链 -> 「收尾超时后动作」（sub/restart）
+        if once_node:
+            nxt = ["无尽局内_继续挑战"]
+            if has_end:
+                nxt.append("无尽挑战_收尾")
+            nxt.append("无尽局内_循环种植")
+            override[once_node["node"]] = {
                 "action": "Custom",
                 "custom_action": "BatchSwipe",
-                "custom_action_param": seg["dsl"],
+                "custom_action_param": once_node["dsl"],
                 "pre_delay": 0,
-                "post_delay": post_delay,
+                "post_delay": 0,
                 "next": nxt,
             }
 
-        # ---- 2) 链首节点：单次链/循环链的入口 ----
-        once_next = [s["node"] for s in once_seq] or ["无尽局内_循环种植"]
-        loop_next = [s["node"] for s in loop_seq]
+        if loop_node:
+            nxt = ["无尽局内_继续挑战"]
+            if has_end:
+                nxt.append("无尽挑战_收尾")
+            nxt.append(loop_node["node"])          # 自循环
+            override[loop_node["node"]] = {
+                "action": "Custom",
+                "custom_action": "BatchSwipe",
+                "custom_action_param": loop_node["dsl"],
+                "pre_delay": 0,
+                "post_delay": 0,
+                "next": nxt,
+            }
+
+        if end_node:
+            # 收尾链跑完：先看结算，没结算再走「收尾超时后动作」
+            if end_after_action == "restart":
+                after = ["无尽挑战_收尾重开"]
+            elif end_sub_action == "once":
+                after = ["无尽局内_单次种植"]
+            elif end_sub_action == "end":
+                after = ["无尽挑战_收尾"]
+            else:
+                after = ["无尽局内_循环种植"]
+            # ★「收尾超时时间」不再是 post_delay，而是末尾的 sleep 动作
+            dsl = end_node["dsl"]
+            if end_last_post_delay > 0:
+                dsl = f"{dsl};sleep:{end_last_post_delay / 1000.0:g}" if dsl \
+                    else f"sleep:{end_last_post_delay / 1000.0:g}"
+            override[end_node["node"]] = {
+                "action": "Custom",
+                "custom_action": "BatchSwipe",
+                "custom_action_param": dsl,
+                "pre_delay": 0,
+                "post_delay": 0,
+                "next": ["无尽局内_继续挑战"] + after,
+            }
+
+        # ---- 2) 链首节点：各自指向自己的那条链 ----
+        once_next = [once_node["node"]] if once_node else ["无尽局内_循环种植"]
+        loop_next = [loop_node["node"]] if loop_node else []
 
         # 记录本关的 boss 状态，供链首节点复用
         _STATE["is_boss"] = is_boss
@@ -792,26 +790,20 @@ class JobSetFight(CustomAction):
             "next": loop_next,
         }
 
-        # ---- 3) 继续挑战节点：结算画面 -> 点击 -> 回到「开始战斗」再进一局 ----
+        # ---- 3) 「无尽局内_继续挑战」——**不再覆盖** ----
         #
-        # ⚠️ 这里的 next 必须指向**真实存在**的节点。
-        #    「无尽局内_判断是否换阵容」已被注释（换阵容流程由用户重写），
-        #    曾经把它写在这里 -> 点完继续挑战后找不到后继 -> 3ms 内 Task.Failed。
+        # 这个节点的内容已经写死在 03_Endless_fight/0300Endless_fight.json：
+        #     next = ["无尽局内_补给", "无尽挑战_选取植物_开始战斗"]
+        # 曾经这里用 override 重写了一遍（内容与 pipe 完全相同），属于无用功，
+        # 而且**有害**：override_pipeline 对 next 是整体替换，会顶掉
+        # 「无尽模式=训练模式」任务选项里配的
+        #     next = ["无尽训练_继续训练"]
+        # 导致训练模式永远走不到「继续训练」。
         #
-        # ★ 顺序很重要：先走「无尽局内_补给」（结算后可能进入补给界面），
-        #   没进补给就自然落到「选取植物_开始战斗」继续下一局。
-        #   之前这里只写了「选取植物_开始战斗」，把补给漏掉了 ——
-        #   结果补给链永远不执行（作业集里配了也没用）。
-        after_pick = str(param.get("继续挑战后续") or "无尽挑战_选取植物_开始战斗")
-        override["无尽局内_继续挑战"] = {
-            "recognition": "OCR",
-            "expected": "继续挑战",
-            "roi": [716, 621, 179, 50],
-            "action": "Click",
-            "pre_delay": 800,
-            "post_delay": 300,
-            "next": ["无尽局内_补给", after_pick],
-        }
+        # 教训：**不要覆盖 pipeline 里已经正确的内容** ——
+        #       任务选项（task option）的 pipeline_override 优先级无法被 custom 感知，
+        #       custom 一旦写同名字段就会把它顶掉。
+        #       需要调整落点时，改 pipe JSON，而不是在 custom 里重写。
 
         # ---- 3b) 收尾检测节点：检测到最后一波 -> 执行收尾链 -> 等结算 ----
         #
@@ -827,7 +819,7 @@ class JobSetFight(CustomAction):
             override["无尽挑战_收尾"] = {
                 "enabled": True,
                 "post_delay": end_post_delay,
-                "next": [end_seq[0]["node"]],
+                "next": [end_node["node"]],
             }
         else:
             override["无尽挑战_收尾"] = {"enabled": False}
@@ -861,17 +853,14 @@ class JobSetFight(CustomAction):
         try:
             context.override_pipeline(override)
             _log(f"已注入 {len(override)} 个节点")
-            # 打印每段的节点名与动作数（段序 = 执行顺序）
-            for kind, seq in (("once", once_seq), ("loop", loop_seq), ("end", end_seq)):
-                cn = {"once": "单次", "loop": "循环", "end": "收尾"}[kind]
-                if not seq:
+            # 打印三条链各自的动作数
+            for kind, cn in (("once", "单次"), ("loop", "循环"), ("end", "收尾")):
+                node = chain_nodes.get(kind)
+                if not node:
                     _log(f"  [{cn}链] （空）")
                     continue
-                names = [s["node"] for s in seq]
-                _log(f"  [{cn}链] 共 {len(seq)} 段，执行顺序：")
-                for s in seq:
-                    n = len([x for x in s["dsl"].split(";") if x.strip()])
-                    _log(f"      {s['node']}  （{s['key']}，{n} 条动作）")
+                n = len([x for x in node["dsl"].split(";") if x.strip()])
+                _log(f"  [{cn}链] {node['node']}  共 {n} 条动作")
         except Exception as e:
             _log(f"注入失败（{type(e).__name__}: {e}）")
             return _fail()
@@ -991,41 +980,60 @@ class JobSetFight(CustomAction):
             _log("next 目标自检通过")
 
     @classmethod
-    def _build_seg_nodes(
+    def _build_chain_nodes(
         cls,
         rules: Dict[str, Any],
         coords: Dict[str, Any],
         swipe_ms: int,
         interval: Any,
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        """链里**每一段**生成一个独立节点。
+        every_n: int = 10,
+        has_end: bool = False,
+    ) -> Dict[str, Optional[Dict[str, Any]]]:
+        """三条链各生成**一个**节点（整条链拼成一条 DSL）。
 
-        返回 {"once": [{"node": 节点名, "key": 槽位key, "dsl": "..."}],
-              "loop": [...], "end": [...]}
-        列表顺序 = 链里段的先后，运行时按此顺序串 next。
+        返回 {"once": {"node": 节点名, "kind": "once", "dsl": "..."} 或 None,
+              "loop": ..., "end": ...}
+        链为空时对应项为 None（不生成节点）。
 
-        ★ 为什么按段而不是按槽：
-          同一个槽可以在链里多次出现且不相邻，比如
-            shovel(格子1_3) → card1 → shovel(2_2,2_3,2_4) → card2
-          如果按槽聚合成一个节点，两段铲子会被合并、节点排到 card1 前面，
-          实际执行就变成「先铲完所有，再种」—— 与顺序链不符。
+        ★ 为什么整条链一个节点（而不是旧做法的「每段一个节点」）：
+          旧做法节点数随链长膨胀（20+），每段跑完都要回「继续挑战」识别一次。
+          现在整条链一次跑完，中途靠 every:N 定期识别结算，
+          命中即停本批、跟随 next —— 既省节点又不容易乱点。
         """
-        out: Dict[str, List[Dict[str, Any]]] = {"once": [], "loop": [], "end": []}
+        out: Dict[str, Optional[Dict[str, Any]]] = {"once": None, "loop": None, "end": None}
 
+        # ★ 三条链各一个节点：整条链的动作拼成**一条** BatchSwipe DSL。
+        #   节点名固定（见 0301Endless_fight_1.json）：
+        #       无尽挑战_组合动作_单次 / _循环 / _收尾
+        #
+        #   为什么不按段拆节点（旧做法）：
+        #     旧做法每段一个节点、靠 next 串起来，节点数随链长膨胀（20+），
+        #     而且每段跑完都要回「继续挑战」识别一次，开销大。
+        #     现在整条链一次跑完，中途靠 every:N 定期识别结算
+        #     （识别结算速率在网页端「高级设置」里配，默认 10）。
         for kind, field in (
             ("once", "once_chain"),
             ("loop", "loop_chain"),
             ("end", "end_chain"),
         ):
             chain = rules.get(field) or []
-            # 段序号：同名槽多段时用于区分节点（第一个 _1，第二个 _2 …）
-            seq_no: Dict[str, int] = {}
+            parts: List[str] = []
 
             for seg in chain:
                 key = str(seg.get("key") or "").strip()
+                typ = str(seg.get("type") or "plant").lower()
+
+                # ---- 通用动作段（点波/捡豆/加速）：没有格子，整段 = 一条 DSL ----
+                if typ == "action" or key.startswith("ga:"):
+                    r = _dsl.generic_dsl(seg.get("action") or key, coords)
+                    if r["dsl"]:
+                        parts.append(r["dsl"])
+                    for m in r["missing"]:
+                        _log(f"  ⚠️ 通用动作跳过：{m}")
+                    continue
+
                 if key not in _SLOT_NODE_NAME:
                     continue
-                typ = str(seg.get("type") or "plant").lower()
 
                 # 决定这一段每株的起点
                 src = None
@@ -1040,7 +1048,6 @@ class JobSetFight(CustomAction):
                 # 该段每个落点的「动作后等待」秒数（与 cells 等长，来自 waitAfter）
                 waits = seg.get("waits") or []
 
-                parts: List[str] = []
                 for i, cell in enumerate(seg.get("cells") or []):
                     dst = _dsl.find_grass_point(coords, str(cell))
                     if dst is None:
@@ -1052,30 +1059,38 @@ class JobSetFight(CustomAction):
                     # 等待：这个动作之后插入 sleep:N（BatchSwipe 支持 sleep:秒）
                     try:
                         sec = float(waits[i]) if i < len(waits) else 0.0
-                    except (TypeError, ValueError, IndexError):
+                    except (TypeError, ValueError):
                         sec = 0.0
                     if sec > 0:
                         parts.append(f"sleep:{sec:g}")
 
-                if not parts:
-                    continue
+            body = ";".join(parts)
+            if not body:
+                continue
+            # ★ 识别触发（放在动作之前，是「触发条件」不是动作）：
+            #   ref:无尽局内_继续挑战  —— 结算画面出现 -> 停本批、跟随 next
+            #   ref:无尽挑战_收尾      —— 检测到最后一波 -> 停本批，next 里会跳收尾链
+            #   ref:无尽训练_继续训练  —— 训练模式的结算按钮（正赛下识别不到，无害）
+            #
+            #   这几个 ref 复用 pipe 节点里已定义的识别配置，无需写 ROI。
+            #   收尾链自己**不加**「收尾」触发（它已经在收尾链里了，避免自跳）。
+            refs: List[str] = [REF_SETTLE]
+            if kind != "end" and has_end:
+                refs.append(REF_LAST_WAVE)
+            refs.append(REF_TRAIN)
+            body = "ref:" + "|".join(refs) + ";" + body
 
-                body = ";".join(parts)
-                if interval not in (None, ""):
-                    body = f"@{interval};{body}"
+            # ★ every:N —— 每 N 个动作识别一遍「有无结算」（识别结算速率）
+            if every_n and every_n > 1:
+                body = f"every:{every_n};{body}"
+            if interval not in (None, ""):
+                body = f"@{interval};{body}"
 
-                # 节点名：<槽位>组合动作_<单次/循环>_<段号>
-                seq_no[key] = seq_no.get(key, 0) + 1
-                node = (
-                    FIGHT_NODE_TPL.format(slot=_SLOT_NODE_NAME[key], kind=KIND_CN[kind])
-                    + f"_{seq_no[key]}"
-                )
-                out[kind].append({
-                    "node": node,
-                    "key": key,
-                    "seq": seq_no[key],
-                    "dsl": body,
-                })
+            out[kind] = {
+                "node": CHAIN_NODE_TPL.format(kind=KIND_CN[kind]),
+                "kind": kind,
+                "dsl": body,
+            }
 
         return out
 

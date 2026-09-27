@@ -1065,3 +1065,44 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #genPicker .gp-act .ga-ico { display: inline-flex; align-items: center; justify-content: center; }
 /* 取消弹窗条目图标 */
 #cellCancelPicker .cc-ico { display: inline-flex; align-items: center; justify-content: center; }
+
+/* ============ 高级设置弹窗 ============ */
+#jobAdvModal {
+    position: fixed; inset: 0; z-index: 10090;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#jobAdvModal.ja-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobAdvModal .ja-panel {
+    width: min(420px, 92vw);
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#jobAdvModal .ja-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0;
+}
+#jobAdvModal .ja-dot { width: 6px; height: 6px; border-radius: 50%; background: #d81e06; }
+#jobAdvModal .ja-title { font-size: 14px; font-weight: 700; color: #d81e06; }
+#jobAdvModal .ja-close {
+    width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#jobAdvModal .ja-close:hover { background: #e2e8f0; }
+#jobAdvModal .ja-body { padding: 16px 18px; }
+#jobAdvModal .ja-row { display: flex; align-items: center; gap: 10px; }
+#jobAdvModal .ja-label { font-size: 13px; font-weight: 600; color: #334155; flex: 1; }
+#jobAdvModal .ja-input {
+    width: 88px; padding: 5px 8px; font-size: 13px;
+    border: 1px solid #cbd5e1; border-radius: 7px; text-align: center;
+}
+#jobAdvModal .ja-input:focus { outline: none; border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.18); }
+#jobAdvModal .ja-help {
+    width: 18px; height: 18px; border-radius: 50%; cursor: help;
+    background: #e2e8f0; color: #64748b;
+    font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+    flex: 0 0 18px;
+}
+#jobAdvModal .ja-help:hover { background: #cbd5e1; }
+#jobAdvModal .ja-hint { font-size: 11px; color: #94a3b8; margin-top: 10px; line-height: 1.6; }

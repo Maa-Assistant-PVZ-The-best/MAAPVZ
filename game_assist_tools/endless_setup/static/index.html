@@ -103,6 +103,25 @@
     </div>
 </div>
 
+<!-- ============ 高级设置弹窗 ============ -->
+<div id="jobAdvModal">
+    <div class="ja-panel">
+        <div class="ja-head">
+            <span class="ja-dot"></span>
+            <span class="ja-title">高级设置</span>
+            <button class="ja-close" id="jobAdvClose" title="关闭">✕</button>
+        </div>
+        <div class="ja-body">
+            <div class="ja-row">
+                <label class="ja-label" for="jobAdvEvery">识别结算速率</label>
+                <input type="number" id="jobAdvEvery" class="ja-input" min="1" max="999" value="10">
+                <span class="ja-help" data-tip="每执行 n 次动作，就会识别一遍游戏有无结算。识别会占用执行时长，设置太少了可能会导致动作执行很慢（例如 1）。">?</span>
+            </div>
+            <div class="ja-hint">该设置作用于<b>所有组合动作</b>，每个作业集独立保存。</div>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 通用动作 -> 选链弹窗 ============ -->
 <div id="genPicker">
     <div class="gp-panel">
@@ -183,6 +202,7 @@
             <button class="btn btn-danger" id="jobDeleteBtn">🗑 删除作业集</button>
             <button class="btn btn-primary" id="jobDownloadBtn">⬇ 下载远程作业集</button>
             <button class="btn" id="jobRefreshBtn" title="重新读取本地作业集列表">↻</button>
+            <button class="btn" id="jobAdvBtn" title="高级设置">⚙ 高级设置</button>
             <span id="jobStatus" style="color:#22a65e;font-size:13px;"></span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
@@ -398,4 +418,5 @@
 <script src="/static/js/28-jobset-io.js"></script>
 <script src="/static/js/29-jobset-init.js"></script>
 <script src="/static/js/30-jobset-generic.js"></script>
+<script src="/static/js/31-jobset-adv.js"></script>
 </body></html>

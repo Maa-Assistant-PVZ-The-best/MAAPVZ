@@ -153,6 +153,82 @@ def find_feed_point(coords: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+# ---------------------------------------------------------------------------
+# 通用动作（不需要格子，直接插在链里）
+#
+#   wave  点波 —— 点击「下一波」
+#   bean  捡豆 —— 5 根手指从「N阳光起始点」滑到「N阳光终点」（时长 100ms）
+#   speed 加速 —— 点击「加速」
+#
+# 坐标键来自 agent/assets/resource/coords.json（顶层，无前缀）。
+# ---------------------------------------------------------------------------
+
+# 动作 id -> 点击用的坐标键
+GENERIC_CLICK_KEY = {
+    "wave": "下一波",
+    "speed": "加速",
+}
+
+# 捡豆：要滑的 5 条线（起始点键, 终点键）
+GENERIC_BEAN_LINES = [
+    ("1阳光起始点", "1阳光终点"),
+    ("2阳光起始点", "2阳光终点"),
+    ("3阳光起始点", "3阳光终点"),
+    ("4阳光起始点", "4阳光终点"),
+    ("5阳光起始点", "5阳光终点"),
+]
+GENERIC_BEAN_MS = 100
+
+
+def _coord_any(coords: Dict[str, Any], name: str) -> Optional[str]:
+    """在坐标表里找一个键（先带前缀、再裸名）。"""
+    for c in (name, f"{PREFIX_INIT}{name}"):
+        if _coord_ok(coords, c):
+            return c
+    return None
+
+
+def generic_dsl(action: str, coords: Dict[str, Any]) -> Dict[str, Any]:
+    """把一个通用动作翻成 BatchSwipe DSL。
+
+    action: wave / bean / speed（也接受作业集里的 'ga:wave' 形式）
+    返回 {"dsl": str, "missing": [...], "count": int}
+    """
+    aid = str(action or "").strip()
+    if aid.startswith("ga:"):
+        aid = aid[3:]
+
+    parts: List[str] = []
+    missing: List[str] = []
+
+    if aid in GENERIC_CLICK_KEY:
+        key = _coord_any(coords, GENERIC_CLICK_KEY[aid])
+        if key is None:
+            missing.append(f"{aid}：坐标表缺少「{GENERIC_CLICK_KEY[aid]}」")
+        else:
+            parts.append(f"click:{key}")
+
+    elif aid == "bean":
+        lines: List[str] = []
+        for a, b in GENERIC_BEAN_LINES:
+            ka = _coord_any(coords, a)
+            kb = _coord_any(coords, b)
+            if ka is None or kb is None:
+                miss = a if ka is None else b
+                missing.append(f"bean：坐标表缺少「{miss}」")
+                continue
+            lines.append(f"{ka},{kb},{GENERIC_BEAN_MS}")
+        if lines:
+            # multi:(...)：原生 MultiSwipe，5 指同时按下/移动/抬起
+            parts.append("multi:(" + ";".join(lines) + ")")
+
+    else:
+        missing.append(f"未知通用动作：{action}")
+
+    dsl = ";".join(parts)
+    return {"dsl": dsl, "missing": missing, "count": len(parts)}
+
+
 def find_shovel_point(coords: Dict[str, Any]) -> Optional[str]:
     """铲子图标位置。"""
     for c in (f"{PREFIX_INIT}铲子位置", "铲子位置", "铲子"):
@@ -265,6 +341,14 @@ def chain_dsl(
             continue
         typ = str(seg.get("type") or "plant").lower()
         slot = seg.get("slot")
+
+        # ★ 通用动作段（点波/捡豆/加速）：没有格子，走单独分支
+        if typ == "action":
+            r = generic_dsl(seg.get("action") or seg.get("key"), coords)
+            if r["dsl"]:
+                parts.append(r["dsl"])
+            missing.extend(r["missing"])
+            continue
 
         # 决定这一段的「起点」
         src: Optional[str] = None

@@ -220,14 +220,30 @@ class Table:
                     c.strip() for c in (seg.get("cells") or [])
                     if isinstance(c, str) and c.strip()
                 ]
-                if not cells:
-                    continue
                 slot = seg.get("slot")
                 key_name = str(seg.get("key") or "").strip()
+                typ = str(seg.get("type") or "plant").strip().lower()
+
+                # ★ 通用动作段（点波/捡豆/加速）：**没有 cells**，
+                #   不能像普通槽那样因为「没落点」被丢掉。
+                if typ == "action" or key_name.startswith("ga:"):
+                    out.append({
+                        "key": key_name,
+                        "slot": None,
+                        "type": "action",
+                        "action": str(seg.get("action") or key_name).strip(),
+                        "label": seg.get("label") or "",
+                        "cells": [],
+                        "waits": [],
+                    })
+                    continue
+
+                if not cells:
+                    continue
                 out.append({
                     "key": key_name,
                     "slot": str(slot) if slot not in (None, "") else None,
-                    "type": str(seg.get("type") or "plant").strip().lower(),
+                    "type": typ,
                     "label": seg.get("label") or "",
                     "cells": cells,
                     "waits": _waits_for_seg(key_name, cells, which),

@@ -1480,6 +1480,20 @@ function jobBuildChain(t, board, which) {
     const segs = jobGetChainOrder(t, which, board);
 
     segs.forEach(function (seg) {
+        // ★ 通用动作段（点波/捡豆/加速）：没有格子，直接按"动作"导出
+        const ga = jobGenericActionOfKey(seg.key);
+        if (ga) {
+            out.push({
+                key: seg.key,           // 'ga:wave' 等
+                slot: null,
+                type: 'action',         // 通用动作
+                action: ga.id,          // wave | bean | speed
+                label: ga.name,         // 点波 / 捡豆 / 加速
+                mode: (which === 'loop') ? 'loop' : (which === 'end' ? 'end' : 'once'),
+                cells: []               // 无落点
+            });
+            return;
+        }
         // 该段实际包含的落点（已按 seq 排序，且同一槽内保持落子先后）
         const places = jobSegPlacements(board, seg, which);
         if (!places.length) return;
@@ -1650,12 +1664,13 @@ function jobBuild() {
         version: '1.0',            // 版本不再让用户填，固定 1.0
         worlds,
         max_level: 149,            // 最大关卡固定 149
+        everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
         tables
     };
 }
 
 // 当前作业集的名字：输入框已移除，改由下拉里选中的项 / 本地缓存记录
-let jobMeta = { code: '', name: '' };
+let jobMeta = { code: '', name: '', everyN: 10 };
 
 function jobCurrentName() { return (jobMeta.name || '').trim(); }
 

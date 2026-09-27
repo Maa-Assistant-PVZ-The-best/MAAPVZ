@@ -72,6 +72,9 @@ function jobLoadLocal() {
         // 元信息只有「名字 + 代码」（代码/版本/最大关卡输入框已移除）
         jobMeta.name = m.name || '';
         jobMeta.code = m.code || '';
+        // 识别结算速率（高级设置）；旧数据没有 -> 用默认 10
+        jobMeta.everyN = (Number.isFinite(+m.everyN) && +m.everyN >= 1)
+            ? Math.floor(+m.everyN) : JOB_EVERY_DEFAULT;
         if (Array.isArray(m.worlds)) {
             document.querySelectorAll('#jobWorlds input').forEach(cb => { cb.checked = m.worlds.includes(cb.value); });
         }
@@ -238,6 +241,9 @@ function jobInit() {
         });
     }
     jobSyncSupplyVisibility();
+
+    // 高级设置（识别结算速率）
+    jobBindAdv();
 
     // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
     const bdEl = document.getElementById('tfBoundary');
