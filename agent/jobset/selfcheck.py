@@ -38,7 +38,10 @@ try:
               f"feed={len(t.non_boss['feed'])} shovel={len(t.non_boss['shovel'])} "
               f"seq={len(t.non_boss['sequence'])}")
         print(f"      boss    : plant={len(t.boss['plant'])} seq={len(t.boss['sequence'])}")
-    check("载入成功", js.code == "pvz_20260926_015808", js.name)
+    # ★ 不校验具体代码：作者每次「保存作业集」都会生成带新时间戳的 code
+    #   （pvz_2026...），写死某个值必然过期。只校验「确实载入成功」。
+    check("载入成功", bool(js.code) and len(js.tables) > 0,
+          f"{js.name} ({js.code}, {len(js.tables)} 张表)")
     # 至少有一张表配了植物（哪张表配的会随作者调整，不做硬编码）
     any_plants = any(t.plants for t in js.tables)
     check("至少一张表有植物列表", any_plants,

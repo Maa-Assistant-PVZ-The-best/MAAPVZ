@@ -39,8 +39,8 @@ from typing import Any, Dict, List, Optional
 DEFAULT_INIT_SCORE = 50      # 首次识别后的初始分
 DEFAULT_SCORE_MAX = 100      # 达到即转纯计数器
 DEFAULT_SCORE_MIN = 0        # 触底即回头信任 OCR
-DEFAULT_GAIN = 20            # 验证通过加分
-DEFAULT_PENALTY = 10         # 验证失败扣分
+DEFAULT_GAIN = 30            # 验证通过加分（连贯 +1）
+DEFAULT_PENALTY = 10         # 验证失败扣分（跳变）
 DEFAULT_TOLERANCE = 2        # |raw - predicted| <= 容差 视为「抖动」
 
 DEFAULT_MIN_LEVEL = 1
@@ -64,6 +64,11 @@ class LevelState:
     # 连续「对不上」的次数。用于判断是偶发抖动还是计数器真的跑偏。
     consecutive_bad: int = 0
     last_verdict: str = "init"      # init/agree/disagree/trust_ocr/trust_counter/resync/tick
+    # ★ 纯计数模式下，上一次「进关时」读到的天数。
+    #   用来分辨「过关（天数变了）」和「重开（天数没变）」：
+    #     相同 -> 重开，计数不动
+    #     不同 / 没读到 -> 过关，计数 +1
+    locked_last_raw: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -76,6 +81,7 @@ class LevelState:
             "last_anchor": self.last_anchor,
             "consecutive_bad": self.consecutive_bad,
             "last_verdict": self.last_verdict,
+            "locked_last_raw": self.locked_last_raw,
             "samples": list(self.samples[-8:]),
         }
 
@@ -222,12 +228,28 @@ class LevelTracker:
         st.last_raw = raw
         st.samples.append(raw)
 
-        # ---- 纯计数器模式：不再看 OCR ----
+        # ---- 纯计数器模式：不再看 OCR（但仍用「天数是否变化」分辨重开）----
+        #
+        # ★ 为什么要读天数：纯计数只会 +1，分不清「过关」和「重开」——
+        #   重开打的还是同一关，却也 +1，计数器就慢慢跑偏。
+        #
+        #   判据：天数**与上次相同** = 重开（不 +1）；不同或没读到 = 过关（+1）。
+        #   这个判断对 OCR 准确度要求极低 —— 只要「同一关读到同一个值」就够了，
+        #   偶尔读错也不影响（下次读到不同值照样 +1）。
         if st.locked:
-            st.count = self._clamp(st.count + 1)
-            st.last_predicted = st.count
-            st.last_verdict = "tick"
-            self._note(f"纯计数器模式 -> {st.count}")
+            if st.locked_last_raw is not None and raw == st.locked_last_raw:
+                # 天数没变 -> 重开，计数不动
+                st.last_predicted = st.count
+                st.last_verdict = "restart"
+                self._note(
+                    f"纯计数器：天数仍为 {raw}（判定重开）-> 计数保持 {st.count}"
+                )
+            else:
+                st.count = self._clamp(st.count + 1)
+                st.last_predicted = st.count
+                st.last_verdict = "tick"
+                self._note(f"纯计数器（{st.locked_last_raw} -> {raw}）-> {st.count}")
+            st.locked_last_raw = raw
             return st.count
 
         # ---- 还没有基准（既非 first 也没识别过）：直接采信 ----
@@ -238,6 +260,18 @@ class LevelTracker:
             st.last_anchor = raw
             st.last_verdict = "init"
             self._note(f"首次识别 -> count={raw}, score={st.score}")
+            return st.count
+
+        # ---- ★ 天数与上次「完全相同」= 重开：不增不减 ----
+        #
+        # 重开打的还是同一关，天数一模一样。这不是识别错误，不该扣分；
+        # 也不是推进，不该加分/计数。
+        # 放在「+1 比对」之前，避免被当成「抖动」扣 10 分。
+        base0 = st.last_anchor if st.last_anchor is not None else st.count
+        if raw == base0:
+            st.last_verdict = "restart"
+            st.consecutive_bad = 0
+            self._note(f"天数仍为 {raw}（判定重开）-> 计数与分数均不变")
             return st.count
 
         # ---- 常规：与「上次识别值 + 1」比对 ----
@@ -257,7 +291,11 @@ class LevelTracker:
             self._note(f"验证通过 {raw}（score={st.score}）")
             if st.score >= self.score_max:
                 st.locked = True
-                self._note(f"得分达 {st.score} -> 进入纯计数器模式（此后 count += 1）")
+                st.locked_last_raw = raw
+                self._note(
+                    f"得分达 {st.score} -> 进入纯计数器模式"
+                    f"（此后靠「天数是否变化」分辨过关/重开）"
+                )
             return st.count
 
         if delta <= self.tolerance:

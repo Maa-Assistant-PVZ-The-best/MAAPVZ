@@ -30,12 +30,14 @@
             96,
             78
         ],
-        "action": "Custom",
-        "custom_action": "JobSetEndRestart",
-        "custom_action_param": {},
         "enabled": false,
         "pre_delay": 0,
         "post_delay": 0,
-        "next": []
+        "anchor": {
+            "下一个动作": "无尽挑战_识别开始战斗_清空卡牌"
+        },
+        "next": [
+            "通用_重开_暂停"
+        ]
     }
 }

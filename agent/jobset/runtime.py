@@ -3,13 +3,22 @@
 
 注册的动作
 ----------
-JobSetLoad   载入作业集、初始化关卡计数器，把「当前阵容」暴露给后续节点。
-             挂在空壳节点「无尽挑战_加载作业集代码」上。
-JobSetLevel  喂入一次 OCR 原始天数 -> 输出融合后的可信关卡号。
-             挂在天数识别之后。
-JobSetSlot   输出当前关该用的种植规则（non_boss / boss），供种植节点消费。
-JobSetInfo   只读查询当前状态（调试用，不产生副作用）。
-JobSetReset  显式重置计数器（重新开始任务时）。
+JobSetLoad        载入作业集、初始化关卡计数器，把「当前阵容」暴露给后续节点。
+                  挂在空壳节点「无尽挑战_加载作业集代码」上。
+JobSetStage       识别当前天数 -> 计数/计分 -> 必要时换阵容重开。
+                  挂在「无尽挑战_确认自己当前阶段」。
+JobSetFight       核心：把三条链（单次/循环/收尾）拼成 DSL 注入组合动作节点，
+                  并覆盖补给链顺序。挂在「无尽局内_单次/循环种植」。
+JobSetInfo        只读查询当前状态（调试用，不产生副作用）。
+
+⚠️ 曾经还有 7 个动作，因三链重构 / pipe 化后不再需要而删除：
+   JobSetLevel / JobSetSlot / JobSetReset / JobSetFightPlan / JobSetRollback
+   / JobSetStageChanged —— 逻辑已并入上面几个。
+   JobSetEndRestart —— 已 pipe 化（next + [Anchor]下一个动作），见 03-1-01。
+
+   ★ 教训：**能用 pipe 表达的，不要写 custom**。
+     run_task 是同步的，看着像必须用代码；但 pipe 的 next + [Anchor]
+     同样能表达「跑完子流程再继续」，而且可读性好得多。
 
 与 pipeline 的对接方式：本模块**不修改任何 pipeline JSON**，
 需要的信息通过 CustomAction 的返回值 / 日志传递；
@@ -36,7 +45,7 @@ from . import dsl as _dsl
 # 进程级单例状态
 #
 # MAA 的 CustomAction 是每次执行新实例化的，所以状态必须放在模块级。
-# 生命周期与 Agent 进程一致；每次「重新开始任务」由 JobSetReset / task 变化重置。
+# 生命周期与 Agent 进程一致；每次「重新开始任务」由 JobSetLoad(重置) / task 变化重置。
 # ---------------------------------------------------------------------------
 
 _STATE: Dict[str, Any] = {
@@ -176,7 +185,7 @@ class JobSetLoad(CustomAction):
         #   但首次进关根本没有「上一套阵容」可换，也不需要重开——
         #   直接按识别结果选表、选卡、开种就行。
         #
-        #   所以 table_index 保持 None：JobSetStageChanged 见到 None 一律返回
+        #   所以 table_index 保持 None：本关一律按「第一次进表」处理。
         #   「不需要换」，直到 JobSetFight 第一次真正按识别结果锁定表。
         _STATE["table_index"] = None
 
@@ -209,212 +218,6 @@ class JobSetLoad(CustomAction):
         return _ok()
 
 
-# ---------------------------------------------------------------------------
-# JobSetLevel —— 天数识别之后
-# ---------------------------------------------------------------------------
-
-@AgentServer.custom_action("JobSetLevel")
-class JobSetLevel(CustomAction):
-    """喂入一次 OCR 原始天数，更新计数器。
-
-    两种用法：
-      1) 参数直接给数：  {"原始天数": 57}
-      2) 参数给识别节点名：{"识别节点": "frame_wj_custom_识别天数"}
-         -> 引擎自己跑一次识别拿原始值（需要 MaaFw 支持 run_recognition_direct）
-
-    OCR 没认出来（识别失败）时传 {"原始天数": null} 或直接不传，
-    计数器会按「+1 推进」处理。
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        tr = _ensure_tracker(param)
-
-        raw: Optional[int] = None
-        has_raw = "原始天数" in param
-        if has_raw:
-            v = param.get("原始天数")
-            if v not in (None, ""):
-                try:
-                    raw = int(float(v))
-                except (TypeError, ValueError):
-                    _log(f"原始天数非法，按未识别处理：{v!r}")
-                    raw = None
-        else:
-            node = param.get("识别节点")
-            if node:
-                raw = self._recognize(context, str(node), param)
-
-        before = tr.count
-        level = tr.observe(raw)
-        _log(f"识别={raw} -> {tr.describe()}（{before} -> {level}）")
-
-        # 换阵容检测：跨过锚点则更新活动表并重新注入选卡
-        self._maybe_switch(context, tr, level)
-        return _ok()
-
-    # -- 内部 --------------------------------------------------------------
-
-    def _recognize(self, context: Context, node: str, param: Dict[str, Any]) -> Optional[int]:
-        """用 run_recognition_direct 跑一次天数 OCR。
-
-        ★ 第三个参数必须是**自己截好的图**（同 JobSetStage._recognize）。
-        """
-        try:
-            from maa.pipeline import JRecognitionType, JOCR
-        except Exception:
-            _log("当前 MaaFw 不支持 run_recognition_direct，无法按节点识别")
-            return None
-        if not hasattr(context, "run_recognition_direct"):
-            _log("context 没有 run_recognition_direct，无法按节点识别")
-            return None
-
-        roi = param.get("识别roi") or [555, 61, 414, 81]   # 旧版实测区域
-        replace = param.get("替换") or [["g", "9"], ["G", "6"]]
-
-        # ---- 先截图 ----
-        try:
-            image = context.tasker.controller.post_screencap().wait().get()
-        except Exception as e:
-            _log(f"识别：截图失败（{type(e).__name__}: {e}）")
-            return None
-        if image is None:
-            _log("识别：截图为空")
-            return None
-
-        try:
-            detail = context.run_recognition_direct(
-                JRecognitionType.OCR,
-                JOCR(only_rec=True, roi=list(roi), replace=replace),
-                image,
-            )
-            text = self._extract_text(detail)
-        except Exception as e:
-            _log(f"识别异常（{type(e).__name__}: {e}）")
-            return None
-
-        if not text:
-            _log(f"节点 {node} 未识别到文字")
-            return None
-        # 统一走「第N关 / 第N天 / 纯数字」解析，避免拼接多个数字出错
-        return JobSetStage._parse_day(str(text))
-
-    @staticmethod
-    def _extract_text(detail: Any) -> str:
-        """从 run_recognition_direct 的返回值里取出 OCR 文本。
-
-        真实返回是 RecognitionDetail，文本在 `.best_result.text`；
-        为兼容不同版本/字典形态，逐层尝试 best_result / text / all / detail。
-        """
-        if detail is None:
-            return ""
-
-        def _from(obj: Any) -> str:
-            if obj is None:
-                return ""
-            if isinstance(obj, str):
-                return obj.strip()
-            for attr in ("best_result", "text", "all", "detail"):
-                v = getattr(obj, attr, None)
-                if v is None and isinstance(obj, dict):
-                    v = obj.get(attr)
-                if v is None:
-                    continue
-                got = _from(v)
-                if got:
-                    return got
-            if isinstance(obj, (list, tuple)):
-                for it in obj:
-                    got = _from(it)
-                    if got:
-                        return got
-            return ""
-
-        txt = _from(detail)
-        if txt:
-            return txt
-        inner = getattr(detail, "detail", None)
-        if inner is None and isinstance(detail, dict):
-            inner = detail.get("detail")
-        return _from(inner)
-
-    def _maybe_switch(self, context: Context, tr: LevelTracker, level: int) -> None:
-        """关卡跨过阵容锚点时，切换活动表并重新注入选卡参数。"""
-        js: Optional[JobSet] = _STATE.get("jobset")
-        if js is None:
-            return
-        table = js.pick_table(level)
-        prev = _STATE.get("table_index")
-        if prev == table.index:
-            return
-
-        _STATE["table_index"] = table.index
-        _log(
-            f"★ 换阵容：关卡 {level} 跨入表{table.index + 1}"
-            f"（关卡{table.from_level}起）-> 植物 {table.plants}"
-        )
-        try:
-            context.override_pipeline({
-                "无尽挑战_选取植物": {
-                    "custom_action_param": json.dumps(
-                        {"植物列表": table.plants}, ensure_ascii=False
-                    )
-                }
-            })
-            _log("已注入新阵容的选卡参数")
-        except Exception as e:
-            _log(f"注入选卡参数失败：{type(e).__name__}: {e}")
-
-
-# ---------------------------------------------------------------------------
-# JobSetSlot —— 输出当前关该用的种植规则
-# ---------------------------------------------------------------------------
-
-@AgentServer.custom_action("JobSetSlot")
-class JobSetSlot(CustomAction):
-    """按「当前关卡 + 是否 boss 关」取出该用的种植规则。
-
-    参数：
-        {"是boss关": true}       // boss 判定由 pipeline 侧完成（见下）
-        {"关卡": 55}             // 可选，不给就用计数器当前值
-
-    boss 判定：**本引擎不判断 boss**。pipeline 侧用
-        「无尽通用框架_识别boss关_开始阶段」（09_Frame_Endless_boss.json，
-         模板 僵王的头 / 功夫僵王，ROI [169,8,335,69]）
-    判定后把结果作为参数传进来即可。
-
-    规则以 JSON 形式打印到日志，并 redirect 到 pipeline 变量供下游消费。
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        js: Optional[JobSet] = _STATE.get("jobset")
-        if js is None:
-            _log("尚未载入作业集（JobSetLoad 未执行）")
-            return _fail()
-
-        tr = _ensure_tracker(param)
-        lv = param.get("关卡")
-        if lv in (None, ""):
-            lv = tr.count if tr.count > 0 else 1
-        try:
-            lv = int(lv)
-        except (TypeError, ValueError):
-            lv = 1
-
-        is_boss = bool(param.get("是boss关"))
-
-        table = js.pick_table(lv)
-        rules = table.rules(is_boss)
-        kind = "boss" if is_boss else "普通关"
-
-        _log(
-            f"关卡{lv} {kind} -> 表{table.index + 1} "
-            f"| 种植{len(rules['plant'])}组 喂豆{len(rules['feed'])} "
-            f"铲子{len(rules['shovel'])} 顺序{len(rules['sequence'])} 点波={rules['wave']}"
-        )
-        return _ok()
-
 
 # ---------------------------------------------------------------------------
 # 辅助动作
@@ -436,20 +239,6 @@ class JobSetInfo(CustomAction):
             _log(f"快照：{json.dumps(tr.snapshot(), ensure_ascii=False)}")
         return _ok()
 
-
-@AgentServer.custom_action("JobSetReset")
-class JobSetReset(CustomAction):
-    """显式重置计数器（保留已载入的作业集）。"""
-
-    def run(self, context: Context, argv) -> Any:
-        tr: Optional[LevelTracker] = _STATE.get("tracker")
-        if tr is not None:
-            tr.reset()
-            _STATE["table_index"] = None
-            _log("计数器已重置")
-        else:
-            _log("计数器尚未初始化，无需重置")
-        return _ok()
 
 
 # ---------------------------------------------------------------------------
@@ -598,7 +387,7 @@ class JobSetFight(CustomAction):
                 f"★ 阵容切换：表{prev_index + 1} -> 表{table.index + 1}"
                 f"（关卡 {table.from_level} 起，植物 {table.plants}）"
             )
-            # 推进表指针 —— 这是**唯一**推进它的地方（JobSetStageChanged 无副作用）。
+            # 推进表指针 —— 换阵容流程里**唯一**推进它的地方。
             # 同时重新注入选卡参数，保证新阵容真的被选上。
             _STATE["table_index"] = table.index
             try:
@@ -824,22 +613,22 @@ class JobSetFight(CustomAction):
         else:
             override["无尽挑战_收尾"] = {"enabled": False}
 
-        # ---- 3c) 收尾重开节点：收尾超时后动作 = 「重开」时注入 ----
+        # ---- 3c) 收尾重开节点：**已 pipe 化，运行时不再注入** ----
         #
-        # 当一个 Custom 节点承载「重开当前关卡」的动作（不增加计数器）：
-        #   调用「通用_重开_暂停」重开 -> 跳回「无尽挑战_选取植物_开始战斗」直接开局。
-        # 只在作业集选择「重开」且配了收尾链时才启用。
-        # ⚠️ 壳节点在 pipeline 里 enabled=false，这里必须显式置 true 才会执行。
+        # 「无尽挑战_收尾重开」现在是一个纯 pipe 节点（03-1-01）：
+        #     next   = ["通用_重开_暂停"]
+        #     anchor = {"下一个动作": "无尽挑战_识别开始战斗_清空卡牌"}
+        # 重开完靠 [Anchor]下一个动作 回到锚点直接开局。
+        #
+        # 曾经这里用 CustomAction（JobSetEndRestart）跑 run_task 串两次调用，
+        # 但 run_task 是同步的，pipe 的 next 表达不了——于是写了 40 行 Python。
+        # 改成 pipe 后那 40 行完全不需要：next + [Anchor] 天然能表达。
+        #
+        # ★ 唯一还需要运行时管的是 enabled：
+        #   壳节点在 pipeline 里是 enabled=false（避免没配收尾链时参与识别），
+        #   只有作业集选了「重开」且配了收尾链时才启用。
         if has_end and end_after_action == "restart":
-            override["无尽挑战_收尾重开"] = {
-                "action": "Custom",
-                "custom_action": "JobSetEndRestart",
-                "custom_action_param": {},
-                "enabled": True,
-                "pre_delay": 0,
-                "post_delay": 0,
-                "next": [],
-            }
+            override["无尽挑战_收尾重开"] = {"enabled": True}
         else:
             override["无尽挑战_收尾重开"] = {"enabled": False}
 
@@ -1095,198 +884,6 @@ class JobSetFight(CustomAction):
         return out
 
 
-@AgentServer.custom_action("JobSetFightPlan")
-class JobSetFightPlan(CustomAction):
-    """告诉 pipeline「本次该跑单次链还是循环链」（只查询，不注入）。
-
-    用于调度节点 decide 流程：
-        单次链非空 -> 跑单次；单次跑完 -> 跑循环；循环也空 -> 等对局结束。
-
-    参数：{"是boss关": false}
-    日志输出，并返回 success；pipeline 侧按日志/后续节点分支。
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        js: Optional[JobSet] = _STATE.get("jobset")
-        if js is None:
-            _log("尚未载入作业集")
-            return _fail()
-
-        tr = _ensure_tracker(param)
-        lv = tr.count if tr.count > 0 else 1
-        table = js.pick_table(lv)
-        rules = table.rules(bool(param.get("是boss关")))
-
-        has_once = bool(rules.get("once_chain"))
-        has_loop = bool(rules.get("loop_chain"))
-        _log(
-            f"调度：关卡{lv} 表{table.index + 1} "
-            f"once={'有' if has_once else '无'} loop={'有' if has_loop else '无'}"
-        )
-        _STATE["has_once"] = has_once
-        _STATE["has_loop"] = has_loop
-        return _ok()
-
-
-@AgentServer.custom_action("JobSetRollback")
-class JobSetRollback(CustomAction):
-    """换阵容重开后回退计数器（count-1，分数不变）。
-
-    ★ 关键点：重开后打的还是同一关，如果管道再走一次天数识别，
-      计数器会被多推一格。所以在「通用_重开」路径上显式回退。
-
-    参数：{"次数": 1}   # 可选，默认退 1
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        tr: Optional[LevelTracker] = _STATE.get("tracker")
-        if tr is None:
-            _log("计数器未初始化，无法回退")
-            return _fail()
-
-        try:
-            times = int(param.get("次数") or 1)
-        except (TypeError, ValueError):
-            times = 1
-        times = max(1, times)
-
-        for _ in range(times):
-            tr.rollback_one()
-        _log(f"重开回退 {times} 次 -> {tr.describe()}")
-        return _ok()
-
-
-@AgentServer.custom_action("JobSetEndRestart")
-class JobSetEndRestart(CustomAction):
-    """收尾超时后动作 = 「重开」：重开当前关卡，重开后直接继续开始战斗。
-
-    语义（用户要求）：
-      · **不增加计数器**：重开打的还是同一关，重开后重新识别天数会得到同一关 ->
-        计数器判「抖动」，不会推进，所以这里不需要显式回退。
-      · 调用「通用_重开_暂停」重开当前关卡。
-      · 重开后跳回「无尽挑战_选取植物_开始战斗」直接点开始战斗（不重新选卡）。
-
-    参数（全部可选）：
-        {
-          "通用重开节点": "通用_重开_暂停",
-          "重开后回跳节点": "无尽挑战_选取植物_开始战斗"
-        }
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-
-        restart_node = str(param.get("通用重开节点") or "通用_重开_暂停")
-        back_node = str(param.get("重开后回跳节点") or "无尽挑战_选取植物_开始战斗")
-
-        _log(f"收尾超时 -> 重开当前关卡（{restart_node}，计数器不变）")
-        try:
-            context.run_task(restart_node)
-            _log("收尾重开：通用重开完成")
-        except Exception as e:
-            _log(f"收尾重开：通用重开失败（{type(e).__name__}: {e}）")
-            return _fail()
-
-        _log(f"收尾重开完成 -> 跳回「{back_node}」直接开始战斗")
-        try:
-            context.run_task(back_node)
-            _log("收尾重开：开始战斗流程完成")
-        except Exception as e:
-            _log(f"收尾重开：跳回开始战斗失败（{type(e).__name__}: {e}）")
-            return _fail()
-
-        return _ok()
-
-
-# ---------------------------------------------------------------------------
-# JobSetStageChanged —— 自定义识别：本关是否跨入了新阵容阶段
-# ---------------------------------------------------------------------------
-
-try:
-    @AgentServer.custom_recognition("JobSetStageChanged")
-    class JobSetStageChanged(CustomRecognition):
-        """判断当前关卡是否跨过了阵容锚点（需要换阵容 + 重开）。
-
-        用作 pipeline 的 recognition，**命中 = 需要换阵容**。
-        pipeline 侧写法：
-            "recognition": "Custom",
-            "custom_recognition": "JobSetStageChanged",
-            "next": ["换阵容重开节点"],
-            "on_error": ["继续当前链"]
-
-        判定依据：当前关卡所属的表序号 != 上次记录的表序号。
-
-        ★ 本识别**无副作用（幂等）**：它只读不写 _STATE["table_index"]。
-          因为 pipeline 里「正向 + inverse 反向」两个兄弟节点会各调用一次，
-          如果在这里推进表指针，第二次调用就会把指针再推一格 -> 判定错乱。
-          真正的推进由 JobSetFight（注入新阵容时）负责，它每次换阵容只跑一次。
-        """
-
-        def analyze(self, context: Context, argv) -> Any:
-            param = _parse_param(getattr(argv, "custom_recognition_param", None))
-            js: Optional[JobSet] = _STATE.get("jobset")
-            if js is None:
-                _log("[换阵容判断] 作业集未载入 -> 判定为「不需要换」")
-                return CustomRecognition.AnalyzeResult(
-                    box=None, detail={"reason": "no_jobset"}
-                )
-
-            tr = _ensure_tracker(param)
-            lv = param.get("关卡")
-            if lv in (None, ""):
-                lv = tr.count if tr.count > 0 else 1
-            try:
-                lv = int(lv)
-            except (TypeError, ValueError):
-                lv = 1
-
-            table = js.pick_table(lv)
-            prev = _STATE.get("table_index")
-
-            # ★ prev 为 None = 还没锁定过任何表 = 本轮**首次进关**。
-            #   首次进关直接按识别结果选表开种，不重开（没有「上一套阵容」可换）。
-            #   JobSetLoad 故意不猜表，就是靠这个 None 来区分首次与真的换表。
-            if prev is None:
-                _log(
-                    f"[换阵容判断] 首次进关（尚未锁定表）-> 不换阵容，"
-                    f"按识别结果用表{table.index + 1}（植物 {table.plants}）"
-                )
-                return CustomRecognition.AnalyzeResult(
-                    box=None, detail={"stage": table.index, "level": lv, "first": True},
-                )
-
-            if prev != table.index:
-                _log(
-                    f"[换阵容判断] 关卡{lv} 从表{prev + 1} 跨入表{table.index + 1} "
-                    f"-> 需要换阵容（植物 {table.plants}）"
-                )
-                return CustomRecognition.AnalyzeResult(
-                    box=(0, 0, 1, 1),
-                    detail={"stage": table.index, "level": lv, "plants": table.plants},
-                )
-
-            _log(f"[换阵容判断] 关卡{lv} 仍在表{table.index + 1} -> 不需要换")
-            return CustomRecognition.AnalyzeResult(
-                box=None, detail={"stage": table.index, "level": lv}
-            )
-
-except Exception as _e:  # pragma: no cover
-    _log(f"JobSetStageChanged 注册失败（MaaFw 版本可能不支持 CustomRecognition）：{_e}")
-
-
-# ---------------------------------------------------------------------------
-# JobSetStage —— 挂在「无尽挑战_确认自己当前阶段」
-#
-# 一个动作干完四件事：识别天数 -> 计数 -> 计分 -> 判断是否换阵容。
-#
-# 关键语义（用户明确要求）：
-#   · 本次任务里**第一次**识别到「属于另一张表」的天数时（比如表2 是 50~149），
-#     **不增加计数**，而是用「通用暂停」重开，把作业集切换成表2 的阵容与种植逻辑，
-#     然后继续开始游戏，走表2 的种植流程。
-#   · 之后同一张表内的关卡，按正常的「计数 + 得分期望」推进。
-# ---------------------------------------------------------------------------
 
 @AgentServer.custom_action("JobSetStage")
 class JobSetStage(CustomAction):
@@ -1325,11 +922,45 @@ class JobSetStage(CustomAction):
                 _STATE["seen_stages"] = set()
 
         # ---- 1) 识别天数 ----
-        raw = self._recognize(context, param)
+        # ★ boss 关判定由 pipeline 侧完成（「无尽挑战_局内识别boss关」）并作为参数传入。
+        #   调用顺序：进入到局内 -> 识别boss关(命中) -> 无尽挑战_确认阶段_BOSS -> 本动作
+        is_boss = bool(param.get("是boss关"))
+
+        # ★ 连着识别 3 次（每次重新截图 + OCR），只要一次读到就用它。
+        #   3 次都读不到 -> 交给 LevelTracker 按「识别失败」处理（计数器 +1，不计分）。
+        #   ⚠️ 中间不插入等待：等待会让这一帧早就过去了，再读也是旧画面，
+        #      「黄花菜都凉了」—— 连续无间隔重试才是对的。
+        raw = None
+        for attempt in range(1, 4):
+            raw = self._recognize(context, param)
+            if raw is not None:
+                if attempt > 1:
+                    _log(f"天数识别：第 {attempt} 次成功 -> {raw}")
+                break
+            _log(f"天数识别：第 {attempt}/3 次未读到文字")
         if raw is None:
-            _log("天数识别失败" + ("（基准帧）" if first else " -> 仅按计数器推进一格"))
+            _log("天数识别失败（3 次均未读到）" + ("（基准帧）" if first else " -> 计数器 +1，不计分"))
         else:
             _log(f"天数识别：{raw}")
+
+        # ---- 1b) boss 关：天数就近取 5 的倍数 ----
+        #
+        # 依据（用户给的规律）：boss 关恒定出现在 5 的倍数关。
+        #   · 识别到天数 -> 就近取 5 的倍数（23->25, 22->20）
+        #   · 识别失败   -> 直接按 boss 处理（用计数器就近取 5 的倍数）
+        #   · 本身就是 5 的倍数 -> 不动
+        if is_boss:
+            base_lv = raw if raw is not None else tr.count
+            if base_lv and base_lv > 0:
+                snapped = int(round(base_lv / 5.0)) * 5
+                snapped = max(5, min(tr.max_level, snapped))   # 别超出最大关
+                if snapped != base_lv:
+                    _log(f"boss 关：天数 {base_lv} -> 就近取 5 的倍数 {snapped}")
+                else:
+                    _log(f"boss 关：天数 {base_lv} 已是 5 的倍数，不变")
+                raw = snapped
+            else:
+                _log("boss 关：无可用天数（计数为 0），跳过取整")
 
         # ---- 2~3) 计数 + 计分（交给 LevelTracker）----
         lv = tr.observe(raw, first=first)
@@ -1492,19 +1123,22 @@ class JobSetStage(CustomAction):
 
     @staticmethod
     def _parse_day(text: str) -> Optional[int]:
-        """从 OCR 文本里取出「第几关/第几天」的数字。
+        """从 OCR 文本里取出关卡数字。
+
+        ★ 现在 roi 只覆盖**数字区**（不再包含「第 / 关」），所以优先走纯数字路径。
+          但保留「第N关 / 第N天」的兼容分支 —— roi 万一放宽了也不会失效。
 
         真实日志出现过这些形态：
-            "55"                  纯数字（最理想）
+            "55"                  纯数字（现在的常态）
+            "第55关" / "第 55 关"   带「第N关」（旧 roi 会读到）
             "亚瑟的挑战-第8关"      带前缀的关卡名
-            "第55关" / "第 55 关"   带「第N关」
 
         规则（按优先级）：
-          1. 先找「第 <数字> 关」这种明确写法
-          2. 否则找「第 <数字> 天」
-          3. 否则若整串就是个纯数字，直接用
-          4. 否则把 `-` `_` `/` `|` 当分隔符，取最后一段里的数字
-             （"亚瑟的挑战-第8关" -> "第8关" -> 8）
+          1. 整串就是个纯数字 -> 直接用（现在的常态）
+          2. 「第 <数字> 关」
+          3. 「第 <数字> 天」
+          4. 取最后一段里的数字（兼容 "A-B第8关"）
+          5. 整串里最后一个数字
         """
         import re as _re
 
@@ -1512,17 +1146,17 @@ class JobSetStage(CustomAction):
         if not s:
             return None
 
-        # 1) 第N关
+        # 1) 纯数字（只 OCR 数字区时的常态）
+        if _re.fullmatch(r"\d{1,3}", s):
+            return int(s)
+        # 2) 第N关
         m = _re.search(r"第\s*(\d{1,3})\s*关", s)
         if m:
             return int(m.group(1))
-        # 2) 第N天
+        # 3) 第N天
         m = _re.search(r"第\s*(\d{1,3})\s*天", s)
         if m:
             return int(m.group(1))
-        # 3) 纯数字
-        if _re.fullmatch(r"\d{1,3}", s):
-            return int(s)
         # 4) 取最后一段里的数字（兼容「A-B第8关」这类）
         tail = _re.split(r"[-_/|]", s)[-1]
         nums = _re.findall(r"\d{1,3}", tail)
@@ -1536,8 +1170,42 @@ class JobSetStage(CustomAction):
 
     @staticmethod
     def _extract_text(detail: Any) -> str:
-        """见 JobSetLevel._extract_text（同一套兼容逻辑）。"""
-        return JobSetLevel._extract_text(detail)
+        """从 run_recognition_direct 的返回值里取出 OCR 文本。
+
+        真实返回是 RecognitionDetail，文本在 `.best_result.text`；
+        为兼容不同版本/字典形态，逐层尝试 best_result / text / all / detail。
+        """
+        if detail is None:
+            return ""
+
+        def _from(obj: Any) -> str:
+            if obj is None:
+                return ""
+            if isinstance(obj, str):
+                return obj.strip()
+            for attr in ("best_result", "text", "all", "detail"):
+                v = getattr(obj, attr, None)
+                if v is None and isinstance(obj, dict):
+                    v = obj.get(attr)
+                if v is None:
+                    continue
+                got = _from(v)
+                if got:
+                    return got
+            if isinstance(obj, (list, tuple)):
+                for it in obj:
+                    got = _from(it)
+                    if got:
+                        return got
+            return ""
+
+        txt = _from(detail)
+        if txt:
+            return txt
+        inner = getattr(detail, "detail", None)
+        if inner is None and isinstance(detail, dict):
+            inner = detail.get("detail")
+        return _from(inner)
 
     @staticmethod
     def _apply_table(context: Context, js: JobSet, table: Any) -> bool:

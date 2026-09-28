@@ -1,14 +1,191 @@
 {
-    "无尽挑战_选择世界_未来": {
+    "无尽挑战_选择世界_埃及": {
         "recognition": "OCR",
         "expected": [
-            "未来世界"
+            "神秘埃及"
         ],
+        "enabled": false,
         "action": "Click",
         "next": [
             "无尽挑战_点击内部的开始训练"
         ]
     },
+    "无尽挑战_选择世界_海盗港湾": {
+        "recognition": "OCR",
+        "expected": [
+            "海盗港湾"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_狂野西部": {
+        "recognition": "OCR",
+        "expected": [
+            "狂野西部"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_功夫世界": {
+        "recognition": "OCR",
+        "expected": [
+            "功夫世界"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_未来": {
+        "recognition": "OCR",
+        "expected": [
+            "未来世界"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_黑暗时代": {
+        "recognition": "OCR",
+        "expected": [
+            "黑暗时代"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_巨浪沙滩": {
+        "recognition": "OCR",
+        "expected": [
+            "巨浪沙滩"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_冰河世界": {
+        "recognition": "OCR",
+        "expected": [
+            "冰河世界"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_天空之城": {
+        "recognition": "OCR",
+        "expected": [
+            "天空之城"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_失落之城": {
+        "recognition": "OCR",
+        "expected": [
+            "失落之城"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_摇滚年代": {
+        "recognition": "OCR",
+        "expected": [
+            "摇滚年代"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_恐龙危机": {
+        "recognition": "OCR",
+        "expected": [
+            "恐龙危机"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_摩登世界": {
+        "recognition": "OCR",
+        "expected": [
+            "摩登世界"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_蒸汽时代": {
+        "recognition": "OCR",
+        "expected": [
+            "蒸汽时代"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_复兴时代": {
+        "recognition": "OCR",
+        "expected": [
+            "复兴时代"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    "无尽挑战_选择世界_童话世界": {
+        "recognition": "OCR",
+        "expected": [
+            "童话世界"
+        ],
+        "enabled": false,
+        "action": "Click",
+        "next": [
+            "无尽挑战_点击内部的开始训练"
+        ]
+    },
+    // "无尽挑战_选择世界_地宫": {
+    //     "recognition": "OCR",
+    //     "expected": [
+    //         "地宫世界"
+    //     ],
+    //     "enabled": false,
+    //     "action": "Click",
+    //     "next": [
+    //         "无尽挑战_点击内部的开始训练"
+    //     ]
+    // },
     "无尽挑战_点击内部的开始训练": {
         "recognition": "OCR",
         "expected": [

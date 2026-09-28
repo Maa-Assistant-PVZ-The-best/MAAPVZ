@@ -128,8 +128,16 @@ function jobIsBossBoard() {
 }
 
 // 取某条链在指定 board 上对应的字段名
-function jobChainField(which, board) {
-    const isBoss = (board === boardLate) || (board === undefined && jobIsBossBoard());
+//
+// ★ forceBoss：显式指定「这次按 boss 处理」，优先于引用判断。
+//   为什么需要它：导出 boss 链时传进来的棋盘可能是**上一张表的 boardLate**
+//   （t.inheritBoss && prev ? prev.boardLate : t.boardLate），
+//   那个对象的引用不等于全局 boardLate，靠 === 判断会误判成普通关 ——
+//   结果 boss 链读了 t.loopOrder（把普通关的通用动作串进 boss 关）。
+function jobChainField(which, board, forceBoss) {
+    const isBoss = (forceBoss === true)
+        || (board === boardLate)
+        || (board === undefined && jobIsBossBoard());
     return isBoss ? JOB_FIELD_MAP[which].boss : JOB_FIELD_MAP[which].normal;
 }
 

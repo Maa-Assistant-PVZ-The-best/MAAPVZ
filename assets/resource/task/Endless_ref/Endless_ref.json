@@ -15,17 +15,15 @@
                     }
                 },
                 {
-                    "name": "使用远程作业集",
+                    "name": "使用远程作业集(别用)",
                     "option": [
                         "作业集代码",
-                        "配置来源",
                         "无尽模式_重构"
                     ]
                 },
                 {
                     "name": "使用本地作业集",
                     "option": [
-                        "配置来源",
                         "无尽模式_重构"
                     ]
                 }
@@ -41,18 +39,146 @@
                 }
             ]
         },
-        "配置来源": {
+        "无尽挑战_选择世界": {
             "type": "select",
-            "default_case": "默认",
+            "label": "选择世界",
             "cases": [
                 {
-                    "name": "默认",
-                    "description": "使用作业集自带的默认代码配置。"
+                    "name": "埃及世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_埃及": {
+                            "enabled": true
+                        }
+                    }
                 },
                 {
-                    "name": "自定义配置",
-                    "description": "手动更改一些已有的配置"
+                    "name": "海盗港湾",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_海盗港湾": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "狂野西部",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_狂野西部": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "功夫世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_功夫世界": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "未来世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_未来": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "黑暗时代",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_黑暗时代": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "巨浪沙滩",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_巨浪沙滩": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "冰河世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_冰河世界": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "天空之城",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_天空之城": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "失落之城",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_失落之城": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "摇滚年代",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_摇滚年代": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "恐龙危机",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_恐龙危机": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "摩登世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_摩登世界": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "蒸汽时代",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_蒸汽时代": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "复兴时代",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_复兴时代": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "童话世界",
+                    "pipeline_override": {
+                        "无尽挑战_选择世界_童话世界": {
+                            "enabled": true
+                        }
+                    }
                 }
+                // {
+                //     "name": "地宫世界",
+                //     "pipeline_override": {
+                //         "无尽挑战_选择世界_地宫": {
+                //             "enabled": true
+                //         }
+                //     }
+                // }
             ]
         },
         "无尽模式_重构": {
