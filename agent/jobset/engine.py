@@ -119,6 +119,23 @@ class Table:
         self.plants: List[str] = _norm_plants(lineup.get("plants"))
         self.deck: Optional[str] = lineup.get("deck") or None
 
+        # ---- 编队（换阵容时用「切换编队」代替「选卡」）----
+        #
+        # squad = 1..6，表示这一阶段用第几个编队。
+        #   · None / 缺省 / 非法值 -> 关闭切换编队，走原来的选卡逻辑（向后兼容）
+        #   · 1..6               -> 换阵容时走到「无尽挑战_切换编队」，
+        #                           并把「无尽_切换编队序号」的 expected 改成该数字
+        #
+        # ★ 放在 Table 层（每张表各自一个编队号），和「一张表 = 一个阵容阶段」
+        #   的现有模型一致：50 关换编队2、150 关换编队3 这种天然支持。
+        self.squad: Optional[int] = _as_int(self.raw.get("squad"), None)
+        if self.squad is not None and not (1 <= self.squad <= 6):
+            self.squad = None      # 超出 1..6 视为未配置，别把非法值传给 pipe
+
+        # 关闭时留个后门：显式写 squadEnabled=false 可以临时停用而不清掉数字
+        if self.raw.get("squadEnabled") is False:
+            self.squad = None
+
         slots = self.raw.get("slots")
         self.slots: Dict[str, str] = {}
         if isinstance(slots, dict):
@@ -224,10 +241,10 @@ class Table:
                 key_name = str(seg.get("key") or "").strip()
                 typ = str(seg.get("type") or "plant").strip().lower()
 
-                # ★ 通用动作段（点波/捡豆/加速）：**没有 cells**，
+                # ★ 通用动作段（点波/捡豆/加速/等待）：**没有 cells**，
                 #   不能像普通槽那样因为「没落点」被丢掉。
                 if typ == "action" or key_name.startswith("ga:"):
-                    out.append({
+                    rec: Dict[str, Any] = {
                         "key": key_name,
                         "slot": None,
                         "type": "action",
@@ -235,7 +252,13 @@ class Table:
                         "label": seg.get("label") or "",
                         "cells": [],
                         "waits": [],
-                    })
+                    }
+                    # ★ 等待动作的毫秒数（网页端「等待」块里的输入框）：
+                    #   必须带下去，否则运行时只能当未知动作跳过。
+                    ms_val = seg.get("ms")
+                    if isinstance(ms_val, (int, float)) and ms_val > 0:
+                        rec["ms"] = ms_val
+                    out.append(rec)
                     continue
 
                 if not cells:
@@ -420,6 +443,7 @@ class JobSet:
             "table_index": t.index,
             "from_level": t.from_level,
             "to_level": t.to_level,
+            "squad": t.squad,          # 1..6 = 换这个编队；None = 走选卡
         }
 
     def rules_at(self, level: int, is_boss: bool = False) -> Dict[str, Any]:

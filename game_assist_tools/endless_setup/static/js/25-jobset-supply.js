@@ -23,13 +23,14 @@ const SUPPLY_DEFAULTS = [
 const SUPPLY_IMG_DIR = 'static/supply/';
 
 // 候选补给项（「可选补给项」图库里能选的全部图片）
-// 「查看」放在最后，且是**固定项**：点它只会置顶，不能移除（见 jobToggleSupplyItem）
+// ★「查看」是一个**普通可选项**：点击选中 / 再点取消，
+//   但它不参与排序，也不会出现在上面的堆叠卡片区（见 jobRenderSupply）。
 const SUPPLY_CANDIDATES = SUPPLY_DEFAULTS.concat([
     { id: 'cucumber', name: '黄瓜', img: 'bomb.png' },
     { id: 'view',     name: '查看', img: '查看.png', pinned: true }
 ]);
 
-// 「查看」是固定项：点它 = 放到链首（已在首位则不动），不能删
+// 「查看」：不参与排序、不显示在排序区，状态在「已选择」那一栏体现
 const SUPPLY_PINNED_ID = 'view';
 
 // 取当前阵容的补给列表（没有就按默认初始化）
@@ -48,7 +49,7 @@ function jobSupplyIsPinned(it) {
     return !!it && (it.id === SUPPLY_PINNED_ID || it.pinned === true);
 }
 
-// 点图库项：固定项 -> 置顶；普通项 -> 添加／移除切换
+// 点图库项：普通项 -> 添加／移除切换；「查看」-> 选中／取消（语义相同）
 function jobToggleSupplyItem(cand) {
     const t = jobTables[currentTable];
     if (!t) return;
@@ -57,20 +58,17 @@ function jobToggleSupplyItem(cand) {
     const at = list.findIndex(function (x) { return jobSupplyItemKey(x) === key; });
 
     if (cand.pinned) {
-        // 「查看」是固定项，但允许取消：
-        //   · 不在列表里        -> 插到最前面（置顶）
-        //   · 在列表里但不在首位 -> 移到最前面
-        //   · 已在首位          -> 再点一次取消（移除）
-        if (at < 0) {
-            list.unshift({ id: cand.id, name: cand.name, img: cand.img, pinned: true });
-            setStatus('📌 已把「' + cand.name + '」固定到最前');
-        } else if (at > 0) {
+        // ★「查看」不再是「固定到最前」，而是像普通项一样：
+        //   点一下 = 选中；再点一下 = 取消。
+        //   （用户要求：点击是已选择，再次点击取消选择）
+        if (at >= 0) {
             list.splice(at, 1);
-            list.unshift({ id: cand.id, name: cand.name, img: cand.img, pinned: true });
-            setStatus('📌 已把「' + cand.name + '」固定到最前');
+            setStatus('－ 已取消选择：' + cand.name);
         } else {
-            list.splice(at, 1);
-            setStatus('－ 已取消「' + cand.name + '」');
+            // ★ 关键：**不要 unshift 到最前** —— 它不会再显示在排序区，
+            //   放在最前只会无谓地改变其它项的序号。追加到末尾即可。
+            list.push({ id: cand.id, name: cand.name, img: cand.img, pinned: true });
+            setStatus('＋ 已选择：' + cand.name);
         }
     } else if (at >= 0) {
         list.splice(at, 1);
@@ -105,23 +103,23 @@ function jobRenderSupply() {
         return;
     }
 
-    // ★「查看」不参与排序 —— 单独放在旁边固定显示（见 jobRenderSupplyPinned）
+    // ★「查看」是一个**开关**，不是补给项 —— 它**完全不显示在补给顺序区**。
+    //   用户明确要求：即使选中了「查看」，它也不该出现在补给顺序里。
+    //   · 排序区只画普通补给项；
+    //   · 「查看」的选中状态记在 supplyPicks 里（导出要用），
+    //     但界面上只在**下方图库**用「✓ 已选择」角标体现。
     const sortable = list.filter(function (it) { return !jobSupplyIsPinned(it); });
-    jobRenderSupplyPinned(list);
 
     sortable.forEach(function (item, i) {
         const card = document.createElement('div');
-        const isPinned = jobSupplyIsPinned(item);
-        // 固定项加 sp-pinned -> 蓝色描边（见 CSS）
-        card.className = 'supply-card' + (isPinned ? ' sp-pinned' : '');
-        // 固定项不许拖走（拖了也会被置顶逻辑拉回来，不如直接禁用）
-        card.draggable = !isPinned;
+        // ★ 这里的 item 一定不是「查看」（sortable 已把它滤掉），
+        //   所以不再需要 sp-pinned / 不可拖拽那些分支。
+        card.className = 'supply-card';
+        card.draggable = true;
         card.dataset.idx = String(i);
         // ★ 关键：把序号写进 CSS 变量，位移由 CSS 一次算出
         card.style.setProperty('--i', String(i));
-        card.title = isPinned
-            ? (item.name + '（固定项，始终在最前）')
-            : (item.name + '（拖拽调整顺序）');
+        card.title = item.name + '（拖拽调整顺序）';
 
         const img = document.createElement('div');
         img.className = 'sc-img';
@@ -143,25 +141,22 @@ function jobRenderSupply() {
 
         const ord = document.createElement('span');
         ord.className = 'sc-order';
-        ord.textContent = isPinned ? '📌' : String(i + 1);
+        ord.textContent = String(i + 1);
         card.appendChild(ord);
 
-        // 固定项（「查看」）不给删除按钮 —— 它的取消入口在弹窗图库里
-        // （再点一次「查看」= 取消），避免误触把置顶项删掉
-        if (!isPinned) {
-            const del = document.createElement('button');
-            del.className = 'sc-del';
-            del.textContent = '×';
-            del.title = '删除这一项';
-            del.addEventListener('click', function (e) {
-                e.stopPropagation();
-                list.splice(i, 1);
-                jobSaveLocal();
-                jobRenderSupply();
-                jobRenderSupplyPicker();
-            });
-            card.appendChild(del);
-        }
+        // 删除按钮：从补给列表里去掉这一项
+        const del = document.createElement('button');
+        del.className = 'sc-del';
+        del.textContent = '×';
+        del.title = '删除这一项';
+        del.addEventListener('click', function (e) {
+            e.stopPropagation();
+            list.splice(list.indexOf(item), 1);
+            jobSaveLocal();
+            jobRenderSupply();
+            jobRenderSupplyPicker();
+        });
+        card.appendChild(del);
 
         const nm = document.createElement('div');
         nm.className = 'sc-name';
@@ -184,7 +179,7 @@ function jobRenderSupply() {
             const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
             const to = i;
             if (isNaN(from) || from === to) return;
-            // ★ 注意：这里操作的是 sortable（已剔除固定项），
+            // ★ 注意：这里操作的是 sortable（已剔除「查看」），
             //   但真正要改的是 list —— 先按 sortable 算好新顺序，再写回 list。
             const moved = sortable.splice(from, 1)[0];
             sortable.splice(to, 0, moved);
@@ -210,57 +205,21 @@ function jobRenderSupply() {
     if (hint) hint.textContent = list.length ? '拖拽卡片可调整顺序' : '';
 }
 
-// 把排序结果写回列表：固定项保持原位，其余按 sortable 的新顺序铺进去
+// 把排序结果写回列表：「查看」保持原位，其余按 sortable 的新顺序铺进去
 function jobCommitSupplyOrder(list, sortable) {
     let k = 0;
     for (let i = 0; i < list.length; i++) {
-        if (jobSupplyIsPinned(list[i])) continue;      // 固定项不动
+        if (jobSupplyIsPinned(list[i])) continue;      // 「查看」不动
         list[i] = sortable[k++];
     }
     jobSaveLocal();
     jobRenderSupply();
 }
 
-// 「查看」这类固定项：不参与排序，单独画在堆叠区旁边
-function jobRenderSupplyPinned(list) {
-    const box = document.getElementById('supplyPinned');
-    if (!box) return;
-    box.innerHTML = '';
-    const pinned = (list || []).filter(jobSupplyIsPinned);
-    box.style.display = pinned.length ? '' : 'none';
-    if (!pinned.length) return;
-
-    const lab = document.createElement('div');
-    lab.className = 'sp-pin-label';
-    lab.textContent = '固定';
-    box.appendChild(lab);
-
-    pinned.forEach(function (item) {
-        const card = document.createElement('div');
-        card.className = 'supply-card sp-pinned sp-static';
-        card.title = item.name + '（固定项，不参与排序）';
-        card.style.setProperty('--i', '0');
-
-        const img = document.createElement('div');
-        img.className = 'sc-img';
-        const el = document.createElement('img');
-        el.src = SUPPLY_IMG_DIR + encodeURIComponent(item.img);
-        el.alt = item.name || '';
-        el.draggable = false;
-        el.onerror = function () { this.style.display = 'none'; };
-        img.appendChild(el);
-        card.appendChild(img);
-
-        const nm = document.createElement('div');
-        nm.className = 'sc-name';
-        nm.textContent = item.name;
-        card.appendChild(nm);
-
-        // 点它 -> 打开图库（在那边可以取消固定）
-        card.addEventListener('click', function () { jobOpenSupplyPicker(); });
-        box.appendChild(card);
-    });
-}
+// ★ 原先这里有个 jobRenderSupplyPinned()：把「查看」单独画在堆叠区旁边。
+//   用户要求「即使选中了查看，它也不该在补给顺序中显示」——
+//   所以这个函数连同 HTML 里的 #supplyPinned 容器一起删掉了。
+//   「查看」的选中状态现在只在下半图库里用「✓ 已选择」角标体现。
 
 // 悬停/离开时重算所有卡片的让位
 //   hoverIdx 那张：加 .sc-lifted（CSS 负责上浮+旋转+放大）

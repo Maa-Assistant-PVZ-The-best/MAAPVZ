@@ -13,7 +13,9 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from agent.jobset.engine import JobSet, Table, load_jobset, pick_table  # noqa: E402
-from agent.jobset.level_tracker import LevelTracker  # noqa: E402
+from agent.jobset.level_tracker import (  # noqa: E402
+    LevelTracker, DEFAULT_INIT_SCORE, DEFAULT_PENALTY,
+)
 
 FAILED = []
 
@@ -43,9 +45,12 @@ try:
     check("载入成功", bool(js.code) and len(js.tables) > 0,
           f"{js.name} ({js.code}, {len(js.tables)} 张表)")
     # 至少有一张表配了植物（哪张表配的会随作者调整，不做硬编码）
-    any_plants = any(t.plants for t in js.tables)
-    check("至少一张表有植物列表", any_plants,
-          str([t.plants for t in js.tables]))
+    #
+    # ★ 但「换阵 = 编队」的表 plants 本来就是空的（用 squad 切编队，不经选卡），
+    #   这时不该算失败 —— 判据放宽成「有植物 或 有编队号」。
+    any_lineup = any(t.plants or t.squad for t in js.tables)
+    check("至少一张表有植物列表或编队号", any_lineup,
+          str([(t.plants, t.squad) for t in js.tables]))
 except Exception as e:
     check("载入作业集", False, f"{type(e).__name__}: {e}")
     js = None
@@ -113,7 +118,9 @@ check("初始分 50", lt.score == 50, f"score={lt.score}")
 c = lt.observe(56)
 print(f"  下一关 OCR=56 -> count={c} score={lt.score}  {lt.state.last_verdict}")
 check("抖动时计数保持 57", c == 57, f"count={c}")
-check("抖动扣分 40", lt.score == 40, f"score={lt.score}")
+# ★ 扣分额从常量推导（曾写死 40，改 DEFAULT_PENALTY 后会假失败）
+_expect = DEFAULT_INIT_SCORE - DEFAULT_PENALTY
+check(f"抖动扣分 {_expect}", lt.score == _expect, f"score={lt.score}")
 
 
 # ---------------------------------------------------------------------------
@@ -135,10 +142,12 @@ check("锁定后仍能推进", c == before + 1, f"{before} -> {c}")
 print("\n=== 6. 大幅偏差 -> 信任计数器 / 分数触底回头信 OCR ===")
 lt = LevelTracker()
 lt.observe(30, first=True)     # 基准
-c = lt.observe(35)             # 预测31，偏差4 > 容差2，扣到40 -> 信计数器
+c = lt.observe(35)             # 预测31，偏差4 > 容差2
 print(f"  30 -> OCR=35: count={c} score={lt.score} {lt.state.last_verdict}")
 check("偏差大信计数器", c == 31, f"count={c}")
-check("扣分后 40", lt.score == 40, f"score={lt.score}")
+# ★ 同样从常量推导（penalty<init_score 时才会走 trust_counter 分支）
+_expect2 = DEFAULT_INIT_SCORE - DEFAULT_PENALTY
+check(f"扣分后 {_expect2}", lt.score == _expect2, f"score={lt.score}")
 
 lt2 = LevelTracker(init_score=10, penalty=10, tolerance=2)  # 一次就触底
 lt2.observe(30, first=True)

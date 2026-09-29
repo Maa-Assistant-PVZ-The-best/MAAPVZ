@@ -136,6 +136,21 @@ function jobApplyLoaded(job, code) {
         if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
         // 补给选取：数组（null/缺失都留空，由 jobSupplyList 填默认）
         if (!Array.isArray(t.supplyPicks)) t.supplyPicks = null;
+
+        // ★ 编队切换：squad（1..6）是运行时读的权威字段。
+        //   读回来时同步成编辑器的 lineupMode / deckNo，
+        //   这样「换阵」下拉框和编队号输入框能正确显示。
+        //   · squad 是合法 1..6 -> lineupMode='deck', deckNo=它
+        //   · 否则                -> 'plants'，编队号给个默认 1（但不生效）
+        const _sq = Number(t.squad);
+        if (Number.isFinite(_sq) && _sq >= 1 && _sq <= 6) {
+            t.lineupMode = 'deck';
+            t.deckNo = _sq;
+        } else {
+            t.lineupMode = 'plants';
+            if (!t.deckNo) t.deckNo = 1;
+        }
+        delete t.squad;   // 编辑器内部只留 lineupMode/deckNo，导出时再由 jobBuild 生成
         if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {}, end: {} };
         if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
         if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};

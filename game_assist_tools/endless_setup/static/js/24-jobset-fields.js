@@ -52,8 +52,13 @@ const JOB_UI_IMG = {
 //
 //   · 放在棋盘右侧的按钮组里，点一下弹窗确认插入哪条链。
 //   · 存进链里的是 key = 'ga:<id>' 的段（没有格子、没有落点）。
-//   · 目前只有三个：点波 / 捡豆 / 加速（后续可扩）。
-//   · ⚠️ 运行时尚未消费这些段（作业集里暂时不生效）。
+//   · 点波 / 捡豆 / 加速。
+//
+// ★ 「等待」不在这个按钮组里 —— 用户要求把它从通用动作按钮里删掉。
+//   等待改为：**任何一步（植物或通用动作）旁边的 ⏱ 按钮**，
+//   点一下就在这一步**下面插入一个独立的等待块**。
+//   所以等待仍然是合法的链段（见 JOB_WAIT_ACTION），只是不能从
+//   通用动作按钮组直接插。
 // ============================================================
 const JOB_GENERIC_ACTIONS = [
     { id: 'wave',  name: '点波', icon: '🌊', img: JOB_UI_IMG.wave,  desc: '点一次波（催僵尸）' },
@@ -61,11 +66,26 @@ const JOB_GENERIC_ACTIONS = [
     { id: 'speed', name: '加速', icon: '⏩', img: JOB_UI_IMG.speed, desc: '切换加速' }
 ];
 
+// ★ 「等待」：不再是可插入的通用动作，但依然是合法的链段。
+//   seg.ms = 毫秒数，导出成 BatchSwipe 的 sleep（秒）。
+//   插入入口只有「某一步旁边的 ⏱」。
+const JOB_WAIT_ACTION = {
+    id: 'wait', name: '等待', icon: '⏱', img: '',
+    desc: '等待指定毫秒（可精细到 1ms）', hasMs: true, defaultMs: 1000
+};
+
 // 通用动作的段前缀
 const JOB_GA_PREFIX = 'ga:';
 
+// 按 id 取动作定义（含「等待」——它仍是合法链段，只是不在按钮组里）
 function jobGenericActionById(id) {
+    if (id === JOB_WAIT_ACTION.id) return JOB_WAIT_ACTION;
     return JOB_GENERIC_ACTIONS.filter(function (a) { return a.id === id; })[0] || null;
+}
+
+// 可在「通用动作按钮组」里直接插入的动作（不含等待）
+function jobInsertableActions() {
+    return JOB_GENERIC_ACTIONS;
 }
 
 // 判断某个 key 是不是通用动作段，是则返回动作定义
@@ -163,16 +183,29 @@ function jobSegPlacements(board, seg, which) {
     // ★ 通用动作段没有落点，直接返回空
     if (!seg || jobIsGenericKey(seg.key)) return [];
     const all = jobPlacementsOf(board, seg.key, which);
+    const total = all.length;
     let idxs;
     if (Array.isArray(seg.picked) && seg.picked.length) {
         idxs = seg.picked.slice();
     } else if (seg.from === 0 && (seg.to === null || seg.to === undefined)) {
         idxs = all.map(function (_, i) { return i; });
     } else {
-        const to = (seg.to === null || seg.to === undefined) ? all.length : seg.to;
+        const to = (seg.to === null || seg.to === undefined) ? total : seg.to;
         idxs = [];
         for (let g = (seg.from | 0); g < to; g++) idxs.push(g);
     }
+
+    // ★ 严格读取棋盘：丢掉棋盘上不存在的下标（植物被删掉后，
+    //   picked/from-to 里会留下越界值；不清理的话段会「看起来还在」，
+    //   但实际渲染为空，拖动时又拿不到落点 → 幽灵段）。
+    const seen = {};
+    idxs = idxs.filter(function (g) {
+        g = Number(g);
+        if (!Number.isFinite(g) || g < 0 || g >= total) return false;
+        if (seen[g]) return false;
+        seen[g] = true;
+        return true;
+    });
 
     // ★ 应用自定义块内顺序
     if (Array.isArray(seg.order) && seg.order.length) {

@@ -26,7 +26,7 @@ function jobRenderSupplyPicker() {
             + (isPicked ? ' sp-picked' : '')
             + (cand.pinned ? ' sp-pinned' : '');
         item.title = cand.pinned
-            ? (cand.name + (isPicked ? '（点击取消）' : '（点击固定到最前）'))
+            ? (cand.name + (isPicked ? '（点击取消选择）' : '（点击选择）'))
             : cand.name;
 
         const img = document.createElement('img');
@@ -40,11 +40,11 @@ function jobRenderSupplyPicker() {
         nm.textContent = cand.name;
         item.appendChild(nm);
 
-        // 固定项补一个角标，说明它的状态
+        // 选中项补一个角标，说明它的状态
         if (cand.pinned && isPicked) {
             const tag = document.createElement('span');
             tag.className = 'sp-pin-tag';
-            tag.textContent = '📌 已固定';
+            tag.textContent = '✓ 已选择';
             item.appendChild(tag);
         }
 

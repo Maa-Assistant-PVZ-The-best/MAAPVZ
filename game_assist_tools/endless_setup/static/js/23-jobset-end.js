@@ -148,6 +148,17 @@ function jobGetChainOrder(t, which, board, forceBoss) {
     const all = jobAllSlotKeys();
     let raw = Array.isArray(t[field]) ? t[field] : [];
 
+    // 当前正在编辑的棋盘（按 tab 推断）。后面「补空槽」「覆盖率修复」「写回」
+    // 都要用它，所以提到最前面算一次。
+    let _editingBoard = null;
+    try {
+        const _tab = document.querySelector('.tab.active')?.dataset.tab;
+        _editingBoard = (_tab === 'late') ? boardLate : boardEarly;
+    } catch (e) { _editingBoard = null; }
+
+    // 本次调用该用哪块棋盘：优先调用方传入的，否则用当前编辑的那块
+    const _useBoard = board || _editingBoard;
+
     // 兼容旧数据：以前存的是裸键名字符串数组 → 转成 {key, from:0, to:null}
     // ★ 通用动作段（key = 'ga:<id>'）没有格子，用 ga 字段标记，不走 from/to
     let segs = raw.map(function (e) {
@@ -158,7 +169,10 @@ function jobGetChainOrder(t, which, board, forceBoss) {
         if (e && typeof e === 'object' && e.key) {
             const k = String(e.key);
             if (jobIsGenericKey(k)) {
-                return { key: k, ga: k.slice(JOB_GA_PREFIX.length) };
+                const o2 = { key: k, ga: k.slice(JOB_GA_PREFIX.length) };
+                // ★ 等待动作的毫秒数（其它通用动作没有这个字段）
+                if (e.ms !== undefined && Number.isFinite(Number(e.ms))) o2.ms = Number(e.ms);
+                return o2;
             }
             const o = {
                 key: k,
@@ -176,39 +190,30 @@ function jobGetChainOrder(t, which, board, forceBoss) {
         return jobIsGenericKey(e.key) || all.indexOf(e.key) !== -1;
     });
 
-    // 补齐：每个槽至少要有一段；没有任何段的槽补到末尾
+    // 补齐：每个槽至少要有一段；没有任何段的槽补到末尾。
+    //
+    // ★ 但只在**有落点**的槽上补 —— 空槽补出来的 {from:0,to:null} 是纯噪音：
+    //   渲染时 jobResolveSteps 已经会「严格按棋盘」展示该显示的落点，
+    //   这里再补一遍只会在每次渲染时把 card2..card8/feed/shovel 全写进 slotOrder，
+    //   把用户的链撑得又大又乱（存盘也一起变大）。
+    //   导出时也由 jobResolveSteps/jobSegPlacements 保证覆盖，不需要这些空段。
     all.forEach(function (k) {
-        if (!segs.some(function (s) { return s.key === k; })) segs.push({ key: k, from: 0, to: null });
+        if (segs.some(function (s) { return s.key === k; })) return;
+        // 该槽在这个形态下棋盘上确实有落点才补
+        if (_useBoard && jobPlacementsOf(_useBoard, k, which).length > 0) {
+            segs.push({ key: k, from: 0, to: null });
+        }
     });
 
     // ★ 覆盖率修复：链条里若有落点没被任何段覆盖（常见于「拖出成独立块」
     //   之后那个块又被删掉/拖走），这些植物就永远不会被种 ->
     //   游戏里表现成「某一格种不上」。
     //   这里把「没被覆盖的下标」补成一个附加段，保证链路与棋盘一致。
-    //
-    //   板子来源：优先用调用方传进来的 board；没传就按当前编辑的 tab 推断
-    //   （'late' tab = boss 棋盘 boardLate，否则普通关 boardEarly）。
-    //
-    // ★ 写回策略：只有「正在编辑的那块棋盘」才把修复结果写回 t[field]。
-    //   导出 boss 链时会用 bossBoard 调本函数，如果也写回 slotOrder，
-    //   就会把 boss 的段覆盖到普通关链条上 —— 这是必须避免的。
-    let _board = board;
-    if (!_board) {
-        try {
-            const _tab = document.querySelector('.tab.active')?.dataset.tab;
-            _board = (_tab === 'late') ? boardLate : boardEarly;
-        } catch (e) { _board = null; }
-    }
-    segs = jobRepairChainCoverage(segs, _board, which, all);
+    segs = jobRepairChainCoverage(segs, _useBoard, which, all);
 
     // 只有传进来的 board 就是「当前编辑棋盘」时才写回
     // ★ 但 forceBoss=true（导出 boss 链）时**绝不写回** ——
     //   否则会把 boss 段覆盖到普通关链条上。
-    let _editingBoard = null;
-    try {
-        const _tab = document.querySelector('.tab.active')?.dataset.tab;
-        _editingBoard = (_tab === 'late') ? boardLate : boardEarly;
-    } catch (e) { _editingBoard = null; }
     if (forceBoss !== true && (!board || board === _editingBoard)) {
         t[field] = segs;
     }

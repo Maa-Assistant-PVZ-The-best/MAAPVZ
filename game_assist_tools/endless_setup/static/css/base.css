@@ -617,27 +617,11 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     padding-top: 8px;
 }
 
-/* 堆叠区 + 固定项 并排 */
+/* 堆叠区
+   ★ 原先这里是「堆叠区 + 固定项并排」，固定项用来放「查看」。
+     现在「查看」不再显示在补给顺序里（它只是个开关，状态在图库里看），
+     所以 #supplyPinned、.supply-pinned、.sp-pin-label、.sp-static 全部删掉了。 */
 .supply-lane { display: flex; align-items: flex-start; gap: 18px; }
-.supply-pinned {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding-left: 14px; margin-left: 4px;
-    border-left: 2px dashed #bfdbfe;
-    flex: 0 0 auto;
-}
-.supply-pinned .sp-pin-label {
-    font-size: 10px; font-weight: 700; color: #2563eb;
-    writing-mode: vertical-rl; letter-spacing: 2px;
-    align-self: center;
-}
-/* 固定项卡：静态定位，不参与堆叠与让位 */
-.supply-card.sp-static {
-    position: static;
-    transform: none !important;
-    z-index: auto;
-    cursor: pointer;
-}
-.supply-card.sp-static:hover { transform: translateY(-4px) !important; }
 
 /* ---- 单张卡：位置由自己的 --i 算出（让位叠加 --shift-x）---- */
 .supply-card {
@@ -737,17 +721,9 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 /* 悬停时名字加粗，进一步强化反馈 */
 .supply-card.sc-lifted .sc-name { color: #1d4ed8; }
 
-/* ---- 固定项（如「查看」）：蓝色描边 ---- */
-.supply-card.sp-pinned .sc-img {
-    border: 2px solid #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,.18);
-    background: #eff6ff;
-}
-.supply-card.sp-pinned .sc-order {
-    background: #2563eb;             /* 固定项角标用蓝色 */
-}
-/* 固定项不可拖，鼠标样式也换掉 */
-.supply-card.sp-pinned { cursor: pointer; }
+/* ★ 原先这里有 .supply-card.sp-pinned（给「查看」画蓝色描边）。
+   现在「查看」不显示在补给顺序区了，卡片永远不会带 sp-pinned，故删除。
+   （图库里的 .sp-item.sp-pinned 仍然有效，见下方补给弹窗样式。） */
 
 /* 空状态 */
 .supply-empty {
@@ -1005,11 +981,74 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     font-size: 9px; background: #6366f1;
 }
 .seq-chain-compact .seq-chain-head .seq-ico { font-size: 12px; display: flex; align-items: center; }
+/* 紧凑块头里的缩略图（植物 / 喂豆 / 铲子）：小一点，别撑高那一行 */
+.seq-chain-compact .seq-chain-head .seq-thumb {
+    position: relative;
+    width: 16px; height: 16px; flex: 0 0 16px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 3px; font-size: 12px;
+}
+.seq-chain-compact .seq-chain-head .seq-thumb img,
+.seq-chain-compact .seq-chain-head .seq-thumb .seq-thumb-img {
+    width: 16px; height: 16px; object-fit: contain; display: block;
+}
+.seq-chain-compact .seq-chain-head .seq-cell {
+    font-size: 9px; color: #94a3b8;
+}
 .seq-chain-compact .seq-chain-head .seq-slot { font-size: 11px; }
 .seq-chain-compact .seq-chain-del { margin-left: auto; }
 /* 紧凑块内部若有 chip（喂豆/铲子带落点），横排一行不换行撑高 */
 .seq-chain-compact .seq-chain-body { padding: 2px 6px 3px; gap: 2px; }
 .seq-chain-compact .seq-node { padding: 1px 5px; font-size: 10px; }
+
+/* ============ 新链模型：一株一块 ============
+   链条现在完全按棋盘展开，每个块只代表一株/一个动作，
+   所以植物块也不再有多行 chip，直接用紧凑的单行头即可。 */
+/* 植物块也走「单行」：头部就是全部内容，不再有 body */
+.seq-chain-head .seq-cell {
+    font-size: 10px; color: #94a3b8; flex: 0 0 auto;
+}
+/* 等待块的毫秒输入框 */
+.seq-ms {
+    width: 54px; flex: 0 0 54px;
+    padding: 1px 4px; font-size: 10px; text-align: right;
+    border: 1px solid #c7d2fe; border-radius: 4px;
+    background: #fff; color: #3730a3;
+}
+.seq-ms:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
+.seq-ms-unit { font-size: 9px; color: #818cf8; margin-left: -2px; }
+
+/* 缩略图：链条里的植物头像 */
+.seq-ico .seq-thumb-img,
+.seq-chain-head .seq-ico .seq-thumb-img {
+    width: 20px; height: 20px; object-fit: contain; display: block;
+    border-radius: 3px;
+}
+
+/* 「插入等待」按钮：灰色小按钮，hover 才显眼 */
+.seq-wbtn {
+    margin-left: 2px; padding: 0 5px; height: 17px; line-height: 15px;
+    font-size: 10px; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 4px;
+    background: #f8fafc; color: #64748b;
+}
+.seq-wbtn:hover { border-color: #6366f1; color: #4f46e5; background: #eef2ff; }
+
+/* 「已勾选 N 项 / 清空已勾选」——只有勾了东西才出现 */
+.seq-selbar {
+    display: flex; align-items: center; gap: 8px;
+    margin: 2px 0 4px; padding: 3px 8px;
+    background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px;
+    font-size: 11px; color: #3730a3;
+}
+.seq-selbar-tip { flex: 1; font-weight: 600; }
+.seq-selbar-clear {
+    padding: 1px 8px; font-size: 11px; cursor: pointer;
+    border: 1px solid #c7d2fe; border-radius: 4px;
+    background: #fff; color: #4338ca;
+}
+.seq-selbar-clear:hover { background: #4338ca; border-color: #4338ca; color: #fff; }
+
 .ga-badge {
     font-size: 9px; padding: 1px 5px; border-radius: 4px;
     background: #e0e7ff; color: #4338ca; font-weight: 700;
@@ -1175,4 +1214,86 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #genPicker .gp-inserted {
     font-size: 11px; color: #22a65e; font-weight: 600;
     text-align: center; margin-top: 8px; min-height: 14px;
+}
+
+/* ============================================================
+   植物小块：底色改得更清爽（白底 + 左侧彩色描边 + 轻阴影）
+   ============================================================ */
+.seq-chain.seq-plant-block {
+    background: #ffffff;
+    border-color: #e6ebf2;
+    border-left: 3px solid #34d399;      /* 绿色：植物 */
+}
+.seq-plant-block .seq-chain-head {
+    background: #ffffff;
+    color: #1f2937;
+}
+.seq-plant-block .seq-chain-head .seq-order { background: #10b981; }
+.seq-plant-block .seq-chain-head .seq-slot { font-weight: 600; color: #111827; }
+.seq-plant-block:hover { border-color: #a7f3d0; box-shadow: 0 2px 8px rgba(16,185,129,.15); }
+
+/* 循环链的植物块：左侧描边转灰蓝，和单次区分 */
+.seq-plant-block.m-loop { border-left-color: #94a3b8; }
+.seq-plant-block.m-loop .seq-chain-head .seq-order { background: #94a3b8; }
+/* 收尾链的植物块：红色系 */
+.seq-plant-block.m-end { border-left-color: #f87171; }
+.seq-plant-block.m-end .seq-chain-head .seq-order { background: #ef4444; }
+
+/* 「等待」通用动作的毫秒输入框 */
+.seq-ms-input {
+    width: 58px; padding: 1px 4px; margin-left: 2px;
+    font-size: 11px; text-align: center;
+    border: 1px solid #c7d2fe; border-radius: 5px;
+    background: #fff; color: #3730a3; font-family: inherit;
+}
+.seq-ms-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.18); }
+.seq-ms-unit { font-size: 10px; color: #818cf8; margin-left: 1px; }
+
+/* ============================================================
+   多选复选框 + 拖动落点指示
+   ============================================================ */
+
+/* 块头里「名字后面」的多选框 */
+.seq-chain-head .seq-pick {
+    width: 14px; height: 14px; margin: 0 6px 0 4px;
+    flex: 0 0 auto; cursor: pointer; accent-color: #2d7aff;
+}
+.seq-chain-head .seq-pick:hover { filter: brightness(.92); }
+
+/* 拖动中：禁止选中文字，鼠标保持抓取态 */
+body.seq-dragging-on { user-select: none; cursor: grabbing; }
+.seq-chain.seq-dragging { opacity: .45; }
+
+/* 落点指示线：明确告诉用户「会插到这里」 */
+.seq-chain.seq-over-top,
+.seq-chain.seq-over-bottom { position: relative; }
+
+.seq-chain.seq-over-top::before,
+.seq-chain.seq-over-bottom::after {
+    content: ''; position: absolute; left: 2px; right: 2px; height: 3px;
+    background: #2d7aff; border-radius: 2px; z-index: 5;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 8px rgba(45,122,255,.7);
+}
+.seq-chain.seq-over-top::before { top: -3px; }
+.seq-chain.seq-over-bottom::after { bottom: -3px; }
+
+/* 链容器落点（拖到空白处 / 链尾 / 空链） */
+.seq-list.seq-over-top,
+.seq-list.seq-over-bottom { position: relative; }
+.seq-list.seq-over-bottom::after {
+    content: ''; position: absolute; left: 2px; right: 2px; bottom: 0; height: 3px;
+    background: #2d7aff; border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(255,255,255,.9), 0 0 8px rgba(45,122,255,.7);
+}
+/* 空链也要有可落的高度，否则拖不进去 */
+.seq-list-empty { min-height: 34px; }
+.seq-list-empty.seq-over-bottom::after { bottom: 6px; }
+
+/* ============================================================
+   等待节点（等待块）：白底 + 琥珀色描边，和时间语义呼应
+   ============================================================ */
+.seq-chain.seq-wait-block {
+    background: #ffffff;
+    border-color: #fde68a;
+    border-left: 3px solid #f59e0b;
 }

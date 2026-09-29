@@ -101,6 +101,77 @@ def _ensure_tracker(param: Dict[str, Any]) -> LevelTracker:
     return tr
 
 
+# ---------------------------------------------------------------------------
+# 切换编队（用编队代替选卡）
+#
+# 需求（用户原话）：
+#   「换阵使用换编队的话就不需要选卡逻辑了」
+#   「需要重开的，也需要确认自己在选卡界面」
+#   「如果用户选择了切换编队，则强制输入 1-6 的数字，
+#     并将『无尽挑战_识别开始战斗_清空卡牌』的 next 改成『无尽挑战_切换编队』」
+#   「将『无尽_切换编队序号』的 expected 改成用户输入的数字，写入作业集
+#     并让作业集的 custom 读取覆盖」
+#
+# pipe 里的链路（02_Endless_plant_Choose_ref.json）：
+#   无尽挑战_识别开始战斗_清空卡牌   (OCR 识别到「清空卡牌」-> Click)
+#        └─ next: ["无尽挑战_选取植物"]              <- 默认走选卡
+#   无尽挑战_切换编队                (OCR 识别到「配队」-> Click)
+#        └─ next: ["无尽_过滤编队颜色"]
+#   无尽_过滤编队颜色                (ColorMatch 找蓝色 -> DoNothing)
+#        └─ next: ["无尽_切换编队序号", "无尽_滑动寻找编队"]
+#   无尽_切换编队序号                (OCR，expected 默认为 [] -> Click)
+#        └─ next: ["无尽挑战_选取植物_开始战斗"]     <- 跳过选卡，直接开战
+#
+# 所以运行时要改的只有两个字段：
+#   1) 「清空卡牌」的 next  -> ["无尽挑战_切换编队"]   （默认是 ["无尽挑战_选取植物"]）
+#   2) 「切换编队序号」的 expected -> ["3"]            （默认是 []）
+#
+# ★ 「确认自己在选卡界面」由「清空卡牌」那个 OCR 节点天然保证：
+#   它认到「清空卡牌」才会 Click 并走 next。认不到 -> OCR 超时 -> 不会误点编队。
+#   所以这里不需要额外加识别节点。
+# ---------------------------------------------------------------------------
+
+# pipe 节点名（与 02_Endless_plant_Choose_ref.json 一一对应）
+NODE_CLEAR_CARDS = "无尽挑战_识别开始战斗_清空卡牌"
+NODE_CHOOSE_PLANTS = "无尽挑战_选取植物"
+NODE_SWITCH_SQUAD = "无尽挑战_切换编队"
+NODE_SQUAD_INDEX = "无尽_切换编队序号"
+
+# 选卡 / 编队两条分支各自的下一步
+NEXT_PICK_PLANTS = [NODE_CHOOSE_PLANTS]
+
+
+def _squad_param(squad: Optional[int]) -> Dict[str, Any]:
+    """把编队号翻成一份 pipeline_override。
+
+    squad 为 None -> 回滚成「选卡」分支（把 next 和 expected 都还原）。
+    这样从「编队表」切回「选卡表」时不会残留上一次的编队设置。
+    """
+    if squad is None:
+        return {
+            NODE_CLEAR_CARDS: {"next": list(NEXT_PICK_PLANTS)},
+            NODE_SQUAD_INDEX: {"expected": []},
+        }
+    return {
+        NODE_CLEAR_CARDS: {"next": [NODE_SWITCH_SQUAD]},
+        # expected 必须是**字符串列表**（OCR 的比对格式）；
+        # 写成数字 MAA 会当成非法 expected，识别永不命中。
+        NODE_SQUAD_INDEX: {"expected": [str(squad)]},
+    }
+
+
+def _inject_squad(context: Context, squad: Optional[int]) -> None:
+    """注入编队切换配置。失败只记日志，不影响主流程。"""
+    try:
+        context.override_pipeline(_squad_param(squad))
+        if squad is None:
+            _log("编队切换：未配置 -> 走选卡逻辑")
+        else:
+            _log(f"编队切换：已启用 -> 点「清空卡牌」后切到编队 {squad}")
+    except Exception as e:
+        _log(f"注入编队配置失败（{type(e).__name__}: {e}）")
+
+
 def _ok() -> CustomAction.RunResult:
     """统一成功返回。
 
@@ -214,6 +285,11 @@ class JobSetLoad(CustomAction):
         except Exception as e:
             # override 失败不该致命：日志留痕，继续走
             _log(f"注入选卡参数失败（{type(e).__name__}: {e}），下游可能拿到空参数")
+
+        # ★ 编队切换：同样按「预计表」先注入一次。
+        #   这样首帧进选卡界面时，「清空卡牌」的 next 就已经是对的
+        #   （选卡 or 切换编队），不会先走错分支再纠正。
+        _inject_squad(context, table.squad)
 
         return _ok()
 
@@ -382,6 +458,8 @@ class JobSetFight(CustomAction):
                 _log(f"已注入选卡植物：{table.plants}")
             except Exception as e:
                 _log(f"注入选卡失败（{type(e).__name__}: {e}）")
+            # ★ 编队：首次锁定时也注入，保证后续重开走对分支
+            _inject_squad(context, table.squad)
         elif prev_index != table.index:
             _log(
                 f"★ 阵容切换：表{prev_index + 1} -> 表{table.index + 1}"
@@ -401,6 +479,9 @@ class JobSetFight(CustomAction):
                 _log(f"已重新注入选卡植物：{table.plants}")
             except Exception as e:
                 _log(f"重新注入选卡失败（{type(e).__name__}: {e}）")
+            # ★ 编队：换阵容时**必须**重新注入 —— 这正是「换阵用编队」的入口。
+            #   重开后跳回「清空卡牌」，那里会按这里注入的 next 决定走选卡还是切编队。
+            _inject_squad(context, table.squad)
 
         _log(
             f"关卡{lv} {kind_cn} -> 表{table.index + 1} "
@@ -812,9 +893,9 @@ class JobSetFight(CustomAction):
                 key = str(seg.get("key") or "").strip()
                 typ = str(seg.get("type") or "plant").lower()
 
-                # ---- 通用动作段（点波/捡豆/加速）：没有格子，整段 = 一条 DSL ----
+                # ---- 通用动作段（点波/捡豆/加速/等待）：没有格子，整段 = 一条 DSL ----
                 if typ == "action" or key.startswith("ga:"):
-                    r = _dsl.generic_dsl(seg.get("action") or key, coords)
+                    r = _dsl.generic_dsl(seg.get("action") or key, coords, seg.get("ms"))
                     if r["dsl"]:
                         parts.append(r["dsl"])
                     for m in r["missing"]:
@@ -1219,6 +1300,8 @@ class JobSetStage(CustomAction):
                 }
             })
             _log(f"已切换到表{table.index + 1}：选卡植物={table.plants}")
+            # ★ 编队：切表时一并注入（换阵用编队时的另一条入口）
+            _inject_squad(context, table.squad)
             return True
         except Exception as e:
             _log(f"切换表失败（{type(e).__name__}: {e}）")

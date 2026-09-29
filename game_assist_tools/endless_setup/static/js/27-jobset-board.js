@@ -101,6 +101,711 @@ function jobConfirmCancelPicker() {
     if (chosen.length && done) done(chosen);
 }
 
+// ============================================================
+// 链条拖放内核（统一实现）
+//
+// 设计原则：
+//   1. **链条严格读取棋盘** —— 段只是「棋盘上某些落点的引用」，
+//      任何时刻链条显示的落点集合 = 棋盘上真实存在的落点。
+//      段里的 from/to/picked 会被规范化成「真实存在的 gidx 列表」，
+//      棋盘上不存在的下标一律丢弃，避免幽灵落点拖不动/种不上。
+//   2. **落点判定只有一处** —— 所有块共用 jobWireDropTarget，
+//      「插入到哪」只由 jobApplyDrop 决定。
+//   3. **段身份用引用 + 指纹**，绝不用 key 单独定位（key 不唯一）。
+//   4. **移动下标用移除前的下标换算**（否则源在目标前时会原地不动）。
+// ============================================================
+
+// 当前编辑的是「前期棋盘」还是「后期棋盘」
+function jobCurrentBoard() {
+    const late = document.querySelector('.tab.active')?.dataset.tab === 'late';
+    return late ? boardLate : boardEarly;
+}
+
+// ---- 段的规范化：把段翻译成「真实存在」的落点下标列表 ----
+// 返回 [gidx...]，保证每个都在棋盘上真实存在（严格读取棋盘）。
+// ★ 复用 jobSegPlacements，避免两处各算一遍导致不一致。
+function jobSegRealGidxs(board, seg, which) {
+    return jobSegPlacements(board, seg, which).map(function (p) { return p.gidx; });
+}
+
+// ============================================================
+// ★ 新链模型：链 = 一串「步骤」（step）
+//
+// 旧模型把「同一个槽的连续若干株」压成一段 {key, from, to}，
+// 于是一个段会渲染成一个**大块**（真实数据里有一块塞了 21 株），
+// 拖动/勾选/删除都得在「段」和「块」之间来回换算，非常容易错。
+//
+// 新模型：把段**完全展开**成一株一步：
+//   { kind:'plant',   key:'card2', gidx:3 }       —— 某个具体落点
+//   { kind:'generic', key:'ga:bean' }             —— 通用动作（没有落点）
+//   { kind:'wait',    key:'ga:wait', ms:1000 }    —— 等待（带毫秒）
+//
+// 好处：
+//   · 一块 = 一株，所见即所得，没有「大块」；
+//   · 拖动 = 在这个有序列表里挪一项，不需要任何下标换算；
+//   · 删除 = 从列表删一项 **并且** 从棋盘删掉那个落点（用户要求）；
+//   · 顺序天然就是链序，与棋盘 seq 一致（严格读取棋盘）。
+// 持久化时再压回旧的 {key,from,to,picked} 格式，保证 agent 端不用改。
+// ============================================================
+
+// 把一个槽的落点按「棋盘上的落子先后」排好（jobPlacementsOf 已按 seq 排）
+function jobBoardStepsOfSlot(board, key, which) {
+    return jobPlacementsOf(board, key, which).map(function (p, i) {
+        return { kind: 'plant', key: key, gidx: i };
+    });
+}
+
+// 棋盘上「所有槽」的落点，按各自的 seq 展开（用于「严格读取棋盘」）
+function jobBoardStepsFor(board, which, keys) {
+    const out = [];
+    (keys || jobAllSlotKeys()).forEach(function (k) {
+        jobBoardStepsOfSlot(board, k, which).forEach(function (s) { out.push(s); });
+    });
+    return out;
+}
+
+// ★ 步骤 id：**必须唯一**，且**与位置无关**。
+//
+//   两条要求：
+//     ① 唯一 —— 通用动作可以完全一样（真实数据里 loop 链有 11 个一模一样的捡豆），
+//        只靠 key 会算出同一个 id -> 勾一个等于全勾、拖一个拖走全部。
+//     ② 与位置无关 —— 否则拖动之后 id 变了，勾选就会「留在原位」而不是跟着走。
+//        这正是「多选拖动后勾选还在原来的位置」的根因。
+//
+//   做法：
+//     · 植物：key + 落点下标（落点是棋盘的固有属性，跟链内位置无关）✓
+//     · 通用动作/等待：key + ms + occ，其中 occ 是「同 key 在第几个**落点组**里」
+//       —— 但那样又依赖位置了。所以改为：**同一份链里，按出现次序一次性编号，
+//       编号写进步骤对象（st.uid），拖动时连同对象一起搬走。**
+function jobStepId(s) {
+    if (!s) return '';
+    const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
+    if (s.kind === 'generic' || s.kind === 'wait') {
+        const ms = (s.ms === undefined || s.ms === null) ? '' : ('#' + s.ms);
+        return s.key + ms + uid;
+    }
+    return s.key + '#' + s.gidx + uid;
+}
+
+// 不含参数（ms）的「身份」：用于改毫秒数时定位自己。
+// ★ 改 ms 会让 jobStepId 变化，所以定位时不能带 ms。
+function jobStepIdentity(s) {
+    if (!s) return '';
+    const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
+    if (s.kind === 'generic' || s.kind === 'wait') return s.key + uid;
+    return s.key + '#' + s.gidx + uid;
+}
+
+// 按「不含参数的身份」在列表里定位（改 ms 时用）
+function jobFindStepByIdentity(list, st) {
+    const idn = jobStepIdentity(st);
+    return (list || []).findIndex(function (x) { return jobStepIdentity(x) === idn; });
+}
+
+// ★ 给没有 uid 的步骤分配一个稳定 uid。
+//
+//   uid 的作用是让「两个一模一样的通用动作」区分开，同时**不依赖链内位置**：
+//   uid 一旦分配就跟着步骤对象走，拖动时对象一起被搬走 -> 勾选跟着走。
+//
+//   分配策略：**只给新解析出来、还没有 uid 的步骤分配**；
+//   已经在列表里、带 uid 的一律保留（这正是拖动后 id 不变的关键）。
+let _jobUidSeq = 0;
+function jobAssignOcc(steps) {
+    (steps || []).forEach(function (s) {
+        if (!s) return;
+        if (s.uid === undefined || s.uid === null) s.uid = ++_jobUidSeq;
+    });
+    return steps;
+}
+
+// 步骤在链里的位置（对象同一性优先，其次按 id）
+function jobStepIndexIn(list, step) {
+    if (!Array.isArray(list) || !step) return -1;
+    const byRef = list.indexOf(step);
+    if (byRef !== -1) return byRef;
+    const id = jobStepId(step);
+    return list.findIndex(function (s) { return jobStepId(s) === id; });
+}
+
+// ★ 把持久化的「段数组」展开成步骤数组（严格读取棋盘：棋盘上没有的落点直接不产生步骤）
+function jobSegsToSteps(board, segs, which) {
+    const out = [];
+    (segs || []).forEach(function (seg) {
+        if (!seg) return;
+        // 通用动作 / 等待
+        if (jobIsGenericKey(seg.key)) {
+            const st = { kind: 'generic', key: seg.key };
+            if (seg.ms !== undefined && seg.ms !== null) { st.kind = 'wait'; st.ms = Number(seg.ms); }
+            out.push(st);
+            return;
+        }
+        // 植物：展开成「一株一步」
+        jobSegRealGidxs(board, seg, which).forEach(function (g) {
+            out.push({ kind: 'plant', key: seg.key, gidx: g });
+        });
+    });
+    return out;
+}
+
+// ★ 把步骤数组压回持久化格式（相邻且同槽连续的合并成一个段，保留旧格式兼容 agent）
+//   通用动作保持独立段；ms 一并写回。
+function jobStepsToSegs(steps) {
+    const segs = [];
+    (steps || []).forEach(function (st) {
+        if (!st) return;
+        if (st.kind === 'generic' || st.kind === 'wait') {
+            const o = { key: st.key };
+            if (st.ms !== undefined && st.ms !== null) o.ms = Number(st.ms);
+            segs.push(o);
+            return;
+        }
+        const last = segs[segs.length - 1];
+        if (last && last.key === st.key && Array.isArray(last.picked)
+            && last.picked[last.picked.length - 1] === st.gidx - 1) {
+            last.picked.push(st.gidx);          // 连续的继续接在后面
+            return;
+        }
+        segs.push({ key: st.key, from: -1, to: -1, picked: [st.gidx] });
+    });
+    // picked 只有一项的还原成 from/to（更干净，也更接近旧数据的样子）
+    segs.forEach(function (g) {
+        if (Array.isArray(g.picked) && g.picked.length === 1) {
+            g.from = g.picked[0];
+            g.to = g.picked[0] + 1;
+            delete g.picked;
+        }
+    });
+    return segs;
+}
+
+// 段身份指纹（含 ms，用于区分两个同内容的「等待」）
+function jobSegFingerprint(s) {
+    if (!s) return '';
+    return s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
+         + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '')
+         + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms);
+}
+function jobSameSeg(a, b) {
+    return a === b || (!!a && !!b && jobSegFingerprint(a) === jobSegFingerprint(b));
+}
+
+// ★ 「把 src 段移到 target 段的前/后」→ 最终插入下标（用移除前的下标换算）
+//   源在目标之前时，移除源段会让目标左移一位，
+//   若还按「插到目标前面」算，正好插回原地 —— 表现成「拖了没反应」。
+function jobMoveIndexFor(src, ti, after) {
+    if (after) return (src < ti) ? ti : (ti + 1);
+    return (src < ti) ? (ti - 1) : ti;
+}
+
+// ============================================================
+// ★★ 链的解析：把「棋盘 + 持久化段」解析成**有序步骤列表**
+//
+// 这是整个链逻辑的唯一真相来源。规则：
+//   1. 链条里记录的段，展开成步骤（一株一步）；
+//   2. **严格读取棋盘**：棋盘上已经删掉的落点，步骤也一并消失；
+//   3. 棋盘上新增的落点（作者又种了一株），只要没被链显式排过，
+//      就按 seq 追加到「该槽最后一步之后」，不会丢；
+//   4. 返回的数组顺序 = 执行顺序。
+// ============================================================
+// 上一次解析出来的步骤（每条链各存一份），用于把 uid 传下去
+const _jobLastSteps = { once: null, loop: null, end: null };
+
+function jobResolveSteps(t, which, board) {
+    const field = jobChainField(which, board);
+    const raw = Array.isArray(t[field]) ? t[field] : [];
+    const steps = jobSegsToSteps(board, raw, which);
+    // ③ 补上「棋盘上有、链里没有」的落点（新增的株不能丢）
+    const inChain = {};
+    steps.forEach(function (s) {
+        if (s.kind === 'plant') inChain[s.key + '#' + s.gidx] = true;
+    });
+    jobAllSlotKeys().forEach(function (k) {
+        const missing = [];
+        jobPlacementsOf(board, k, which).forEach(function (_, i) {
+            if (!inChain[k + '#' + i]) missing.push(i);
+        });
+        if (!missing.length) return;
+        // 追加到「该槽最后一步」之后；该槽还没有步骤就放到末尾
+        let at = -1;
+        for (let i = steps.length - 1; i >= 0; i--) {
+            if (steps[i].kind === 'plant' && steps[i].key === k) { at = i; break; }
+        }
+        const add = missing.map(function (g) {
+            // ★ 标成 synthesized：渲染时看得见（严格读取棋盘），
+            //   但存盘时不会被写回去（否则会把空槽撑成一大堆段）
+            return { kind: 'plant', key: k, gidx: g, synthesized: true };
+        });
+        if (at === -1) steps.push.apply(steps, add);
+        else steps.splice.apply(steps, [at + 1, 0].concat(add));
+    });
+
+    // ④ 编上稳定 uid（区分「一模一样的通用动作」，且拖动后不改变）
+    //    ★ 关键：把上一次解析出来的 uid 传下来，这样「同一个捡豆」在多次
+    //      解析之间拿到同一个 uid —— 勾选（用 uid 做 id）才能跟着它走。
+    jobAssignOcc(steps);
+    const prev = _jobLastSteps[which];
+    if (prev) jobCarryUids(steps, prev);
+    _jobLastSteps[which] = steps;
+    return steps;
+}
+
+
+// ★★ 把旧步骤列表里的 uid 转移到新解析出来的步骤上。
+//
+//   为什么需要：jobResolveSteps 每次都会**新建对象**，而 uid 挂在对象上。
+//   如果每次解析都重新编号，那么「同一个捡豆」在两次解析里会拿到不同的 uid，
+//   勾选（用 uid 做 id）就会失效 / 串位。
+//
+//   匹配规则（按稳定性从高到低）：
+//     ① 植物：key + gidx —— 落点是棋盘固有属性，跟链内位置无关，最可靠；
+//     ② 通用动作/等待：key + ms，按**出现次序**逐个配对（有多个相同的时候）。
+//   这样「第 3 个捡豆」拖到最前，它在同类里的次序变了，但我们可以按次序重新配对 ——
+//   ★ 不行，那还是位置相关。所以对通用动作改用**按出现次序配对**，
+//     且只在「新旧列表里同类数量相同」时才配对；数量变了就保持新 uid
+//     （宁可丢勾选也不要串到别的项上）。
+function jobCarryUids(newSteps, oldSteps) {
+    if (!Array.isArray(newSteps) || !oldSteps || !oldSteps.length) return newSteps;
+
+    // ① 植物：key#gidx 直接对应
+    const byKeyG = {};
+    oldSteps.forEach(function (s) {
+        if (s && s.kind === 'plant' && s.uid !== undefined) {
+            byKeyG[s.key + '#' + s.gidx] = s.uid;
+        }
+    });
+    const used = {};
+    newSteps.forEach(function (s) {
+        if (!s || s.kind !== 'plant') return;
+        const k = s.key + '#' + s.gidx;
+        if (byKeyG[k] !== undefined && !used[k]) { s.uid = byKeyG[k]; used[k] = true; }
+    });
+
+    // ② 通用动作/等待：按「key+ms」分组，组内按出现次序一一配对。
+    //    只有在两边数量相同时才配对 —— 否则说明链内容变了，配对会串位。
+    const grp = function (list) {
+        const m = {};
+        list.forEach(function (s) {
+            if (!s || (s.kind !== 'generic' && s.kind !== 'wait')) return;
+            const gk = s.key + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms);
+            (m[gk] = m[gk] || []).push(s);
+        });
+        return m;
+    };
+    const om = grp(oldSteps), nm = grp(newSteps);
+    Object.keys(nm).forEach(function (gk) {
+        const o = om[gk], n = nm[gk];
+        if (!o || o.length !== n.length) return;   // 数量不同 -> 不配对，避免串位
+        for (let i = 0; i < n.length; i++) {
+            if (o[i] && o[i].uid !== undefined) n[i].uid = o[i].uid;
+        }
+    });
+
+    return newSteps;
+}
+
+// 把步骤列表存回 t[field]（压缩成旧的段格式）
+//
+// ★ 只存「链里真正记过的」内容：
+//   jobResolveSteps 会为了「严格读取棋盘」自动补上棋盘上新增的落点，
+//   那是**渲染用的视图**，不该原样写回 —— 否则每存一次盘，
+//   槽 card2..card8/feed/shovel 这些空槽都会被写成 {from:0,to:null}，
+//   把用户的链撑得又大又乱。
+//   做法：把「自动补出来的步骤」标成 synthesized，存盘时跳过它们。
+function jobStoreSteps(t, which, board, steps) {
+    const field = jobChainField(which, board);
+    const solid = (steps || []).filter(function (s) { return s && !s.synthesized; });
+    t[field] = jobStepsToSegs(solid);
+    return t[field];
+}
+
+// ============================================================
+// 多选状态
+//
+// 勾选表只是一个 **id -> true 的集合**；id 由「段」推导，
+// 保证：重渲染后仍对得上、通用动作也能勾、两个一样的段不会串。
+// ============================================================
+
+// 步骤的勾选 id。
+// ★ 新模型里每一步都有天然稳定的身份（植物=key#gidx，动作=key[#ms]），
+//   不需要再看链内下标，也就不会出现「重渲染后对不上」的问题。
+function jobPickId(which, st) {
+    return which + '|' + jobStepId(st);
+}
+
+function jobIsPicked(which, st) {
+    if (!jobSeqSel) return false;
+    return !!jobSeqSel[jobPickId(which, st)];
+}
+
+// 一个勾选框
+function jobBuildPickBox(which, st) {
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.className = 'seq-pick';
+    const id = jobPickId(which, st);
+    cb.checked = !!(jobSeqSel && jobSeqSel[id]);
+    cb.title = '勾选后可和其它勾选项一起拖动';
+    cb.draggable = false;
+    cb.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+    cb.addEventListener('click', function (e) { e.stopPropagation(); });
+    cb.addEventListener('change', function (e) {
+        e.stopPropagation();
+        if (!jobSeqSel) jobSeqSel = {};
+        if (this.checked) jobSeqSel[id] = true;
+        else delete jobSeqSel[id];
+        jobRenderSeqChains();
+    });
+    return cb;
+}
+
+// ★ 已勾选项，**严格按链内先后**返回（顺序直接来自步骤列表，天然保序）
+//   board 可选：拖动时传渲染时用的那块棋盘，避免和 jobCurrentBoard() 不一致。
+function jobSelectedInOrder(which, board) {
+    const out = [];
+    if (!jobSeqSel) return out;
+    const t = jobTables[currentTable];
+    if (!t) return out;
+    const b = board || jobCurrentBoard();
+    jobResolveSteps(t, which, b).forEach(function (st) {
+        if (jobSeqSel[jobPickId(which, st)]) out.push(st);
+    });
+    return out;
+}
+
+// 当前这条链勾了几项（用于决定要不要显示「清空已勾选」）
+function jobSelectedCount(which) {
+    if (!jobSeqSel) return 0;
+    const t = jobTables[currentTable];
+    if (!t) return 0;
+    const board = jobCurrentBoard();
+    let n = 0;
+    jobResolveSteps(t, which, board).forEach(function (st) {
+        if (jobSeqSel[jobPickId(which, st)]) n++;
+    });
+    return n;
+}
+
+// 拖动时要一起搬的东西。被拖的块若已勾选 -> 搬「所有勾选项」；否则搬它自己。
+function jobDragGroupFor(which, st, board) {
+    if (!jobIsPicked(which, st)) return null;
+    const list = jobSelectedInOrder(which, board);
+    return list.length > 1 ? list : null;
+}
+
+function jobMarkDragging(on) {
+    try { document.body.classList.toggle('seq-dragging-on', !!on); } catch (e) { }
+}
+
+// ============================================================
+// 落点判定（宽容版，无死区）
+// ============================================================
+
+function jobDropBelow(e, el) {
+    const r = el.getBoundingClientRect();
+    return (e.clientY - r.top) > r.height / 2;
+}
+
+function jobMarkDropTarget(el, below) {
+    jobClearSeqOver();
+    if (!el) return;
+    el.classList.add(below ? 'seq-over-bottom' : 'seq-over-top');
+}
+
+// 指针是否正落在某个块的矩形内
+function jobBlockUnderPointer(listBox, clientY) {
+    const els = listBox.querySelectorAll('.seq-chain');
+    for (let i = 0; i < els.length; i++) {
+        const r = els[i].getBoundingClientRect();
+        if (clientY >= r.top && clientY <= r.bottom) return els[i];
+    }
+    return null;
+}
+
+// ★ 按指针 Y 找最近的块，用「相邻块中线」分界 —— 每个像素都归属某个块，
+//   块之间的 gap:8px 缝里也不会出现「谁都接不住」的死区。
+function jobNearestBlockInList(listBox, clientY) {
+    const els = listBox.querySelectorAll('.seq-chain');
+    if (!els.length) return null;
+    const rects = [];
+    for (let i = 0; i < els.length; i++) rects.push(els[i].getBoundingClientRect());
+
+    function info(i, below) {
+        const el = els[i];
+        return {
+            el: el,
+            step: el.__seqStep || null,
+            isGeneric: el.classList.contains('seq-chain-generic'),
+            gidx: (el.dataset.gidx === undefined || el.dataset.gidx === '')
+                ? -1 : Number(el.dataset.gidx),
+            below: !!below
+        };
+    }
+
+    for (let i = 0; i < els.length; i++) {
+        const r = rects[i];
+        if (clientY >= r.top && clientY <= r.bottom) {
+            return info(i, (clientY - r.top) > r.height / 2);
+        }
+    }
+    if (clientY < rects[0].top) return info(0, false);
+    const last = els.length - 1;
+    if (clientY > rects[last].bottom) return info(last, true);
+    for (let i = 0; i < els.length - 1; i++) {
+        const a = rects[i], b = rects[i + 1];
+        if (clientY >= a.bottom && clientY <= b.top) {
+            const mid = (a.bottom + b.top) / 2;
+            return clientY < mid ? info(i, true) : info(i + 1, false);
+        }
+    }
+    return info(last, true);
+}
+
+// ============================================================
+// 唯一的 drop 出口（新模型）
+// drag   描述：{ which, kind:'step'|'group', step, group }
+// target 描述：{ t, which, board, step, after }
+//
+// ★ 新模型下这里极简：把步骤从列表里摘出来、插到目标位置，存回去。
+//   没有「段/块/落点」三层的下标换算，也就没有那类 bug。
+// ============================================================
+function jobApplyDrop(drag, target) {
+    if (!drag || !target) return false;
+    if (drag.which !== target.which) return false;
+    const t = target.t;
+    const which = target.which;
+    const board = target.board;
+    const after = !!target.after;
+
+    const steps = jobResolveSteps(t, which, board);
+
+    // 要搬走的步骤（多选整组，或单个）
+    const moving = (drag.kind === 'group' && drag.group && drag.group.length)
+        ? drag.group.slice()
+        : (drag.step ? [drag.step] : []);
+    if (!moving.length) return false;
+
+    // ★ 把「渲染时的步骤对象」映射到「刚解析出来的步骤对象」。
+    //   两层匹配：(1) 对象引用（没重渲染时直接命中）；
+    //             (2) 步骤 id（含 occ，能区分 11 个一样的捡豆）。
+    const resolveIdx = function (st) {
+        if (!st) return -1;
+        const byRef = steps.indexOf(st);
+        if (byRef !== -1) return byRef;
+        const id = jobStepId(st);
+        return steps.findIndex(function (x) { return jobStepId(x) === id; });
+    };
+
+    const cut = {};
+    const movingReal = [];
+    moving.forEach(function (s) {
+        const i = resolveIdx(s);
+        if (i === -1 || cut[i]) return;
+        cut[i] = true;
+        movingReal.push(steps[i]);
+    });
+    if (!movingReal.length) return false;                 // 一个都没定位到 -> 无效拖动
+
+    // ① 摘出
+    const rest = steps.filter(function (_, i) { return !cut[i]; });
+
+    // ② 定位插入点（在「摘除后」的列表里）
+    let insertAt;
+    const anchorIdx = resolveIdx(target.step);
+    if (!target.step || anchorIdx === -1) {
+        insertAt = rest.length;                          // 拖到链尾
+    } else if (cut[anchorIdx]) {
+        // ★ 目标自己也在被搬的组里 -> 用「目标原来前面还剩几项」定位，
+        //   否则会插错位置（旧实现这里会整组掉链尾）。
+        let n = 0;
+        for (let i = 0; i < anchorIdx; i++) if (!cut[i]) n++;
+        insertAt = n;
+    } else {
+        // 在 rest 里重新定位锚点（rest 的元素是 steps 的子集，按引用找）
+        insertAt = rest.indexOf(steps[anchorIdx]);
+        if (insertAt === -1) insertAt = rest.length;
+        else if (after) insertAt += 1;
+    }
+
+    // ③ 插回去（movingReal 已按链内先后排好，顺序原样保留）
+    rest.splice.apply(rest, [insertAt, 0].concat(movingReal));
+
+    // ④ 存回（压缩成兼容格式）
+    jobStoreSteps(t, which, board, rest);
+
+    const nP = movingReal.filter(function (s) { return s.kind === 'plant'; }).length;
+    const nG = movingReal.length - nP;
+    if (drag.kind === 'group') {
+        jobAfterChainChange(t, which,
+            '📦 已把 ' + nP + ' 株' + (nG ? ' + ' + nG + ' 个动作' : '') + '一起搬到指定位置');
+    } else {
+        jobAfterChainChange(t, which, '🔗 已调整顺序');
+    }
+    return true;
+}
+
+// 链条变动后的统一收尾
+// ★ 注意：**不清空勾选**。用户要求「多选拖动后勾选保留」——
+//   因为 step id 由 (key + gidx/occ) 决定，与链内位置无关，
+//   拖动后 id 依然对得上，勾选状态天然能保留。
+function jobAfterChainChange(t, which, msg) {
+    jobSaveCurrentBoard();
+    jobSaveLocal();
+    jobRenderSeqChains();
+    jobRenderCurrentBoard();
+    if (msg) setStatus(msg);
+}
+
+// ★ 在某一步后面插入一个「等待」通用动作。
+//   它是一个**独立的步骤**（可以在链里单独拖动/删除/改毫秒），
+//   而不是挂在植物身上的属性。
+function jobInsertWaitAfter(t, which, board, st, ms) {
+    const steps = jobResolveSteps(t, which, board);
+    // ★ 定位：先按对象引用，再按「稳定身份」。
+    //   jobResolveSteps 每次都新建对象，但 uid 会被 jobCarryUids 传下去，
+    //   所以身份匹配在重渲染之后依然成立。
+    let idx = steps.indexOf(st);
+    if (idx === -1) idx = jobFindStepByIdentity(steps, st);
+    if (idx === -1) idx = steps.length - 1;      // 兜底：插到末尾
+
+    steps.splice(idx + 1, 0, { kind: 'wait', key: 'ga:wait', ms: ms || 1000 });
+    jobStoreSteps(t, which, board, steps);
+
+    jobAfterChainChange(t, which, '⏱ 已在下面插入一个「等待」');
+}
+
+// ★ 删除一步：从链里去掉 **并且** 从棋盘上删掉那一株（用户要求的联动）
+function jobDeleteStep(t, which, board, st) {
+    if (!st) return;
+
+    if (st.kind === 'plant') {
+        const places = jobPlacementsOf(board, st.key, which);
+        const p = places[st.gidx];
+        if (p) {
+            const cell = board[p.r] && board[p.r][p.c];
+            if (Array.isArray(cell)) {
+                const i = cell.indexOf(p.item);
+                if (i !== -1) cell.splice(i, 1);
+            }
+        }
+    }
+
+    // 链里同样去掉这一项：先定位到「刚解析出来的那个步骤」，再按引用删，
+    // 这样 11 个一样的捡豆也能只删掉被点的那个。
+    const steps = jobResolveSteps(t, which, board);
+    let idx = steps.indexOf(st);
+    if (idx === -1) {
+        const id = jobStepId(st);
+        idx = steps.findIndex(function (x) { return jobStepId(x) === id; });
+    }
+    if (idx !== -1) steps.splice(idx, 1);
+    jobStoreSteps(t, which, board, steps);
+
+    jobAfterChainChange(t, which, st.kind === 'plant'
+        ? '🗑️ 已从链条和棋盘上移除这一株'
+        : '🗑️ 已从链里移除这个动作');
+}
+
+// 给一个块接上拖放落点。getTarget() 返回 jobApplyDrop 需要的 target（除 after）
+function jobWireDropTarget(el, getTarget) {
+    // ★ 把「这个块代表哪一步」钉在元素上：容器级落点（缝里/块外）
+    //   需要按指针位置找到最近的块，再拿它的步骤做落点。
+    const probe = getTarget();
+    if (probe) {
+        el.__seqStep = probe.step || null;
+        if (probe.key !== undefined) el.dataset.key = probe.key;
+        if (probe.which !== undefined) el.dataset.which = probe.which;
+    }
+
+    el.addEventListener('dragover', function (e) {
+        if (!seqDrag) return;
+        if (seqDrag.which !== el.dataset.which) return;
+        // 一律 preventDefault：即使只是擦到块边缘，也别让光标闪成禁止
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch (err) { }
+        jobMarkDropTarget(el, jobDropBelow(e, el));
+        // 不 stopPropagation：让容器层能按「缝里的中线」纠正落点
+    });
+    el.addEventListener('dragleave', function (e) {
+        if (!seqDrag) return;
+        if (el.contains(e.relatedTarget)) return;
+        el.classList.remove('seq-over-top', 'seq-over-bottom');
+    });
+    el.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!seqDrag) return;
+        if (e.__seqHandled) return;         // 容器层已处理
+        e.__seqHandled = true;
+        const below = jobDropBelow(e, el);
+        const drag = seqDrag;
+        seqDrag = null;
+        jobStopAutoScroll();
+        jobMarkDragging(false);
+        jobClearSeqOver();
+        const target = getTarget();
+        if (!target) return;
+        target.after = below;
+        jobApplyDrop(drag, target);
+    });
+}
+
+// ★ 链容器落点：按指针位置「就近插入」，绝不无脑丢链尾。
+//   块之间的缝、块左右没铺满的地方、链尾空白都能正确落点。
+function jobWireChainDropZone(listBox, t, board, which) {
+    listBox.addEventListener('dragover', function (e) {
+        if (!seqDrag) return;
+        if (seqDrag.which !== which) return;
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch (err) { }
+        // 指针在某块内部时，块的 dragover 已经画好线了，别覆盖
+        if (jobBlockUnderPointer(listBox, e.clientY)) return;
+        const near = jobNearestBlockInList(listBox, e.clientY);
+        if (!near) { jobMarkDropTarget(listBox, false); return; }   // 空链
+        jobMarkDropTarget(near.el, near.below);
+    });
+    listBox.addEventListener('dragleave', function (e) {
+        if (!seqDrag) return;
+        if (listBox.contains(e.relatedTarget)) return;
+        jobClearSeqOver();
+    });
+    listBox.addEventListener('drop', function (e) {
+        e.preventDefault();
+        if (!seqDrag) return;
+        if (e.__seqHandled) return;
+        e.__seqHandled = true;
+        const drag = seqDrag;
+        seqDrag = null;
+        jobStopAutoScroll();
+        jobMarkDragging(false);
+        jobClearSeqOver();
+        if (drag.which !== which) return;
+
+        const inBlock = jobBlockUnderPointer(listBox, e.clientY);
+        if (inBlock) {
+            jobApplyDrop(drag, {
+                t: t, which: which, board: board,
+                step: inBlock.__seqStep || null,
+                after: jobDropBelow(e, inBlock)
+            });
+            return;
+        }
+        const near = jobNearestBlockInList(listBox, e.clientY);
+        if (near && near.step) {
+            jobApplyDrop(drag, {
+                t: t, which: which, board: board,
+                step: near.step, after: near.below
+            });
+            return;
+        }
+        // 真没有块（空链）-> 落到链尾
+        jobDropAtChainEnd(t, which, board, drag);
+    });
+}
+
+// 落到链尾（空链时才用得到）
+function jobDropAtChainEnd(t, which, board, drag) {
+    jobApplyDrop(drag, { t: t, which: which, board: board, step: null, after: true });
+}
+
 function jobRenderSeqChains() {
     const box = document.getElementById('seqChains');
     if (!box) return;
@@ -108,8 +813,7 @@ function jobRenderSeqChains() {
     box.innerHTML = '';
     if (!t) return;
 
-    const isLate = (document.querySelector('.tab.active')?.dataset.tab === 'late');
-    const board = isLate ? boardLate : boardEarly;
+    const board = jobCurrentBoard();
     jobEnsureSeq(board);
 
     // 三条链：单次 → 循环 → 收尾（按勾选显示）
@@ -150,17 +854,10 @@ function jobRenderChainFilter() {
 // 渲染一条链（which = 'once' | 'loop' | 'end'）
 function jobRenderOneChain(box, t, board, which) {
     const meta = JOB_CHAIN_META[which] || JOB_CHAIN_META.loop;
-    const segs = jobGetChainOrder(t, which, board);
 
-    // 每条链列出「在该形态下真正落过子」的段。
-    // 同一个槽可以被拆成多段（例如 种槽1 → 喂豆 → 再种槽1），所以按段过滤而非按槽去重。
-    // ★ 通用动作段（点波/捡豆/加速）没有格子，永远可见。
-    const visible = segs.filter(function (seg) {
-        if (jobIsGenericKey(seg.key)) return true;
-        if (seg.key === 'feed' || seg.key === 'shovel') return jobSegPlacements(board, seg, which).length > 0;
-        const s = Number(String(seg.key).replace('card', ''));
-        return !!t.slots[s] && jobSegPlacements(board, seg, which).length > 0;
-    });
+    // ★★ 唯一真相来源：把「棋盘 + 持久化段」解析成有序步骤列表。
+    //    一株一步，严格读取棋盘（棋盘上删掉的落点这里自动消失）。
+    const steps = jobResolveSteps(t, which, board);
 
     // 链头
     const sec = document.createElement('div');
@@ -171,9 +868,35 @@ function jobRenderOneChain(box, t, board, which) {
     hd.className = 'seq-section-head';
     hd.textContent = meta.icon + ' ' + meta.label;
     sec.appendChild(hd);
+
+    // ★ 只有在「已经勾了东西」的时候，才显示「清空已勾选」。
+    //   没勾任何东西时这里什么都不显示，界面保持干净。
+    const selCnt = jobSelectedCount(which);
+    if (selCnt > 0) {
+        const bar = document.createElement('div');
+        bar.className = 'seq-selbar';
+
+        const tip = document.createElement('span');
+        tip.className = 'seq-selbar-tip';
+        tip.textContent = '已勾选 ' + selCnt + ' 项';
+        bar.appendChild(tip);
+
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'seq-selbar-clear';
+        clearBtn.textContent = '✕ 清空已勾选';
+        clearBtn.title = '取消所有勾选';
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            jobSeqSel = {};
+            jobRenderSeqChains();
+        });
+        bar.appendChild(clearBtn);
+
+        sec.appendChild(bar);
+    }
     box.appendChild(sec);
 
-    if (!visible.length) {
+    if (!steps.length) {
         const empty = document.createElement('div');
         empty.className = 'seq-empty';
         empty.textContent = '还没有「' + meta.short.replace('链', '')
@@ -183,115 +906,183 @@ function jobRenderOneChain(box, t, board, which) {
 
     const listBox = document.createElement('div');
     listBox.className = 'seq-list';
+    if (!steps.length) listBox.classList.add('seq-list-empty');
     sec.appendChild(listBox);
 
-    // 全局种植序号（跨块连续 1..N），供每个槽块内的序号角标使用
+    // ★ 容器级落点：缝里 / 块外 / 链尾 / 空链都能正确落点（就近插入）
+    jobWireChainDropZone(listBox, t, board, which);
+
+    // 全局种植序号（跨块连续 1..N），供每株的序号角标使用
     const gseq = jobBuildGlobalSeq(board, t, which);
 
-    // 逐段渲染；同一槽的多段各自是独立块，可在链里任意穿插
-    visible.forEach(function (seg, pos) {
-        listBox.appendChild(jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq));
+    // ★★ 逐「步骤」渲染 —— 一株一个块，不再有把 21 株塞一起的大块
+    steps.forEach(function (st, pos) {
+        listBox.appendChild(jobBuildStepBlock(t, board, st, which, pos, steps, gseq));
     });
 }
 
-// 槽块「内部」的等待节点：[{gap, sec}, ...]，gap = 插在第几个植物之前
-function jobGetInnerWaits(t, which, key) {
-    if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {}, end: {} };
-    if (!t.innerWaits[which] || typeof t.innerWaits[which] !== 'object') t.innerWaits[which] = {};
-    const slot = t.innerWaits[which];
-    if (!Array.isArray(slot[key])) slot[key] = [];
-    slot[key] = slot[key].map(function (w, i) {
-        if (typeof w === 'number') return { gap: w, sec: 3 };
-        if (!w || typeof w !== 'object') return { gap: i, sec: 3 };
-        return { gap: (w.gap | 0), sec: (typeof w.sec === 'number' ? w.sec : 3) };
-    });
-    return slot[key];
-}
+// ============================================================
+// ★ 渲染「一个步骤」= 一个块
+//   plant   -> 一株（缩略图 + 序号 + 格子坐标 + 勾选 + 删除）
+//   generic -> 通用动作（点波/捡豆/加速）
+//   wait    -> 等待（可改毫秒）
+// 每个块只代表链里的**一项**，拖动/删除都是对着一项操作。
+// ============================================================
+function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
+    if (st.kind === 'generic' || st.kind === 'wait') {
+        return jobBuildGenericBlock(t, board, st, which, pos);
+    }
 
-// 构建一个「槽块内部」的等待节点（插在两个植物之间）
-function jobBuildInnerWait(t, which, key, wi) {
-    const waits = jobGetInnerWaits(t, which, key);
-    const node = document.createElement('div');
-    node.className = 'seq-wait seq-wait-inner';
-    node.draggable = true;
-    node.dataset.gap = (waits[wi] ? waits[wi].gap : 0);
+    const key = st.key;
+    const gIdx = st.gidx;
+    const isFeed = (key === 'feed');
+    const isShovel = (key === 'shovel');
+    const slotNo = isFeed || isShovel ? null : Number(String(key).replace('card', ''));
+    const plantName = slotNo ? t.slots[slotNo] : null;
+    const place = jobPlacementsOf(board, key, which)[gIdx];
+
+    const wrap = document.createElement('div');
+    wrap.className = 'seq-chain' + ' m-' + which
+        + ((isFeed || isShovel) ? ' seq-chain-compact' : '');
+    wrap.draggable = true;
+    wrap.dataset.key = key;
+    wrap.dataset.which = which;
+    wrap.dataset.gidx = gIdx;
+    wrap.__seqStep = st;
+
+    const head = document.createElement('div');
+    head.className = 'seq-chain-head';
 
     const grip = document.createElement('span');
     grip.className = 'seq-grip';
     grip.textContent = '⠿';
-    node.appendChild(grip);
+    head.appendChild(grip);
 
+    const ord = document.createElement('span');
+    ord.className = 'seq-order';
+    ord.textContent = pos + 1;
+    head.appendChild(ord);
+
+    // ★ 植物缩略图（保留并放大一点）：用棋盘上那一株自带的 plant.img
     const ico = document.createElement('span');
-    ico.textContent = '⏱';
-    ico.style.cssText = 'font-size:13px;';
-    node.appendChild(ico);
+    ico.className = 'seq-ico';
+    if (isFeed) {
+        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 20, alt: '喂豆', fallbackText: '🫘' });
+    } else if (isShovel) {
+        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 20, alt: '铲子', fallbackText: '🧤' });
+    } else {
+        const img = place && place.item && place.item.plant && place.item.plant.img;
+        if (img) {
+            const im = document.createElement('img');
+            im.className = 'seq-thumb-img';
+            im.src = img;
+            im.alt = plantName || '';
+            im.draggable = false;
+            im.onerror = function () { this.style.display = 'none'; };
+            ico.appendChild(im);
+        } else {
+            ico.textContent = '🪴';
+        }
+    }
+    head.appendChild(ico);
 
-    const lbl = document.createElement('span');
-    lbl.textContent = '等待';
-    lbl.style.cssText = 'font-size:12px;';
-    node.appendChild(lbl);
+    const hl = document.createElement('span');
+    hl.className = 'seq-slot';
+    hl.textContent = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
+    head.appendChild(hl);
 
-    const inp = document.createElement('input');
-    inp.type = 'number';
-    inp.min = '0';
-    inp.step = '0.5';
-    inp.value = waits[wi] ? waits[wi].sec : 3;
-    inp.style.cssText = 'width:56px;padding:2px 5px;border:1px solid #d0d7de;border-radius:5px;font-size:12px;';
-    inp.addEventListener('input', function () {
-        const v = Math.max(0, parseFloat(this.value) || 0);
-        const arr = jobGetInnerWaits(t, which, key);
-        if (arr[wi]) arr[wi].sec = v;
-        jobSaveLocal();
+    // 该株在棋盘上的格子坐标
+    if (place) {
+        const cellLbl = document.createElement('span');
+        cellLbl.className = 'seq-cell';
+        cellLbl.textContent = '(' + (place.c + 1) + ',' + (place.r + 1) + ')';
+        head.appendChild(cellLbl);
+    }
+
+    // 全局种植序号（与棋盘角标一一对应）
+    if (place) {
+        const _gk = jobPlacementKey(which, key, place.r, place.c, place.item.seq);
+        const num = document.createElement('span');
+        num.className = 'seq-idx'
+            + (which === 'once' ? ' seq-idx-once' : '')
+            + (which === 'end' ? ' seq-idx-end' : '');
+        num.textContent = (gseq && gseq.get(_gk)) || (pos + 1);
+        head.appendChild(num);
+    }
+
+    // 勾选框
+    head.appendChild(jobBuildPickBox(which, st));
+
+    // ★ 插一个「等待」到这一步后面（是一个独立的通用动作步骤，
+    //   不是「这个动作之后等待几秒」的附加属性）
+    const wbtn = document.createElement('button');
+    wbtn.className = 'seq-wbtn';
+    wbtn.textContent = '⏱';
+    wbtn.title = '在这一步下面插入一个「等待」动作';
+    wbtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        jobInsertWaitAfter(t, which, board, st);
     });
-    inp.addEventListener('click', function (e) { e.stopPropagation(); });
-    node.appendChild(inp);
+    head.appendChild(wbtn);
 
-    const unit = document.createElement('span');
-    unit.textContent = '秒';
-    unit.style.cssText = 'font-size:11px;color:#64748b;';
-    node.appendChild(unit);
-
+    // 删除：从链里去掉这一株 **并且** 从棋盘上删掉它（用户要求同步）
     const del = document.createElement('button');
-    del.className = 'seq-del';
+    del.className = 'seq-chain-del';
     del.textContent = '✕';
-    del.title = '删除该等待节点';
+    del.title = '从链条和棋盘上都删掉这一株';
     del.addEventListener('click', function (e) {
         e.stopPropagation();
-        jobGetInnerWaits(t, which, key).splice(wi, 1);
-        jobSaveLocal();
-        jobRenderSeqChains();
+        jobDeleteStep(t, which, board, st);
     });
-    node.appendChild(del);
+    head.appendChild(del);
 
-    // 拖动：在同一个槽块内部改位置
-    node.addEventListener('dragstart', function (e) {
-        seqDrag = { kind: 'innerwait', which: which, key: key, idx: wi };
-        node.classList.add('seq-dragging');
+    wrap.appendChild(head);
+
+    // 整株拖拽：单拖 = 自己；勾选后拖 = 整组（按链内原顺序）
+    wrap.addEventListener('dragstart', function (e) {
+        const group = jobDragGroupFor(which, st, board);
+        seqDrag = {
+            kind: group ? 'group' : 'step',
+            which: which, step: st, gidx: gIdx, key: key,
+            group: group
+        };
+        wrap.classList.add('seq-dragging');
+        jobMarkDragging(true);
         jobStartAutoScroll();
-        try { e.dataTransfer.setData('text/plain', 'innerwait'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+        try {
+            e.dataTransfer.setData('text/plain', group ? 'group' : 'step');
+            e.dataTransfer.effectAllowed = 'move';
+        } catch (err) { }
         e.stopPropagation();
     });
-    node.addEventListener('dragend', function () {
-        node.classList.remove('seq-dragging');
+    wrap.addEventListener('dragend', function () {
+        wrap.classList.remove('seq-dragging');
         seqDrag = null;
         jobStopAutoScroll();
+        jobMarkDragging(false);
         jobClearSeqOver();
     });
-    return node;
+    jobWireDropTarget(wrap, function () {
+        return { t: t, which: which, board: board, step: st, after: false };
+    });
+
+    return wrap;
 }
 
 // 构建一个槽位块（可整块拖动排序）。seg = {key, from, to}
-// 通用动作块（点波/捡豆/加速）：没有格子，只有一个整块
-function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
-    const ga = jobGenericActionOfKey(seg.key) || { name: seg.key, icon: '⚡' };
+// 通用动作 / 等待块（点波/捡豆/加速/等待）：没有格子，只有一个块
+function jobBuildGenericBlock(t, board, st, which, pos) {
+    const ga = jobGenericActionOfKey(st.key) || { name: st.key, icon: '⚡' };
+    const isWait = (st.kind === 'wait') || (ga.id === 'wait');
 
     const wrap = document.createElement('div');
     // ★ 通用动作是「一个动作」不是「一组植物」，用紧凑样式，别占整块高度
     wrap.className = 'seq-chain seq-chain-generic seq-chain-compact m-' + which;
     wrap.draggable = true;
-    wrap.dataset.key = seg.key;
+    wrap.dataset.key = st.key;
     wrap.dataset.which = which;
     wrap.dataset.ga = ga.id;
+    wrap.__seqStep = st;
 
     const head = document.createElement('div');
     head.className = 'seq-chain-head';
@@ -316,26 +1107,84 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
     hl.textContent = ga.name;
     head.appendChild(hl);
 
-    // 删除按钮
+    // ★ 等待的毫秒数就地可改（这是「等待」这个动作唯一的参数）
+    if (isWait) {
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.className = 'seq-ms';
+        inp.min = '1';
+        inp.step = '100';
+        inp.value = (st.ms === undefined || st.ms === null) ? 1000 : st.ms;
+        inp.title = '等待毫秒数';
+        inp.draggable = false;
+        inp.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        inp.addEventListener('click', function (e) { e.stopPropagation(); });
+        inp.addEventListener('change', function (e) {
+            e.stopPropagation();
+            const v = parseInt(inp.value, 10);
+            const ms = (isFinite(v) && v > 0) ? v : 1000;
+            // ★ 必须用「不含参数的身份」定位，不能先改 st.ms 再按 jobStepId 找 ——
+            //   因为 jobStepId 含 ms，改了之后 id 就变了，肯定找不到自己。
+            const steps = jobResolveSteps(t, which, board);
+            const i = jobFindStepByIdentity(steps, st);
+            if (i !== -1) {
+                steps[i].ms = ms;
+                st.ms = ms;
+                jobStoreSteps(t, which, board, steps);
+                jobSaveLocal();
+            }
+            jobRenderSeqChains();
+        });
+        head.appendChild(inp);
+        const unit = document.createElement('span');
+        unit.className = 'seq-ms-unit';
+        unit.textContent = 'ms';
+        head.appendChild(unit);
+    }
+
+    // 勾选框
+    head.appendChild(jobBuildPickBox(which, st));
+
+    // ★ 插一个「等待」到这一步后面。
+    //   用户要求「顺序链里让所有动作都可以等待」——所以**任何一步**
+    //   （植物或通用动作）都带这个按钮，点一下就在它下面插入一个独立的等待块。
+    //   （等待本身是独立的块，可以单独拖走/删掉，不是挂在动作上的属性。）
+    const wbtn = document.createElement('button');
+    wbtn.className = 'seq-wbtn';
+    wbtn.textContent = '⏱';
+    wbtn.title = '在这一步下面插入一个「等待」';
+    wbtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        jobInsertWaitAfter(t, which, board, st);
+    });
+    head.appendChild(wbtn);
+
+    // 删除按钮（从链里移除这个动作）
     const del = document.createElement('button');
     del.className = 'seq-chain-del';
     del.textContent = '✕';
     del.title = '从这条链里移除此动作';
     del.addEventListener('click', function (e) {
         e.stopPropagation();
-        jobRemoveGenericSeg(t, which, board, seg);
+        jobDeleteStep(t, which, board, st);
     });
     head.appendChild(del);
 
     wrap.appendChild(head);
 
-    // 整块拖拽（与槽块同语义：拖到别的块之前/之后 = 调整链内顺序）
+    // 整块拖拽：单拖 = 自己；勾选后拖 = 整组（按链内原顺序）
     wrap.addEventListener('dragstart', function (e) {
-        seqDrag = { kind: 'generic', key: seg.key, which: which, ga: ga.id, seg: seg };
+        const group = jobDragGroupFor(which, st, board);
+        seqDrag = {
+            kind: group ? 'group' : 'step',
+            which: which, step: st, key: st.key, gidx: -1,
+            group: group
+        };
         wrap.classList.add('seq-dragging');
+        jobMarkDragging(true);
         jobStartAutoScroll();
         try {
-            e.dataTransfer.setData('text/plain', 'generic');
+            e.dataTransfer.setData('text/plain', group ? 'group' : 'step');
             e.dataTransfer.effectAllowed = 'move';
         } catch (err) { }
         e.stopPropagation();
@@ -344,637 +1193,14 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
         wrap.classList.remove('seq-dragging');
         seqDrag = null;
         jobStopAutoScroll();
+        jobMarkDragging(false);
         jobClearSeqOver();
     });
-    wrap.addEventListener('dragover', function (e) {
-        if (!seqDrag) return;
-        if (seqDrag.which !== which) return;   // 只在自己的链里排序
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = 'move';
-        const rect = wrap.getBoundingClientRect();
-        const below = (e.clientY - rect.top) > rect.height / 2;
-        jobClearSeqOver();
-        wrap.classList.add(below ? 'seq-over-bottom' : 'seq-over-top');
-    });
-    wrap.addEventListener('drop', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!seqDrag) return;
-        const drag = seqDrag;
-        seqDrag = null;
-        jobClearSeqOver();
-        if (drag.kind === 'generic' && drag.which === which) {
-            const rect = wrap.getBoundingClientRect();
-            const below = (e.clientY - rect.top) > rect.height / 2;
-            jobMoveGenericInOrder(t, which, drag.key, seg.key, below);
-        }
+    jobWireDropTarget(wrap, function () {
+        return { t: t, which: which, board: board, step: st, key: st.key, after: false };
     });
 
     return wrap;
-}
-
-// 把通用动作段移动到目标段之前/之后（限同一条链，按段 key 定位）
-function jobMoveGenericInOrder(t, which, fromKey, targetKey, after) {
-    which = which || 'once';
-    const field = jobChainField(which);
-    const order = jobGetChainOrder(t, which).slice();
-    const src = order.findIndex(function (s) { return String(s.key) === fromKey; });
-    const ti = order.findIndex(function (s) { return String(s.key) === targetKey; });
-    if (src === -1 || ti === -1 || src === ti) return;
-    const moved = order.splice(src, 1)[0];
-    // 重排后重新定位目标（因为删除会改变下标）
-    let t2 = order.findIndex(function (s) { return String(s.key) === targetKey; });
-    if (t2 === -1) t2 = order.length - 1;
-    order.splice(after ? t2 + 1 : t2, 0, moved);
-    t[field] = order;
-    jobSaveLocal();
-    jobRenderSeqChains();
-    const ga = jobGenericActionOfKey(fromKey);
-    setStatus('🔗 已调整顺序：' + (ga ? ga.name : fromKey));
-}
-
-// 从链里移除某个通用动作段
-function jobRemoveGenericSeg(t, which, board, seg) {
-    const field = jobChainField(which, board);
-    const arr = Array.isArray(t[field]) ? t[field] : null;
-    if (arr) {
-        const i = arr.findIndex(function (s) {
-            return s && String(s.key) === seg.key;
-        });
-        if (i >= 0) arr.splice(i, 1);
-    }
-    jobSaveLocal();
-    jobRenderSeqChains();
-    const ga = jobGenericActionOfKey(seg.key);
-    setStatus('🗑 已从链里移除：' + (ga ? ga.name : seg.key));
-}
-
-function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
-    // ★ 通用动作走单独的分支（没有格子、没有落点）
-    if (jobIsGenericKey(seg.key)) {
-        return jobBuildGenericBlock(t, board, seg, which, pos, visible);
-    }
-    const key = seg.key;
-    const isFeed = (key === 'feed');
-    const isShovel = (key === 'shovel');
-    const slotNo = isFeed || isShovel ? null : Number(String(key).replace('card', ''));
-    const plantName = slotNo ? t.slots[slotNo] : null;
-    const allOfSlot = jobPlacementsOf(board, key, which);       // 该槽本形态的全部落点
-    const list = jobSegPlacements(board, seg, which);           // 本段包含的落点
-    const segCount = jobSegCountFor(t, which, key);             // 该槽被拆成了几段
-    const mode = which;                                         // 块显示的是本条链的形态
-    const modeCls = ' m-' + mode;      // m-once / m-loop / m-end
-
-    const wrap = document.createElement('div');
-    // ★ 喂豆 / 铲子也用紧凑样式（和通用动作一致）：
-    //   它们本质上也是「一个动作」，不该占一整块的高度。
-    wrap.className = 'seq-chain' + modeCls
-        + ((isFeed || isShovel) ? ' seq-chain-compact' : '');
-    wrap.draggable = true;
-    wrap.dataset.key = key;
-    wrap.dataset.which = which;
-    wrap.dataset.segFrom = seg.from;
-    wrap.dataset.segTo = (seg.to === null || seg.to === undefined) ? '' : seg.to;
-
-    // ---- 头部 ----
-    const head = document.createElement('div');
-    head.className = 'seq-chain-head';
-
-    const grip = document.createElement('span');
-    grip.className = 'seq-grip';
-    grip.textContent = '⠿';
-    head.appendChild(grip);
-
-    const ord = document.createElement('span');
-    ord.className = 'seq-order';
-    ord.textContent = pos + 1;
-    head.appendChild(ord);
-
-    const ico = document.createElement('span');
-    ico.className = 'seq-ico';
-    const _icoSize = (isFeed || isShovel) ? 18 : 22;
-    if (isFeed) {
-        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: _icoSize, alt: '喂豆', fallbackText: '🫘' });
-    } else if (isShovel) {
-        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: _icoSize, alt: '铲子', fallbackText: '🧤' });
-    } else {
-        ico.textContent = '🪴';
-    }
-    head.appendChild(ico);
-
-    const hl = document.createElement('span');
-    let title = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
-    if (segCount > 1) title += ' (第' + (seg.from + 1) + '~' + (seg.from + list.length) + '株)';
-    hl.textContent = title;
-    head.appendChild(hl);
-
-    // 形态标记
-    const badge = document.createElement('span');
-    badge.className = 'seq-mode';
-    badge.textContent = jobModeLabel(mode);
-    head.appendChild(badge);
-
-    const cnt = document.createElement('span');
-    cnt.className = 'seq-count';
-    cnt.textContent = list.length + ' 个';
-    head.appendChild(cnt);
-
-    // 勾选本槽若干株后：拖到同槽其它块 = 融合；拖到其它槽 = 变成独立块（不融合）
-    const selPrefix = which + ':' + key + '#';
-    const selHere = Object.keys(jobSeqSel || {}).filter(function (k) {
-        return k.indexOf(selPrefix) === 0;
-    });
-    if (selHere.length >= 1) {
-        const out = document.createElement('button');
-        out.className = 'seq-split';
-        out.textContent = '⇱ 拖出 ' + selHere.length;
-        out.title = '把这 ' + selHere.length + ' 株变成独立块（然后拖到链里任意位置）';
-        out.addEventListener('click', function (e) {
-            e.stopPropagation();
-            jobPullPicked(t, which, key);
-        });
-        head.appendChild(out);
-    }
-    wrap.appendChild(head);
-
-    // ---- 主体：植物节点 + 可插在它们之间的等待节点 ----
-    const body = document.createElement('div');
-    body.className = 'seq-chain-body';
-
-    // 等待槽内的 gap 是「段内」的下标；同一槽被拆成多段时用 key@from 区分，
-    // 否则两块会共用同一组等待位置而互相干扰。
-    const _wkey = key + '@' + (seg.from | 0);
-    const innerWaits = jobGetInnerWaits(t, which, _wkey);   // [{gap, sec}, ...] gap=插在第几个植物之前
-    // 按 gap 分组，便于在每个位置前插入等待
-    const waitsAt = {};
-    innerWaits.forEach(function (w, wi) {
-        const g = Math.max(0, Math.min(w.gap | 0, list.length));
-        if (!waitsAt[g]) waitsAt[g] = [];
-        waitsAt[g].push(wi);
-    });
-
-    function emitWaitsFor(gap) {
-        (waitsAt[gap] || []).forEach(function (wi) {
-            body.appendChild(jobBuildInnerWait(t, which, _wkey, wi));
-        });
-    }
-
-    list.forEach(function (entry, i) {
-        emitWaitsFor(i);          // 先放该位置前的等待节点
-
-        const node = document.createElement('div');
-        node.className = 'seq-node';
-        // ★ 用落点自带的真实下标（seg.from + i 在融合块里会重复 → 勾选会串号）
-        const gIdx = (typeof entry.gidx === 'number') ? entry.gidx : (seg.from + i);
-        node.dataset.gidx = gIdx;
-
-        // 勾选框：勾选同一个槽的若干株后，点块头「⇲ 融合」并成一块
-        const cb = document.createElement('input');
-        cb.type = 'checkbox';
-        cb.className = 'seq-pick';
-        cb.checked = !!(jobSeqSel && jobSeqSel[which + ':' + key + '#' + gIdx]);
-        cb.title = '勾选本槽的若干株后，点块头「⇲ 融合」可并成同一个块';
-        cb.addEventListener('click', function (e) { e.stopPropagation(); });
-        cb.addEventListener('change', function (e) {
-            e.stopPropagation();
-            if (!jobSeqSel) jobSeqSel = {};
-            const k = which + ':' + key + '#' + gIdx;
-            if (this.checked) jobSeqSel[k] = { key: key, gidx: gIdx, which: which };
-            else delete jobSeqSel[k];
-            jobRenderSeqChains();
-        });
-        node.appendChild(cb);
-
-        const num = document.createElement('span');
-        num.className = 'seq-idx'
-            + (which === 'once' ? ' seq-idx-once' : '')
-            + (which === 'end' ? ' seq-idx-end' : '');
-        // 全局种植序号：按整条链连续编号（跨块不重号），与棋盘角标一一对应
-        const _gk = jobPlacementKey(which, key, entry.r, entry.c, entry.item.seq);
-        num.textContent = (gseq && gseq.get(_gk)) || (i + 1);
-        node.appendChild(num);
-
-        if (plantName) {
-            const info = jobFindPlant(plantName) || {};
-            const th = document.createElement('span');
-            th.className = 'seq-thumb';
-            th.style.backgroundImage = 'url(static/card_bg/rare_' + (info.rare || 0) + '.webp)';
-            if (info.img) {
-                const im = document.createElement('img');
-                im.src = info.img;
-                im.alt = plantName;
-                im.onerror = function () { this.style.display = 'none'; };
-                th.appendChild(im);
-            }
-            node.appendChild(th);
-        }
-
-        const nm = document.createElement('span');
-        nm.className = 'seq-name';
-        nm.textContent = plantName || (isFeed ? '喂豆' : '铲子');
-        node.appendChild(nm);
-
-        const cellLbl = document.createElement('span');
-        cellLbl.className = 'seq-cell';
-        cellLbl.textContent = '(' + (entry.c + 1) + ',' + (entry.r + 1) + ')';
-        node.appendChild(cellLbl);
-
-        // 该动作后的等待（挂在动作上）
-        // ★ 普通关与 boss 关各自独立的等待表
-        const _wf = jobWaitField();
-        const wk = jobPlacementKey(which, key, entry.r, entry.c, entry.item.seq);
-        const wv = (t[_wf] && t[_wf][wk]) || null;
-        const wbtn = document.createElement('button');
-        wbtn.className = 'seq-wbtn' + (wv ? ' on' : '');
-        wbtn.textContent = wv ? ('⏱' + wv + 's') : '⏱';
-        wbtn.title = '这个动作之后等待几秒';
-        wbtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const cur = (t[_wf] && t[_wf][wk]) || 0;
-            const nv = window.prompt('这个动作之后等待几秒？（0 = 不等待）', String(cur));
-            if (nv === null) return;
-            const sec = Math.max(0, parseFloat(nv) || 0);
-            if (!t[_wf]) t[_wf] = {};
-            if (sec > 0) t[_wf][wk] = sec;
-            else delete t[_wf][wk];
-            jobSaveLocal();
-            jobRenderSeqChains();
-        });
-        node.appendChild(wbtn);
-
-        // 在这个植物之后插入等待节点的快捷按钮
-        const addw = document.createElement('button');
-        addw.className = 'seq-wbtn';
-        addw.textContent = '＋⏱';
-        addw.title = '在这之后插入一个等待节点';
-        addw.addEventListener('click', function (e) {
-            e.stopPropagation();
-            const arr = jobGetInnerWaits(t, which, _wkey);
-            arr.push({ gap: i + 1, sec: 3 });
-            jobSaveLocal();
-            jobRenderSeqChains();
-        });
-        node.appendChild(addw);
-
-        // 整株拖拽：拖到别的块上 → 把它（或所有勾选的）变独立块插到那里
-        node.draggable = true;
-        node.addEventListener('dragstart', function (e) {
-            const picked = Object.keys(jobSeqSel || {})
-                .filter(function (k) { return k.indexOf(which + ':' + key + '#') === 0; })
-                .map(function (k) { return parseInt(k.split('#')[1], 10); })
-                .filter(function (n) { return !isNaN(n); });
-            seqDrag = {
-                kind: 'plant', key: key, which: which,
-                gidxs: picked.length ? picked : [gIdx]
-            };
-            node.classList.add('seq-dragging');
-            jobStartAutoScroll();
-            try { e.dataTransfer.setData('text/plain', 'plant'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
-            e.stopPropagation();
-        });
-        node.addEventListener('dragend', function () {
-            node.classList.remove('seq-dragging');
-            seqDrag = null;
-            jobStopAutoScroll();
-            jobClearSeqOver();
-        });
-
-        // ★ 块内重排：把 chip 拖到**同一个块里**的另一个 chip 上 -> 交换先后。
-        //   拖到别的块上仍然是「拖出成独立块」（由外面的 drop 处理）。
-        node.addEventListener('dragover', function (e) {
-            if (!seqDrag || seqDrag.kind !== 'plant') return;
-            if (seqDrag.which !== which || seqDrag.key !== key) return;   // 只认同槽同链
-            e.preventDefault();
-            e.stopPropagation();
-            node.classList.add('seq-over-inside');
-        });
-        node.addEventListener('dragleave', function () {
-            node.classList.remove('seq-over-inside');
-        });
-        node.addEventListener('drop', function (e) {
-            // ★ 只有「拖的是单株 chip」时才在这里处理块内重排。
-            //   拖整块（kind==='slot'）时要让事件冒泡到 wrap 的 drop，
-            //   否则整块拖到别的块上会被 chip 抢先吞掉 -> 看起来「拖不动」。
-            if (!seqDrag || seqDrag.kind !== 'plant') return;
-            if (seqDrag.which !== which || seqDrag.key !== key) return;
-            e.preventDefault();
-            e.stopPropagation();
-            node.classList.remove('seq-over-inside');
-            // 把被拖的那一株移到当前这一株的位置
-            jobReorderInSeg(t, which, key, seg, seqDrag.gidxs, gIdx);
-        });
-
-        body.appendChild(node);
-    });
-    emitWaitsFor(list.length);   // 末尾位置的等待
-    wrap.appendChild(body);
-
-    // ---- 整块拖拽 ----
-    wrap.addEventListener('dragstart', function (e) {
-        seqDrag = { kind: 'slot', key: key, which: which, seg: seg };   // 记录是哪一段（整段对象）
-        wrap.classList.add('seq-dragging');
-        jobStartAutoScroll();
-        try { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
-        e.stopPropagation();
-    });
-    wrap.addEventListener('dragend', function () {
-        wrap.classList.remove('seq-dragging');
-        seqDrag = null;
-        jobStopAutoScroll();
-        jobClearSeqOver();
-    });
-    wrap.addEventListener('dragover', function (e) {
-        if (!seqDrag) return;
-        if (seqDrag.kind === 'slot' && seqDrag.which !== which) return;   // 只在自己的链里排序
-        if (seqDrag.kind === 'plant' && seqDrag.which !== which) return;
-        e.preventDefault();
-        e.stopPropagation();
-        e.dataTransfer.dropEffect = 'move';
-        const rect = wrap.getBoundingClientRect();
-        const below = (e.clientY - rect.top) > rect.height / 2;
-        jobClearSeqOver();
-        wrap.classList.add(below ? 'seq-over-bottom' : 'seq-over-top');
-    });
-    wrap.addEventListener('drop', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!seqDrag) return;
-        const rect = wrap.getBoundingClientRect();
-        const below = (e.clientY - rect.top) > rect.height / 2;
-        const drag = seqDrag;
-        seqDrag = null;
-        jobClearSeqOver();
-        if (drag.kind === 'innerwait') {
-            // 槽块内部的等待节点：换到别的槽就移过去，同槽则保持
-            if (drag.key !== key) {
-                const from = jobGetInnerWaits(t, drag.which, drag.key);
-                const moved = from.splice(drag.idx, 1)[0];
-                if (moved) {
-                    moved.gap = 0;
-                    jobGetInnerWaits(t, which, key).push(moved);
-                }
-                jobSaveLocal();
-                jobRenderSeqChains();
-            }
-        } else if (drag.kind === 'plant') {
-            // 拖出的植物 → 变成独立块，插到目标块之前/之后
-            jobDropPlantsAsBlock(t, which, drag, seg, below);
-        } else if (drag.which === which) {
-            // 整块拖动：**一律只做排序，不再自动融合**
-            //   ★ 用户要求：同槽的多个块保持独立（4 个植物放一块就显示 4 个独立小块），
-            //     以前「拖到同槽的块上会自动合并」，现在关掉了。
-            jobMoveSegInOrder(t, drag.seg, seg, below, which);
-        }
-    });
-
-    // 右键：切换该槽的放置形态（单次 ↔ 循环）
-    wrap.addEventListener('contextmenu', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        const nm2 = jobToggleSlotMode(t, key);
-        jobRenderSlots();
-        jobRenderSeqChains();
-        jobSaveLocal();
-        setStatus('🔄 ' + jobSlotLabel(t, key) + ' → ' + jobModeLabel(nm2));
-    });
-
-    return wrap;
-}
-
-// 拖出：把勾选的若干株变成独立块（插在本槽现有块的后面），之后可拖到链里任意位置
-function jobPullPicked(t, which, key) {
-    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
-    const total = jobPlacementsOf(board, key, which).length;
-
-    const picked = Object.keys(jobSeqSel || {})
-        .filter(function (k) { return k.indexOf(which + ':' + key + '#') === 0; })
-        .map(function (k) { return parseInt(k.split('#')[1], 10); })
-        .filter(function (n) { return !isNaN(n) && n >= 0 && n < total; })
-        .sort(function (a, b) { return a - b; });
-    if (!picked.length) return;
-
-    const take = {};
-    picked.forEach(function (g) { take[g] = true; });
-
-    const order = jobGetChainOrder(t, which);
-
-    // 找出包含被勾选株的段
-    const affected = [];
-    order.forEach(function (s, i) {
-        if (s.key !== key) return;
-        const sf = s.from | 0;
-        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
-        const mine = Array.isArray(s.picked) ? s.picked : null;
-        const hits = mine
-            ? mine.filter(function (g) { return take[g]; }).length
-            : picked.filter(function (g) { return g >= sf && g < st; }).length;
-        if (hits) affected.push({ i: i, seg: s, mine: mine });
-    });
-    if (!affected.length) return;
-
-    // 每个受影响段里「没被拖出的株」保持成一个块（中间被抽走不要裂成多块）
-    const repl = {};
-    affected.forEach(function (a) {
-        const s = a.seg;
-        const sf = s.from | 0;
-        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
-        const keep = [];
-        if (a.mine) {
-            a.mine.forEach(function (g) { if (!take[g]) keep.push(g); });
-        } else {
-            for (let g = sf; g < st; g++) if (!take[g]) keep.push(g);
-        }
-        keep.sort(function (x, y) { return x - y; });
-        if (!keep.length) { repl[a.i] = []; return; }
-        let contiguous = true;
-        for (let k = 1; k < keep.length; k++) {
-            if (keep[k] !== keep[k - 1] + 1) { contiguous = false; break; }
-        }
-        if (contiguous) {
-            repl[a.i] = [{ key: key, from: keep[0], to: keep[keep.length - 1] + 1 }];
-        } else {
-            repl[a.i] = [{ key: key, from: -1, to: -1, picked: keep.slice() }];
-        }
-    });
-
-    // 重建链：受影响段换成剩余段，拖出的株作为新块插在最后一个受影响段之后
-    const lastAffected = affected[affected.length - 1].i;
-    const rebuilt = [];
-    order.forEach(function (s, i) {
-        if (i in repl) {
-            repl[i].forEach(function (r) { rebuilt.push(r); });
-            if (i === lastAffected) rebuilt.push({ key: key, from: -1, to: -1, picked: picked.slice() });
-            return;
-        }
-        rebuilt.push(s);
-    });
-
-    t[jobChainField(which)] = rebuilt;
-
-    jobSeqSel = {};
-    jobSaveLocal();
-    jobRenderSeqChains();
-    jobRenderCurrentBoard();
-    setStatus('⇱ 已拖出 ' + picked.length + ' 株成为独立块（可拖到链里其他位置）');
-}
-
-// 把拖出的植物作为一个新块插到目标段之前/之后（拖出 = 变成独立块）
-function jobDropPlantsAsBlock(t, which, drag, targetSeg, after) {
-    const picked = (drag.gidxs || []).slice().sort(function (a, b) { return a - b; });
-    if (!picked.length) return;
-
-    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
-    const total = jobPlacementsOf(board, drag.key, which).length;
-    const take = {};
-    picked.forEach(function (g) { if (g >= 0 && g < total) take[g] = true; });
-    const taken = Object.keys(take).map(Number).sort(function (a, b) { return a - b; });
-    if (!taken.length) return;
-
-    const order = jobGetChainOrder(t, which).slice();
-
-    // 找出包含被拖株的段
-    const affected = [];
-    order.forEach(function (s, i) {
-        if (s.key !== drag.key) return;
-        const sf = s.from | 0;
-        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
-        const mine = Array.isArray(s.picked) ? s.picked : null;
-        const hits = mine
-            ? mine.filter(function (g) { return take[g]; }).length
-            : taken.filter(function (g) { return g >= sf && g < st; }).length;
-        if (hits) affected.push({ i: i, seg: s, mine: mine });
-    });
-    if (!affected.length) return;
-
-    // 剩余株（受影响段里没被拖走的）—— 保持成「一个块」，不要因中间被抽走而裂成多块
-    const repl = {};
-    affected.forEach(function (a) {
-        const s = a.seg;
-        const sf = s.from | 0;
-        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
-        const keep = [];
-        if (a.mine) a.mine.forEach(function (g) { if (!take[g]) keep.push(g); });
-        else for (let g = sf; g < st; g++) if (!take[g]) keep.push(g);
-        keep.sort(function (x, y) { return x - y; });
-        if (!keep.length) { repl[a.i] = []; return; }
-        // 判断是否连续：连续就保留 from/to；有空洞就用 picked 合并成一个块
-        let contiguous = true;
-        for (let k = 1; k < keep.length; k++) {
-            if (keep[k] !== keep[k - 1] + 1) { contiguous = false; break; }
-        }
-        if (contiguous) {
-            repl[a.i] = [{ key: drag.key, from: keep[0], to: keep[keep.length - 1] + 1 }];
-        } else {
-            repl[a.i] = [{ key: drag.key, from: -1, to: -1, picked: keep.slice() }];
-        }
-    });
-
-    // 先重建（受影响段换成剩余段）
-    const mid = [];
-    order.forEach(function (s, i) {
-        if (i in repl) { repl[i].forEach(function (r) { mid.push(r); }); return; }
-        mid.push(s);
-    });
-    // 再把新块插到目标段附近
-    let ti = mid.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
-    if (ti === -1) ti = mid.length - 1;
-    mid.splice(after ? ti + 1 : ti, 0, { key: drag.key, from: -1, to: -1, picked: taken });
-
-    t[jobChainField(which)] = mid;
-
-    jobSeqSel = {};
-    jobSaveLocal();
-    jobRenderSeqChains();
-    jobRenderCurrentBoard();
-    setStatus('⇱ 已把 ' + taken.length + ' 株变成独立块并插入到指定位置');
-}
-
-// 把某一段移动到目标段之前/之后（限同一条链）
-// 段身份用 key + picked/from 指纹判断：融合块的 from 是 -1、不唯一，不能只靠 from
-function jobSegFingerprint(s) {
-    if (!s) return '';
-    return s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
-         + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '');
-}
-function jobSameSeg(a, b) { return a === b || (!!a && !!b && jobSegFingerprint(a) === jobSegFingerprint(b)); }
-
-function jobMoveSegInOrder(t, fromSeg, targetSeg, after, which) {
-    which = which || 'once';
-    const order = jobGetChainOrder(t, which).slice();
-    const src = order.findIndex(function (s) { return jobSameSeg(s, fromSeg); });
-    const ti = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
-    if (src === -1 || ti === -1 || src === ti) return;
-    const moved = order.splice(src, 1)[0];
-    let t2 = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
-    if (t2 === -1) t2 = order.length - 1;
-    order.splice(after ? t2 + 1 : t2, 0, moved);
-    t[jobChainField(which)] = order;
-    jobSaveCurrentBoard();
-    jobSaveLocal();
-    jobRenderSeqChains();
-    jobRenderCurrentBoard();
-    setStatus('🔗 已调整顺序');
-}
-
-// 把两个同槽的段并成一个块（拖整块「拖回」= 融合）
-function jobMergeSegs(t, which, fromSeg, targetSeg) {
-    const order = jobGetChainOrder(t, which).slice();
-    const board = (document.querySelector('.tab.active')?.dataset.tab === 'late') ? boardLate : boardEarly;
-    const key = fromSeg.key;
-
-    function segGidxs(s) {
-        const total = jobPlacementsOf(board, key, which).length;
-        const out = [];
-        if (Array.isArray(s.picked) && s.picked.length) return s.picked.slice();
-        const sf = s.from | 0;
-        const st = (s.to === null || s.to === undefined) ? total : (s.to | 0);
-        for (let g = sf; g < st; g++) out.push(g);
-        return out;
-    }
-
-    const srcIdx = order.findIndex(function (s) { return jobSameSeg(s, fromSeg); });
-    const tgtIdx = order.findIndex(function (s) { return jobSameSeg(s, targetSeg); });
-    if (srcIdx === -1 || tgtIdx === -1 || srcIdx === tgtIdx) return;
-
-    const union = {};
-    segGidxs(order[srcIdx]).forEach(function (g) { union[g] = true; });
-    segGidxs(order[tgtIdx]).forEach(function (g) { union[g] = true; });
-    const merged = Object.keys(union).map(Number).sort(function (a, b) { return a - b; });
-    if (!merged.length) return;
-
-    const mergedSeg = { key: key, from: -1, to: -1, picked: merged };
-
-    // 用融合块替换「靠前」那个段，删掉另一个段
-    const lo = Math.min(srcIdx, tgtIdx);
-    const hi = Math.max(srcIdx, tgtIdx);
-    order.splice(lo, 1, mergedSeg);
-    order.splice(hi, 1);
-
-    t[jobChainField(which)] = order;
-    jobSaveCurrentBoard();
-    jobSaveLocal();
-    jobRenderSeqChains();
-    jobRenderCurrentBoard();
-    setStatus('🔗 已把两块融合成一个块');
-}
-
-// 旧接口保留（按槽名移动，取该槽第一段）
-function jobMoveSlotInOrder(t, fromKey, targetKey, after, which) {
-    which = which || 'once';
-    const order = jobGetChainOrder(t, which).slice();
-    const fi = order.findIndex(function (s) { return s.key === fromKey; });
-    const ti = order.findIndex(function (s) { return s.key === targetKey; });
-    if (fi === -1 || ti === -1 || fi === ti) return;
-    const moved = order.splice(fi, 1)[0];
-    let t2 = order.findIndex(function (s) { return s.key === targetKey; });
-    order.splice(after ? t2 + 1 : t2, 0, moved);
-    t[jobChainField(which)] = order;
-    jobSaveCurrentBoard();
-    jobSaveLocal();
-    jobRenderSeqChains();
-    jobRenderCurrentBoard();
-    setStatus('🔗 已调整顺序：' + jobSlotLabel(t, fromKey) + (after ? ' 排到 ' : ' 排到 ') + jobSlotLabel(t, targetKey) + (after ? ' 之后' : ' 之前'));
 }
 
 function jobSlotLabel(t, key) {
@@ -1001,30 +1227,62 @@ function jobClearSeqOver() {
 //   但 **mousedown 在拖拽开始之前就会触发**。所以：
 //     ① 页面级常驻监听 mousedown / mousemove，始终记住最后的鼠标 Y；
 //     ② dragstart 只是「打开自动滚动开关」，坐标直接用①记着的值。
-//   这样即使在拖拽期间收不到任何事件，也能用「拖拽前的最后已知位置」
-//   持续滚动 —— 鼠标贴着边缘不动时，效果完全正确。
+//
+// ★ 但这样有个坑：拖拽期间收不到新坐标，就一直是「按下时的那个 Y」。
+//   只要按下时鼠标恰好在顶部边缘附近，整段拖拽就会**一直向上滚**，
+//   表现成「鼠标往上拖就上滑」。用户明确要求改掉这个行为。
+//
+//   修正：
+//     · 边缘区收窄（90px -> 36px），只在真正贴近边缘时才滚；
+//     · **必须先动一下**才允许滚（避免刚按下就开始滚）；
+//     · 一旦收到过真实的新坐标，就用新坐标（不再用按下时的旧值）；
+//     · 拖拽期间没有坐标更新且已经滚过一小段 -> 自动停下，
+//       不让「一直滚」变成失控。
 // ============================================================
 let _dragMouseY = null;
 let _autoScrollRAF = 0;
 let _autoScrollOn = false;
+let _autoScrollStartY = null;    // 拖拽开始时的 Y
+let _autoScrollFresh = false;    // 是否收到过拖拽期间的真实坐标
+let _autoScrollMoved = false;    // 是否已经滚过（用于「滚一下就好」的限流）
+let _autoScrollBudget = 0;       // 还能滚多少帧（防止无坐标时一直滚）
 
-const AUTO_SCROLL_EDGE = 90;     // 距边缘多少像素开始自动滚
-const AUTO_SCROLL_MAX  = 24;     // 每帧最大滚动像素
+const AUTO_SCROLL_EDGE = 36;     // 距边缘多少像素开始自动滚（原 90 太大，一点就滚）
+const AUTO_SCROLL_MAX  = 18;     // 每帧最大滚动像素
+const AUTO_SCROLL_STALE_FRAMES = 24;   // 无新坐标时最多滚多少帧（约 0.4 秒）就停
 
 // ① 常驻追踪鼠标 Y（在任何拖拽开始之前就一直在记）
 document.addEventListener('mousemove', function (e) {
-    if (typeof e.clientY === 'number') _dragMouseY = e.clientY;
+    if (typeof e.clientY !== 'number') return;
+    _dragMouseY = e.clientY;
+    if (_autoScrollOn) {
+        // 拖拽期间居然收到了 mousemove -> 这是真实坐标，可以放心用
+        _autoScrollFresh = true;
+        if (Math.abs(e.clientY - (_autoScrollStartY === null ? e.clientY : _autoScrollStartY)) > 6) {
+            _autoScrollMoved = true;
+        }
+    }
 }, true);
 document.addEventListener('mousedown', function (e) {
     if (typeof e.clientY === 'number') _dragMouseY = e.clientY;
 }, true);
-// 拖拽期间若浏览器仍派发 dragover，用它刷新（更准）
+// 拖拽期间若浏览器仍派发 dragover，用它刷新（这是最可靠的真实坐标来源）
 document.addEventListener('dragover', function (e) {
-    if (_autoScrollOn && typeof e.clientY === 'number') _dragMouseY = e.clientY;
+    if (!_autoScrollOn || typeof e.clientY !== 'number') return;
+    _dragMouseY = e.clientY;
+    _autoScrollFresh = true;
+    if (Math.abs(e.clientY - (_autoScrollStartY === null ? e.clientY : _autoScrollStartY)) > 6) {
+        _autoScrollMoved = true;
+    }
+    _autoScrollBudget = AUTO_SCROLL_STALE_FRAMES;   // 有真实坐标 -> 重新给额度
 }, true);
 
 function jobStopAutoScroll() {
     _autoScrollOn = false;
+    _autoScrollFresh = false;
+    _autoScrollMoved = false;
+    _autoScrollStartY = null;
+    _autoScrollBudget = 0;
     if (_autoScrollRAF) { cancelAnimationFrame(_autoScrollRAF); _autoScrollRAF = 0; }
 }
 
@@ -1032,23 +1290,39 @@ function jobStartAutoScroll() {
     const drawer = document.getElementById('seqDrawer');
     if (!drawer) return;
     _autoScrollOn = true;
+    _autoScrollStartY = _dragMouseY;      // 记住按下时的位置
+    _autoScrollMoved = false;
+    _autoScrollFresh = false;
+    _autoScrollBudget = AUTO_SCROLL_STALE_FRAMES;
     if (_autoScrollRAF) return;              // 已在跑就别重复起循环
 
     function tick() {
         if (!_autoScrollOn || !seqDrag) { _autoScrollRAF = 0; return; }
 
         const y = _dragMouseY;
-        if (y !== null) {
-            const r = drawer.getBoundingClientRect();
-            let dy = 0;
+        const r = drawer.getBoundingClientRect();
+        let dy = 0;
+
+        // ★ 必须先动一下 —— 否则「刚按下就开始滚」会让人以为一点就滑
+        if (y !== null && _autoScrollMoved) {
             if (y < r.top + AUTO_SCROLL_EDGE) {
-                const t = Math.min(1, (r.top + AUTO_SCROLL_EDGE - y) / AUTO_SCROLL_EDGE);
-                dy = -Math.ceil(AUTO_SCROLL_MAX * Math.max(0, t));
+                const k = Math.min(1, (r.top + AUTO_SCROLL_EDGE - y) / AUTO_SCROLL_EDGE);
+                dy = -Math.ceil(AUTO_SCROLL_MAX * Math.max(0, k));
             } else if (y > r.bottom - AUTO_SCROLL_EDGE) {
-                const t = Math.min(1, (y - (r.bottom - AUTO_SCROLL_EDGE)) / AUTO_SCROLL_EDGE);
-                dy = Math.ceil(AUTO_SCROLL_MAX * Math.max(0, t));
+                const k = Math.min(1, (y - (r.bottom - AUTO_SCROLL_EDGE)) / AUTO_SCROLL_EDGE);
+                dy = Math.ceil(AUTO_SCROLL_MAX * Math.max(0, k));
             }
-            if (dy) drawer.scrollTop += dy;
+        }
+
+        // ★ 没有真实新坐标时，最多滚「一小段」就停 —— 这正是
+        //   「鼠标往上拖就一直上滑」的元凶：旧代码会拿按下时的旧 Y 无限滚下去。
+        if (dy) {
+            if (_autoScrollFresh) {
+                drawer.scrollTop += dy;
+            } else if (_autoScrollBudget > 0) {
+                drawer.scrollTop += dy;
+                _autoScrollBudget--;
+            }
         }
         _autoScrollRAF = requestAnimationFrame(tick);
     }
@@ -1237,14 +1511,26 @@ function jobRenderSlots() {
         // 清空按钮（原来右键清空，现在右键让位给「切换形态」）
         const clr = document.createElement('span');
         clr.textContent = '✕';
-        clr.title = '清空该槽位';
+        clr.title = '清空该槽位（同时清掉棋盘上该槽的落点）';
         clr.style.cssText = 'font-size:11px;color:#ef4444;padding:0 2px;';
         clr.addEventListener('click', (e) => {
             e.stopPropagation();
+            const had = t.slots[i];
             t.slots[i] = '';
             if (jobArmedSlot === i) jobArmedSlot = 0;
+            // ★ 槽位清空了，棋盘上这个槽的落点也必须清掉 ——
+            //   否则会留下「没有槽位却还在棋盘上」的孤儿植物
+            //   （和「改槽位不同步」是同一类问题的另一面）。
+            const removed = jobPurgeSlotFromBoard(i);
+            if (removed) {
+                try { renderAllBoards(); } catch (err) { }
+                try { updatePreview(); } catch (err) { }
+            }
             jobRenderSlots();
+            jobRenderSeqChains();
             jobSaveLocal();
+            if (had) setStatus('已清空 槽' + i + '（' + had + '）'
+                + (removed ? '，棋盘上 ' + removed + ' 个落点也已移除' : ''));
         });
         chip.appendChild(clr);
 
@@ -1278,6 +1564,114 @@ function jobRenderSlots() {
         });
         box.appendChild(chip);
     }
+}
+
+// ============================================================
+// 键盘快捷键：W / S 切换槽位，F 切换该槽位的「形态」（也就是所属的链）
+//
+//   W = 上一个槽，S = 下一个槽
+//     顺序：槽1..槽8 → 喂豆 → 铲子 → 回到槽1（循环）
+//     ★ 未选中任何槽时，W/S 从「槽1」开始（第一次按 S 选槽1，按 W 选铲子）。
+//
+//   F = 把当前选中槽位的形态在「单次 → 循环 → 收尾」之间切换。
+//     ★ 这和右键点槽位是同一个功能（jobToggleSlotMode）。
+//     ★ boss 关**不能**切到收尾 —— 这一点 jobToggleSlotMode 内部已经处理
+//       （boss 下只在 once ↔ loop 之间转，end 会归一化回 loop），
+//       所以这里不用再判断，直接调用即可。
+//
+//   注意：在输入框里打字时不响应（否则改毫秒数会误触）。
+// ============================================================
+
+// W/S 的循环顺序：1..8（植物）→ 9（喂豆）→ 10（铲子）
+const JOB_SLOT_CYCLE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
+// ★ 把 jobArmedSlot 的数字编号转成「槽位 key」。
+//   注意 jobSlotKeyOf 认的是字符串 'feed'/'shovel'，
+//   而 jobArmedSlot 用 9/10 表示它们 —— 直接传数字会得到 'card9'/'card10'（错的）。
+function jobSlotKeyOfArmed(s) {
+    if (s === 9) return 'feed';
+    if (s === 10) return 'shovel';
+    return jobSlotKeyOf(s);
+}
+
+// 该槽位在界面上显示的名字（用于状态提示）
+function jobSlotDisplayName(t, s) {
+    if (s === 9) return '喂豆';
+    if (s === 10) return '铲子';
+    const nm = (t && t.slots) ? (t.slots[s] || '') : '';
+    return '槽' + s + (nm ? '（' + nm + '）' : '（未设置）');
+}
+
+// 切换选中的槽位：dir = +1 下一个（S），-1 上一个（W）
+function jobCycleSlot(dir) {
+    const t = jobTables[currentTable];
+    if (!t) return;
+
+    const n = JOB_SLOT_CYCLE.length;
+    let i = JOB_SLOT_CYCLE.indexOf(jobArmedSlot);
+    // 当前没选中（0）时给一个合理起点：
+    //   按 S（下一个）→ 从槽1 开始；按 W（上一个）→ 从铲子 开始
+    if (i === -1) i = (dir > 0) ? -1 : 0;
+
+    const next = JOB_SLOT_CYCLE[((i + dir) % n + n) % n];
+    jobArmedSlot = next;
+    jobRenderSlots();
+
+    const st = document.getElementById('jobStatus');
+    if (st) {
+        st.textContent = '已选中 ' + jobSlotDisplayName(t, next)
+            + '　|　点击棋盘格子落子　|　F 切换形态：'
+            + jobModeLabel(jobSlotMode(t, jobSlotKeyOfArmed(next)));
+    }
+}
+
+// 切换当前选中槽位的形态（= 右键那个功能）
+function jobCycleSlotOrChain() {
+    const t = jobTables[currentTable];
+    if (!t) return;
+
+    if (!jobArmedSlot) {
+        setStatus('先用 W / S 选一个槽位，再按 F 切换形态');
+        return;
+    }
+
+    const key = jobSlotKeyOfArmed(jobArmedSlot);
+    const m = jobToggleSlotMode(t, key);
+    jobRenderSlots();
+    jobRenderSeqChains();
+    jobSaveLocal();
+
+    const extra = jobIsBossBoard() ? '（boss 关没有收尾）' : '';
+    setStatus('🔄 ' + jobSlotDisplayName(t, jobArmedSlot) + ' → ' + jobModeLabel(m) + extra);
+}
+
+// 判断事件是否发生在可输入元素里（那里不能抢键）
+function jobIsTypingTarget(el) {
+    if (!el) return false;
+    const tag = String(el.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    return el.isContentEditable === true;
+}
+
+function jobInstallSlotHotkeys() {
+    document.addEventListener('keydown', function (e) {
+        // 带修饰键的不抢（Ctrl+F 之类留给浏览器）
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        // 正在输入框里打字 -> 不响应
+        if (jobIsTypingTarget(e.target)) return;
+        // 有弹层打开时 -> 不响应，避免和弹窗里的操作冲突
+        try {
+            const open = document.querySelector('#plantPicker.job-open')
+                || document.querySelector('#supplyPicker.sp-open')
+                || document.querySelector('#genPicker.gp-open');
+            if (open) return;
+        } catch (err) { }
+
+        const k = String(e.key || '').toLowerCase();
+        if (k === 'w') { e.preventDefault(); jobCycleSlot(-1); }
+        else if (k === 's') { e.preventDefault(); jobCycleSlot(1); }
+        else if (k === 'f') { e.preventDefault(); jobCycleSlotOrChain(); }
+    });
 }
 
 // ---- 植物选择器 ----
@@ -1439,13 +1833,28 @@ function jobConfirmPick() {
         return;
     }
     const t = jobTables[currentTable];
+    const oldName = t ? t.slots[currentSlotEditing] : '';
     if (t) t.slots[currentSlotEditing] = p.name;
+
+    // ★ 关键：把棋盘上该槽已有的落点同步成新植物。
+    //   落点里存的是「下子那一刻的植物快照」，不跟着槽位走 ——
+    //   不同步的话，改了槽位棋盘却还是旧植物（看起来像能放好几种植物）。
+    const synced = jobSyncSlotPlantEverywhere(currentSlotEditing, p.name);
+    if (synced) {
+        try { renderAllBoards(); } catch (e) { }
+        try { updatePreview(); } catch (e) { }
+    }
+
     jobArmedSlot = currentSlotEditing;   // 选完自动进入落子状态
     jobClosePicker();
     jobRenderSlots();
+    jobRenderSeqChains();
     jobSaveLocal();
     const st = document.getElementById('jobStatus');
-    if (st) st.textContent = '已选中 槽' + currentSlotEditing + '（' + p.name + '），点击棋盘格子落子';
+    if (st) {
+        st.textContent = '已选中 槽' + currentSlotEditing + '（' + p.name + '），点击棋盘格子落子'
+            + (synced && oldName ? '　|　棋盘上的该槽已同步改为「' + p.name + '」' : '');
+    }
 }
 
 function jobRenderPlantGrid() {
@@ -1568,18 +1977,25 @@ function jobBuildChain(t, board, which, forceBoss) {
     const segs = jobGetChainOrder(t, which, board, forceBoss);
 
     segs.forEach(function (seg) {
-        // ★ 通用动作段（点波/捡豆/加速）：没有格子，直接按"动作"导出
+        // ★ 通用动作段（点波/捡豆/加速/等待）：没有格子，直接按"动作"导出
         const ga = jobGenericActionOfKey(seg.key);
         if (ga) {
-            out.push({
+            const item = {
                 key: seg.key,           // 'ga:wave' 等
                 slot: null,
                 type: 'action',         // 通用动作
-                action: ga.id,          // wave | bean | speed
-                label: ga.name,         // 点波 / 捡豆 / 加速
+                action: ga.id,          // wave | bean | speed | wait
+                label: ga.name,         // 点波 / 捡豆 / 加速 / 等待
                 mode: (which === 'loop') ? 'loop' : (which === 'end' ? 'end' : 'once'),
                 cells: []               // 无落点
-            });
+            };
+            // ★ 等待必须带上毫秒数 —— agent 端用 generic_dsl(action, coords, ms)
+            //   编译成 sleep:N，没有 ms 就退化成默认值，作者设的时长会丢。
+            if (ga.hasMs) {
+                item.ms = (seg.ms === undefined || seg.ms === null)
+                    ? (ga.defaultMs || 1000) : Number(seg.ms);
+            }
+            out.push(item);
             return;
         }
         // 该段实际包含的落点（已按 seq 排序，且同一槽内保持落子先后）
@@ -1691,6 +2107,14 @@ function jobBuild() {
             to_level: t.to_level === '' ? null : Number(t.to_level),
             lineup: t.lineupMode === 'deck' ? { plants: [], deck: String(t.deckNo) } : { plants, deck: null },
             slots: { ...t.slots },
+
+            // ★ 编队切换：lineupMode='deck' 时把编队号写进 squad（1..6）。
+            //   运行时（agent/jobset/runtime.py 的 _inject_squad）读到后：
+            //     · 「清空卡牌」的 next 改成「无尽挑战_切换编队」
+            //     · 「无尽_切换编队序号」的 expected 改成这个数字
+            //   于是「选卡」整段被跳过，直接切编队开打。
+            //   'plants' 模式写 null，让运行时把上面两个字段还原（避免残留）。
+            squad: (t.lineupMode === 'deck' && t.deckNo) ? Number(t.deckNo) : null,
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢

@@ -108,6 +108,8 @@ function jobInit() {
     jobBindEndParams();                 // 收尾参数面板的输入监听
     jobRenderEndParams();               // 初始显隐（按当前棋盘是否有收尾落子）
     jobRenderSlots();
+    // 键盘快捷键：W/S 切换槽位，F 切换该槽位的形态（= 所属的链）
+    jobInstallSlotHotkeys();
     // ⚠️ 必须带 catch：jobLoadPlants 内部是 fetch('/plants')，一旦失败 Promise 会静默 reject，
     //    .then 永不执行 → 槽位面板就一直是空的（不报错，只是没内容）。
     jobLoadPlants().then(function () {

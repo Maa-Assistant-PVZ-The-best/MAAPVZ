@@ -164,11 +164,12 @@
             <button class="sp-close" id="supplyPickerClose" title="关闭">✕</button>
         </div>
         <div class="sp-body">
-            <!-- 上半：当前已选的堆叠卡片（悬停抽牌）+ 右侧固定项（如「查看」） -->
+            <!-- 上半：当前已选的堆叠卡片（悬停抽牌）
+                 ★ 「查看」不在这里显示 —— 它只是一个开关，不占补给顺序的位置。
+                   选中状态看下半图库里的「✓ 已选择」角标。 -->
             <div class="supply-card-section sc-open" id="supplySection">
                 <div class="supply-lane">
                     <div class="supply-stage" id="supplyStage"><!-- 卡片由 JS 渲染 --></div>
-                    <div class="supply-pinned" id="supplyPinned" style="display:none;"></div>
                 </div>
             </div>
             <!-- 下半：可选图库（点图添加／再点移除） -->
@@ -230,12 +231,26 @@
             <span id="tfBoundaryHint" style="font-size:11px;color:#94a3b8;"></span>
 
             <label style="font-size:12px;margin-left:8px;">换阵
-                <select id="tfLineupMode" style="max-width:90px;">
+                <select id="tfLineupMode" style="max-width:110px;"
+                        title="选卡 = 走原来的选卡流程；编队 = 直接切编队，跳过选卡">
                     <option value="plants">选卡</option>
-                    <option value="deck">编队</option>
+                    <option value="deck">切换编队</option>
                 </select>
             </label>
-            <span id="tfDeckBox" style="display:none;"><label style="font-size:12px;">编队号 <input type="number" id="tfDeckNo" min="1" max="6" style="width:45px;"></label></span>
+            <span id="tfDeckBox" style="display:none;">
+                <label style="font-size:12px;">编队号
+                    <select id="tfDeckNo" style="width:auto;"
+                            title="换阵容时切换到第几个编队（1-6，必填）">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </label>
+                <span style="font-size:11px;color:#94a3b8;">跳过选卡，直接切编队开打</span>
+            </span>
         </div>
     </div>
     <!-- 植物选择器弹层 -->

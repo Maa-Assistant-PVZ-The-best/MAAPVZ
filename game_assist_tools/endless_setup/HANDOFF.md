@@ -8,7 +8,7 @@
 
 ## 0. 一句话现状
 
-**网页端（作业集编辑器）已可用；运行时已跑通「选卡 + 种植 + 换阵容 + 补给 + 收尾」。**
+**网页端（作业集编辑器）已可用；运行时已跑通「选卡 / 切换编队 + 种植 + 换阵容 + 补给 + 收尾」。**
 
 收尾链的运行时接线**已完成**（早期版本这里是缺口，现已补齐）：
 收尾检测 → 收尾链 → 结算 → 收尾超时后动作。
@@ -75,6 +75,14 @@ static/
 - **每段一个节点**：链里第 i 段 → 独立节点（名字带段号），顺序严格跟链走。
 - **关卡融合**：首帧采信 OCR；后续与「上次识别值 +1」比对；连续自洽则重同步；
   分数满 100 转纯计数。
+  - 参数：`init_score=50` / `score_max=100` / **`penalty=30`** / `gain=30` / `tolerance=2`
+  - **`penalty=30` 的由来**：基准帧读错一次（如 `81→21`）后，比对基准被钉在错值上，
+    之后每帧**正确的** OCR 都被算成「偏差过大」，只能靠「分数触底 → 回头信 OCR」爬出来。
+    - `penalty=10`：要扣 **5 次**才触底 → 太慢（实测锁在错值上好几关）
+    - `penalty=50`：扣 **1 次**就触底 → 太快，任何**单帧** OCR 误读（如 `87→89`）
+      都会被直接采信，把错误固化
+    - `penalty=30`：**第 2 次**触底 → 计数器持续跑偏能较快纠正，
+      同时给单帧误读留一次容错（见 §9 观察项）
 - **换阵容**：`JobSetStage` 锁表 → `JobSetRollback`（count-1，分数不变）→
   调用 `通用_重开_暂停` → 跳回 `无尽挑战_识别开始战斗_清空卡牌` 重新走选卡流程。
 - **三条链**：`once_chain` / `loop_chain` / `end_chain`。
@@ -82,6 +90,36 @@ static/
 - **节点覆盖**：`next` 覆盖成
   「`无尽局内_继续挑战`（固定首位）+ 中间按链顺序 + 链尾」。
 - **滑动时长**：管道里连续滑动会「第二个滑不出来」，所以用 `"滑动时长": 100` 之类调参。
+- **换阵 = 选卡 或 切换编队**：见 §2.1，编队模式会跳过整套选卡流程。
+
+### 2.1 切换编队（用编队代替选卡）
+
+> 需求原话：「换阵使用换编队的话就不需要选卡逻辑了」「需要重开的，也需要确认自己在选卡界面」
+
+**作业集字段**：每张表一个 `squad`（1-6），跟着 `from_level` 走。缺省/越界/`squadEnabled:false` → `None`（走选卡）。
+
+```jsonc
+{ "from_level": 50, "lineup": {"plants": []}, "squad": 2 }
+```
+
+**运行时只改两个字段**（`runtime.py` 的 `_squad_param` / `_inject_squad`）：
+
+| pipe 节点 | 字段 | 值 |
+| --- | --- | --- |
+| `无尽挑战_识别开始战斗_清空卡牌` | `next` | `["无尽挑战_切换编队"]`（默认 `["无尽挑战_选取植物"]`） |
+| `无尽_切换编队序号` | `expected` | `["3"]`（**字符串**；默认 `[]`） |
+
+注入点共 **4 处**：`JobSetLoad`（预计表预热）、`JobSetStage` 首次锁定、`JobSetStage` 换阵容、`_apply_table`（切表辅助）。
+
+- **未配置时会主动回滚**（把 `next` 还原成「选取植物」、`expected` 还原成 `[]`），
+  否则从编队表切回选卡表会残留上次设置。
+- **`expected` 必须是字符串列表** —— 写数字 MAA 会当非法 expected，识别永不命中。
+- **「确认在选卡界面」不用额外加节点**：就靠「清空卡牌」那个 OCR ——
+  它认到「清空卡牌」才 Click 并走 `next`。认不到就超时，**不会误点编队**。
+
+**网页端**：「换阵」下拉框（`tfLineupMode` = `plants`/`deck`）+ 编队号下拉（`tfDeckNo`，1-6）。
+`jobBuild` 导出 `squad`；`jobApplyLoaded` 反向同步回 `lineupMode`/`deckNo`。
+`jobSyncForm` 把编队号夹在 1-6。
 
 ---
 
@@ -275,17 +313,64 @@ cd D:\maapvz\MAAPVZ
   - `01_Endless_plant_ref.json 无尽挑战_检查是否需要选植物`
   - `01_Endless_plant_ref.json 无尽挑战_选植物`
   - `Endless_html_ref.json 无尽挑战_编辑作业集`
-- `selfcheck.py` 有 1 个**预存在**的 FAIL（`载入成功`，断言里硬编码了旧作业集 code），
-  与代码改动无关。
+- `selfcheck.py` 的断言**已改成从常量/实际数据推导**，不再硬编码：
+  - 扣分额用 `DEFAULT_INIT_SCORE - DEFAULT_PENALTY` 算，改 `penalty` 不会再假失败
+  - 「至少一张表有植物列表」放宽为「**有植物 或 有编队号**」——
+    编队模式的表 `plants` 本来就是空的，属正常
+  - 截至最近一次运行：**37/37 全部通过，无失败项**
+
+### 9.1 观察项（暂不改，先攒数据）
+
+- **`_ocr_self_consistent()` 的判据是「严格 +1」**，所以同一帧内连续读到同一个值
+  （`samples = [82, 82, 82]`）反而被判为**不自洽**。反直觉，但目前影响不大
+  （`penalty=30` 后的「触底重信 OCR」更可靠），先观察。
+- **`locked`（纯计数器）模式跑偏后无法自愈**：它只判断「天数变没变」。
+  实测在**锁定那刻基数正确**时能一路跟住，所以暂不动；
+  但若发现锁定后长跑偏，需要在这里加保险。
+- **OCR 本身的误读**（`81→21`、`87→89`）：这是识别精度问题，**不是 replace 表能解决的**
+  （那两条现有规则 `g→9`/`G→6`/`《→8` 都是「非数字→数字」，
+  而这两次是**数字变数字**；加 `2→8` 会误伤真正的第 2 关/第 20 关）。
+  真要修得动 `roi` / `threshold` 或改数字模板匹配，**需要实际截图才能判断**。
 
 ---
 
-## 10. 最近验证结果（全绿基线）
+## 10. 未来要加的东西（占位，暂不实现）
+
+> 以下为**已登记但未开工**的需求，只做占位记录，不要照此直接动手。
+
+1. **HTML 适配无尽局外选择 80 个植物**
+   —— 网页端支持在「无尽局外」（非局内）场景下从 80 个植物中选择。
+
+2. **点击格子，使用神器**
+   —— 棋盘格子支持配置「使用神器」这一动作类型（目前格子动作是种植 / 喂豆 / 铲子）。
+
+3. **通用动作增加「滑飞弹」**
+   —— `JOB_GENERIC_ACTIONS` 目前只有 `wave`（点波）/ `bean`（捡豆）/ `speed`（加速），
+      需要新增「滑飞弹」。涉及网页端按钮组 + `dsl.py` 的通用动作翻译 + pipe 端执行。
+
+---
+
+## 11. 最近验证结果（全绿基线）
 
 ```
+selfcheck.py                       →  37/37 全部通过
 check_resource.py assets/resource  →  All directories checked
 check_graph.py                     →  仅 3 个预存在空壳告警，无悬挂引用
-网页端资源                          →  26 个 /static/ 资源全部 200
-JS 语法                            →  24 个拆分文件 node --check 全通过
-HTML 拆分完整性                     →  body / css / js 与原单文件逐字符一致
+JS 语法                            →  全部拆分文件 node --check 通过
+```
+
+本轮（编队 + 槽位同步 + 补给 + 快捷键 + 关卡融合）改动文件：
+
+```
+agent/jobset/engine.py            Table.squad / lineup_at 暴露 squad
+agent/jobset/runtime.py            _squad_param / _inject_squad（4 处注入）
+agent/jobset/level_tracker.py     DEFAULT_PENALTY 10 -> 30
+agent/jobset/selfcheck.py         断言改为常量推导
+game_assist_tools/endless_setup/static/index.html         换阵下拉 + 编队号 + 去掉 #supplyPinned
+game_assist_tools/endless_setup/static/css/base.css       删掉固定项样式
+.../static/js/21-jobset-levels.js  编队号夹在 1-6
+.../static/js/25-jobset-supply.js  「查看」不进补给顺序区
+.../static/js/26-jobset-supply-pick.js  「✓ 已选择」角标
+.../static/js/27-jobset-board.js   W/S/F 快捷键、槽位植物同步、squad 导出
+.../static/js/28-jobset-io.js      squad -> lineupMode/deckNo 反向同步
 ```

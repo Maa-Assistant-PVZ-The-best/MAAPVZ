@@ -97,7 +97,9 @@ function jobSyncForm() {
     const lm = document.getElementById('tfLineupMode');
     if (lm) t.lineupMode = lm.value;
     const dn = document.getElementById('tfDeckNo');
-    if (dn) t.deckNo = Math.max(1, parseInt(dn.value) || 1);
+    // ★ 编队号强制 1-6：pipe 那边的「切换编队序号」只认 1-6，
+    //   越界的值会让 OCR 的 expected 永远匹配不上。
+    if (dn) t.deckNo = Math.min(6, Math.max(1, parseInt(dn.value) || 1));
     jobRenderTabs();
 }
 
@@ -203,6 +205,102 @@ function jobNextSeq(board, scopeId, mode) {
     }
     return max + 1;
 }
+
+// ============================================================
+// ★★ 改槽位植物后，把棋盘上该槽已有的落点**同步**成新植物。
+//
+//   为什么必须做：
+//     落点对象里存的是「下子那一刻的植物快照」——
+//       { id:'card3', label:'豌豆射手', plant:{ name:'豌豆射手', img:'..', rare:0 } }
+//     其中 id（card3）只标明「属于哪个槽」，label / plant 才是显示出来的植物。
+//
+//     所以把槽3 从「豌豆射手」改成「坚果墙」时，棋盘上那些 card3 落点
+//     仍然带着旧的 label/plant —— 界面上就表现为「改了槽位但棋盘没变」，
+//     而且能同时看到好几种植物挤在同一个槽里（看起来像能放好几个植物）。
+//
+//   做法：遍历棋盘，把所有 id === 'card<N>' 的落点重写成新植物的名字/图片/稀有度。
+//        喂豆(feed) / 铲子(shovel) 没有植物属性，跳过。
+//        名字没变就什么都不写（返回 false），避免无谓的存档与重渲染。
+//
+//   返回 true = 确实改了内容（调用方需要保存并重渲染）。
+// ============================================================
+function jobSyncSlotPlantOnBoard(board, slot, name) {
+    if (!board || !slot || slot === 9 || slot === 10) return false;
+    if (!name) return false;
+
+    const scopeId = 'card' + slot;
+    const info = jobFindPlant(name) || {};
+    const plant = {
+        name: name,
+        img: info.img || null,
+        rare: (typeof info.rare === 'number' ? info.rare : 0)
+    };
+
+    let changed = false;
+    for (let r = 0; r < board.length; r++) {
+        const row = board[r];
+        if (!Array.isArray(row)) continue;
+        for (let c = 0; c < row.length; c++) {
+            const cell = row[c];
+            if (!Array.isArray(cell)) continue;
+            cell.forEach(function (it) {
+                if (!it || it.id !== scopeId) return;
+                if (it.label === name
+                    && it.plant
+                    && it.plant.name === name
+                    && it.plant.img === plant.img) return;   // 已经是新植物，不用动
+                it.label = name;
+                it.plant = { name: plant.name, img: plant.img, rare: plant.rare };
+                changed = true;
+            });
+        }
+    }
+    return changed;
+}
+
+// 把「当前正在编辑的关卡」和 boss 关两块棋盘一起同步。
+// 返回是否有改动。
+function jobSyncSlotPlantEverywhere(slot, name) {
+    let changed = false;
+    try {
+        if (typeof boardEarly !== 'undefined' && jobSyncSlotPlantOnBoard(boardEarly, slot, name)) changed = true;
+    } catch (e) { }
+    try {
+        if (typeof boardLate !== 'undefined' && jobSyncSlotPlantOnBoard(boardLate, slot, name)) changed = true;
+    } catch (e) { }
+    return changed;
+}
+
+// ============================================================
+// 清空槽位时，把棋盘上该槽的落点一并删掉（两块棋盘都删）。
+// 返回删除的落点总数。
+// ============================================================
+function jobPurgeSlotFromBoard(slot) {
+    if (!slot || slot === 9 || slot === 10) return 0;
+    const scopeId = 'card' + slot;
+    let removed = 0;
+
+    function purge(board) {
+        if (!board) return;
+        for (let r = 0; r < board.length; r++) {
+            const row = board[r];
+            if (!Array.isArray(row)) continue;
+            for (let c = 0; c < row.length; c++) {
+                const cell = row[c];
+                if (!Array.isArray(cell)) continue;
+                const keep = cell.filter(function (it) {
+                    if (it && it.id === scopeId) { removed++; return false; }
+                    return true;
+                });
+                if (keep.length !== cell.length) board[r][c] = keep;
+            }
+        }
+    }
+    try { purge(typeof boardEarly !== 'undefined' ? boardEarly : null); } catch (e) { }
+    try { purge(typeof boardLate !== 'undefined' ? boardLate : null); } catch (e) { }
+    return removed;
+}
+
 
 // 保证棋盘上每个带内容项都有 seq（旧数据 / 本地缓存恢复时补齐），并返回“id@r,c -> seq”映射
 function jobEnsureSeq(board) {

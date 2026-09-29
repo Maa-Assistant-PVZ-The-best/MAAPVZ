@@ -159,6 +159,7 @@ def find_feed_point(coords: Dict[str, Any]) -> Optional[str]:
 #   wave  点波 —— 点击「下一波」
 #   bean  捡豆 —— 5 根手指从「N阳光起始点」滑到「N阳光终点」（时长 100ms）
 #   speed 加速 —— 点击「加速」
+#   wait  等待 —— 不需要坐标，直接翻成 sleep:秒（毫秒来自网页端输入框）
 #
 # 坐标键来自 agent/assets/resource/coords.json（顶层，无前缀）。
 # ---------------------------------------------------------------------------
@@ -188,10 +189,22 @@ def _coord_any(coords: Dict[str, Any], name: str) -> Optional[str]:
     return None
 
 
-def generic_dsl(action: str, coords: Dict[str, Any]) -> Dict[str, Any]:
+def _as_seconds(ms: Any, fallback: float) -> float:
+    """毫秒 -> 秒；非正数/非法值一律回落到 fallback（秒）。"""
+    try:
+        sec = float(ms) / 1000.0
+    except (TypeError, ValueError):
+        return fallback
+    if not sec > 0:
+        return fallback
+    return sec
+
+
+def generic_dsl(action: str, coords: Dict[str, Any], ms: Any = None) -> Dict[str, Any]:
     """把一个通用动作翻成 BatchSwipe DSL。
 
-    action: wave / bean / speed（也接受作业集里的 'ga:wave' 形式）
+    action: wave / bean / speed / wait（也接受作业集里的 'ga:wave' 形式）
+    ms:     仅 wait 用 —— 等待的毫秒数（网页端输入框填的值），缺省/非法时用 1000ms
     返回 {"dsl": str, "missing": [...], "count": int}
     """
     aid = str(action or "").strip()
@@ -207,6 +220,12 @@ def generic_dsl(action: str, coords: Dict[str, Any]) -> Dict[str, Any]:
             missing.append(f"{aid}：坐标表缺少「{GENERIC_CLICK_KEY[aid]}」")
         else:
             parts.append(f"click:{key}")
+
+    elif aid == "wait":
+        # ★ 等待：不需要坐标，直接翻成 sleep:秒（BatchSwipe 原生支持小数秒）
+        #   网页端填的是毫秒（默认 1000），这里换算成秒 —— 1ms 精度会保留。
+        sec = _as_seconds(ms, 1.0)
+        parts.append(f"sleep:{sec:g}")
 
     elif aid == "bean":
         lines: List[str] = []
@@ -342,9 +361,9 @@ def chain_dsl(
         typ = str(seg.get("type") or "plant").lower()
         slot = seg.get("slot")
 
-        # ★ 通用动作段（点波/捡豆/加速）：没有格子，走单独分支
+        # ★ 通用动作段（点波/捡豆/加速/等待）：没有格子，走单独分支
         if typ == "action":
-            r = generic_dsl(seg.get("action") or seg.get("key"), coords)
+            r = generic_dsl(seg.get("action") or seg.get("key"), coords, seg.get("ms"))
             if r["dsl"]:
                 parts.append(r["dsl"])
             missing.extend(r["missing"])

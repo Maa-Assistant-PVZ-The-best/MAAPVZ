@@ -37,6 +37,89 @@
             "无尽挑战_选取植物_开始战斗"
         ]
     },
+    "无尽挑战_切换编队": {
+        "recognition": "OCR",
+        "roi": [
+            739,
+            397,
+            54,
+            37
+        ],
+        "expected": [
+            "配队"
+        ],
+        "action": "Click",
+        "post_delay": 2000,
+        "next": [
+            "无尽_过滤编队颜色"
+        ]
+    },
+    "无尽_过滤编队颜色": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    0,
+                    0,
+                    255
+                ],
+                "upper": [
+                    0,
+                    0,
+                    255
+                ],
+                "roi": [
+                    131,
+                    135,
+                    55,
+                    537
+                ]
+            }
+        },
+        "action": "DoNothing",
+        "next": [
+            "无尽_切换编队序号",
+            "无尽_滑动寻找编队"
+        ]
+    },
+    "无尽_切换编队序号": {
+        "recognition": "OCR",
+        "roi": [
+            131,
+            135,
+            55,
+            537
+        ],
+        "threshold": 0.2,
+        "action": "Click",
+        "expected": [],
+        "next": [
+            "无尽挑战_选取植物_开始战斗"
+        ]
+    },
+    "无尽_滑动寻找编队": {
+        "action": "Swipe",
+        "begin": [
+            447,
+            535,
+            4,
+            1
+        ],
+        "end": [
+            450,
+            147,
+            1,
+            7
+        ],
+        "end_hold": 100,
+        "duration": 200,
+        "post_wait_freezes": 100,
+        "next": [
+            "无尽_切换编队序号",
+            "无尽_滑动寻找编队"
+        ]
+    },
     "无尽挑战_选取植物_开始战斗": {
         "recognition": "OCR",
         "expected": "开始战斗",
