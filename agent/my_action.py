@@ -701,10 +701,20 @@ def _is_port_open(host: str = "127.0.0.1", port: int = 5000, timeout: float = 1.
 
 
 def _pick_flask_python():
-    """挑一个装了 flask 的解释器（项目 .venv 可能尚未安装 flask）"""
+    """挑一个装了 flask 的解释器（项目 .venv 可能尚未安装 flask）
+
+    候选顺序覆盖两种布局：
+      - 开发布局：<仓库根>/agent -> <仓库根>/.venv
+      - 发行包布局：install/agent -> install/python/python.exe（CI 内置解释器）
+    """
     candidates = [
         sys.executable,
+        # 发行包布局：install/python/python.exe（Windows）/ python/bin/python3（unix）
+        str(ROOT_DIR / "python" / "python.exe"),
+        str(ROOT_DIR / "python" / "bin" / "python3"),
+        # 开发布局：<仓库根>/.venv
         str(ROOT_DIR / ".venv" / "Scripts" / "python.exe"),
+        str(ROOT_DIR / ".venv" / "bin" / "python3"),
         r"D:\ana\python.exe",
         "python",
     ]

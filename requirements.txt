@@ -11,4 +11,14 @@ notify-py==0.3.2
 jeepney==0.9.0
 onnxruntime>=1.16.0
 pyperclip>=1.8.2
+# --- Flask 及其依赖闭包 ---
+# download_deps.py 用 --no-deps 下载（--platform 与依赖解析不能共存），
+# 所以这里必须列全传递依赖，否则打包后的解释器 import flask 会失败。
+# 版本下限取自 flask 3.1.3 的 Requires-Dist。
 Flask>=3.1.0
+blinker>=1.9.0
+click>=8.1.3
+itsdangerous>=2.2.0
+jinja2>=3.1.2
+markupsafe>=2.1.1
+werkzeug>=3.1.0

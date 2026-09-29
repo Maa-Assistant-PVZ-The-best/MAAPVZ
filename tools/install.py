@@ -210,10 +210,28 @@ def install_agent():
     )
 
 
+def install_game_assist_tools():
+    """复制网页工具目录（作业集编辑器）。
+
+    OpenJobEditor 动作按 <仓库根>/game_assist_tools/endless_setup/pvz.py 定位脚本，
+    不复制的话发行包内该路径必然缺失，动作恒定失败（见 0930 日志）。
+    """
+    source = working_dir / "game_assist_tools"
+    if not source.exists():
+        print("Warning: game_assist_tools not found, skipping.")
+        return
+    shutil.copytree(
+        source,
+        install_path / "game_assist_tools",
+        dirs_exist_ok=True,
+    )
+
+
 if __name__ == "__main__":
     install_deps()
     install_resource()
     install_chores()
     install_agent()
+    install_game_assist_tools()
 
     print(f"Install to {install_path} successfully.")

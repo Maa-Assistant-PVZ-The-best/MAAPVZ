@@ -11,10 +11,12 @@ echo ========================================
 
 :: ---------------------------------------------------------------
 :: 选择带 flask 的 Python 解释器：
-::   1) 优先项目自带 .venv（requirements.txt 已含 Flask>=3.1.0）
-::   2) .venv 缺 flask 时回退到本机已装 flask 的解释器
+::   1) 发行包自带解释器 ..\..\python\python.exe（install/python）
+::   2) 优先项目自带 .venv（requirements.txt 已含 Flask>=3.1.0）
+::   3) 回退到本机已装 flask 的解释器
 :: ---------------------------------------------------------------
-set "PYEXE=..\..\.venv\Scripts\python.exe"
+set "PYEXE=..\..\python\python.exe"
+if not exist "%PYEXE%" set "PYEXE=..\..\.venv\Scripts\python.exe"
 "%PYEXE%" -c "import flask" >nul 2>&1
 if errorlevel 1 (
     if exist "D:\ana\python.exe" (
@@ -22,8 +24,8 @@ if errorlevel 1 (
     ) else (
         set "PYEXE=python.exe"
     )
-    echo [提示] 项目 .venv 未安装 flask，改用 %PYEXE%
-    echo        建议执行: ..\..\.venv\Scripts\python.exe -m pip install -r ..\..\requirements.txt
+    echo [提示] 未找到带 flask 的内置解释器，改用 %PYEXE%
+    echo        建议执行: ..\..\python\python.exe -m pip install -r ..\..\requirements.txt
 )
 
 :: 后台启动 Flask，日志写入临时文件
