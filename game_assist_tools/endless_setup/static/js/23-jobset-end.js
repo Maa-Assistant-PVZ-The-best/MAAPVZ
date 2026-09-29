@@ -140,9 +140,11 @@ function jobBindEndParams() {
 //   to   = 到第几个落点为止（不含）；null = 到最后
 // 支持同一个槽在链里出现多次 —— 这样才能把「槽1 的 2 株」拆成两块，
 // 中间插进别的槽（例如：种槽1 → 喂豆 → 再种槽1）。
-function jobGetChainOrder(t, which, board) {
+function jobGetChainOrder(t, which, board, forceBoss) {
     // ★ 普通关与 boss 关各自独立的链条字段
-    const field = jobChainField(which, board);
+    //   forceBoss：导出 boss 链时显式声明（board 可能是上一张表的棋盘，
+    //   引用判断会失效 —— 见 jobChainField 注释）
+    const field = jobChainField(which, board, forceBoss);
     const all = jobAllSlotKeys();
     let raw = Array.isArray(t[field]) ? t[field] : [];
 
@@ -200,12 +202,14 @@ function jobGetChainOrder(t, which, board) {
     segs = jobRepairChainCoverage(segs, _board, which, all);
 
     // 只有传进来的 board 就是「当前编辑棋盘」时才写回
+    // ★ 但 forceBoss=true（导出 boss 链）时**绝不写回** ——
+    //   否则会把 boss 段覆盖到普通关链条上。
     let _editingBoard = null;
     try {
         const _tab = document.querySelector('.tab.active')?.dataset.tab;
         _editingBoard = (_tab === 'late') ? boardLate : boardEarly;
     } catch (e) { _editingBoard = null; }
-    if (!board || board === _editingBoard) {
+    if (forceBoss !== true && (!board || board === _editingBoard)) {
         t[field] = segs;
     }
     return segs;

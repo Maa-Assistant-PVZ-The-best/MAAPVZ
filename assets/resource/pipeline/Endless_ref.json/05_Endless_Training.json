@@ -112,7 +112,8 @@
     "无尽挑战_选择世界_摇滚年代": {
         "recognition": "OCR",
         "expected": [
-            "摇滚年代"
+            "摇滚年代",
+            "搖滚年代"
         ],
         "enabled": false,
         "action": "Click",
@@ -190,7 +191,9 @@
         "recognition": "OCR",
         "expected": [
             "开始训练",
-            "始训练"
+            "始训练",
+            "继续训练",
+            "训练"
         ],
         "roi": [
             841,

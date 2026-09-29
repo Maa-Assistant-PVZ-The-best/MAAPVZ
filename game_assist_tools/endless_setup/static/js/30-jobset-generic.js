@@ -36,6 +36,19 @@ function jobOpenGenPicker(gaId) {
     jobRenderGenTarget();
     modal.dataset.ga = gaId;
     modal.classList.add('gp-open');
+
+    // 回显「本次已插入 N 次」（优化2：弹窗不关，可以连点）
+    const tip = document.getElementById('gpInserted');
+    if (tip) {
+        const t = jobTables[currentTable];
+        const board = jobIsBossBoard() ? boardLate : boardEarly;
+        const used = jobGenUsageIn(t, jobGenTarget, board, gaId);
+        tip.textContent = used > 0 ? ('本次已插入 ' + used + ' 次') : '';
+    }
+
+    // 每次打开都把滚动条置顶，避免上次滚动位置残留
+    const body = modal.querySelector('.gp-body');
+    if (body) body.scrollTop = 0;
 }
 
 // 渲染「目标链」这一行（带左右箭头 + 可点击/右键切换）
@@ -62,6 +75,9 @@ function jobCloseGenPicker() {
 }
 
 // 确认插入：把通用动作段追加到目标链的末尾
+//
+// ★ 优化2：**不关闭弹窗**，可以反复点击「确认插入」连续添加同一个动作。
+//   只有「取消 / ✕ / 点遮罩 / Esc」才关闭。所以状态栏也要提示当前累计次数。
 function jobConfirmGenPicker() {
     const modal = document.getElementById('genPicker');
     if (!modal) return;
@@ -80,11 +96,74 @@ function jobConfirmGenPicker() {
     t[field].push({ key: JOB_GA_PREFIX + ga.id, ga: ga.id });
 
     jobSaveLocal();
-    jobCloseGenPicker();
+    // ★ 不关闭弹窗；刷新链条 + 按钮上的次数
     jobRenderSeqChains();
+    jobRefreshGenCounts();
 
     const meta = JOB_CHAIN_META[which] || JOB_CHAIN_META.once;
-    setStatus('＋ 已把「' + ga.name + '」插入 ' + meta.short + ' 末尾');
+    const used = jobGenUsageIn(t, which, board, ga.id);
+    setStatus('＋ 已把「' + ga.name + '」插入 ' + meta.short
+        + ' 末尾（该链已用 ' + used + ' 次）');
+
+    // 弹窗里也回显一下「已插入 N 次」，给用户即时反馈
+    const tip = document.getElementById('gpInserted');
+    if (tip) tip.textContent = '本次已插入 ' + used + ' 次';
+}
+
+// 统计某个通用动作在指定链里出现了几次
+function jobGenUsageIn(t, which, board, gaId) {
+    if (!t) return 0;
+    const field = jobChainField(which, board);
+    const arr = Array.isArray(t[field]) ? t[field] : [];
+    return arr.filter(function (s) {
+        return s && String(s.key) === (JOB_GA_PREFIX + gaId);
+    }).length;
+}
+
+// 统计某个通用动作在**所有链**（单次/循环/收尾）里的总次数
+function jobGenUsageTotal(t, gaId) {
+    if (!t) return 0;
+    const board = jobIsBossBoard() ? boardLate : boardEarly;
+    let n = 0;
+    ['once', 'loop', 'end'].forEach(function (which) {
+        n += jobGenUsageIn(t, which, board, gaId);
+    });
+    return n;
+}
+
+// 只刷新按钮上的三条链次数角标（不重建按钮，避免闪烁）
+//   ★ 不再是「一个总数」，而是 收尾 / 单次 / 循环 三个小图标 + 各自次数
+function jobRefreshGenCounts() {
+    ['genActions', 'genActionsBoss'].forEach(function (hostId) {
+        const box = document.getElementById(hostId);
+        if (!box) return;
+        const t = jobTables[currentTable];
+        const board = jobIsBossBoard() ? boardLate : boardEarly;
+
+        Array.from(box.querySelectorAll('.gen-act')).forEach(function (btn) {
+            const gaId = btn.dataset.ga;
+            if (!gaId) return;
+            const wrap = btn.querySelector('.ga-counts');
+            if (!wrap) return;
+            wrap.innerHTML = '';
+            let total = 0;
+
+            ['end', 'once', 'loop'].forEach(function (which) {
+                const n = jobGenUsageIn(t, which, board, gaId);
+                total += n;
+                const meta = JOB_CHAIN_META[which] || {};
+                const chip = document.createElement('span');
+                chip.className = 'ga-chip ga-chip-' + which;
+                chip.title = (meta.short || which) + '：' + n + ' 次';
+                chip.textContent = (meta.icon || '') + (n > 0 ? n : '');
+                if (n === 0) chip.classList.add('ga-chip-zero');
+                wrap.appendChild(chip);
+            });
+
+            // 三条链都没用到 -> 整行藏起来，按钮更干净
+            wrap.style.display = total > 0 ? '' : 'none';
+        });
+    });
 }
 
 // ============================================================
@@ -112,10 +191,13 @@ function jobRenderGenActionsInto(hostId) {
         return;
     }
 
+    const t = jobTables[currentTable];
+
     list.forEach(function (ga) {
         const btn = document.createElement('button');
         btn.className = 'gen-act';
         btn.type = 'button';
+        btn.dataset.ga = ga.id;                 // 供 jobRefreshGenCounts 定位
         btn.title = (ga.desc || ga.name) + '（点击插入顺序链）';
 
         const ico = document.createElement('span');
@@ -128,9 +210,34 @@ function jobRenderGenActionsInto(hostId) {
         nm.textContent = ga.name || ga.id;
         btn.appendChild(nm);
 
+        // ★ 三条链各自的小图标 + 次数（收尾 / 单次 / 循环），由 jobRefreshGenCounts 填充
+        const counts = document.createElement('span');
+        counts.className = 'ga-counts';
+        counts.style.display = 'none';
+        btn.appendChild(counts);
+
         btn.addEventListener('click', function () { jobOpenGenPicker(ga.id); });
         box.appendChild(btn);
     });
+
+    // 首次填充次数角标
+    jobRefreshGenCounts();
+
+    // ★ 优化5：末尾加一个「更多动作」占位（尚未开放的扩展位）
+    const more = document.createElement('button');
+    more.className = 'gen-act gen-act-more';
+    more.type = 'button';
+    more.title = '更多动作（预留位，后续扩展）';
+    more.disabled = true;
+    const mIco = document.createElement('span');
+    mIco.className = 'ga-ico';
+    mIco.textContent = '＋';
+    more.appendChild(mIco);
+    const mNm = document.createElement('span');
+    mNm.className = 'ga-name';
+    mNm.textContent = '更多';
+    more.appendChild(mNm);
+    box.appendChild(more);
 }
 
 // 对外入口：一次把两个棋盘都渲染

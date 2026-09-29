@@ -119,6 +119,8 @@ function jobRenderSeqChains() {
     });
     // 同步下拉栏的勾选状态（首次渲染时把默认全勾画出来）
     jobRenderChainFilter();
+    // ★ 同步通用动作按钮上的次数角标（链条变了 -> 次数可能变）
+    if (typeof jobRefreshGenCounts === 'function') jobRefreshGenCounts();
 }
 
 // 链显示下拉栏：默认全勾，点一下取消/恢复
@@ -265,12 +267,14 @@ function jobBuildInnerWait(t, which, key, wi) {
     node.addEventListener('dragstart', function (e) {
         seqDrag = { kind: 'innerwait', which: which, key: key, idx: wi };
         node.classList.add('seq-dragging');
+        jobStartAutoScroll();
         try { e.dataTransfer.setData('text/plain', 'innerwait'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
         e.stopPropagation();
     });
     node.addEventListener('dragend', function () {
         node.classList.remove('seq-dragging');
         seqDrag = null;
+        jobStopAutoScroll();
         jobClearSeqOver();
     });
     return node;
@@ -282,7 +286,8 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
     const ga = jobGenericActionOfKey(seg.key) || { name: seg.key, icon: '⚡' };
 
     const wrap = document.createElement('div');
-    wrap.className = 'seq-chain seq-chain-generic m-' + which;
+    // ★ 通用动作是「一个动作」不是「一组植物」，用紧凑样式，别占整块高度
+    wrap.className = 'seq-chain seq-chain-generic seq-chain-compact m-' + which;
     wrap.draggable = true;
     wrap.dataset.key = seg.key;
     wrap.dataset.which = which;
@@ -303,18 +308,13 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 44, alt: ga.name, fallbackText: ga.icon || '⚡' });
+    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 18, alt: ga.name, fallbackText: ga.icon || '⚡' });
     head.appendChild(ico);
 
     const hl = document.createElement('span');
     hl.className = 'seq-slot';
     hl.textContent = ga.name;
     head.appendChild(hl);
-
-    const badge = document.createElement('span');
-    badge.className = 'ga-badge';
-    badge.textContent = '动作';
-    head.appendChild(badge);
 
     // 删除按钮
     const del = document.createElement('button');
@@ -333,6 +333,7 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
     wrap.addEventListener('dragstart', function (e) {
         seqDrag = { kind: 'generic', key: seg.key, which: which, ga: ga.id, seg: seg };
         wrap.classList.add('seq-dragging');
+        jobStartAutoScroll();
         try {
             e.dataTransfer.setData('text/plain', 'generic');
             e.dataTransfer.effectAllowed = 'move';
@@ -342,6 +343,7 @@ function jobBuildGenericBlock(t, board, seg, which, pos, visible) {
     wrap.addEventListener('dragend', function () {
         wrap.classList.remove('seq-dragging');
         seqDrag = null;
+        jobStopAutoScroll();
         jobClearSeqOver();
     });
     wrap.addEventListener('dragover', function (e) {
@@ -425,7 +427,10 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
     const modeCls = ' m-' + mode;      // m-once / m-loop / m-end
 
     const wrap = document.createElement('div');
-    wrap.className = 'seq-chain' + modeCls;
+    // ★ 喂豆 / 铲子也用紧凑样式（和通用动作一致）：
+    //   它们本质上也是「一个动作」，不该占一整块的高度。
+    wrap.className = 'seq-chain' + modeCls
+        + ((isFeed || isShovel) ? ' seq-chain-compact' : '');
     wrap.draggable = true;
     wrap.dataset.key = key;
     wrap.dataset.which = which;
@@ -448,10 +453,11 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
+    const _icoSize = (isFeed || isShovel) ? 18 : 22;
     if (isFeed) {
-        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 44, alt: '喂豆', fallbackText: '🫘' });
+        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: _icoSize, alt: '喂豆', fallbackText: '🫘' });
     } else if (isShovel) {
-        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 44, alt: '铲子', fallbackText: '🧤' });
+        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: _icoSize, alt: '铲子', fallbackText: '🧤' });
     } else {
         ico.textContent = '🪴';
     }
@@ -623,12 +629,14 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
                 gidxs: picked.length ? picked : [gIdx]
             };
             node.classList.add('seq-dragging');
+            jobStartAutoScroll();
             try { e.dataTransfer.setData('text/plain', 'plant'); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
             e.stopPropagation();
         });
         node.addEventListener('dragend', function () {
             node.classList.remove('seq-dragging');
             seqDrag = null;
+            jobStopAutoScroll();
             jobClearSeqOver();
         });
 
@@ -645,6 +653,9 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
             node.classList.remove('seq-over-inside');
         });
         node.addEventListener('drop', function (e) {
+            // ★ 只有「拖的是单株 chip」时才在这里处理块内重排。
+            //   拖整块（kind==='slot'）时要让事件冒泡到 wrap 的 drop，
+            //   否则整块拖到别的块上会被 chip 抢先吞掉 -> 看起来「拖不动」。
             if (!seqDrag || seqDrag.kind !== 'plant') return;
             if (seqDrag.which !== which || seqDrag.key !== key) return;
             e.preventDefault();
@@ -663,12 +674,14 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
     wrap.addEventListener('dragstart', function (e) {
         seqDrag = { kind: 'slot', key: key, which: which, seg: seg };   // 记录是哪一段（整段对象）
         wrap.classList.add('seq-dragging');
+        jobStartAutoScroll();
         try { e.dataTransfer.setData('text/plain', key); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
         e.stopPropagation();
     });
     wrap.addEventListener('dragend', function () {
         wrap.classList.remove('seq-dragging');
         seqDrag = null;
+        jobStopAutoScroll();
         jobClearSeqOver();
     });
     wrap.addEventListener('dragover', function (e) {
@@ -708,13 +721,10 @@ function jobBuildSlotBlock(t, board, seg, which, pos, visible, gseq) {
             // 拖出的植物 → 变成独立块，插到目标块之前/之后
             jobDropPlantsAsBlock(t, which, drag, seg, below);
         } else if (drag.which === which) {
-            // 整块拖动：若拖的是「拆出来的块」且目标块是同槽的 → 融合；否则仅排序
-            if (drag.seg && seg && drag.seg.key === seg.key &&
-                !jobSameSeg(drag.seg, seg)) {
-                jobMergeSegs(t, which, drag.seg, seg);
-            } else {
-                jobMoveSegInOrder(t, drag.seg, seg, below, which);
-            }
+            // 整块拖动：**一律只做排序，不再自动融合**
+            //   ★ 用户要求：同槽的多个块保持独立（4 个植物放一块就显示 4 个独立小块），
+            //     以前「拖到同槽的块上会自动合并」，现在关掉了。
+            jobMoveSegInOrder(t, drag.seg, seg, below, which);
         }
     });
 
@@ -979,6 +989,81 @@ function jobClearSeqOver() {
         el.classList.remove('seq-over-top', 'seq-over-bottom');
     });
 }
+
+// ============================================================
+// ★ 拖动链条里的块时，靠近抽屉边缘自动滚动
+//
+// 关键发现（实测）：
+//   原生 HTML5 拖拽（draggable=true）期间，浏览器把鼠标独占给拖拽会话 ——
+//   wheel / mousemove / dragover **全都可能不派发**，所以「在 dragstart 之后
+//   再开始监听鼠标」是拿不到坐标的。
+//
+//   但 **mousedown 在拖拽开始之前就会触发**。所以：
+//     ① 页面级常驻监听 mousedown / mousemove，始终记住最后的鼠标 Y；
+//     ② dragstart 只是「打开自动滚动开关」，坐标直接用①记着的值。
+//   这样即使在拖拽期间收不到任何事件，也能用「拖拽前的最后已知位置」
+//   持续滚动 —— 鼠标贴着边缘不动时，效果完全正确。
+// ============================================================
+let _dragMouseY = null;
+let _autoScrollRAF = 0;
+let _autoScrollOn = false;
+
+const AUTO_SCROLL_EDGE = 90;     // 距边缘多少像素开始自动滚
+const AUTO_SCROLL_MAX  = 24;     // 每帧最大滚动像素
+
+// ① 常驻追踪鼠标 Y（在任何拖拽开始之前就一直在记）
+document.addEventListener('mousemove', function (e) {
+    if (typeof e.clientY === 'number') _dragMouseY = e.clientY;
+}, true);
+document.addEventListener('mousedown', function (e) {
+    if (typeof e.clientY === 'number') _dragMouseY = e.clientY;
+}, true);
+// 拖拽期间若浏览器仍派发 dragover，用它刷新（更准）
+document.addEventListener('dragover', function (e) {
+    if (_autoScrollOn && typeof e.clientY === 'number') _dragMouseY = e.clientY;
+}, true);
+
+function jobStopAutoScroll() {
+    _autoScrollOn = false;
+    if (_autoScrollRAF) { cancelAnimationFrame(_autoScrollRAF); _autoScrollRAF = 0; }
+}
+
+function jobStartAutoScroll() {
+    const drawer = document.getElementById('seqDrawer');
+    if (!drawer) return;
+    _autoScrollOn = true;
+    if (_autoScrollRAF) return;              // 已在跑就别重复起循环
+
+    function tick() {
+        if (!_autoScrollOn || !seqDrag) { _autoScrollRAF = 0; return; }
+
+        const y = _dragMouseY;
+        if (y !== null) {
+            const r = drawer.getBoundingClientRect();
+            let dy = 0;
+            if (y < r.top + AUTO_SCROLL_EDGE) {
+                const t = Math.min(1, (r.top + AUTO_SCROLL_EDGE - y) / AUTO_SCROLL_EDGE);
+                dy = -Math.ceil(AUTO_SCROLL_MAX * Math.max(0, t));
+            } else if (y > r.bottom - AUTO_SCROLL_EDGE) {
+                const t = Math.min(1, (y - (r.bottom - AUTO_SCROLL_EDGE)) / AUTO_SCROLL_EDGE);
+                dy = Math.ceil(AUTO_SCROLL_MAX * Math.max(0, t));
+            }
+            if (dy) drawer.scrollTop += dy;
+        }
+        _autoScrollRAF = requestAnimationFrame(tick);
+    }
+    _autoScrollRAF = requestAnimationFrame(tick);
+}
+
+// 兜底：某些环境下 drag 期间仍会派发 wheel
+document.addEventListener('wheel', function (e) {
+    if (!seqDrag) return;
+    const drawer = document.getElementById('seqDrawer');
+    if (!drawer) return;
+    const before = drawer.scrollTop;
+    drawer.scrollTop = before + (e.deltaY || 0);
+    if (drawer.scrollTop !== before) e.preventDefault();
+}, { passive: false });
 
 // ---- 右侧抽屉开关 ----
 function jobOpenSeqDrawer() {
@@ -1471,13 +1556,16 @@ function jobRenderPlantGrid() {
 //
 // 正确做法：复用链解析（jobGetChainOrder + jobSegPlacements）——链条里段的先后
 // 就是执行先后，同一槽可被拆成多段穿插（种槽1 → 喂豆 → 再种槽1）。
-function jobBuildChain(t, board, which) {
+function jobBuildChain(t, board, which, forceBoss) {
     const out = [];
     if (!t || !board) return out;
     jobEnsureSeq(board);
     // ★ 传入 board：让 jobGetChainOrder 的覆盖率修复用**正确的棋盘**
     //   （导出 boss 链时要用 bossBoard，不能靠 tab 猜）
-    const segs = jobGetChainOrder(t, which, board);
+    // ★ forceBoss：导出 boss 链必须显式传 true —— 因为 bossBoard 可能是
+    //   上一张表的棋盘（inheritBoss），靠引用判断会被误判成普通关，
+    //   结果读了 t.loopOrder，把普通关的通用动作串进 boss 关。
+    const segs = jobGetChainOrder(t, which, board, forceBoss);
 
     segs.forEach(function (seg) {
         // ★ 通用动作段（点波/捡豆/加速）：没有格子，直接按"动作"导出
@@ -1651,9 +1739,9 @@ function jobBuild() {
                 feed: jobExtractCells(bossBoard, 'feed'),
                 shovel: jobExtractCells(bossBoard, 'shovel'),
                 wave: t.waveEnabled === true,
-                once_chain: jobBuildChain(t, bossBoard, 'once'),
-                loop_chain: jobBuildChain(t, bossBoard, 'loop'),
-                end_chain: jobBuildChain(t, bossBoard, 'end'),
+                once_chain: jobBuildChain(t, bossBoard, 'once', true),
+                loop_chain: jobBuildChain(t, bossBoard, 'loop', true),
+                end_chain: jobBuildChain(t, bossBoard, 'end', true),
                 sequence: jobExtractSequence(bossBoard, t.slots, t)
             }
         };

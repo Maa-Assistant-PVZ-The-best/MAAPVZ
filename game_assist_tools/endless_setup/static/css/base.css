@@ -152,9 +152,12 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 
 /* ================= 种植顺序链条（拖动整块，决定先种哪个槽） ================= */
 .seq-chain {
-    margin-bottom:9px; border:1px solid #e2e8f0; border-radius:8px;
+    /* ★ 每个块都是独立卡片：自带边框+阴影+圆角，块间留白分明显 */
+    margin-bottom:0;
+    border:1px solid #dfe5ec; border-radius:8px;
     background:#fff; overflow:hidden;
     cursor:grab;
+    box-shadow:0 1px 3px rgba(15,23,42,.07);
     transition:box-shadow .12s, border-color .12s, opacity .12s;
 }
 .seq-chain:hover { border-color:#bfdbfe; box-shadow:0 2px 8px rgba(15,23,42,.08); }
@@ -163,7 +166,7 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .seq-chain.seq-over-top    { box-shadow:0 -3px 0 0 #2d7aff; }
 .seq-chain.seq-over-bottom { box-shadow:0  3px 0 0 #2d7aff; }
 .seq-chain-head {
-    display:flex; align-items:center; gap:6px; padding:5px 8px;
+    display:flex; align-items:center; gap:6px; padding:4px 8px;
     background:#f1f5f9; font-size:12px; font-weight:600; color:#334155;
     border-bottom:1px solid #e2e8f0;
 }
@@ -212,12 +215,18 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 #tfBoundary {
     font-weight:700; color:#1d4ed8; border-color:#93c5fd; background:#f8fbff;
 }
-.seq-chain-body { padding:5px 6px; display:flex; flex-direction:column; gap:4px; }
+/* ★ 块体：chips 改为**横向流式换行**，块就不会变成一个特别高的大块 */
+.seq-chain-body {
+    padding: 4px 6px;
+    display: flex; flex-direction: row; flex-wrap: wrap;
+    gap: 3px; align-items: center;
+}
 .seq-node {
-    display:flex; align-items:center; gap:6px;
-    padding:3px 6px; border-radius:6px;
+    display:flex; align-items:center; gap:4px;
+    padding:2px 5px; border-radius:6px;
     background:#f8fafc; border:1px solid #eef2f7;
     font-size:11px; user-select:none;
+    flex: 0 0 auto;
 }
 .seq-node .seq-idx {
     flex:0 0 16px; height:16px; line-height:16px; text-align:center;
@@ -237,10 +246,10 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 @media (prefers-reduced-motion: reduce) { .seq-chain { transition:none !important; } }
 
 /* ---- 两条链的分区标题 ---- */
-.seq-section { margin-bottom:14px; }
+.seq-section { margin-bottom:10px; }
 .seq-section-head {
     font-size:12px; font-weight:600; color:#334155;
-    padding:5px 8px; margin-bottom:7px;
+    padding:4px 8px; margin-bottom:5px;
     background:#eef2f7; border-radius:6px;
     border-left:3px solid #2d7aff;
 }
@@ -249,8 +258,10 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .seq-section-end .seq-section-head {
     border-left-color:#22a65e; background:#f0fdf4; color:#15803d;
 }
+/* ★ 优化4：块之间凑得更紧，但用明显间隔 + 独立外观确保「不会粘成一块」 */
+/* ★ 块间距：给足留白，让每个块看起来是独立卡片（不会粘成一坨） */
 .seq-list { display:flex; flex-direction:column; gap:8px; }
-.seq-empty { font-size:11px; color:#cbd5e1; text-align:center; padding:10px 6px; line-height:1.6; }
+.seq-empty { font-size:11px; color:#cbd5e1; text-align:center; padding:8px 6px; line-height:1.6; }
 
 /* ---- 三条链的显示过滤栏 ---- */
 .seq-filter-bar {
@@ -979,6 +990,26 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 /* 通用动作插进链条后的块样式 */
 .seq-chain.seq-chain-generic { border-color: #c7d2fe; background: #f5f7ff; }
 .seq-chain-generic .seq-node { background: #fff; }
+
+/* ★ 紧凑块：通用动作 / 喂豆 / 铲子 —— 它们都只是「一个动作」，
+   不该占一整块的高度。只保留一行头，动作就是 head 里的那个图标+名字。 */
+.seq-chain.seq-chain-compact { border-radius: 7px; }
+.seq-chain-compact .seq-chain-head {
+    padding: 3px 7px; gap: 5px;
+    background: #eef2ff; border-bottom: none;
+    font-size: 11px; color: #3730a3;
+}
+.seq-chain-compact .seq-chain-head .seq-grip { font-size: 11px; color: #a5b4fc; }
+.seq-chain-compact .seq-chain-head .seq-order {
+    flex: 0 0 15px; height: 15px; line-height: 15px;
+    font-size: 9px; background: #6366f1;
+}
+.seq-chain-compact .seq-chain-head .seq-ico { font-size: 12px; display: flex; align-items: center; }
+.seq-chain-compact .seq-chain-head .seq-slot { font-size: 11px; }
+.seq-chain-compact .seq-chain-del { margin-left: auto; }
+/* 紧凑块内部若有 chip（喂豆/铲子带落点），横排一行不换行撑高 */
+.seq-chain-compact .seq-chain-body { padding: 2px 6px 3px; gap: 2px; }
+.seq-chain-compact .seq-node { padding: 1px 5px; font-size: 10px; }
 .ga-badge {
     font-size: 9px; padding: 1px 5px; border-radius: 4px;
     background: #e0e7ff; color: #4338ca; font-weight: 700;
@@ -1106,3 +1137,42 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 }
 #jobAdvModal .ja-help:hover { background: #cbd5e1; }
 #jobAdvModal .ja-hint { font-size: 11px; color: #94a3b8; margin-top: 10px; line-height: 1.6; }
+
+/* ============================================================
+   通用动作按钮：次数角标 + 「更多动作」占位
+   ============================================================ */
+.gen-act { position: relative; }          /* 供次数角标绝对定位 */
+/* ★ 三条链的小图标 + 次数：收尾 / 单次 / 循环 */
+.gen-act .ga-counts {
+    display: flex; align-items: center; justify-content: center;
+    gap: 2px; margin-top: 2px; flex-wrap: nowrap;
+}
+.gen-act .ga-chip {
+    display: inline-flex; align-items: center; gap: 1px;
+    font-size: 9px; font-weight: 700; line-height: 1;
+    padding: 1px 3px; border-radius: 5px;
+    border: 1px solid transparent; white-space: nowrap;
+}
+/* 收尾=红 / 单次=蓝 / 循环=灰（与链条配色一致） */
+.gen-act .ga-chip-end   { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
+.gen-act .ga-chip-once  { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.gen-act .ga-chip-loop  { background:#f1f5f9; color:#475569; border-color:#e2e8f0; }
+/* 0 次的压暗，但仍显示图标（让用户知道有三个可能的归属） */
+.gen-act .ga-chip-zero { opacity: .38; font-weight: 500; }
+/* 「更多动作」占位：虚线、不可点、视觉上弱化 */
+.gen-act-more {
+    border-style: dashed !important;
+    border-color: #cbd5e1 !important;
+    background: #fafbfc !important;
+    cursor: default !important;
+    opacity: .7;
+}
+.gen-act-more:hover { transform: none !important; background: #fafbfc !important; }
+.gen-act-more .ga-ico { font-size: 18px; color: #cbd5e1; font-weight: 400; }
+.gen-act-more .ga-name { color: #94a3b8; }
+
+/* 弹窗里的「本次已插入 N 次」回显 */
+#genPicker .gp-inserted {
+    font-size: 11px; color: #22a65e; font-weight: 600;
+    text-align: center; margin-top: 8px; min-height: 14px;
+}
