@@ -48,8 +48,8 @@ permissions:
   contents: read
 
 env:
-  MFAA_VERSION: v2.16.0
-  MAA_FRAMEWORK_VERSION: v5.12.2
+  MFAA_VERSION: v2.16.2
+  MAA_FRAMEWORK_VERSION: v5.14.2
 
 jobs:
   meta:
