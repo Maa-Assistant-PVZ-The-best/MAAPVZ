@@ -25,6 +25,8 @@ import ExpressionRecognition
 import ocr_return_action
 import actions
 import custom_select_plant
+# 创意庭院：关卡 ID 的 OCR 提取（CreateYardOCRLevelID）与 Shell 输入（CreateYardInputLevelID）
+import create_yard_id
 
 
 SingleAction.load_coords('./assets/resource/coords.json')

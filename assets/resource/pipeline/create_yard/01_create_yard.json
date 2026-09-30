@@ -498,6 +498,28 @@
             "创意庭院_砸罐子_发布_确定2"
         ]
     },
+    "创意庭院_OCRID": {
+        "recognition": {
+            "type": "DirectHit"
+        },
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "CreateYardOCRLevelID",
+                "custom_action_param": {
+                    "roi": [
+                        610,
+                        210,
+                        290,
+                        45
+                    ]
+                }
+            }
+        },
+        "next": [
+            "创意庭院_砸罐子_发布_关闭"
+        ]
+    },
     "创意庭院_砸罐子_发布_关闭": {
         "recognition": "TemplateMatch",
         "template": [
