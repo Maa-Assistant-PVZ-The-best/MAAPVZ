@@ -463,4 +463,7 @@ debug
 flask.log
 
 # 作业集（网页端本地产出：jobs/<code>.json + current.json）
+# 两种布局都忽略：开发仓库是 assets/resource/jobs，发行包是 resource/jobs。
+# 这些是用户数据 / 开发者本地调试数据，不进仓库。
 assets/resource/jobs/
+resource/jobs/

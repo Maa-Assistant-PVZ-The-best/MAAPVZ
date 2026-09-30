@@ -155,6 +155,14 @@ def install_resource():
         install_path / "resource",
         dirs_exist_ok=True,
     )
+
+    # 作业集目录：源码里被 .gitignore 排除（用户数据 / 本地调试数据），
+    # CI 检出的工作区是干净的 -> 上面这句拷不出它。这里预建空目录，
+    # 让作业集路径在打包后就是 <包根>/resource/jobs（与 agent/pvz.py 的
+    # 运行时判断一致：存在 <根>/resource/ 时就用它），
+    # 避免代码在包根另建一个 <包根>/assets/ 目录。
+    (install_path / "resource" / "jobs").mkdir(parents=True, exist_ok=True)
+
     # 复制 interface.json（只一次）
     shutil.copy2(
         working_dir / "assets" / "interface.json",

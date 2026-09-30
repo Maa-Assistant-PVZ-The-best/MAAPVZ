@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -43,12 +44,69 @@ from typing import Any, Dict, List, Optional
 # <仓库根>/agent/jobset/engine.py  ->  <仓库根>
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
-DEFAULT_JOBS_DIR = _REPO_ROOT / "assets" / "resource" / "jobs"
+
+def _pick_resource_dir() -> Path:
+    """定位资源根目录（作业集放在它的 jobs/ 子目录下）。
+
+    两种布局并存，运行时自动判断：
+      - 发行包：<根>/resource/ 存在（MaaFramework 的正式资源目录，
+                install.py 把 assets/resource 的内容摊平拷到这里）
+                -> 作业集用 <根>/resource/jobs
+      - 开发仓库：没有 <根>/resource/，资源在 <根>/assets/resource/
+                -> 作业集用 <根>/assets/resource/jobs
+    """
+    packaged = _REPO_ROOT / "resource"
+    if packaged.is_dir():
+        return packaged
+    return _REPO_ROOT / "assets" / "resource"
+
+
+_RESOURCE_DIR = _pick_resource_dir()
+
+DEFAULT_JOBS_DIR = _RESOURCE_DIR / "jobs"
+
+# 旧版布局的作业集位置：<根>/assets/resource/jobs。
+# 发行包里它只可能是运行时自建的（源码里被 .gitignore 排除、不会被打包），
+# 但老用户的数据就躺在那里，需要迁移到新位置。
+_LEGACY_JOBS_DIR = _REPO_ROOT / "assets" / "resource" / "jobs"
+
 CURRENT_FILE = "current.json"
 
 
 class JobSetError(Exception):
     """作业集载入/校验失败。"""
+
+
+def migrate_legacy_jobs(dst: Optional[Path] = None) -> int:
+    """把旧布局里的作业集迁移到新位置。返回迁移的文件数。
+
+    仅当新旧目录确实不同时才动作（开发仓库里两者相同 -> 直接返回 0）。
+    逐个文件搬：目标已存在同名文件时**不覆盖**（新位置的数据优先）。
+    """
+    dst = Path(dst) if dst is not None else DEFAULT_JOBS_DIR
+    src = _LEGACY_JOBS_DIR
+    if src == dst or not src.is_dir() or not dst.parent.exists():
+        return 0
+
+    moved = 0
+    try:
+        entries = sorted(src.iterdir())
+    except OSError:
+        return 0
+    for f in entries:
+        if not f.is_file() or f.suffix != ".json":
+            continue
+        target = dst / f.name
+        if target.exists():
+            continue
+        try:
+            dst.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(f), str(target))
+            moved += 1
+        except OSError:
+            # 单个文件失败不影响其它文件；也不阻断启动
+            continue
+    return moved
 
 
 # ---------------------------------------------------------------------------
@@ -496,6 +554,14 @@ def load_jobset(
 
     code 为 None/空 -> 用 jobs/current.json 里记录的当前作业集。
     """
+    # 未显式指定目录时，先确保旧布局的数据已迁移到新位置。
+    # 放在这里而不是模块导入期：agent 进程可能先于网页端启动。
+    if jobs_dir is None:
+        try:
+            migrate_legacy_jobs()
+        except Exception:
+            pass
+
     d = Path(jobs_dir) if jobs_dir else DEFAULT_JOBS_DIR
     if not d.is_dir():
         raise JobSetError(f"作业集目录不存在：{d}")
