@@ -13,7 +13,10 @@
             "back_to_home/时空秘境_返回.png",
             "back_to_home/潘妮秘宝的叉叉.png",
             "back_to_home/超z的叉叉.png",
-            "back_to_home/世界关卡的叉叉.png"
+            "back_to_home/世界关卡的叉叉.png",
+            "back_to_home/无尽的确定.png",
+            "back_to_home/无尽的返回.png",
+            "back_to_home/无尽正赛的返回.png"
         ],
         "action": "Click",
         "threshold": [
@@ -21,7 +24,24 @@
         ],
         "post_wait_freezes": 1000,
         "next": [
+            "返回主界面1",
             "返回主界面2",
+            "返回主界面",
+            "确认当前是否在主界面"
+        ]
+    },
+    "返回主界面1": {
+        "timeout": 30000,
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/无尽的确定.png"
+        ],
+        "action": "Click",
+        "threshold": [
+            0.9
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
             "返回主界面",
             "确认当前是否在主界面"
         ]

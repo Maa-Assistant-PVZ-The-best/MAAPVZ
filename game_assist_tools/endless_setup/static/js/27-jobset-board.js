@@ -666,6 +666,196 @@ function jobApplyDrop(drag, target) {
     return true;
 }
 
+// ============================================================
+// ★★ 跨链移动：把步骤从一条链搬到另一条链（单次 ↔ 循环 ↔ 收尾）
+//
+// 链是棋盘的**派生视图**：落点属于哪条链 = 它的 item.mode。
+// 所以「植物跨链」= 改棋盘上那株的 mode（链侧自动跟着变，
+// 顺带把它的「动作后等待」waitAfter 键的形态前缀一起改写）；
+// 「通用动作/等待」没有落点，链成员 = 它在哪个顺序数组里，
+// 直接搬顺序条目即可。
+//
+// ★ boss 关没有收尾链（运行时永不执行），boss 棋盘上禁止搬入 end。
+// ============================================================
+function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
+    if (!drag || !t || !board) return false;
+    const fromWhich = drag.which;
+    if (!fromWhich || fromWhich === toWhich) return false;
+    // boss 关没有收尾链：boss 棋盘上禁止把任何东西搬进收尾
+    if (toWhich === 'end' && jobIsBossBoard()) {
+        setStatus('🚫 boss 关没有收尾链（boss 关只有单次/循环）');
+        return false;
+    }
+
+    const moving = (drag.kind === 'group' && drag.group && drag.group.length)
+        ? drag.group.slice() : (drag.step ? [drag.step] : []);
+    if (!moving.length) return false;
+
+    // 通用动作签名（相同动作在存储上不可区分，摘掉「第一个没摘过的」即等价）
+    const genSig = function (s) {
+        return s.kind + '|' + s.key
+            + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms)
+            + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
+            + 'x' + (s.times === undefined || s.times === null ? '' : s.times);
+    };
+
+    // ⓪ 预解析目标链，把落点锚翻译成「搬动后仍能找回」的形式：
+    //    植物 -> 落点对象引用（mode 翻转后 gidx 会漂，引用不会）；
+    //    动作 -> 签名 + 它在同签名里的第几号。
+    let anchorItem = null, anchorKey = null, anchorGen = null;
+    if (targetStep) {
+        const preDst = jobResolveSteps(t, toWhich, board);
+        let ai = jobStepIndexIn(preDst, targetStep);
+        if (ai !== -1) {
+            const a = preDst[ai];
+            if (a.kind === 'plant') {
+                const pl = jobPlacementsOf(board, a.key, toWhich)[a.gidx];
+                if (pl) { anchorItem = pl.item; anchorKey = a.key; }
+            } else {
+                const sig = genSig(a);
+                let rank = 0;
+                for (let i = 0; i < ai; i++) {
+                    if (preDst[i].kind !== 'plant' && genSig(preDst[i]) === sig) rank++;
+                }
+                anchorGen = { sig: sig, rank: rank };
+            }
+        }
+    }
+
+    // ① 收集载荷：先拿落点**对象引用**，再动棋盘 —— mode 一改 gidx 就漂
+    const payload = [];
+    moving.forEach(function (st) {
+        if (!st) return;
+        if (st.kind === 'plant') {
+            const p = jobPlacementsOf(board, st.key, fromWhich)[st.gidx];
+            if (p && p.item) {
+                payload.push({ kind: 'plant', key: st.key, item: p.item, r: p.r, c: p.c });
+            }
+        } else {
+            const e = { kind: st.kind, key: st.key };
+            if (st.ms !== undefined && st.ms !== null) e.ms = st.ms;
+            if (st.slot !== undefined && st.slot !== null) e.slot = st.slot;
+            if (st.times !== undefined && st.times !== null) e.times = st.times;
+            payload.push(e);
+        }
+    });
+    if (!payload.length) return false;
+
+    // ② 棋盘严格对应：植物落点的 mode 全部切到目标链；
+    //    顺带迁移「动作后等待」的形态前缀（waitAfter 键 = 形态|槽|r,c|seq）
+    let nPlant = 0;
+    const wField = jobWaitField();
+    const waits = (t && t[wField] && typeof t[wField] === 'object') ? t[wField] : null;
+    payload.forEach(function (e) {
+        if (e.kind !== 'plant') return;
+        e.item.mode = toWhich;
+        nPlant++;
+        if (waits) {
+            const pre = fromWhich + '|' + e.key + '|' + e.r + ',' + e.c + '|';
+            Object.keys(waits).forEach(function (wk) {
+                if (wk.indexOf(pre) !== 0) return;
+                // 只换形态前缀（pre 已含结尾的 |，直接拼尾巴）
+                waits[toWhich + wk.slice(fromWhich.length)] = waits[wk];
+                delete waits[wk];
+            });
+        }
+    });
+
+    // ③ 源链收尾：重新解析（被搬走的植物已因 mode 变化自动消失），
+    //    再把被搬走的通用动作从源链里摘掉（它们的顺序条目还在）
+    const genPool = payload.filter(function (e) { return e.kind !== 'plant'; });
+    const srcRest = jobResolveSteps(t, fromWhich, board).filter(function (s) {
+        if (!s || s.kind === 'plant') return true;
+        const sig = genSig(s);
+        for (let i = 0; i < genPool.length; i++) {
+            if (!genPool[i]._cut && genSig(genPool[i]) === sig) {
+                genPool[i]._cut = true;
+                return false;
+            }
+        }
+        return true;
+    });
+    // ★ 存回前把 synthesized 全部固化（摘掉过滤标记）：
+    //   否则只搬过段/从未导出过的链里，「棋盘上自动补出来的落点」会在
+    //   存盘时被丢掉、重新解析时按「追加到末尾」重排 —— 用户看到的顺序
+    //   和存下来的顺序就不一样了（拖放后顺序乱跳）。固化后所见即所得。
+    srcRest.forEach(function (s) { if (s) delete s.synthesized; });
+    jobStoreSteps(t, fromWhich, board, srcRest);
+
+    // ④ 目标链：重新解析（搬过来的植物以 synthesized 步骤出现），
+    //    挑出来按载荷顺序插到锚点位置，再固化存回
+    const dstSteps = jobResolveSteps(t, toWhich, board);
+    const inserts = [];
+    payload.forEach(function (e) {
+        if (e.kind === 'plant') {
+            const list = jobPlacementsOf(board, e.key, toWhich);
+            let g = -1;
+            for (let i = 0; i < list.length; i++) {
+                if (list[i].item === e.item) { g = i; break; }
+            }
+            if (g === -1) return;
+            let at = -1;
+            for (let i = 0; i < dstSteps.length; i++) {
+                const s = dstSteps[i];
+                if (s && s.kind === 'plant' && s.key === e.key && s.gidx === g) { at = i; break; }
+            }
+            if (at === -1) return;
+            const st = dstSteps.splice(at, 1)[0];
+            inserts.push(st);
+        } else {
+            const st = { kind: (e.ms !== undefined && e.ms !== null) ? 'wait' : 'generic', key: e.key };
+            if (e.ms !== undefined) st.ms = e.ms;
+            if (e.slot !== undefined) st.slot = e.slot;
+            if (e.times !== undefined) st.times = e.times;
+            inserts.push(st);
+        }
+    });
+    if (!inserts.length) return false;
+
+    // 定位插入点（在已摘除搬入项后的目标步骤列表里）
+    let insertAt = dstSteps.length;
+    if (anchorItem && anchorKey) {
+        const list = jobPlacementsOf(board, anchorKey, toWhich);
+        let g = -1;
+        for (let i = 0; i < list.length; i++) {
+            if (list[i].item === anchorItem) { g = i; break; }
+        }
+        if (g !== -1) {
+            for (let i = 0; i < dstSteps.length; i++) {
+                const s = dstSteps[i];
+                if (s && s.kind === 'plant' && s.key === anchorKey && s.gidx === g) {
+                    insertAt = after ? i + 1 : i;
+                    break;
+                }
+            }
+        }
+    } else if (anchorGen) {
+        let rank = 0;
+        for (let i = 0; i < dstSteps.length; i++) {
+            const s = dstSteps[i];
+            if (!s || s.kind === 'plant') continue;
+            if (genSig(s) !== anchorGen.sig) continue;
+            if (rank === anchorGen.rank) { insertAt = after ? i + 1 : i; break; }
+            rank++;
+        }
+    }
+    dstSteps.splice.apply(dstSteps, [insertAt, 0].concat(inserts));
+    // ★ 存回前固化全部 synthesized（理由同源链③：所见即所得，
+    //   否则未显式存储的落点会在存盘后重排到链尾）
+    dstSteps.forEach(function (s) { if (s) delete s.synthesized; });
+    jobStoreSteps(t, toWhich, board, dstSteps);
+
+    // ⑤ 收尾：保存 + 重渲染（两条链都会重画）
+    const meta = JOB_CHAIN_META[toWhich] || { short: toWhich };
+    const nGen = inserts.length - nPlant;
+    jobAfterChainChange(t, toWhich,
+        '🔀 已把 ' + (nPlant ? nPlant + ' 株' : '')
+        + (nPlant && nGen ? ' + ' : '')
+        + (nGen ? nGen + ' 个动作' : '')
+        + ' 搬到「' + (meta.short || toWhich) + '」（棋盘形态已同步）');
+    return true;
+}
+
 // 链条变动后的统一收尾
 // ★ 注意：**不清空勾选**。用户要求「多选拖动后勾选保留」——
 //   因为 step id 由 (key + gidx/occ) 决定，与链内位置无关，
@@ -741,7 +931,9 @@ function jobWireDropTarget(el, getTarget) {
 
     el.addEventListener('dragover', function (e) {
         if (!seqDrag) return;
-        if (seqDrag.which !== el.dataset.which) return;
+        // ★ 跨链拖拽也放行（boss 棋盘禁止拖入收尾链 —— boss 关没有收尾）
+        if (seqDrag.which !== el.dataset.which
+            && el.dataset.which === 'end' && jobIsBossBoard()) return;
         // 一律 preventDefault：即使只是擦到块边缘，也别让光标闪成禁止
         e.preventDefault();
         try { e.dataTransfer.dropEffect = 'move'; } catch (err) { }
@@ -767,6 +959,12 @@ function jobWireDropTarget(el, getTarget) {
         const target = getTarget();
         if (!target) return;
         target.after = below;
+        // ★ 跨链：改落点形态（棋盘联动）+ 搬顺序条目；同链：原来的排序逻辑
+        if (drag.which !== target.which) {
+            jobMoveStepsToChain(target.t, target.board, drag,
+                target.which, target.step, below);
+            return;
+        }
         jobApplyDrop(drag, target);
     });
 }
@@ -776,13 +974,15 @@ function jobWireDropTarget(el, getTarget) {
 function jobWireChainDropZone(listBox, t, board, which) {
     listBox.addEventListener('dragover', function (e) {
         if (!seqDrag) return;
-        if (seqDrag.which !== which) return;
+        // ★ 跨链拖拽放行（boss 棋盘禁止拖入收尾链）
+        if (seqDrag.which !== which && which === 'end' && jobIsBossBoard()) return;
         e.preventDefault();
         try { e.dataTransfer.dropEffect = 'move'; } catch (err) { }
         // 指针在某块内部时，块的 dragover 已经画好线了，别覆盖
         if (jobBlockUnderPointer(listBox, e.clientY)) return;
         const near = jobNearestBlockInList(listBox, e.clientY);
-        if (!near) { jobMarkDropTarget(listBox, false); return; }   // 空链
+        // 空链：整条链高亮「落到底部」（CSS 只给 seq-over-bottom 画了线）
+        if (!near) { jobMarkDropTarget(listBox, true); return; }
         jobMarkDropTarget(near.el, near.below);
     });
     listBox.addEventListener('dragleave', function (e) {
@@ -800,7 +1000,20 @@ function jobWireChainDropZone(listBox, t, board, which) {
         jobStopAutoScroll();
         jobMarkDragging(false);
         jobClearSeqOver();
-        if (drag.which !== which) return;
+
+        // ★ 跨链拖放：改落点形态（棋盘联动）+ 搬顺序条目
+        if (drag.which !== which) {
+            const xBlock = jobBlockUnderPointer(listBox, e.clientY);
+            if (xBlock) {
+                jobMoveStepsToChain(t, board, drag, which,
+                    xBlock.__seqStep || null, jobDropBelow(e, xBlock));
+                return;
+            }
+            const xNear = jobNearestBlockInList(listBox, e.clientY);
+            jobMoveStepsToChain(t, board, drag, which,
+                (xNear && xNear.step) || null, !!(xNear && xNear.below));
+            return;
+        }
 
         const inBlock = jobBlockUnderPointer(listBox, e.clientY);
         if (inBlock) {
@@ -919,18 +1132,21 @@ function jobRenderOneChain(box, t, board, which) {
     }
     box.appendChild(sec);
 
-    if (!steps.length) {
-        const empty = document.createElement('div');
-        empty.className = 'seq-empty';
-        empty.textContent = '还没有「' + meta.short.replace('链', '')
-            + '」落子。（右键左侧槽位切到该形态，再到棋盘落子）';
-        sec.appendChild(empty);
-    }
-
     const listBox = document.createElement('div');
     listBox.className = 'seq-list';
     if (!steps.length) listBox.classList.add('seq-list-empty');
     sec.appendChild(listBox);
+
+    if (!steps.length) {
+        // ★ 空链提示放在链容器**里面**：这样整个空链区域（含提示文字）
+        //   都是容器级落点 —— 空链也能接住跨链拖过来的块。
+        //   （提示在容器外面时，34px 的 min-height 细条才是落点，等于没有。）
+        const empty = document.createElement('div');
+        empty.className = 'seq-empty';
+        empty.textContent = '还没有「' + meta.short.replace('链', '')
+            + '」落子。（右键左侧槽位切到该形态，再到棋盘落子；或从别的链拖过来）';
+        listBox.appendChild(empty);
+    }
 
     // ★ 容器级落点：缝里 / 块外 / 链尾 / 空链都能正确落点（就近插入）
     jobWireChainDropZone(listBox, t, board, which);
