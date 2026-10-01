@@ -63,7 +63,8 @@
         // preset 预设
         "./resource/task/Endless/preset/yuan_big/preset_yuan_big.json", // 原大桑葚
         "./resource/task/Endless/preset/heart_tower/preset_heart_tower.json", // 心叶兰塔黄
-        "./resource/task/Endless/preset/banana_tower/preset_banana_tower.json" // 塔黄香蕉
+        "./resource/task/Endless/preset/banana_tower/preset_banana_tower.json", // 塔黄香蕉
+        "./resource/task/Endless/preset/huin_snake/preset_huin_snake.json" //毁灭菇蛇果
     ],
     "task": [
         {
