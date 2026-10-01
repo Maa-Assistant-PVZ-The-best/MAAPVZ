@@ -182,7 +182,11 @@ function jobStepId(s) {
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
     if (s.kind === 'generic' || s.kind === 'wait') {
         const ms = (s.ms === undefined || s.ms === null) ? '' : ('#' + s.ms);
-        return s.key + ms + uid;
+        // ★ 切换形态：槽位/次数也是参数，必须进 id —— 否则「槽1点1次」和
+        //   「槽2点3次」会撞成同一个 id，勾选/拖动定位就会串位。
+        const sl = (s.slot === undefined || s.slot === null) ? '' : ('@' + s.slot);
+        const tm = (s.times === undefined || s.times === null) ? '' : ('x' + s.times);
+        return s.key + ms + sl + tm + uid;
     }
     return s.key + '#' + s.gidx + uid;
 }
@@ -194,6 +198,16 @@ function jobStepIdentity(s) {
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
     if (s.kind === 'generic' || s.kind === 'wait') return s.key + uid;
     return s.key + '#' + s.gidx + uid;
+}
+
+// ★ 把「切换形态」的槽位/次数输入夹到合法区间。
+//   非法输入（空、NaN、0、负数、超上限）一律回落到 fallback。
+function jobClampFormNum(v, lo, hi, fallback) {
+    let n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return fallback;
+    if (n < lo) return lo;
+    if (n > hi) return hi;
+    return n;
 }
 
 // 按「不含参数的身份」在列表里定位（改 ms 时用）
@@ -236,6 +250,9 @@ function jobSegsToSteps(board, segs, which) {
         if (jobIsGenericKey(seg.key)) {
             const st = { kind: 'generic', key: seg.key };
             if (seg.ms !== undefined && seg.ms !== null) { st.kind = 'wait'; st.ms = Number(seg.ms); }
+            // ★ 切换形态的参数（槽位 + 次数）—— 不带上就会在渲染/存盘时被丢掉
+            if (seg.slot !== undefined && seg.slot !== null) st.slot = Number(seg.slot);
+            if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
             out.push(st);
             return;
         }
@@ -256,6 +273,9 @@ function jobStepsToSegs(steps) {
         if (st.kind === 'generic' || st.kind === 'wait') {
             const o = { key: st.key };
             if (st.ms !== undefined && st.ms !== null) o.ms = Number(st.ms);
+            // ★ 切换形态的参数（槽位 + 次数）—— 必须写回，否则重载后参数丢失
+            if (st.slot !== undefined && st.slot !== null) o.slot = Number(st.slot);
+            if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
             segs.push(o);
             return;
         }
@@ -283,7 +303,9 @@ function jobSegFingerprint(s) {
     if (!s) return '';
     return s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
          + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '')
-         + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms);
+         + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms)
+         + '|' + (s.slot === undefined || s.slot === null ? '' : s.slot)
+         + '|' + (s.times === undefined || s.times === null ? '' : s.times);
 }
 function jobSameSeg(a, b) {
     return a === b || (!!a && !!b && jobSegFingerprint(a) === jobSegFingerprint(b));
@@ -382,11 +404,15 @@ function jobCarryUids(newSteps, oldSteps) {
 
     // ② 通用动作/等待：按「key+ms」分组，组内按出现次序一一配对。
     //    只有在两边数量相同时才配对 —— 否则说明链内容变了，配对会串位。
+    //    ★ 切换形态还要带上 slot/times：参数不同就是不同的动作，不能配对到一起。
     const grp = function (list) {
         const m = {};
         list.forEach(function (s) {
             if (!s || (s.kind !== 'generic' && s.kind !== 'wait')) return;
-            const gk = s.key + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms);
+            const gk = s.key
+                + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms)
+                + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
+                + 'x' + (s.times === undefined || s.times === null ? '' : s.times);
             (m[gk] = m[gk] || []).push(s);
         });
         return m;
@@ -1140,6 +1166,68 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
         unit.className = 'seq-ms-unit';
         unit.textContent = 'ms';
         head.appendChild(unit);
+    }
+
+    // ★ 切换形态：槽位 + 次数就地可改。
+    //   存回时与等待的 ms 一样，用「不含参数的身份」定位自己
+    //   （改了参数 jobStepId 就变了，不能先改再按 jobStepId 找）。
+    if (ga && ga.hasSlot) {
+        const applyForm = function (slot, times) {
+            const steps = jobResolveSteps(t, which, board);
+            const i = jobFindStepByIdentity(steps, st);
+            if (i !== -1) {
+                steps[i].slot = slot;
+                steps[i].times = times;
+                st.slot = slot;
+                st.times = times;
+                jobStoreSteps(t, which, board, steps);
+                jobSaveLocal();
+            }
+            jobRenderSeqChains();
+        };
+
+        const sel = document.createElement('select');
+        sel.className = 'seq-form-slot';
+        sel.title = '切换哪个槽位的形态';
+        sel.draggable = false;
+        for (let i = 1; i <= (ga.slotMax || 8); i++) {
+            const op = document.createElement('option');
+            op.value = String(i);
+            op.textContent = '槽' + i;
+            sel.appendChild(op);
+        }
+        sel.value = String((st.slot === undefined || st.slot === null) ? (ga.defaultSlot || 1) : st.slot);
+        sel.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        sel.addEventListener('click', function (e) { e.stopPropagation(); });
+        sel.addEventListener('change', function (e) {
+            e.stopPropagation();
+            const cur = (st.times === undefined || st.times === null) ? (ga.defaultTimes || 1) : st.times;
+            applyForm(jobClampFormNum(sel.value, 1, ga.slotMax || 8, 1), cur);
+        });
+        head.appendChild(sel);
+
+        const tx = document.createElement('input');
+        tx.type = 'number';
+        tx.className = 'seq-form-times';
+        tx.min = '1';
+        tx.max = String(ga.timesMax || 20);
+        tx.step = '1';
+        tx.value = String((st.times === undefined || st.times === null) ? (ga.defaultTimes || 1) : st.times);
+        tx.title = '点击几次（填几就点几）';
+        tx.draggable = false;
+        tx.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        tx.addEventListener('click', function (e) { e.stopPropagation(); });
+        tx.addEventListener('change', function (e) {
+            e.stopPropagation();
+            const cur = (st.slot === undefined || st.slot === null) ? (ga.defaultSlot || 1) : st.slot;
+            applyForm(cur, jobClampFormNum(tx.value, 1, ga.timesMax || 20, 1));
+        });
+        head.appendChild(tx);
+
+        const xu = document.createElement('span');
+        xu.className = 'seq-ms-unit';
+        xu.textContent = '次';
+        head.appendChild(xu);
     }
 
     // 勾选框
@@ -1994,6 +2082,18 @@ function jobBuildChain(t, board, which, forceBoss) {
             if (ga.hasMs) {
                 item.ms = (seg.ms === undefined || seg.ms === null)
                     ? (ga.defaultMs || 1000) : Number(seg.ms);
+            }
+            // ★ 切换形态必须带上槽位与次数 —— agent 端用它们定位
+            //   「槽N切换形态」坐标并展开成 N 个 click:N。
+            if (ga.hasSlot) {
+                const sv = (seg.slot === undefined || seg.slot === null)
+                    ? (ga.defaultSlot || 1) : Number(seg.slot);
+                item.slot = Math.max(1, Math.min(ga.slotMax || 8, sv || 1));
+            }
+            if (ga.hasTimes) {
+                const tv = (seg.times === undefined || seg.times === null)
+                    ? (ga.defaultTimes || 1) : Number(seg.times);
+                item.times = Math.max(1, Math.min(ga.timesMax || 20, tv || 1));
             }
             out.push(item);
             return;

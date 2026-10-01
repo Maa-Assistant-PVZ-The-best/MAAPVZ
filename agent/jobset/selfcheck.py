@@ -187,6 +187,49 @@ check("reset 后未锁定", not lt.locked)
 
 
 # ---------------------------------------------------------------------------
+print("\n=== 8. 切换形态（通用动作 form） ===")
+from agent.jobset import dsl as _dsl  # noqa: E402
+
+_coords = _dsl.load_coords()
+
+# 8a. 坐标表里应有「槽N切换形态」，N = 1..GENERIC_FORM_SLOT_MAX
+_missing_keys = [
+    f"槽{n}切换形态"
+    for n in range(1, _dsl.GENERIC_FORM_SLOT_MAX + 1)
+    if not _dsl._coord_ok(_coords, f"槽{n}切换形态")
+]
+check("坐标表含全部「槽N切换形态」键", not _missing_keys, str(_missing_keys))
+
+# 8b. 点 N 次 -> 展开成 N 个 click（不做形态档位换算）
+_r = _dsl.generic_dsl("form", _coords, None, 3, 2)
+check("form: 槽3 点2次 -> 2 个 click", _r["count"] == 2 and not _r["missing"],
+      f"count={_r['count']} dsl={_r['dsl']!r}")
+check("form: 点击目标是对应槽位坐标", _r["dsl"] == "click:槽3切换形态;click:槽3切换形态",
+      repr(_r["dsl"]))
+
+# 8c. 次数缺省 / 非法 -> 1 次
+for _bad in (None, "", "abc", 0, -5):
+    _rb = _dsl.generic_dsl("form", _coords, None, 1, _bad)
+    check(f"form: times={_bad!r} -> 1 次", _rb["count"] == 1, f"count={_rb['count']}")
+
+# 8d. 次数超上限 -> 夹到 GENERIC_FORM_TIMES_MAX
+_rc = _dsl.generic_dsl("form", _coords, None, 1, 9999)
+check("form: times 超上限被夹取", _rc["count"] == _dsl.GENERIC_FORM_TIMES_MAX,
+      f"count={_rc['count']} max={_dsl.GENERIC_FORM_TIMES_MAX}")
+
+# 8e. ★ 槽位越界必须判无效（不能悄悄退化成相邻槽 —— 那会点错按钮）
+for _bad_slot in (0, -1, _dsl.GENERIC_FORM_SLOT_MAX + 1, None, "x"):
+    _rs = _dsl.generic_dsl("form", _coords, None, _bad_slot, 1)
+    check(f"form: 槽位 {_bad_slot!r} 判无效", _rs["count"] == 0 and bool(_rs["missing"]),
+          f"count={_rs['count']} missing={_rs['missing']}")
+
+# 8f. 'ga:form' 前缀形式（作业集里 key 的写法）等价
+_rg = _dsl.generic_dsl("ga:form", _coords, None, 2, 3)
+check("form: 'ga:form' 前缀等价", _rg["count"] == 3 and not _rg["missing"],
+      f"count={_rg['count']}")
+
+
+# ---------------------------------------------------------------------------
 print("\n" + "=" * 52)
 if FAILED:
     print(f"FAILED {len(FAILED)}: {FAILED}")

@@ -172,6 +172,11 @@ function jobGetChainOrder(t, which, board, forceBoss) {
                 const o2 = { key: k, ga: k.slice(JOB_GA_PREFIX.length) };
                 // ★ 等待动作的毫秒数（其它通用动作没有这个字段）
                 if (e.ms !== undefined && Number.isFinite(Number(e.ms))) o2.ms = Number(e.ms);
+                // ★ 切换形态动作的槽位与次数
+                //   —— 必须在这里显式保留，否则「保存后重载」会被静默丢掉，
+                //      段变成没有 slot 的 form，运行时判越界直接不执行。
+                if (e.slot !== undefined && Number.isFinite(Number(e.slot))) o2.slot = Number(e.slot);
+                if (e.times !== undefined && Number.isFinite(Number(e.times))) o2.times = Number(e.times);
                 return o2;
             }
             const o = {

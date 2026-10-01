@@ -350,13 +350,89 @@ cd D:\maapvz\MAAPVZ
 
 ---
 
+## 10.1 已完成的：「切换形态」通用动作
+
+> 入口是棋盘右侧通用动作按钮组**末端的「更多」按钮**（`#morePicker` 弹窗）。
+> 弹窗内目前只有「切换形态」一项。
+
+**交互**：选槽位 1-8 + 填点击次数 → 插入到指定链。
+
+| 项 | 说明 |
+| --- | --- |
+| 坐标 | `coords.json` 顶层键 `槽1切换形态` … `槽8切换形态` |
+| 动作语义 | **纯点击**，不做形态档位换算 —— 填几次就点几次 |
+| 间隔 | **不加**。要控制节奏由用户在链里插「等待」段（等待仍是合法链段） |
+| 上限 | 槽位 1-8；次数 1-20（`GENERIC_FORM_TIMES_MAX`） |
+
+**段形状**：`{ key: 'ga:form', ga: 'form', slot: N, times: M }`
+
+**DSL 编译**（`dsl.py` → `generic_dsl(action, coords, ms, slot, times)`）：
+
+```
+slot=3 times=2  ->  click:槽3切换形态;click:槽3切换形态
+```
+
+> ⚠️ **槽位越界不夹取**：`slot=9` 一律返回 `None` 并记 `missing`，
+> **不能悄悄退化成槽 8** —— 那会点错槽位的按钮。次数越界才夹取（1..20）。
+
+**网页端**：`JOB_FORM_ACTION`（`24-jobset-fields.js`）带 `hasSlot`/`hasTimes`；
+`jobGenericActionById` 从 `JOB_ALL_GENERIC_ACTIONS` 取，**但按钮组仍只渲染
+`JOB_GENERIC_ACTIONS` 的 3 项** —— 切换形态只从「更多」进。
+
+**易丢字段的四处坑（都已接好，改动时务必留意）**：
+
+| 位置 | 函数 | 不通会怎样 |
+| --- | --- | --- |
+| `23-jobset-end.js` | 重载映射 | 存盘后重载，`slot/times` 被静默丢掉 |
+| `27-jobset-board.js` | `jobSegsToSteps` | 每次渲染重建对象，参数丢失 |
+| `27-jobset-board.js` | `jobStepsToSegs` | 存盘写回时参数丢失 |
+| `27-jobset-board.js` | `jobStepId`/`jobSegFingerprint`/`jobCarryUids` | 两个不同参数的 form 段撞成同一 id，勾选/拖动串位 |
+
+> 「等待」的 `ms` 是同样性质的参数，上述四处都是照它的先例加的。
+
+**boss 关防护**：boss 关没有收尾链。`jobCycleMoreTarget` / `jobCycleGenTarget`
+在目标非法（残留 `'end'`）时先规范化再切；`jobConfirmMorePicker` /
+`jobConfirmGenPicker` 另有兜底 —— boss 棋盘下 `'end'` 一律改走 `'loop'`，
+**绝不往 boss 的 `end_chain` 写东西**。
+
+**验证**：`selfcheck.py` 第 8 节共 17 条断言（坐标键齐全 / 次数展开 / 缺省回落 /
+越界夹取 / 槽位越界判无效 / `ga:` 前缀等价）。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
 
 ```
-selfcheck.py                       →  37/37 全部通过
+selfcheck.py                       →  全部通过（含第 8 节「切换形态」17 条）
 check_resource.py assets/resource  →  All directories checked
-check_graph.py                     →  仅 3 个预存在空壳告警，无悬挂引用
-JS 语法                            →  全部拆分文件 node --check 通过
+check_graph.py                     →  仅预存在空壳告警，无悬挂引用（见下方更正）
+JS 语法                            →  27 个拆分文件 node --check 全部通过
+```
+
+> **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」。**实测是 6 个**，
+> 且全部为预存在、非本轮引入（`git diff --name-only | grep pipeline` 为空）：
+> `01_Endless_plant_ref.json` 的 `无尽挑战_检查是否需要选植物` / `无尽挑战_选植物`；
+> `0300Endless_fight.json` 的 `无尽局内_单次种植` / `无尽局内_循环种植` /
+> `无尽挑战_训练完成`；`Endless_html_ref.json` 的 `无尽挑战_编辑作业集`。
+> 其中 `无尽挑战_训练完成` 是 `StopTask`（本就该终止），其余是运行时注入的空壳。
+> 另注：`check_graph.py` 退出码为 **1**（`sys.exit` 在有问题时），属预期。
+
+本轮（「切换形态」通用动作）改动文件：
+
+```
+agent/assets/resource/coords.json           槽1..槽8切换形态 坐标（用户提供）
+agent/jobset/dsl.py                          GENERIC_FORM_* 常量 / form_point /
+                                             generic_dsl 新增 slot,times 参数
+agent/jobset/runtime.py                      _build_chain_nodes 透传 slot/times
+agent/jobset/selfcheck.py                    第 8 节 17 条 form 断言
+.../static/index.html                        #morePicker 弹窗 DOM
+.../static/css/base.css                      #morePicker 样式 + .seq-form-slot/-times
+.../static/js/23-jobset-end.js               重载时保留 slot/times
+.../static/js/24-jobset-fields.js            JOB_FORM_ACTION / JOB_ALL_GENERIC_ACTIONS
+.../static/js/27-jobset-board.js             段<->步骤 保留 slot/times；chip 内联编辑；
+                                             导出带参数
+.../static/js/30-jobset-generic.js           #morePicker 逻辑；「更多」按钮激活；
+                                             boss 关收尾链兜底
 ```
 
 本轮（编队 + 槽位同步 + 补给 + 快捷键 + 关卡融合）改动文件：

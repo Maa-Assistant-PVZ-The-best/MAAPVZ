@@ -1018,6 +1018,22 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .seq-ms:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
 .seq-ms-unit { font-size: 9px; color: #818cf8; margin-left: -2px; }
 
+/* 切换形态块的「槽位」下拉 + 「次数」输入框 */
+.seq-form-slot {
+    flex: 0 0 auto; margin-left: 4px;
+    padding: 1px 2px; font-size: 10px;
+    border: 1px solid #a5f3fc; border-radius: 4px;
+    background: #fff; color: #0e7490; font-family: inherit; cursor: pointer;
+}
+.seq-form-slot:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,.15); }
+.seq-form-times {
+    width: 42px; flex: 0 0 42px; margin-left: 4px;
+    padding: 1px 4px; font-size: 10px; text-align: right;
+    border: 1px solid #a5f3fc; border-radius: 4px;
+    background: #fff; color: #0e7490; font-family: inherit;
+}
+.seq-form-times:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,.15); }
+
 /* 缩略图：链条里的植物头像 */
 .seq-ico .seq-thumb-img,
 .seq-chain-head .seq-ico .seq-thumb-img {
@@ -1109,6 +1125,98 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #genPicker .gp-cancel:hover { background: #f1f5f9; }
 #genPicker .gp-ok { background: #1d4ed8; border: none; color: #fff; }
 #genPicker .gp-ok:hover { background: #1e40af; }
+
+/* ============ 「更多」动作 -> 切换形态弹窗 ============
+   结构与 #genPicker 平行，多出「槽位 1-8」和「次数」两组输入。 */
+#morePicker {
+    position: fixed; inset: 0; z-index: 10080;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#morePicker.mp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#morePicker .mp-panel {
+    width: min(400px, 90vw);
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#morePicker .mp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0;
+}
+#morePicker .mp-dot { width: 6px; height: 6px; border-radius: 50%; background: #0891b2; }
+#morePicker .mp-title { font-size: 14px; font-weight: 700; color: #0891b2; }
+#morePicker .mp-close {
+    width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#morePicker .mp-close:hover { background: #e2e8f0; }
+#morePicker .mp-body { padding: 16px 18px; }
+#morePicker .mp-act {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    padding: 9px 11px; border-radius: 9px;
+    background: #ecfeff; border: 1px solid #cffafe;
+}
+#morePicker .mp-act .mp-ico { font-size: 20px; display: inline-flex; align-items: center; }
+#morePicker .mp-act .mp-name { font-size: 13px; font-weight: 700; color: #334155; }
+#morePicker .mp-desc { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+#morePicker .mp-label { font-size: 11px; color: #64748b; margin-bottom: 6px; }
+
+/* 槽位 1-8 选择 */
+#morePicker .mp-slots { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+#morePicker .mp-slot {
+    flex: 1 1 0; min-width: 34px; padding: 7px 0; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
+    font-size: 12px; font-weight: 700; color: #475569; font-family: inherit;
+    transition: all .12s ease;
+}
+#morePicker .mp-slot:hover { border-color: #67e8f9; background: #f0fdff; }
+#morePicker .mp-slot.mp-slot-on {
+    border-color: #0891b2; background: #0891b2; color: #fff;
+    box-shadow: 0 2px 8px rgba(8,145,178,.30);
+}
+
+/* 次数输入 */
+#morePicker .mp-times {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+}
+#morePicker .mp-step {
+    width: 30px; height: 30px; flex: none; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
+    font-size: 15px; font-weight: 700; color: #475569; line-height: 1; font-family: inherit;
+}
+#morePicker .mp-step:hover { border-color: #67e8f9; background: #f0fdff; color: #0891b2; }
+#morePicker .mp-times-input {
+    width: 68px; padding: 6px 8px; text-align: center;
+    border: 1px solid #cbd5e1; border-radius: 8px;
+    font-size: 13px; font-weight: 700; color: #0f172a; font-family: inherit;
+}
+#morePicker .mp-times-input:focus { outline: none; border-color: #0891b2; }
+#morePicker .mp-times-hint { font-size: 10px; color: #94a3b8; }
+
+/* 目标链切换（与 #genPicker 同构） */
+#morePicker .mp-target {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; cursor: pointer; user-select: none;
+    border: 2px solid #cbd5e1; border-radius: 10px; background: #fff;
+}
+#morePicker .mp-target:hover { border-color: #67e8f9; background: #f0fdff; }
+#morePicker .mp-target .mp-arrow { font-size: 14px; color: #94a3b8; padding: 0 2px; }
+#morePicker .mp-target .mp-arrow:hover { color: #0891b2; }
+#morePicker .mp-target .mp-chain { font-size: 12px; font-weight: 700; flex: 1; text-align: center; color: #0e7490; }
+#morePicker .mp-hint { font-size: 10px; color: #94a3b8; text-align: center; margin-top: 7px; }
+#morePicker .mp-inserted { font-size: 10px; color: #0891b2; text-align: center; margin-top: 6px; min-height: 12px; }
+#morePicker .mp-foot {
+    padding: 10px 18px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;
+}
+#morePicker .mp-foot button {
+    padding: 7px 16px; cursor: pointer; border-radius: 8px;
+    font-size: 12px; font-weight: 600; font-family: inherit;
+}
+#morePicker .mp-cancel { margin-left: auto; background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+#morePicker .mp-cancel:hover { background: #f1f5f9; }
+#morePicker .mp-ok { background: #0891b2; border: none; color: #fff; }
+#morePicker .mp-ok:hover { background: #0e7490; }
 
 /* ============================================================
    UI 图标图片（替换原 emoji：喂豆/铲子/点波/捡豆/加速）

@@ -1,12 +1,14 @@
 // ============================================================
 // 通用动作：不需要格子，直接插进顺序链
 //
-//   · 棋盘右侧的竖排按钮组（点波 / 捡豆 / 加速）。
+//   · 棋盘右侧的竖排按钮组（点波 / 捡豆 / 加速）+ 末端的「更多」。
 //   · 点一下 -> 弹窗确认插入哪条链（默认单次链，弹窗内可切换）。
 //   · 插进链里的是 key = 'ga:<id>' 的段，没有落点、没有格子。
+//   · 「更多」弹窗（#morePicker）目前只有「切换形态」，它**带参数**：
+//     槽位 1-8 + 点击次数，段形状 { key:'ga:form', ga:'form', slot:N, times:M }。
 //
-//   ⚠️ 目前只做网页端（用户要求先不动作业集）。
-//      运行时 agent/jobset 还没消费这些段，导出后暂不生效。
+//   ★ 运行时由 agent/jobset/runtime.py 的 _build_chain_nodes 消费，
+//     经 dsl.generic_dsl 编译成 BatchSwipe DSL。
 // ============================================================
 
 // 弹窗里「当前选中的目标链」（默认单次链）
@@ -61,11 +63,14 @@ function jobRenderGenTarget() {
 
 // 循环切换目标链
 //   ★ boss 关没有收尾链，所以 boss 棋盘下只在 单次 ↔ 循环 之间切。
+//   ★ 另外：如果当前目标在 boss 下不合法（比如切到 boss 时才残留着 'end'），
+//     indexOf 会返回 -1，按下标算就会**停在原地**、把 'end' 留着 —— 于是
+//     插入 boss 关的收尾链（它并不存在）。所以先规范化再切。
 function jobCycleGenTarget(step) {
     const modes = jobIsBossBoard() ? ['once', 'loop'] : ['once', 'loop', 'end'];
-    const i = modes.indexOf(jobGenTarget);
-    const next = modes[((i < 0 ? 0 : i) + (step || 1) + modes.length) % modes.length];
-    jobGenTarget = next;
+    let i = modes.indexOf(jobGenTarget);
+    if (i < 0) i = 0;                       // 非法残留 -> 从第一个合法项开始
+    jobGenTarget = modes[(i + (step || 1) + modes.length) % modes.length];
     jobRenderGenTarget();
 }
 
@@ -89,7 +94,11 @@ function jobConfirmGenPicker() {
     if (!t) { jobCloseGenPicker(); return; }
 
     const board = jobIsBossBoard() ? boardLate : boardEarly;
-    const which = jobGenTarget;
+    // ★ 兜底：boss 关没有收尾链，残留的 'end' 一律改走循环链。
+    let which = jobGenTarget;
+    if (jobIsBossBoard() && which === 'end') which = 'loop';
+    jobGenTarget = which;
+
     const field = jobChainField(which, board);
     if (!Array.isArray(t[field])) t[field] = [];
 
@@ -223,12 +232,11 @@ function jobRenderGenActionsInto(hostId) {
     // 首次填充次数角标
     jobRefreshGenCounts();
 
-    // ★ 优化5：末尾加一个「更多动作」占位（尚未开放的扩展位）
+    // ★ 优化5：「更多动作」按钮 -> 打开 #morePicker（目前弹窗里只有「切换形态」）
     const more = document.createElement('button');
     more.className = 'gen-act gen-act-more';
     more.type = 'button';
-    more.title = '更多动作（预留位，后续扩展）';
-    more.disabled = true;
+    more.title = '更多动作（切换形态）';
     const mIco = document.createElement('span');
     mIco.className = 'ga-ico';
     mIco.textContent = '＋';
@@ -237,6 +245,7 @@ function jobRenderGenActionsInto(hostId) {
     mNm.className = 'ga-name';
     mNm.textContent = '更多';
     more.appendChild(mNm);
+    more.addEventListener('click', function () { jobOpenMorePicker(); });
     box.appendChild(more);
 }
 
@@ -293,6 +302,227 @@ function jobBindGenPicker() {
 }
 
 // ============================================================
+// 「更多」弹窗（#morePicker）—— 目前只有「切换形态」
+//
+//   段形状：{ key: 'ga:form', ga: 'form', slot: N, times: M }
+//     slot  : 1-8，决定运行时点哪个「槽N切换形态」坐标
+//     times : 点击次数，填几就点几（不做形态档位换算）
+// ============================================================
+
+let jobMoreTarget = 'once';     // 目标链（默认单次链）
+let jobMoreSlot = 1;            // 选中的槽位
+let jobMoreTimes = 1;           // 点击次数
+
+function jobOpenMorePicker() {
+    const modal = document.getElementById('morePicker');
+    if (!modal) return;
+
+    const ga = (typeof JOB_FORM_ACTION !== 'undefined') ? JOB_FORM_ACTION : null;
+    jobMoreTarget = 'once';
+    jobMoreSlot = ga ? (ga.defaultSlot || 1) : 1;
+    jobMoreTimes = ga ? (ga.defaultTimes || 1) : 1;
+
+    const nm = document.getElementById('mpName');
+    const desc = document.getElementById('mpDesc');
+    const ico = document.getElementById('mpIco');
+    if (ico && ga) ico.textContent = ga.icon || '🔄';
+    if (nm && ga) nm.textContent = ga.name || '切换形态';
+    if (desc && ga) desc.textContent = ga.desc || '';
+
+    jobRenderMoreSlots();
+    jobRenderMoreTimes();
+    jobRenderMoreTarget();
+
+    modal.classList.add('mp-open');
+
+    // 回显「本次已插入 N 次」
+    const tip = document.getElementById('mpInserted');
+    if (tip) {
+        const t = jobTables[currentTable];
+        const board = jobIsBossBoard() ? boardLate : boardEarly;
+        const used = jobGenUsageIn(t, jobMoreTarget, board, 'form');
+        tip.textContent = used > 0 ? ('本次已插入 ' + used + ' 次') : '';
+    }
+}
+
+// 渲染 1-8 槽按钮
+function jobRenderMoreSlots() {
+    const box = document.getElementById('mpSlots');
+    if (!box) return;
+    box.innerHTML = '';
+
+    const max = (typeof JOB_FORM_ACTION !== 'undefined' && JOB_FORM_ACTION.slotMax)
+        ? JOB_FORM_ACTION.slotMax : 8;
+
+    for (let i = 1; i <= max; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'mp-slot' + (i === jobMoreSlot ? ' mp-slot-on' : '');
+        b.textContent = i;
+        b.dataset.slot = i;
+        b.title = '切换第 ' + i + ' 槽植物的形态';
+        b.addEventListener('click', function () {
+            jobMoreSlot = i;
+            jobRenderMoreSlots();
+        });
+        box.appendChild(b);
+    }
+}
+
+// 把次数写进输入框（夹在 1..timesMax）
+function jobRenderMoreTimes() {
+    const inp = document.getElementById('mpTimes');
+    if (inp) inp.value = String(jobMoreTimes);
+}
+
+function jobClampMoreTimes(v) {
+    const max = (typeof JOB_FORM_ACTION !== 'undefined' && JOB_FORM_ACTION.timesMax)
+        ? JOB_FORM_ACTION.timesMax : 20;
+    let n = parseInt(v, 10);
+    if (!Number.isFinite(n) || n < 1) n = 1;
+    if (n > max) n = max;
+    return n;
+}
+
+function jobRenderMoreTarget() {
+    const el = document.getElementById('mpChain');
+    if (!el) return;
+    const meta = JOB_CHAIN_META[jobMoreTarget] || JOB_CHAIN_META.once;
+    el.textContent = meta.icon + ' ' + meta.label;
+}
+
+// boss 关没有收尾链 —— 与 #genPicker 同样只在 单次 ↔ 循环 之间切。
+//   ★ 与 jobCycleGenTarget 同理：先把非法残留（'end'）规范化，
+//     否则 indexOf 返回 -1 会让它原地不动，把 'end' 带进 boss 关。
+function jobCycleMoreTarget(step) {
+    const modes = jobIsBossBoard() ? ['once', 'loop'] : ['once', 'loop', 'end'];
+    let i = modes.indexOf(jobMoreTarget);
+    if (i < 0) i = 0;
+    jobMoreTarget = modes[(i + (step || 1) + modes.length) % modes.length];
+    jobRenderMoreTarget();
+}
+
+function jobCloseMorePicker() {
+    const modal = document.getElementById('morePicker');
+    if (modal) modal.classList.remove('mp-open');
+}
+
+// 确认插入：把「切换形态」段追加到目标链末尾
+//   ★ 与 #genPicker 一致：不关弹窗，可连续插入。
+function jobConfirmMorePicker() {
+    const modal = document.getElementById('morePicker');
+    if (!modal) return;
+
+    const t = jobTables[currentTable];
+    if (!t) { jobCloseMorePicker(); return; }
+
+    // 从输入框读回次数（用户可能直接手输）
+    const inp = document.getElementById('mpTimes');
+    if (inp) jobMoreTimes = jobClampMoreTimes(inp.value);
+
+    const board = jobIsBossBoard() ? boardLate : boardEarly;
+    // ★ 兜底：boss 关没有收尾链。即使 jobMoreTarget 因为某些竞态残留成 'end'，
+    //   也绝不能往 boss 的 end_chain 里写东西 —— 那会生成一条永远不执行的链。
+    let which = jobMoreTarget;
+    if (jobIsBossBoard() && which === 'end') which = 'loop';
+    jobMoreTarget = which;
+
+    const field = jobChainField(which, board);
+    if (!Array.isArray(t[field])) t[field] = [];
+
+    // ★ 必须带 ga:'form' —— 运行时靠 key 的 'ga:' 前缀（或 type:'action'）
+    //   判定这是通用动作段，否则会被当成植物段丢弃。
+    t[field].push({
+        key: JOB_GA_PREFIX + 'form',
+        ga: 'form',
+        slot: jobMoreSlot,
+        times: jobMoreTimes
+    });
+
+    jobSaveLocal();
+    jobRenderSeqChains();
+    jobRefreshGenCounts();
+
+    const meta = JOB_CHAIN_META[which] || JOB_CHAIN_META.once;
+    const used = jobGenUsageIn(t, which, board, 'form');
+    setStatus('＋ 已插入「切换形态（槽' + jobMoreSlot + ' × ' + jobMoreTimes
+        + '）」到' + meta.short + '末尾（该链已用 ' + used + ' 次）');
+
+    const tip = document.getElementById('mpInserted');
+    if (tip) tip.textContent = '本次已插入 ' + used + ' 次';
+}
+
+let jobMorePickerBound = false;
+
+function jobBindMorePicker() {
+    if (jobMorePickerBound) return;
+    const modal = document.getElementById('morePicker');
+    if (!modal) return;
+
+    const close = document.getElementById('mpClose');
+    if (close) close.addEventListener('click', jobCloseMorePicker);
+
+    const cancel = document.getElementById('mpCancel');
+    if (cancel) cancel.addEventListener('click', jobCloseMorePicker);
+
+    const ok = document.getElementById('mpOk');
+    if (ok) ok.addEventListener('click', jobConfirmMorePicker);
+
+    // 点击遮罩关闭
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) jobCloseMorePicker();
+    });
+
+    // 次数：加减按钮
+    const down = document.getElementById('mpTimesDown');
+    const up = document.getElementById('mpTimesUp');
+    if (down) down.addEventListener('click', function () {
+        jobMoreTimes = jobClampMoreTimes(jobMoreTimes - 1);
+        jobRenderMoreTimes();
+    });
+    if (up) up.addEventListener('click', function () {
+        jobMoreTimes = jobClampMoreTimes(jobMoreTimes + 1);
+        jobRenderMoreTimes();
+    });
+
+    // 次数：手输 —— 失焦/回车时夹取，避免用户留下 0 或 999
+    const inp = document.getElementById('mpTimes');
+    if (inp) {
+        inp.addEventListener('blur', function () {
+            jobMoreTimes = jobClampMoreTimes(inp.value);
+            jobRenderMoreTimes();
+        });
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                jobMoreTimes = jobClampMoreTimes(inp.value);
+                jobRenderMoreTimes();
+                jobConfirmMorePicker();
+            }
+        });
+    }
+
+    // 目标链：左右箭头 / 点击整行 / 右键，都能循环切换
+    const prev = document.getElementById('mpPrev');
+    const next = document.getElementById('mpNext');
+    const row  = document.getElementById('mpTargetRow');
+    if (prev) prev.addEventListener('click', function (e) { e.stopPropagation(); jobCycleMoreTarget(-1); });
+    if (next) next.addEventListener('click', function (e) { e.stopPropagation(); jobCycleMoreTarget(1); });
+    if (row) {
+        row.addEventListener('click', function () { jobCycleMoreTarget(1); });
+        row.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            jobCycleMoreTarget(-1);
+        });
+    }
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') jobCloseMorePicker();
+    });
+
+    jobMorePickerBound = true;
+}
+
+// ============================================================
 // 自调用 + 自愈：任何时机被清空都能重新补上
 // ============================================================
 (function bootGenActions() {
@@ -306,6 +536,8 @@ function jobBindGenPicker() {
         catch (e) { console.error('[gen-actions] 渲染失败:', e); }
         try { jobBindGenPicker(); }
         catch (e) { console.error('[gen-picker] 绑定失败:', e); }
+        try { jobBindMorePicker(); }
+        catch (e) { console.error('[more-picker] 绑定失败:', e); }
     }
 
     // ① 立即跑一次（脚本在 body 末尾，DOM 已就绪）

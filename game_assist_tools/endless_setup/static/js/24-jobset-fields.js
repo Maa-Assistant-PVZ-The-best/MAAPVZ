@@ -66,6 +66,22 @@ const JOB_GENERIC_ACTIONS = [
     { id: 'speed', name: '加速', icon: '⏩', img: JOB_UI_IMG.speed, desc: '切换加速' }
 ];
 
+// ★ 「切换形态」：不在棋盘右侧按钮组里，而是从末端「更多」按钮的弹窗插入。
+//   它是一个**带参数**的通用动作（槽位 1-8 + 点击次数），所以不能直接塞进
+//   JOB_GENERIC_ACTIONS —— 那个按钮组的弹窗（#genPicker）只处理无参动作。
+//   放在这里是为了让 jobGenericActionById / jobGenericActionOfKey 认它，
+//   导出（27-jobset-board.js）和 chip 渲染才能正确识别为通用动作段。
+const JOB_FORM_ACTION = {
+    id: 'form', name: '切换形态', icon: '🔄', img: '',
+    desc: '切换指定槽位植物的形态（可设点击次数）',
+    hasSlot: true, hasTimes: true,
+    defaultSlot: 1, defaultTimes: 1,
+    slotMax: 8, timesMax: 20
+};
+
+// 可按 id 取到的全部通用动作（含不在按钮组里的「切换形态」）
+const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION]);
+
 // ★ 「等待」：不再是可插入的通用动作，但依然是合法的链段。
 //   seg.ms = 毫秒数，导出成 BatchSwipe 的 sleep（秒）。
 //   插入入口只有「某一步旁边的 ⏱」。
@@ -77,10 +93,10 @@ const JOB_WAIT_ACTION = {
 // 通用动作的段前缀
 const JOB_GA_PREFIX = 'ga:';
 
-// 按 id 取动作定义（含「等待」——它仍是合法链段，只是不在按钮组里）
+// 按 id 取动作定义（含「等待」和「切换形态」——它们仍是合法链段，只是不在按钮组里）
 function jobGenericActionById(id) {
     if (id === JOB_WAIT_ACTION.id) return JOB_WAIT_ACTION;
-    return JOB_GENERIC_ACTIONS.filter(function (a) { return a.id === id; })[0] || null;
+    return JOB_ALL_GENERIC_ACTIONS.filter(function (a) { return a.id === id; })[0] || null;
 }
 
 // 可在「通用动作按钮组」里直接插入的动作（不含等待）

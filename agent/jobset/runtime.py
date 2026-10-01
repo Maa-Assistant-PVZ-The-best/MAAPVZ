@@ -893,9 +893,15 @@ class JobSetFight(CustomAction):
                 key = str(seg.get("key") or "").strip()
                 typ = str(seg.get("type") or "plant").lower()
 
-                # ---- 通用动作段（点波/捡豆/加速/等待）：没有格子，整段 = 一条 DSL ----
+                # ---- 通用动作段（点波/捡豆/加速/等待/切换形态）：没有格子，整段 = 一条 DSL ----
                 if typ == "action" or key.startswith("ga:"):
-                    r = _dsl.generic_dsl(seg.get("action") or key, coords, seg.get("ms"))
+                    r = _dsl.generic_dsl(
+                        seg.get("action") or key,
+                        coords,
+                        seg.get("ms"),
+                        seg.get("slot"),
+                        seg.get("times"),
+                    )
                     if r["dsl"]:
                         parts.append(r["dsl"])
                     for m in r["missing"]:

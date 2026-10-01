@@ -154,6 +154,51 @@
     </div>
 </div>
 
+<!-- ============ 「更多」动作 -> 切换形态弹窗 ============ -->
+<div id="morePicker">
+    <div class="mp-panel">
+        <div class="mp-head">
+            <span class="mp-dot"></span>
+            <span class="mp-title">更多动作</span>
+            <button class="mp-close" id="mpClose" title="关闭">✕</button>
+        </div>
+        <div class="mp-body">
+            <!-- 目前弹窗里只有「切换形态」一项 -->
+            <div class="mp-act">
+                <span class="mp-ico" id="mpIco">🔄</span>
+                <div>
+                    <div class="mp-name" id="mpName">切换形态</div>
+                    <div class="mp-desc" id="mpDesc">切换指定槽位植物的形态</div>
+                </div>
+            </div>
+
+            <div class="mp-label">切换哪个槽位的形态？</div>
+            <div class="mp-slots" id="mpSlots"><!-- 1-8 槽按钮，由 JS 渲染 --></div>
+
+            <div class="mp-label">切换几次？</div>
+            <div class="mp-times">
+                <button class="mp-step" id="mpTimesDown" title="减一">−</button>
+                <input class="mp-times-input" id="mpTimes" type="number" min="1" max="20" step="1" value="1">
+                <button class="mp-step" id="mpTimesUp" title="加一">＋</button>
+                <span class="mp-times-hint">填 1 就点 1 次，填 2 就点 2 次</span>
+            </div>
+
+            <div class="mp-label">插入到哪条链？</div>
+            <div class="mp-target" id="mpTargetRow">
+                <span class="mp-arrow" id="mpPrev" title="上一条链">◀</span>
+                <span class="mp-chain" id="mpChain">1️⃣ 单次链（先执行一遍）</span>
+                <span class="mp-arrow" id="mpNext" title="下一条链">▶</span>
+            </div>
+            <div class="mp-hint">点击 / 右键可切换目标链（收尾链仅普通关有）</div>
+            <div class="mp-inserted" id="mpInserted"></div>
+        </div>
+        <div class="mp-foot">
+            <button class="mp-cancel" id="mpCancel">取消</button>
+            <button class="mp-ok" id="mpOk">确认插入</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 补给选取弹窗（堆叠卡片 + 图库，都在这里） ============ -->
 <div id="supplyPicker">
     <div class="sp-panel">

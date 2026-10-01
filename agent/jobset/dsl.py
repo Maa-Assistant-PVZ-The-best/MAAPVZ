@@ -160,6 +160,7 @@ def find_feed_point(coords: Dict[str, Any]) -> Optional[str]:
 #   bean  捡豆 —— 5 根手指从「N阳光起始点」滑到「N阳光终点」（时长 100ms）
 #   speed 加速 —— 点击「加速」
 #   wait  等待 —— 不需要坐标，直接翻成 sleep:秒（毫秒来自网页端输入框）
+#   form  切换形态 —— 点击「槽N切换形态」N 次（次数来自网页端输入框）
 #
 # 坐标键来自 agent/assets/resource/coords.json（顶层，无前缀）。
 # ---------------------------------------------------------------------------
@@ -169,6 +170,13 @@ GENERIC_CLICK_KEY = {
     "wave": "下一波",
     "speed": "加速",
 }
+
+# 切换形态：每个槽位一个按钮（coords.json 顶层键「槽N切换形态」，N=1..8）。
+# 点击该按钮即为切换对应槽位植物的形态。
+GENERIC_FORM_SLOT_MAX = 8
+
+# 切换次数上限 —— 防止用户误填 999 把整条链拖垮。
+GENERIC_FORM_TIMES_MAX = 20
 
 # 捡豆：要滑的 5 条线（起始点键, 终点键）
 GENERIC_BEAN_LINES = [
@@ -200,11 +208,43 @@ def _as_seconds(ms: Any, fallback: float) -> float:
     return sec
 
 
-def generic_dsl(action: str, coords: Dict[str, Any], ms: Any = None) -> Dict[str, Any]:
+def _clamp_int(value: Any, lo: int, hi: int, fallback: int) -> int:
+    """把网页端来的值夹到 [lo, hi]；非法/缺失时用 fallback。"""
+    try:
+        n = int(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(lo, min(hi, n))
+
+
+def form_point(coords: Dict[str, Any], slot: Any) -> Optional[str]:
+    """槽位号（1..8）-> 「槽N切换形态」坐标键名；越界/缺失返回 None。
+
+    ★ 越界**不夹取**：slot=9 不能悄悄退化成 8 —— 那会点错槽位的按钮。
+      越界一律返回 None，由调用方记 missing，宁可不点也不点错。
+    """
+    try:
+        n = int(slot)
+    except (TypeError, ValueError):
+        return None
+    if not 1 <= n <= GENERIC_FORM_SLOT_MAX:
+        return None
+    return _coord_any(coords, f"槽{n}切换形态")
+
+
+def generic_dsl(
+    action: str,
+    coords: Dict[str, Any],
+    ms: Any = None,
+    slot: Any = None,
+    times: Any = None,
+) -> Dict[str, Any]:
     """把一个通用动作翻成 BatchSwipe DSL。
 
-    action: wave / bean / speed / wait（也接受作业集里的 'ga:wave' 形式）
+    action: wave / bean / speed / wait / form（也接受作业集里的 'ga:wave' 形式）
     ms:     仅 wait 用 —— 等待的毫秒数（网页端输入框填的值），缺省/非法时用 1000ms
+    slot:   仅 form 用 —— 槽位号 1..8（决定点哪个「槽N切换形态」）
+    times:  仅 form 用 —— 点击次数，缺省/非法/越界时用 1（上限见 GENERIC_FORM_TIMES_MAX）
     返回 {"dsl": str, "missing": [...], "count": int}
     """
     aid = str(action or "").strip()
@@ -226,6 +266,19 @@ def generic_dsl(action: str, coords: Dict[str, Any], ms: Any = None) -> Dict[str
         #   网页端填的是毫秒（默认 1000），这里换算成秒 —— 1ms 精度会保留。
         sec = _as_seconds(ms, 1.0)
         parts.append(f"sleep:{sec:g}")
+
+    elif aid == "form":
+        # ★ 切换形态：点击「槽N切换形态」按钮 times 次。
+        #   不做形态档位换算 —— 用户填几次就点几次（由用户自己在链里插「等待」控制节奏）。
+        key = form_point(coords, slot)
+        if key is None:
+            missing.append(
+                f"form：槽位 {slot!r} 无效或坐标表缺少「槽N切换形态」(N=1.."
+                f"{GENERIC_FORM_SLOT_MAX})"
+            )
+        else:
+            n = _clamp_int(times, 1, GENERIC_FORM_TIMES_MAX, 1)
+            parts.extend([f"click:{key}"] * n)
 
     elif aid == "bean":
         lines: List[str] = []
@@ -361,9 +414,15 @@ def chain_dsl(
         typ = str(seg.get("type") or "plant").lower()
         slot = seg.get("slot")
 
-        # ★ 通用动作段（点波/捡豆/加速/等待）：没有格子，走单独分支
+        # ★ 通用动作段（点波/捡豆/加速/等待/切换形态）：没有格子，走单独分支
         if typ == "action":
-            r = generic_dsl(seg.get("action") or seg.get("key"), coords, seg.get("ms"))
+            r = generic_dsl(
+                seg.get("action") or seg.get("key"),
+                coords,
+                seg.get("ms"),
+                seg.get("slot"),
+                seg.get("times"),
+            )
             if r["dsl"]:
                 parts.append(r["dsl"])
             missing.extend(r["missing"])
