@@ -1,0 +1,453 @@
+{
+    "ruin_snake_前期_识别boss关": {
+        "recognition": "ColorMatch",
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "roi": [
+            723,
+            56,
+            17,
+            22
+        ],
+        "rate_limit": 10,
+        "anchor": {
+            "下一个动作": "ruin_snake_boss_前期_识别开始"
+        },
+        "next": [
+            "通用_无尽_补给识别"
+        ]
+    },
+    "ruin_snake_boss_前期_识别开始": {
+        "recognition": "OCR",
+        "expected": "开始战斗",
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "timeout": 60000,
+        "next": [
+            "ruinsnake_boss_前期_判断是否进入关内"
+        ]
+    },
+    "ruinsnake_boss_前期_判断是否进入关内": {
+        "recognition": "ColorMatch",
+        "rate_limit": 10,
+        "roi": [
+            467,
+            669,
+            27,
+            27
+        ],
+        "method": 4,
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "timeout": 10000,
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "post_delay": 0,
+        "pre_delay": 0,
+        "duration": 10,
+        "next": [
+            "ruinsnake_boss_加速"
+        ]
+    },
+    "ruinsnake_boss_加速": {
+        "action": "Click",
+        "post_delay": 0,
+        "target": [
+            1171,
+            37
+        ],
+        "next": [
+            "ruinsnake_boss_前期_铲子"
+        ]
+    },
+    "ruinsnake_boss_前期_铲子": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_铲子位置",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_抛花1"
+        ]
+    },
+    "ruinsnake_boss_前期_抛花1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇1"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子4_4",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇2"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子4_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇3"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇4"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_4",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇5"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_3",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇6"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_2",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_种胆小菇7"
+        ]
+    },
+    "ruinsnake_boss_前期_种胆小菇7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_1",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_喂豆胆小菇2"
+        ]
+    },
+    "ruinsnake_boss_前期_喂豆胆小菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "post_delay": 4000,
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_boss_前期_抛花2"
+        ]
+    },
+    "ruinsnake_boss_前期_抛花2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_前期_喂豆胆小菇3"
+        ]
+    },
+    "ruinsnake_boss_前期_喂豆胆小菇3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "post_delay": 4000,
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_boss_前期_抛花3"
+        ]
+    },
+    "ruinsnake_boss_前期_抛花3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "anchor": {
+            "下一个动作": "ruinsnake_boss_前期_过渡"
+        },
+        "next": [
+            "ruinsnake_boss_前期_过渡"
+        ]
+    },
+    "ruinsnake_boss_前期_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 2000,
+        "next": [
+            "通用_无尽_识别结算",
+            "ruinsnake_前期_识别开始战斗",
+            "ruinsnake_boss_前期_喂豆胆小菇3"
+        ]
+    },
+    "ruin_snake_后期_识别boss关": {
+        "recognition": "ColorMatch",
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "roi": [
+            723,
+            56,
+            17,
+            22
+        ],
+        "rate_limit": 10,
+        "anchor": {
+            "下一个动作": "ruin_snake_boss_后期_识别开始"
+        },
+        "next": [
+            "通用_无尽_补给识别"
+        ]
+    },
+    "ruin_snake_boss_后期_识别开始": {
+        "recognition": "OCR",
+        "expected": "开始战斗",
+        "roi": [
+            1060,
+            647,
+            201,
+            59
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "timeout": 60000,
+        "next": [
+            "ruinsnake_boss_后期_判断是否进入关内"
+        ]
+    },
+    "ruinsnake_boss_后期_判断是否进入关内": {
+        "recognition": "ColorMatch",
+        "rate_limit": 10,
+        "roi": [
+            467,
+            669,
+            27,
+            27
+        ],
+        "method": 4,
+        "lower": [
+            148,
+            213,
+            8
+        ],
+        "upper": [
+            168,
+            233,
+            28
+        ],
+        "timeout": 10000,
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "duration": 10,
+        "post_delay": 0,
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_boss_后期_加速"
+        ]
+    },
+    "ruinsnake_boss_后期_加速": {
+        "action": "Click",
+        "target": [
+            1171,
+            37
+        ],
+        "next": [
+            "ruinsnake_boss_后期_铲子"
+        ]
+    },
+    "ruinsnake_boss_后期_铲子": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_铲子位置",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_抛花1"
+        ]
+    },
+    "ruinsnake_boss_后期_抛花1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇1"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子4_4",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇2"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子4_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇3"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇4"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_4",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇5"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_3",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇6"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇6": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_2",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_种胆小菇7"
+        ]
+    },
+    "ruinsnake_boss_后期_种胆小菇7": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子6_1",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_喂豆胆小菇2"
+        ]
+    },
+    "ruinsnake_boss_后期_喂豆胆小菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "post_delay": 4000,
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_boss_后期_抛花2"
+        ]
+    },
+    "ruinsnake_boss_后期_抛花2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_boss_后期_喂豆胆小菇3"
+        ]
+    },
+    "ruinsnake_boss_后期_喂豆胆小菇3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子5_3",
+        "post_delay": 4000,
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_boss_后期_抛花3"
+        ]
+    },
+    "ruinsnake_boss_后期_抛花3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子1_5",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "anchor": {
+            "下一个动作": "ruinsnake_boss_后期_过渡"
+        },
+        "next": [
+            "ruinsnake_boss_后期_过渡"
+        ]
+    },
+    "ruinsnake_boss_后期_过渡": {
+        "action": "DoNothing",
+        "pre_delay": 2000,
+        "next": [
+            "通用_无尽_识别结算",
+            "ruinsnake_后期_识别开始战斗",
+            "ruinsnake_boss_后期_喂豆胆小菇3"
+        ]
+    },
+}

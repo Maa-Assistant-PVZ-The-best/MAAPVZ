@@ -1,0 +1,308 @@
+{
+    "ruin_snake_1关": {
+        "action": "DoNothing",
+        "timeout": 60000,
+        "next": [
+            "ruinsnake_识别开始战斗"
+        ]
+    },
+    "ruinsnake_识别开始战斗": {
+        "recognition": "OCR",
+        "expected": "开始战斗",
+        "roi": [
+            1038,
+            630,
+            230,
+            84
+        ],
+        "threshold": 0.75,
+        "action": "Click",
+        "next": [
+            "ruinsnake_种蛇果1"
+        ]
+    },
+    "ruinsnake_种蛇果1": {
+        "recognition": "ColorMatch",
+        "roi": [
+            467,
+            669,
+            27,
+            27
+        ],
+        "method": 4,
+        "lower": [
+            156,
+            223,
+            16
+        ],
+        "upper": [
+            156,
+            223,
+            16
+        ],
+        "timeout": 10000,
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子1_3",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种蛇果2"
+        ]
+    },
+    "ruinsnake_种蛇果2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第五个槽位",
+        "end": "种植物_初始化_格子2_3",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种瓷砖1"
+        ]
+    },
+    "ruinsnake_种瓷砖1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子1_3",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种瓷砖2"
+        ]
+    },
+    "ruinsnake_种瓷砖2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子2_3",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种瓷砖3"
+        ]
+    },
+    "ruinsnake_种瓷砖3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第四个槽位",
+        "end": "种植物_初始化_格子1_4",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种能量花1"
+        ]
+    },
+    "ruinsnake_种能量花1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子2_5",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种能量花2"
+        ]
+    },
+    "ruinsnake_种能量花2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子3_5",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种能量花3"
+        ]
+    },
+    "ruinsnake_种能量花3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子3_4",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种能量花4"
+        ]
+    },
+    "ruinsnake_种能量花4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第一个槽位",
+        "end": "种植物_初始化_格子2_4",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种胆小菇1"
+        ]
+    },
+    "ruinsnake_种胆小菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_1",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种胆小菇2"
+        ]
+    },
+    "ruinsnake_种胆小菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_2",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种胆小菇3"
+        ]
+    },
+    "ruinsnake_种胆小菇3": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_3",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种胆小菇4"
+        ]
+    },
+    "ruinsnake_种胆小菇4": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_4",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种胆小菇5"
+        ]
+    },
+    "ruinsnake_种胆小菇5": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第六个槽位",
+        "end": "种植物_初始化_格子5_5",
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种守卫菇1"
+        ]
+    },
+    "ruinsnake_种守卫菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子4_3",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_喂豆守卫菇1"
+        ]
+    },
+    "ruinsnake_喂豆守卫菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子4_3",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_种守卫菇2"
+        ]
+    },
+    "ruinsnake_种守卫菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第八个槽位",
+        "end": "种植物_初始化_格子2_2",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_喂豆守卫菇2"
+        ]
+    },
+    "ruinsnake_喂豆守卫菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子2_2",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_种心叶兰"
+        ]
+    },
+    "ruinsnake_种心叶兰": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第七个槽位",
+        "end": "种植物_初始化_格子3_2",
+        "pre_delay": 0,
+        "next": [
+            "ruinsnake_种球果1"
+        ]
+    },
+    "ruinsnake_种球果1": {
+        "action": "Click",
+        "target": [
+            161,
+            261
+        ],
+        "repeat": 2,
+        "pre_delay": 0,
+        "post_delay": 50,
+        "next": [
+            "ruinsnake_种球果2"
+        ]
+    },
+    "ruinsnake_种球果2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_第三个槽位",
+        "end": "种植物_初始化_格子1_4",
+        "next": [
+            "ruinsnake_喂豆球果"
+        ]
+    },
+    "ruinsnake_喂豆球果": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_能量豆位置",
+        "end": "种植物_初始化_格子1_4",
+        "post_delay": 0,
+        "next": [
+            "ruinsnake_铲守卫菇1"
+        ]
+    },
+    "ruinsnake_铲守卫菇1": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_铲子位置",
+        "end": "种植物_初始化_格子4_3",
+        "pre_delay": 400,
+        "next": [
+            "ruinsnake_铲守卫菇2"
+        ]
+    },
+    "ruinsnake_铲守卫菇2": {
+        "action": "Swipe",
+        "begin": "种植物_初始化_铲子位置",
+        "end": "种植物_初始化_格子2_2",
+        "post_delay": 50,
+        "pre_delay": 50,
+        "next": [
+            "ruinsnake_点波"
+        ]
+    },
+    "ruinsnake_点波": {
+        "action": "Click",
+        "target": [
+            1223,
+            218,
+            1,
+            3
+        ],
+        "repeat": 250,
+        "post_delay": 10,
+        "pre_delay": 10,
+        "next": [
+            "ruinsnake_点葫芦"
+        ]
+    },
+    "ruinsnake_点葫芦": {
+        "action": "Click",
+        "target": "神器_初始化_神器位置",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "next": [
+            "ruinsnake_开葫芦"
+        ]
+    },
+    "ruinsnake_开葫芦": {
+        "action": "Click",
+        "target": "神器_初始化_葫芦小体型",
+        "anchor": {
+            "下一个动作": "ruinsnake_2-51关"
+        },
+        "next": [
+            "通用_无尽_识别结算"
+        ]
+    }
+}

@@ -1,0 +1,98 @@
+{
+    "ruinsnake_跳转后期": {
+        "recognition": {
+            "type": "ColorMatch",
+            "param": {
+                "method": 40,
+                "lower": [
+                    15,
+                    75,
+                    125
+                ],
+                "upper": [
+                    38,
+                    94,
+                    255
+                ],
+                "roi": [
+                    555,
+                    61,
+                    414,
+                    81
+                ]
+            }
+        },
+        "action": "DoNothing",
+        "next": [
+            "ruinsnake_识别天数",
+            "ruinsnake_前期_喂豆球果"
+        ]
+    },
+    "ruinsnake_识别天数": {
+        "recognition": "OCR",
+        "expected": [
+            "51"
+        ],
+        "replace": [
+            [
+                "g",
+                "9"
+            ],
+            [
+                "G",
+                "6"
+            ],
+            [
+                "s",
+                "5"
+            ],
+            [
+                "S",
+                "5"
+            ]
+        ],
+        "roi": [
+            555,
+            61,
+            414,
+            81
+        ],
+        "color_filter": "frame_wj_custom_过滤文字颜色",
+        "pre_delay": 0,
+        "post_delay": 0,
+        "anchor": {
+            "下一个动作": "ruinsnake_51-149关"
+        },
+        "next": [
+            "ruinsnake_点暂停"
+        ]
+    },
+    "ruinsnake_点暂停": {
+        "action": "Click",
+        "target": [
+            1237,
+            33,
+            13,
+            12
+        ],
+        "next": [
+            "ruinsnake_点重新开始"
+        ]
+    },
+    "ruinsnake_点重新开始": {
+        "recognition": "OCR",
+        "expected": [
+            "重新开始"
+        ],
+        "roi": [
+            532,
+            470,
+            222,
+            157
+        ],
+        "action": "Click",
+        "next": [
+            "ruinsnake_51-149关"
+        ]
+    }
+}

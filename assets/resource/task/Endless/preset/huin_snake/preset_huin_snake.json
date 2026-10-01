@@ -1,0 +1,39 @@
+{
+    "option": {
+        "huin_snake_关卡选择": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "第一关布阵",
+                    "pipeline_override": {
+                        "RuinSnakeEntry": {
+                            "anchor": {
+                                "初始化": "ruin_snake_1关"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "前期:2-51关",
+                    "pipeline_override": {
+                        "RuinSnakeEntry": {
+                            "anchor": {
+                                "初始化": "ruinsnake_2-51关"
+                            }
+                        }
+                    }
+                },
+                {
+                    "name": "后期:51-149关",
+                    "pipeline_override": {
+                        "RuinSnakeEntry": {
+                            "anchor": {
+                                "初始化": "ruinsnake_51-149关"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
