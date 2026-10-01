@@ -48,8 +48,15 @@ function jobLoadLocal() {
                 const k = 'card' + s;
                 if (!t.slotModes[k]) t.slotModes[k] = 'loop';
             }
-            if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
-            if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+            // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）由注册表驱动补默认值
+            if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
+                JOB_BOARD_ACTIONS.forEach(function (act) {
+                    if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'loop';
+                });
+            } else {
+                if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
+                if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+            }
             if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
             // boss 关独立配置（旧缓存没有 -> 保持 null，boss 关只等结算）
             if (t.bossSlotModes === undefined) t.bossSlotModes = {};
@@ -108,6 +115,7 @@ function jobInit() {
     jobBindEndParams();                 // 收尾参数面板的输入监听
     jobRenderEndParams();               // 初始显隐（按当前棋盘是否有收尾落子）
     jobRenderSlots();
+    jobBindBoardMore();                 // 左侧落子区「更多」弹窗的事件绑定
     // 键盘快捷键：W/S 切换槽位，F 切换该槽位的形态（= 所属的链）
     jobInstallSlotHotkeys();
     // ⚠️ 必须带 catch：jobLoadPlants 内部是 fetch('/plants')，一旦失败 Promise 会静默 reject，

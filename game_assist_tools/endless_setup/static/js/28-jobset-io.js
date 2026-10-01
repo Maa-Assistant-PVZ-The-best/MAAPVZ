@@ -118,8 +118,15 @@ function jobApplyLoaded(job, code) {
         if (!Array.isArray(t.boardLate)) t.boardLate = [];
         if (!t.slotModes || typeof t.slotModes !== 'object') t.slotModes = {};
         for (let s = 1; s <= 8; s++) { const k = 'card' + s; if (!t.slotModes[k]) t.slotModes[k] = 'loop'; }
-        if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
-        if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+        // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）由注册表驱动补默认值
+        if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
+            JOB_BOARD_ACTIONS.forEach(function (act) {
+                if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'loop';
+            });
+        } else {
+            if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
+            if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+        }
         if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
         // ---- boss 关独立配置 ----
         // ★ 旧作业集没有 boss* 字段 -> **保持 null**，boss 关只会等结算、不做种植。

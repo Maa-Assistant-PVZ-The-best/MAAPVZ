@@ -6,8 +6,18 @@
 let seqDrag = null;   // { kind, key, which, ... } 正在拖动的槽 / 等待 / 单株
 let jobSeqSel = {};   // 顺序链里勾选的落点：{ 'once:card1#3': {key,gidx,which}, ... }（用于批量拖出）
 
-// 一个槽的稳定标识：植物槽是 'card<N>'，另外两条是 'feed' / 'shovel'
-function jobSlotKeyOf(s) { return (s === 'feed' || s === 'shovel') ? s : ('card' + s); }
+// 一个槽的稳定标识：植物槽是 'card<N>'，落子动作（喂豆/铲子/点击格子…）
+// 直接用它的 id。
+//   ★ 由注册表驱动：新增落子动作自动被认出来，不需要在这里加分支。
+//     （以前写死 feed|shovel，新动作会被错认成 'card<数字>'。）
+function jobSlotKeyOf(s) {
+    if (typeof jobBoardActionById === 'function' && jobBoardActionById(s)) return String(s);
+    if (typeof jobBoardActionByArmedNo === 'function') {
+        const act = jobBoardActionByArmedNo(s);
+        if (act) return act.id;
+    }
+    return 'card' + s;
+}
 
 // 该槽在棋盘上是否落了子
 function jobSlotHasPlacement(board, key) {
@@ -36,13 +46,71 @@ function jobCollectSlot(board, scopeId) {
     return out;
 }
 
-// 全部槽位键：槽1~8 + 喂豆 + 铲子
+// 全部槽位键：槽1~8 + 所有注册的落子动作（喂豆/铲子/点击格子/未来扩展）
+//   ★ 落子动作来自 JOB_BOARD_ACTIONS 注册表（15-board-actions.js）——
+//     新增一个动作会自动出现在这里，本函数不需要改。
 function jobAllSlotKeys() {
     const a = [];
     for (let s = 1; s <= 8; s++) a.push('card' + s);
-    a.push('feed');
-    a.push('shovel');
+    if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
+        JOB_BOARD_ACTIONS.forEach(function (act) {
+            if (act && act.id) a.push(act.id);
+        });
+    } else {
+        a.push('feed');       // 注册表没加载时的兜底
+        a.push('shovel');
+    }
     return a;
+}
+
+// 该槽位键是不是「落子动作」（喂豆/铲子/点击格子…），是则返回定义
+function jobBoardActionOfKey(key) {
+    if (typeof jobBoardActionById !== 'function') return null;
+    return jobBoardActionById(key);
+}
+
+// 该槽位键是不是「点一下格子」类的动作（不需要卡槽起点）
+function jobIsTapKey(key) {
+    const act = jobBoardActionOfKey(key);
+    return !!act && act.dslType === 'tap';
+}
+
+// 该槽位键在「所有形态」下的落点总数（用于判断要不要显示它的 chip）
+//   boss 关没有收尾，所以那里只数 once/loop。
+function jobPlacementCountAllModes(key, boss) {
+    const modes = boss ? ['once', 'loop'] : JOB_SLOT_MODES;
+    const board = boss ? boardLate : boardEarly;
+    let n = 0;
+    modes.forEach(function (m) {
+        n += jobPlacementsOf(board, key, m).length;
+    });
+    return n;
+}
+
+// ★ 落子动作是否「在棋盘里」——决定它要不要**常驻**在左侧面板。
+//
+//   规则（用户要求）：
+//     · 「更多」里选过的动作，只要**该关棋盘上还留着它的落子**，就常驻显示；
+//     · 否则不显示（左侧保持干净），W/S 也**不能**循环到它。
+//     · 普通关与 boss 关**各自独立**统计 —— 各自读自己的那张 board，
+//       所以在普通关放了「点击格子」不会让 boss 关也常驻，反之亦然。
+//     · 与形态无关：单次 / 循环 / 收尾 任意一种形态下落了子都算
+//       （boss 关没有收尾，只数 once/loop）。
+//
+//   注意 boardEarly / boardLate 是全局棋盘引用，跟当前 tab 无关 ——
+//   所以必须显式传 boss，不能依赖 jobIsBossBoard()（那只反映当前 tab）。
+function jobBoardActionHasPlacement(act) {
+    if (!act) return false;
+    const key = act.id || act;
+    return jobPlacementCountAllModes(key, jobIsBossBoard()) > 0;
+}
+
+// W/S 可否循环到某个落子动作 —— 内置动作（喂豆/铲子）永远可以；
+// 扩展动作必须已落在当前关的棋盘上。
+function jobBoardActionCycleable(act) {
+    if (!act) return false;
+    if (act.builtin) return true;
+    return jobBoardActionHasPlacement(act);
 }
 
 // 该槽当前的放置形态：'once'（单次）| 'loop'（循环，默认）| 'end'（收尾）

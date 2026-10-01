@@ -154,16 +154,39 @@
     </div>
 </div>
 
-<!-- ============ 「更多」动作 -> 切换形态弹窗 ============ -->
+<!-- ============ 「更多」动作 -> 动作列表（第一级） ============ -->
+<div id="moreList">
+    <div class="ml-panel">
+        <div class="ml-head">
+            <span class="ml-dot"></span>
+            <span class="ml-title">更多动作</span>
+            <button class="ml-close" id="mlClose" title="关闭">✕</button>
+        </div>
+        <div class="ml-body" id="mlBody"><!-- 由 JS 按 JOB_MORE_ACTIONS 渲染 --></div>
+    </div>
+</div>
+
+<!-- ============ 棋盘落子「更多」-> 动作列表 ============ -->
+<div id="boardMoreList">
+    <div class="bml-panel">
+        <div class="bml-head">
+            <span class="bml-dot"></span>
+            <span class="bml-title">更多落子动作</span>
+            <button class="bml-close" id="bmlClose" title="关闭">✕</button>
+        </div>
+        <div class="bml-body" id="bmlBody"><!-- 由 JS 按 JOB_BOARD_MORE_ACTIONS 渲染 --></div>
+    </div>
+</div>
+
+<!-- ============ 「更多」动作 -> 参数弹窗（第二级） ============ -->
 <div id="morePicker">
     <div class="mp-panel">
         <div class="mp-head">
             <span class="mp-dot"></span>
-            <span class="mp-title">更多动作</span>
+            <span class="mp-title" id="mpTitle">更多动作</span>
             <button class="mp-close" id="mpClose" title="关闭">✕</button>
         </div>
         <div class="mp-body">
-            <!-- 目前弹窗里只有「切换形态」一项 -->
             <div class="mp-act">
                 <span class="mp-ico" id="mpIco">🔄</span>
                 <div>
@@ -172,16 +195,8 @@
                 </div>
             </div>
 
-            <div class="mp-label">切换哪个槽位的形态？</div>
-            <div class="mp-slots" id="mpSlots"><!-- 1-8 槽按钮，由 JS 渲染 --></div>
-
-            <div class="mp-label">切换几次？</div>
-            <div class="mp-times">
-                <button class="mp-step" id="mpTimesDown" title="减一">−</button>
-                <input class="mp-times-input" id="mpTimes" type="number" min="1" max="20" step="1" value="1">
-                <button class="mp-step" id="mpTimesUp" title="加一">＋</button>
-                <span class="mp-times-hint">填 1 就点 1 次，填 2 就点 2 次</span>
-            </div>
+            <!-- ★ 参数区：由 JS 按动作定义的 params 自动渲染（见 24-jobset-fields.js） -->
+            <div class="mp-params" id="mpParams"></div>
 
             <div class="mp-label">插入到哪条链？</div>
             <div class="mp-target" id="mpTargetRow">
@@ -193,6 +208,7 @@
             <div class="mp-inserted" id="mpInserted"></div>
         </div>
         <div class="mp-foot">
+            <button class="mp-back" id="mpBack">← 返回</button>
             <button class="mp-cancel" id="mpCancel">取消</button>
             <button class="mp-ok" id="mpOk">确认插入</button>
         </div>
@@ -459,6 +475,7 @@
 <script src="/static/js/03-slot-remarks.js"></script>
 <script src="/static/js/04-cards.js"></script>
 <script src="/static/js/05-render-ops.js"></script>
+<script src="/static/js/15-board-actions.js"></script>
 <script src="/static/js/06-switches.js"></script>
 <script src="/static/js/07-right-controls.js"></script>
 <script src="/static/js/08-board-data.js"></script>

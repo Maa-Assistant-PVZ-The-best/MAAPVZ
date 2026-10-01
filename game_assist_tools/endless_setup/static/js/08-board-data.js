@@ -5,6 +5,12 @@
 let cols = 9, rows = 5;
 let boardEarly = [], boardLate = [];
 
+// ★ 单格最多渲染多少个标记（植物 + 落子动作合计）。
+//   CSS 只定义了 job-p1..job-p9 这 9 个坐标（3×3 摆满），第 10 个起没有定位，
+//   硬渲染会全部堆在同一处。所以渲染封顶 9 个，多出来的用「+N」角标表示。
+//   ⚠️ 改这个值必须同步改 CSS 里的 .job-pN 定位规则。
+const JOB_CELL_MAX_MARKS = 9;
+
 function initBoards() {
     boardEarly = Array.from({length: rows}, () => Array(cols).fill(null).map(() => []));
     boardLate = Array.from({length: rows}, () => Array(cols).fill(null).map(() => []));
@@ -111,11 +117,17 @@ function renderBoard(gridId, boardData, isLate) {
         d.setAttribute('data-tooltip', '点击放置选中的操作，右键清空该格');
         d.setAttribute('data-tooltip-delay', '1000');
 
-        // 同格图标总数（植物 + 喂豆 + 铲子）→ 决定缩略图分档
+        // 同格图标总数（植物 + 所有落子动作标记）→ 决定缩略图分档
+        //   ★ 落子动作由注册表判定，新增动作自动计入。
+        //   ★ 放开重复落子后可能超过 9 个：CSS 只有 3×3（job-n9）这一档最满，
+        //     所以**最多只渲染 9 个**，多出来的在右下角显示「+N」角标。
+        //     （9 个封顶 = JOB_CELL_MAX_MARKS，别和 CSS 的 job-p9 搞混）
         const _pc = cellItems.filter(function (it) {
-            return it.plant || it.type === 'feed' || it.type === 'shovel';
+            if (it.plant) return true;
+            if (typeof jobBoardActionOfKey === 'function' && jobBoardActionOfKey(it.id)) return true;
+            return it.type === 'feed' || it.type === 'shovel';   // 兜底
         }).length;
-        if (_pc > 0) d.classList.add('job-n' + Math.min(_pc, 9));   // 同格多图标 → 略缩图分档
+        if (_pc > 0) d.classList.add('job-n' + Math.min(_pc, JOB_CELL_MAX_MARKS));
 
         let _pIdx = 0;   // 植物序号：决定缩略图落在 2×2 / 3×3 网格的第几格
         // 渲染顺序：先按形态（单次在前）、再按槽号、再按槽内序号
@@ -134,6 +146,10 @@ function renderBoard(gridId, boardData, isLate) {
             return qa - qb;
         });
         _ordered.forEach(item => {
+            // ★ 同格最多渲染 9 个（3×3 摆满），多余的只在末尾显示「+N」角标。
+            //   CSS 的 job-p1..job-p9 只定义了 9 个坐标，第 10 个起没有定位，
+            //   渲染出来会全堆在一起 —— 不如直接不渲染，用角标表达。
+            if (_pIdx >= JOB_CELL_MAX_MARKS) return;
             const _im = jobItemMode(item);
             const _mcls = (_im === 'once') ? ' is-once' : ' is-loop';
             if (item.plant) {
@@ -168,28 +184,42 @@ function renderBoard(gridId, boardData, isLate) {
                 return;
             }
             const tag = document.createElement('span');
-            // 喂豆 / 铲子 也参与缩略图排序：与植物一样带 job-p{序号}
-            const _isFeed = (item.type === 'feed');
-            const _isShovel = (item.type === 'shovel');
-            if (_isFeed || _isShovel) {
+            // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）统一按「图片标记」渲染。
+            //   判定与图标都来自 15-board-actions.js 的注册表 ——
+            //   新增动作不需要改这里。
+            const _act = (typeof jobBoardActionOfKey === 'function')
+                ? jobBoardActionOfKey(item.id) : null;
+            if (_act) {
                 _pIdx++;
-                tag.className = 'tag ' + item.type + ' job-p' + _pIdx + _mcls;
-            } else {
-                tag.className = 'tag ' + item.type + _mcls;
-            }
-            // 喂豆 / 铲子等标记：图片展示（喂豆→绿底能量豆，铲子→铲子）
-            if (_isFeed) {
+                // ★ 加统一的 job-mark 类：CSS 靠它给所有落子动作标记
+                //   统一的「绝对定位 + 透明底 + 按 job-n 分档尺寸」，
+                //   这样新增动作不需要再回 CSS 里补一条规则。
+                tag.className = 'tag job-mark ' + item.type + ' job-p' + _pIdx + _mcls;
+                const ai = document.createElement('img');
+                ai.src = jobBoardActionImg(_act);
+                // ★ 用**统一类名** job-mark-img：CSS 靠它给 width/height。
+                //   不要再按动作分 tag-feed-img / tag-shovel-img ——
+                //   那种「父 .tag.<type> + 子 .tag-*-img」配对选择器很容易脱钩，
+                //   一旦不命中，图片就退回原始尺寸（如 500×500），
+                //   被 .cell{overflow:hidden} 裁成「只剩中心一小块」。
+                ai.className = 'job-mark-img';
+                ai.alt = _act.name;
+                ai.draggable = false;
+                ai.onerror = function () { tag.textContent = item.label || item.id; };
+                tag.appendChild(ai);
+            } else if (item.type === 'feed') {
+                // 兼容旧数据里没有注册表定义的情况
                 const fi = document.createElement('img');
                 fi.src = (typeof JOB_UI_IMG !== 'undefined' && JOB_UI_IMG.feed) ? JOB_UI_IMG.feed : '';
-                fi.className = 'tag-feed-img';
+                fi.className = 'job-mark-img';
                 fi.alt = '喂豆';
                 fi.draggable = false;
                 fi.onerror = function () { tag.textContent = item.label || item.id; };
                 tag.appendChild(fi);
-            } else if (_isShovel) {
+            } else if (item.type === 'shovel') {
                 const si = document.createElement('img');
                 si.src = (typeof JOB_UI_IMG !== 'undefined' && JOB_UI_IMG.shovel) ? JOB_UI_IMG.shovel : '';
-                si.className = 'tag-shovel-img';
+                si.className = 'job-mark-img';
                 si.alt = '铲子';
                 si.draggable = false;
                 si.onerror = function () { tag.textContent = item.label || item.id; };
@@ -207,6 +237,16 @@ function renderBoard(gridId, boardData, isLate) {
             }
             d.appendChild(tag);
         });
+
+        // ★ 超过 9 个的溢出提示：右下角红底「+N」
+        if (_pc > JOB_CELL_MAX_MARKS) {
+            const ov = document.createElement('span');
+            ov.className = 'job-overflow';
+            ov.textContent = '+' + (_pc - JOB_CELL_MAX_MARKS);
+            ov.title = '本格还有 ' + (_pc - JOB_CELL_MAX_MARKS) + ' 个未显示（共 ' + _pc + ' 个）';
+            d.appendChild(ov);
+        }
+
         // 落子高亮闪光（同样只在落子那一次）
         if (jobLastDrop && jobLastDrop.r === r && jobLastDrop.c === c) {
             d.classList.add('job-flash');
@@ -243,9 +283,10 @@ function renderBoard(gridId, boardData, isLate) {
             const tc = parseInt(d.dataset.c);
             if (typeof jobArmedSlot === 'number' && jobArmedSlot > 0) {
                 if (placePlantOnBoard(boardData, jobArmedSlot, tr, tc)) {
-                    const _dropId = (jobArmedSlot === 9) ? 'feed'
-                                  : (jobArmedSlot === 10) ? 'shovel'
-                                  : 'card' + jobArmedSlot;
+                    // ★ 落子动作的 id 由注册表决定（喂豆/铲子/点击格子/扩展…）
+                    const _actDrop = (typeof jobBoardActionByArmedNo === 'function')
+                        ? jobBoardActionByArmedNo(jobArmedSlot) : null;
+                    const _dropId = _actDrop ? _actDrop.id : 'card' + jobArmedSlot;
                     jobLastDrop = { r: tr, c: tc, id: _dropId };
                     renderAllBoards();
                     updatePreview();
@@ -302,6 +343,10 @@ function renderAllBoards() {
     renderBoard('gridEarly', boardEarly, false);
     renderBoard('gridLate', boardLate, true);
     jobRenderSeqChains();   // 棋盘变化后同步刷新顺序链条
+    // ★ 左侧槽位区也要跟着刷新：扩展落子动作（点击格子…）的「常驻」
+    //   取决于**棋盘上还有没有它的落子** —— 刚落下第一个 / 刚清掉最后一个时，
+    //   按钮要立刻出现 / 消失，否则它和 W-S 的可达性会对不上。
+    try { jobRenderSlots(); } catch (e) { console.warn('[board] jobRenderSlots', e); }
     jobRenderEndParams();
 }
 
@@ -467,6 +512,17 @@ function initTabs() {
                     }
                 } catch (e) { console.warn('[tab] 归一化 boss 收尾形态失败', e); }
             }
+            // ★ 普通关 / boss 关的落子动作**各自独立**：
+            //   扩展动作（点击格子…）的「常驻」看的是各自棋盘的落子。
+            //   若切换 tab 时仍arm着上一关的扩展动作，它会因为 isArmed 而
+            //   在新关上「凭空常驻 / 被 W-S 循环到」——所以在切 tab 时清掉选中。
+            //   （内置的喂豆/铲子不受影响：它们本来就常驻。）
+            try {
+                if (typeof jobBoardActionByArmedNo === 'function') {
+                    const _a = jobBoardActionByArmedNo(jobArmedSlot);
+                    if (_a && !_a.builtin) jobArmedSlot = 0;
+                }
+            } catch (e) { console.warn('[tab] 清理跨关选中失败', e); }
             safe(renderOps, target);
             safe(renderQuickSwitches, target);
             safe(renderSlotRemarks);

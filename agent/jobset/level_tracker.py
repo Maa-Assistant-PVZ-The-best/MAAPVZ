@@ -1,30 +1,46 @@
 # -*- coding: utf-8 -*-
-"""关卡计数器 + 得分期望状态机（纯逻辑，可离线单测）。
+"""关卡计数器（纯逻辑，可离线单测）。
 
-背景
-----
-无尽挑战**允许中途插入**：用户可能从第 55 关进去，而 55 的 OCR 很容易被认成
-56 / 57。单帧 OCR 不可信，所以用「计数器为主、OCR 为验证信号」的融合策略：
+背景 / 为什么砍掉了 OCR
+-----------------------
+旧版是「OCR 融合器」：靠 OCR 读游戏里的天数，再用得分期望（`penalty=30`、
+自洽判断、锚点重同步）去兜住 OCR 的误读。那套机制复杂度极高，而根源是
+**OCR 本身不稳**（实测会把 81 读成 21、87 读成 89）。
 
-    predicted = count + 1
-    raw == predicted        -> 验证通过，score += +20（封顶 100），count = raw
-    |raw - predicted| <= T  -> 疑似抖动，score -= 10，count 不变（重新识别）
-    其它                    -> 偏差过大，score -= 10，count = predicted（信任计数器）
+现在改成**纯计数器**：
 
-    score 升到 100  -> 进入「纯计数器模式」：count += 1，不再依赖 OCR
-    score 触底 0    -> 回头信任 OCR：count = raw，score 回升（避免计数器一路跑偏）
+    用户在 MAA option 里填「起始关卡」
+        ↓
+    点「继续挑战 / 继续训练」-> 计数器 +1
+        ↓
+    进 boss 关 -> 强制对齐到最近的 5 的倍数（自愈）
 
-每次重新开始任务都要重置（用户可能关掉 maafw 自己手打几关再用脚本）。
+★ 为什么这样就够：**「点继续挑战」这个事件本身不依赖数字 OCR**，
+  它是结算画面的按钮识别（模板/文字匹配），比数字识别可靠得多。
+  而 boss 关的判定也是**头像模板匹配**（僵王的头 / 功夫僵王），同样可靠。
+  两者都是「是/否」判断，不是「读出一个数」，误差模型完全不同。
 
-你给的例子
-----------
-    实际 55，OCR 错认成 57（首次识别）
-        count=57, score=50
-    下一关实际 56，OCR = 56
-        predicted = 58，raw = 56 -> 偏差 2 -> score 50-10=40，count 保持 57（重识别）
-    再识别仍得 56，predicted 仍是 58
-        如果容差 T=2 且我们允许「重识别」直接采信……
-        -> 该场景见 test_level_tracker.py，此处策略按「连续错 -> 信任 OCR」收敛
+★ 重开为什么不再需要 `rollback_one`：
+  重开走的是 `通用_重开_暂停`，**不经过「点继续挑战」**，
+  所以计数器天然不会被多推一格 —— 不需要再手动退格。
+  （旧版的 `rollback_one` 是为了抵消「重开后又识别一次天数」而存在的，
+    识别没了，它也就没有存在意义了。）
+
+自愈：boss 关对齐
+-----------------
+boss 关恒定出现在 5 的倍数关。所以每次进 boss 关都是**一次校准机会**：
+
+    计数器 56，进 boss 关 -> 就近取 5 的倍数 -> 60
+
+这和旧版「就近取 5 的倍数」是同一个思路，只是**输入从 OCR 换成了计数器**。
+偏差 <= 2 时能纠正到正确值；偏差更大就会对齐到相邻的 boss 关 ——
+这是用户已知并接受的（属于用户填错起始关卡的问题），日志会如实打印。
+
+保留但不再依赖
+--------------
+`rollback_one` / `clear_anchor` / `observe` 等旧接口保留为**兼容垫片**
+（`selfcheck.py` 与其它调用点还在用），但内部语义已简化：
+`observe(raw)` 现在**忽略 raw**，只做「计数 +1」。
 """
 
 from __future__ import annotations
@@ -33,107 +49,68 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 # ---------------------------------------------------------------------------
-# 默认参数（都可在 JobSetLevel 的 custom_action_param 里覆盖）
+# 默认参数
 # ---------------------------------------------------------------------------
-
-DEFAULT_INIT_SCORE = 50      # 首次识别后的初始分
-DEFAULT_SCORE_MAX = 100      # 达到即转纯计数器
-DEFAULT_SCORE_MIN = 0        # 触底即回头信任 OCR
-DEFAULT_GAIN = 30            # 验证通过加分（连贯 +1）
-DEFAULT_TOLERANCE = 2        # |raw - predicted| <= 容差 视为「抖动」
-
-# 验证失败扣分（跳变）
-#
-# ★ 为什么是 30（不是 10，也不是 50）
-# ---------------------------------------------------------------
-# 基准帧读错一次（例如把 81 认成 21）之后，比对基准 anchor 就被钉在错误的
-# 值上，此后每一帧**正确的** OCR 都会被算成「偏差过大」。要爬出来只能靠
-# 「分数触底 -> 回头信 OCR」（observe 的 trust_ocr 分支）。
-#
-#   50 - 10 = 40 -> 40 - 10 = 30 -> ... 要扣 **5 次**才触底，太慢
-#   50 - 50 = 0                             扣 **1 次**就触底，太快
-#
-# 50 的问题是：任何**单帧** OCR 误读（delta 稍大于容差，例如真实87读成89、
-# delta=5）都会立刻触底并把错误值采信进来 —— 把「计数器跑偏」修好了，
-# 却换来「OCR 偶发误读被固化」。
-#
-# 30 取中间：50 - 30 = 20，20 - 30 = 0 -> **第 2 次**触底。
-#   · 计数器跑偏（持续偏离）：第 2 帧就纠正，不再干等 resync
-#   · OCR 偶发误读（单帧）：只会扣分，不动 count（第 1 帧扛得住）
-#   · 连续 3 帧都对不上：才认输并采信 OCR（这时通常确实有问题）
-#
-# 实测三种场景见 _zzan / 提交说明；正常过关与抖动不受影响
-# （它们的 delta <= 容差，根本不走扣分分支）。
-DEFAULT_PENALTY = 30
 
 DEFAULT_MIN_LEVEL = 1
 DEFAULT_MAX_LEVEL = 149
+
+# boss 关对齐的倍数（boss 关恒定出现在 5 的倍数关）
+BOSS_SNAP = 5
+
+# 「就近取 5 的倍数」能容忍的最大偏差。超过它就会对齐到相邻的 boss 关。
+#
+#   BOSS_SNAP // 2 = 2 —— 与 int(round(x/5))*5 的行为一致：
+#     偏差 0..2 -> 就近那个 boss（正确）
+#     偏差 3..   -> 会落到相邻的 boss
+BOSS_SNAP_TOLERANCE = BOSS_SNAP // 2
 
 
 @dataclass
 class LevelState:
     """可序列化的状态快照（便于日志 / 跨动作传递）。"""
     count: int = 0
-    score: int = DEFAULT_INIT_SCORE
-    locked: bool = False            # True = 已进入纯计数器模式
     stage: int = 0                  # 当前所属表序号（0 起）
-    samples: List[int] = field(default_factory=list)   # 最近的原始识别值
+    last_verdict: str = "init"      # init/tick/snap/reset
+    # 上一次「点继续挑战」时的关卡，仅用于日志展示（本关 -> 下一关）
+    last_before_tick: Optional[int] = None
+    # boss 关对齐的最近一次记录（给日志/排查用）
+    last_snap: Optional[Dict[str, Any]] = None
+    # 兼容旧快照的字段（不再有语义，保留以免旧代码 KeyError）
+    score: int = 0
+    locked: bool = True
+    samples: List[int] = field(default_factory=list)
     last_raw: Optional[int] = None
     last_predicted: Optional[int] = None
-    # ★ 「锚点」= 上一次**被采信**的 OCR 值。
-    #   后续的「匹配」判定以 last_anchor + 1 为基准，而不是 count + 1。
-    #   这样即使中途跳关（12 -> 49），只要 OCR 连续，基准就跟着真实关卡走。
     last_anchor: Optional[int] = None
-    # 连续「对不上」的次数。用于判断是偶发抖动还是计数器真的跑偏。
     consecutive_bad: int = 0
-    last_verdict: str = "init"      # init/agree/disagree/trust_ocr/trust_counter/resync/tick
-    # ★ 纯计数模式下，上一次「进关时」读到的天数。
-    #   用来分辨「过关（天数变了）」和「重开（天数没变）」：
-    #     相同 -> 重开，计数不动
-    #     不同 / 没读到 -> 过关，计数 +1
     locked_last_raw: Optional[int] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "count": self.count,
-            "score": self.score,
-            "locked": self.locked,
             "stage": self.stage,
-            "last_raw": self.last_raw,
-            "last_predicted": self.last_predicted,
-            "last_anchor": self.last_anchor,
-            "consecutive_bad": self.consecutive_bad,
             "last_verdict": self.last_verdict,
-            "locked_last_raw": self.locked_last_raw,
-            "samples": list(self.samples[-8:]),
+            "last_before_tick": self.last_before_tick,
+            "last_snap": self.last_snap,
         }
 
 
 class LevelTracker:
-    """关卡融合器：OCR 原始值 -> 可信关卡号。"""
+    """纯关卡计数器：起始关卡 -> 逐关推进 -> boss 关对齐。"""
 
     def __init__(
         self,
-        init_score: int = DEFAULT_INIT_SCORE,
-        score_max: int = DEFAULT_SCORE_MAX,
-        score_min: int = DEFAULT_SCORE_MIN,
-        gain: int = DEFAULT_GAIN,
-        penalty: int = DEFAULT_PENALTY,
-        tolerance: int = DEFAULT_TOLERANCE,
+        start_level: int = 0,
         min_level: int = DEFAULT_MIN_LEVEL,
         max_level: int = DEFAULT_MAX_LEVEL,
     ):
-        self.init_score = int(init_score)
-        self.score_max = int(score_max)
-        self.score_min = int(score_min)
-        self.gain = int(gain)
-        self.penalty = int(penalty)
-        self.tolerance = max(0, int(tolerance))
         self.min_level = int(min_level)
         self.max_level = int(max_level)
-
-        self.state = LevelState(score=self.init_score)
+        self.state = LevelState(locked=True)
         self.log: List[str] = []
+        if start_level:
+            self.reset(start_level)
 
     # -- 内部 --------------------------------------------------------------
 
@@ -149,256 +126,161 @@ class LevelTracker:
     def count(self) -> int:
         return self.state.count
 
-    @property
-    def score(self) -> int:
-        return self.state.score
-
-    @property
-    def locked(self) -> bool:
-        return self.state.locked
-
     # -- 生命周期 ----------------------------------------------------------
 
-    def reset(self) -> None:
-        """重新开始任务时调用：全部清零。"""
-        self.state = LevelState(score=self.init_score)
-        self._note("重置：计数器与得分期望已清零")
+    def reset(self, start_level: Optional[int] = None) -> None:
+        """重置计数器。
+
+        给了 start_level 就用它当起点（用户填的「起始关卡」）；
+        没给则清零。**不再依赖 OCR 基准帧。**
+        """
+        st = self.state
+        if start_level is None:
+            st.count = 0
+            st.last_verdict = "reset"
+            self._note("重置：计数清零（未指定起始关卡）")
+            return
+        st.count = self._clamp(int(start_level))
+        st.last_verdict = "init"
+        st.last_before_tick = None
+        self._note(f"起始关卡 = {st.count}（由用户指定，不再做 OCR 识别）")
 
     def rollback_one(self) -> int:
-        """重开（换阵容）后回退一关：count -= 1，**分数不变**。
+        """**兼容垫片**：旧版用于抵消「重开后又识别一次天数」。
 
-        为什么需要它：换阵容时脚本会「重开」当前关，重开后打的还是同一关，
-        但管道会再走一次天数识别 -> 计数器会被多推一格。
-        所以重开路径上要显式回退，且不该扣分（这不是识别错误）。
-
-        锚点（last_anchor）**不回退**：它记的是「上次 OCR 读到的真实值」，
-        重开后再识别到的仍是同一关，锚点保持原值才能让下一次比对成立。
+        新版重开不经过「点继续挑战」，计数器不会多推，所以正常流程
+        **不应再调用这个**。保留它只为兼容旧调用点 / 旧自测。
         """
         st = self.state
         if st.count > self.min_level:
             st.count = self._clamp(st.count - 1)
-            self._note(f"重开回退 -> count={st.count}（分数保持 {st.score}）")
+            self._note(f"回退 -> count={st.count}")
         else:
-            self._note(f"重开回退：已在最小关 {st.count}，保持不变")
+            self._note(f"回退：已在最小关 {st.count}，保持不变")
         st.last_verdict = "rollback"
         return st.count
 
     def clear_anchor(self) -> None:
-        """清掉锚点 —— 换阵容后想让下一次识别重新做基准时调用。"""
-        self.state.last_anchor = None
-        self._note("锚点已清除，下一次识别将作为新基准")
+        """**兼容垫片**：新版没有锚点概念，空实现。"""
 
     # -- 主入口 ------------------------------------------------------------
 
-    def observe(self, raw: Optional[int], first: bool = False) -> int:
-        """喂入一次 OCR 原始天数，返回融合后的可信关卡号。
+    def tick(self) -> int:
+        """过关一次：计数器 +1，返回新关卡号。
 
-        参数
-        ----
-        raw   : OCR 读到的天数；None 表示本帧没认出来
-        first : **本次任务的第一次识别**（基准帧）。为 True 时无条件采信 raw，
-                用它作为起始关卡并重置分数。由调用方（JobSetStage）在任务首次
-                调用时显式传入，不靠 count<=0 推断——因为上一次任务可能残留
-                了 count，靠推断会误判。
-
-        规则（得分匹配模式）
-        ------------------
-        首次（first=True）  : count = raw，score 重置为初始分
-        未识别（raw=None）  : 不比分，计数器 +1
-        纯计数模式（locked）: 计数器 +1，忽略 OCR
-        常规                : 与「**上次识别值 + 1**」比对
-                               相等            -> score += 加分，count = raw
-                               |差| <= 容差    -> score -= 扣分，count 不动（重识别）
-                               否则            -> score -= 扣分
-                                                  触底 -> count = raw（回头信 OCR）
-                                                  否则 -> count = 上次识别值 + 1
+        ★ 调用时机：**点完「继续挑战 / 继续训练」之后**。
+          用户给的语义：「只要点了就必定是下一关了」——
+          所以这里不需要任何判断，点了就 +1。
+          （重开不会走到这里，天然不会误加。）
         """
         st = self.state
-
-        # ---- 基准帧：无条件采信 ----
-        if first:
-            if raw is None:
-                self._note("基准帧未识别到天数 -> 等待下一次识别")
-                st.last_verdict = "init_wait"
-                return st.count
-            raw = self._clamp(int(raw))
-            st.count = raw
-            st.last_raw = raw
-            st.last_predicted = raw
-            st.last_anchor = raw          # ★ 基准帧也要设锚点，否则后续比对没有依据
-            st.score = self.init_score
-            st.locked = False
-            st.samples.append(raw)
-            st.last_verdict = "init"
-            self._note(f"基准识别（本次任务首个天数）-> count={raw}, score={st.score}")
-            return st.count
-
-        # ---- 没认出来：靠计数器走一格 ----
-        if raw is None:
-            if st.count <= 0:
-                st.last_verdict = "init"
-                st.last_raw = None
-                self._note("OCR 未识别，且计数器尚未起步 -> 维持 0")
-                return st.count
-            st.count = self._clamp(st.count + 1)
-            st.last_raw = None
-            st.last_predicted = st.count
-            st.last_verdict = "tick"
-            self._note(f"OCR 未识别 -> 计数器推进到 {st.count}（score={st.score}）")
-            return st.count
-
-        raw = self._clamp(int(raw))
-        st.last_raw = raw
-        st.samples.append(raw)
-
-        # ---- 纯计数器模式：不再看 OCR（但仍用「天数是否变化」分辨重开）----
-        #
-        # ★ 为什么要读天数：纯计数只会 +1，分不清「过关」和「重开」——
-        #   重开打的还是同一关，却也 +1，计数器就慢慢跑偏。
-        #
-        #   判据：天数**与上次相同** = 重开（不 +1）；不同或没读到 = 过关（+1）。
-        #   这个判断对 OCR 准确度要求极低 —— 只要「同一关读到同一个值」就够了，
-        #   偶尔读错也不影响（下次读到不同值照样 +1）。
-        if st.locked:
-            if st.locked_last_raw is not None and raw == st.locked_last_raw:
-                # 天数没变 -> 重开，计数不动
-                st.last_predicted = st.count
-                st.last_verdict = "restart"
-                self._note(
-                    f"纯计数器：天数仍为 {raw}（判定重开）-> 计数保持 {st.count}"
-                )
-            else:
-                st.count = self._clamp(st.count + 1)
-                st.last_predicted = st.count
-                st.last_verdict = "tick"
-                self._note(f"纯计数器（{st.locked_last_raw} -> {raw}）-> {st.count}")
-            st.locked_last_raw = raw
-            return st.count
-
-        # ---- 还没有基准（既非 first 也没识别过）：直接采信 ----
-        if st.count <= 0 or st.last_anchor is None:
-            st.count = raw
-            st.score = self.init_score
-            st.last_predicted = raw
-            st.last_anchor = raw
-            st.last_verdict = "init"
-            self._note(f"首次识别 -> count={raw}, score={st.score}")
-            return st.count
-
-        # ---- ★ 天数与上次「完全相同」= 重开：不增不减 ----
-        #
-        # 重开打的还是同一关，天数一模一样。这不是识别错误，不该扣分；
-        # 也不是推进，不该加分/计数。
-        # 放在「+1 比对」之前，避免被当成「抖动」扣 10 分。
-        base0 = st.last_anchor if st.last_anchor is not None else st.count
-        if raw == base0:
-            st.last_verdict = "restart"
-            st.consecutive_bad = 0
-            self._note(f"天数仍为 {raw}（判定重开）-> 计数与分数均不变")
-            return st.count
-
-        # ---- 常规：与「上次识别值 + 1」比对 ----
-        # ★ 比对基准是**上次 OCR 读到的值**（anchor），不是计数器推算值。
-        #   这样只要 OCR 连续，基准就跟着真实关卡走，支持中途跳关。
-        base = st.last_anchor if st.last_anchor is not None else st.count
-        predicted = self._clamp(base + 1)
-        st.last_predicted = predicted
-        delta = abs(raw - predicted)
-
-        if raw == predicted:
-            st.score = min(self.score_max, st.score + self.gain)
-            st.count = raw
-            st.last_anchor = raw          # 基准前移
-            st.consecutive_bad = 0
-            st.last_verdict = "agree"
-            self._note(f"验证通过 {raw}（score={st.score}）")
-            if st.score >= self.score_max:
-                st.locked = True
-                st.locked_last_raw = raw
-                self._note(
-                    f"得分达 {st.score} -> 进入纯计数器模式"
-                    f"（此后靠「天数是否变化」分辨过关/重开）"
-                )
-            return st.count
-
-        if delta <= self.tolerance:
-            # 抖动：计数与基准都不动，等下次重识别
-            st.score = max(self.score_min, st.score - self.penalty)
-            st.consecutive_bad += 1
-            st.last_verdict = "disagree"
-            self._note(
-                f"抖动 raw={raw} vs 预测={predicted}（容差{self.tolerance}）"
-                f" -> 扣分 score={st.score}，计数保持 {st.count}"
-            )
-            self._post_penalty(st, raw)
-            return st.count
-
-        # ---- 偏差过大 ----
-        # ★ 关键改进：连续多次 OCR 都对不上，而且这几帧的 OCR **自己是连贯的**
-        #   （每帧 +1），说明不是噪声，而是计数器真的跑偏了（例如中途跳关）。
-        #   这时应该重新采信 OCR，把基准重设到 OCR 上。
-        if self._ocr_self_consistent():
-            st.count = raw
-            st.last_anchor = raw
-            st.score = self.init_score
-            st.consecutive_bad = 0
-            st.locked = False
-            st.last_verdict = "resync"
-            self._note(
-                f"OCR 连续自洽（{st.samples[-3:]}）-> 判定计数器跑偏，"
-                f"重设基准 count={raw}，score 重置为 {st.score}"
-            )
-            return st.count
-
-        st.score = max(self.score_min, st.score - self.penalty)
-        st.consecutive_bad += 1
-
-        if st.score <= self.score_min:
-            # 分数触底 -> 无条件回头信 OCR
-            st.count = raw
-            st.last_anchor = raw
-            st.score = self.init_score
-            st.consecutive_bad = 0
-            st.last_verdict = "trust_ocr"
-            self._note(
-                f"偏差过大且分数触底 -> 回头信任 OCR，count={raw}，"
-                f"score 重置为 {st.score}"
-            )
-        else:
-            st.count = predicted
-            st.last_verdict = "trust_counter"
-            self._note(
-                f"偏差过大 raw={raw} vs 预测={predicted} -> 信任计数器 {st.count}"
-                f"（score={st.score}）"
-            )
+        st.last_before_tick = st.count
+        st.count = self._clamp(st.count + 1)
+        st.last_verdict = "tick"
+        self._note(f"过关：{st.last_before_tick} -> {st.count}")
         return st.count
 
-    def _ocr_self_consistent(self) -> bool:
-        """最近几次 OCR 是否「自己连成一条 +1 的序列」。
+    def observe(self, raw: Optional[int] = None, first: bool = False) -> int:
+        """**兼容垫片**：旧版入口（喂 OCR 值）。
 
-        用来区分两种情况：
-          · OCR 是噪声（值乱跳）        -> 不该信，继续用计数器
-          · OCR 是稳定的真实关卡（连续 +1）-> 该信，计数器跑偏了
+        ★ 新版**忽略 raw** —— 没有 OCR 了。
+          · first=True  -> 只把计数器初始化（若 raw 有效则用作起始关卡）
+          · 其余        -> 等价于 tick()（过关 +1）
+
+        保留它是为了让旧调用点（`JobSetStage` 的过渡期）与旧自测不至于
+        立刻崩掉；新代码请直接用 `reset()` / `tick()` / `snap_boss()`。
         """
-        s = [x for x in self.state.samples[-3:] if x is not None]
-        if len(s) < 3:
-            return False
-        return s[1] == s[0] + 1 and s[2] == s[1] + 1
+        if first:
+            self.reset(raw if (raw and raw > 0) else None)
+            return self.count
+        return self.tick()
 
-    def _post_penalty(self, st: LevelState, raw: int) -> None:
-        """抖动分支的共同收尾：判断是否触底回头信 OCR。"""
-        if st.score <= self.score_min:
-            st.count = raw
-            st.last_anchor = raw
-            st.score = self.init_score
-            st.consecutive_bad = 0
-            st.locked = False
-            st.last_verdict = "trust_ocr"
-            self._note(f"分数触底 -> 回头信任 OCR，count={raw}")
+    # -- boss 关对齐（唯一且主要的自愈机制）---------------------------------
 
-    def rebase(self, raw: Optional[int]) -> int:
-        """把「本次任务的第一次识别」重置为基准（等价 observe(..., first=True)）。"""
-        return self.observe(raw, first=True)
+    def snap_boss(self) -> Dict[str, Any]:
+        """进入 boss 关时把计数器对齐到最近的 5 的倍数。
+
+        返回一份「本次对齐结果」，给调用方打印**用户可见**的日志用：
+
+            {
+              "before": 56,          # 对齐前的计数器
+              "after": 60,           # 对齐后
+              "snapped": True,       # 是否发生了偏移
+              "offset": 4,           # 偏了多少（after - before）
+              "too_far": False,      # 偏差是否超出容忍（>2，可能对到相邻 boss）
+            }
+        """
+        st = self.state
+        before = st.count
+        if before <= 0:
+            # 计数器还没起步 —— 无从对齐，如实记一笔
+            res = {
+                "before": before, "after": before,
+                "snapped": False, "offset": 0, "too_far": False,
+                "skipped": "计数器尚未起步",
+            }
+            st.last_snap = res
+            st.last_verdict = "snap"
+            self._note("boss 关：计数器为 0，跳过对齐")
+            return res
+
+        after = int(round(before / float(BOSS_SNAP))) * BOSS_SNAP
+        after = max(BOSS_SNAP, min(self.max_level, after))
+
+        offset = after - before
+        too_far = abs(offset) > BOSS_SNAP_TOLERANCE
+
+        st.count = after
+        st.last_verdict = "snap"
+        res = {
+            "before": before, "after": after,
+            "snapped": (after != before),
+            "offset": offset, "too_far": too_far, "skipped": "",
+        }
+        st.last_snap = res
+
+        if after != before:
+            self._note(
+                f"boss 关对齐：{before} -> {after}"
+                + (f"（偏差 {offset:+d}，已超容忍 ±{BOSS_SNAP_TOLERANCE}，"
+                   f"可能对到了相邻 boss 关，请检查起始关卡）" if too_far else "")
+            )
+        else:
+            self._note(f"boss 关对齐：{before} 已是 {BOSS_SNAP} 的倍数，不变")
+        return res
+
+    def snap_boss_message(self, res: Dict[str, Any]) -> List[str]:
+        """把 `snap_boss()` 的结果翻成**给用户看的**日志行。
+
+        用户要求（原话）：
+            「识别到 boss 关时直接偏移过去，并在用户可观测的日志层面输出：
+              boss关，当前关卡数：xxx
+              若计数器的关卡数是 56，则检测到关卡数有误，已自动偏移，
+              boss关，当前关卡数：xxx」
+
+        ★ 每次进 boss 关都会输出第一行（即使没偏移）——
+          这样用户能看到「每 5 关校准一次且正确」，这正是他要的检查能力。
+        """
+        after = res.get("after", 0)
+        lines: List[str] = []
+        if res.get("skipped"):
+            lines.append(f"boss关，当前关卡数：{after}（{res['skipped']}）")
+            return lines
+
+        lines.append(f"boss关，当前关卡数：{after}")
+        if res.get("snapped"):
+            if res.get("too_far"):
+                lines.append(
+                    f"⚠️ 计数器为 {res['before']}，与 boss 关（{BOSS_SNAP} 的倍数）"
+                    f"相差 {abs(res['offset'])}，已自动偏移到 {after}；"
+                    f"偏差超过 ±{BOSS_SNAP_TOLERANCE}，请核对起始关卡"
+                )
+            else:
+                lines.append(
+                    f"检测到关卡数有误，已自动偏移"
+                    f"（{res['before']} → {after}），boss关，当前关卡数：{after}"
+                )
+        return lines
 
     # -- 只读 --------------------------------------------------------------
 
@@ -407,23 +289,63 @@ class LevelTracker:
 
     def describe(self) -> str:
         st = self.state
-        mode = "纯计数器" if st.locked else "融合"
-        return (
-            f"关卡={st.count} 分数={st.score}/{self.score_max} 模式={mode} "
-            f"判定={st.last_verdict}"
-        )
+        return f"关卡={st.count} 判定={st.last_verdict}"
+
+    def status_line(self, table: Any = None, is_boss: bool = False) -> str:
+        """给「日志弹窗」用的一行状态（在点「开始战斗」时刷新）。
+
+            当前关卡: 87    当前表: 表2 (50~99)    本关: 普通关
+        """
+        lv = self.state.count
+        kind = "boss关" if is_boss else "普通关"
+        if table is None:
+            return f"当前关卡: {lv}    本关: {kind}"
+        try:
+            rng = (f"{table.from_level}~{table.to_level}"
+                   if getattr(table, "to_level", None) is not None
+                   else f"{table.from_level}~")
+            return (f"当前关卡: {lv}    "
+                    f"当前表: 表{int(table.index) + 1} ({rng})    "
+                    f"本关: {kind}")
+        except Exception:
+            return f"当前关卡: {lv}    本关: {kind}"
 
 
 def from_params(param: Dict[str, Any]) -> LevelTracker:
-    """从 custom_action_param 构造（缺省值全部走 DEFAULT_*）。"""
+    """从 custom_action_param 构造。
+
+    ★ 起始关卡的来源是 MAA option「无尽_起始关卡」（用户自己配的），
+      它的 pipeline_override 会把值填进 `起始关卡` 这个键。
+
+    要防御的三种「没填」形态（都会导致计数器从 0 起）：
+      · 键不存在          -> option 没配 / 没选中
+      · 空串 ""           -> option 的 default 是空
+      · 占位符未替换      -> pipeline_override 里写的是 "{起始关卡}"，
+                             但该 option 没被应用，于是原样传了进来
+    """
     param = param if isinstance(param, dict) else {}
+    start = param.get("起始关卡")
+
+    # 占位符没被替换的情况：MAA 没应用这个 option
+    if isinstance(start, str) and start.strip() in ("{起始关卡}", ""):
+        start = None
+
+    try:
+        start = int(start) if start not in (None, "") else 0
+    except (TypeError, ValueError):
+        start = 0
+
+    # 越界一律当「没填」（play safe）：0 / 负数 / 超出 max_level 都不合理
+    max_level = param.get("最大关", DEFAULT_MAX_LEVEL)
+    try:
+        max_level = int(max_level)
+    except (TypeError, ValueError):
+        max_level = DEFAULT_MAX_LEVEL
+    if not (DEFAULT_MIN_LEVEL <= start <= max_level):
+        start = 0
+
     return LevelTracker(
-        init_score=param.get("初始分", DEFAULT_INIT_SCORE),
-        score_max=param.get("封顶分", DEFAULT_SCORE_MAX),
-        score_min=param.get("触底分", DEFAULT_SCORE_MIN),
-        gain=param.get("加分", DEFAULT_GAIN),
-        penalty=param.get("扣分", DEFAULT_PENALTY),
-        tolerance=param.get("容差", DEFAULT_TOLERANCE),
+        start_level=start,
         min_level=param.get("最小关", DEFAULT_MIN_LEVEL),
-        max_level=param.get("最大关", DEFAULT_MAX_LEVEL),
+        max_level=max_level,
     )

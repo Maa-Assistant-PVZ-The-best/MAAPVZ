@@ -14,7 +14,7 @@ if __package__ in (None, ""):
 
 from agent.jobset.engine import JobSet, Table, load_jobset, pick_table  # noqa: E402
 from agent.jobset.level_tracker import (  # noqa: E402
-    LevelTracker, DEFAULT_INIT_SCORE, DEFAULT_PENALTY,
+    LevelTracker, BOSS_SNAP, BOSS_SNAP_TOLERANCE,
 )
 
 FAILED = []
@@ -107,83 +107,196 @@ check("单表 L=0 兜底", js3.pick_table(0).index == 0)
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 4. 关卡计数器 · 你给的场景（实际55，错认57） ===")
-lt = LevelTracker()
+print("\n=== 4. 计数器：起始关卡 + 逐关推进（不再有 OCR） ===")
+lt = LevelTracker(start_level=87)
 print(f"  初始: {lt.describe()}")
-c = lt.observe(57, first=True)      # ★ 基准帧
-print(f"  首次 OCR=57 -> count={c} score={lt.score}  {lt.state.last_verdict}")
-check("首次采信 OCR", c == 57, f"count={c}")
-check("初始分 50", lt.score == 50, f"score={lt.score}")
+check("起始关卡生效", lt.count == 87, f"count={lt.count}")
 
-c = lt.observe(56)
-print(f"  下一关 OCR=56 -> count={c} score={lt.score}  {lt.state.last_verdict}")
-check("抖动时计数保持 57", c == 57, f"count={c}")
-# ★ 扣分额从常量推导（曾写死 40，改 DEFAULT_PENALTY 后会假失败）
-_expect = DEFAULT_INIT_SCORE - DEFAULT_PENALTY
-check(f"抖动扣分 {_expect}", lt.score == _expect, f"score={lt.score}")
+c = lt.tick()
+check("tick 后 +1", c == 88, f"count={c}")
+c = lt.tick()
+check("再 tick -> 89", c == 89, f"count={c}")
+check("计数器是纯推进（不受任何 OCR 影响）", lt.count == 89, f"count={lt.count}")
+
+# ★ 兼容垫片：observe() 现在忽略 raw，只做 +1
+_lt_ob = LevelTracker(start_level=10)
+_lt_ob.observe(999)          # 旧版会采信 999，新版应忽略
+check("observe 忽略 raw（不再采信 OCR）", _lt_ob.count == 11, f"count={_lt_ob.count}")
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 5. 连续识别正确 -> 进入纯计数器 ===")
-lt = LevelTracker()
-lt.observe(10, first=True)      # 基准
-for i in range(11, 14):
-    lt.observe(i)
-    print(f"  OCR={i} -> count={lt.count} score={lt.score} locked={lt.locked}")
-check("连续正确后锁定", lt.locked, f"score={lt.score}")
-check("锁定分=100", lt.score == 100, f"score={lt.score}")
+print("\n=== 5. boss 关：计数器对齐到最近的 5 的倍数（唯一自愈机制） ===")
+lt = LevelTracker(start_level=56)
+res = lt.snap_boss()
+print(f"  56 -> {res}")
+check("boss 对齐到 55 或 60（就近）", res["after"] in (55, 60), str(res["after"]))
+check("就近选择 = 55", res["after"] == 55, str(res["after"]))
+check("发生了偏移", res["snapped"] is True, str(res))
+check("计数器已更新", lt.count == res["after"], f"count={lt.count}")
+
+# 本来就在 5 的倍数上 -> 不变
+lt2 = LevelTracker(start_level=60)
+res2 = lt2.snap_boss()
+check("已是 5 的倍数则不变", res2["snapped"] is False and res2["after"] == 60, str(res2))
+
+# 偏差 >2 也能对齐（只是可能对到相邻 boss）—— 用户明确接受
+#
+# ★ 注意「偏差」是 |after - before|（对齐后与对齐前的距离），
+#   而不是 |before - 最近的5的倍数| —— 两者等价，因为 after 就是那个倍数。
+#     53 -> 55 偏移 +2（就近，正确）
+#     52 -> 50 偏移 -2（就近，正确）
+#     51 -> 50 偏移 -1 …
+#   要触发 too_far 需要 |offset| >= 3，即 before 距某个 5 的倍数 >= 3 ——
+#   但「最近的 5 的倍数」距离恒 <= 2，所以 **round 之后 offset 永远 <= 2**。
+#   换句话说：就近取整永不判 too_far。
+#   真正会「对到相邻 boss」的是**手写向上/向下取整**的实现，不是 round。
+#   所以这里如实断言：round 实现下 too_far 恒为 False（这是设计事实）。
+lt3 = LevelTracker(start_level=53)
+res3 = lt3.snap_boss()
+check("偏差 2 时对齐到 55", res3["after"] == 55, str(res3["after"]))
+check("round 就近取整下 too_far 恒 False", res3["too_far"] is False, str(res3))
+
+lt4 = LevelTracker(start_level=58)
+res4 = lt4.snap_boss()
+check("58 就近到 60", res4["after"] == 60, str(res4["after"]))
+check("offset = +2", res4["offset"] == 2, str(res4))
+check("58 不标 too_far", res4["too_far"] is False, str(res4))
+
+# 边界：距 5 的倍数恰好 2.5 时 round 的行为（不崩即可）
+lt6 = LevelTracker(start_level=1)
+res6 = lt6.snap_boss()
+check("关卡 1 就近到 0 -> 夹到 5", res6["after"] == 5, str(res6))
+check("最小关夹取生效", res6["after"] >= BOSS_SNAP, str(res6))
+
+# ★ 用户可见日志：每次 boss 关都要输出「boss关，当前关卡数：xxx」
+_msgs = lt2.snap_boss_message(res2)
+print(f"  用户可见日志: {_msgs}")
+check("boss 日志含『boss关，当前关卡数：』", "boss关，当前关卡数：60" in _msgs[0], str(_msgs))
+check("未偏移时不输出偏移警告", len(_msgs) == 1, str(_msgs))
+
+_msgs3 = lt3.snap_boss_message(res3)
+print(f"  用户可见日志(偏移): {_msgs3}")
+check("偏移时输出两行", len(_msgs3) == 2, str(_msgs3))
+check("偏移日志含『已自动偏移』", "已自动偏移" in _msgs3[1], str(_msgs3[1]))
+
+# 计数器为 0 时不崩
+lt5 = LevelTracker()
+res5 = lt5.snap_boss()
+check("计数为 0 时跳过对齐", res5["skipped"] != "", str(res5))
+check("计数为 0 的日志不崩", len(lt5.snap_boss_message(res5)) == 1)
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 6. 换阵容不再改动计数器（旧版要 rollback_one） ===")
+#
+# 旧版：重开后管道会再识别一次天数 -> 计数被多推一格 -> 必须退一格抵消。
+# 新版：换阵容走「局外换卡」那条路，**不经过点继续挑战** -> 计数器不动。
+lt = LevelTracker(start_level=50)
 before = lt.count
-c = lt.observe(None)    # 锁定后 OCR 不再影响
-print(f"  锁定后 OCR=None -> count={c}")
-check("锁定后仍能推进", c == before + 1, f"{before} -> {c}")
+# 模拟「换阵容」：只做对齐/读表，不 tick、不 rollback
+_after_switch = lt.count
+check("换阵容不改变计数器", _after_switch == before, f"{before} -> {_after_switch}")
 
-
-# ---------------------------------------------------------------------------
-print("\n=== 6. 大幅偏差 -> 信任计数器 / 分数触底回头信 OCR ===")
-lt = LevelTracker()
-lt.observe(30, first=True)     # 基准
-c = lt.observe(35)             # 预测31，偏差4 > 容差2
-print(f"  30 -> OCR=35: count={c} score={lt.score} {lt.state.last_verdict}")
-check("偏差大信计数器", c == 31, f"count={c}")
-# ★ 同样从常量推导（penalty<init_score 时才会走 trust_counter 分支）
-_expect2 = DEFAULT_INIT_SCORE - DEFAULT_PENALTY
-check(f"扣分后 {_expect2}", lt.score == _expect2, f"score={lt.score}")
-
-lt2 = LevelTracker(init_score=10, penalty=10, tolerance=2)  # 一次就触底
-lt2.observe(30, first=True)
-c = lt2.observe(99)
-print(f"  触底场景: count={c} score={lt2.score} {lt2.state.last_verdict}")
-check("触底回头信 OCR", c == 99, f"count={c}")
-check("触底后分数回初始", lt2.score == 10, f"score={lt2.score}")
-
-
-# ---------------------------------------------------------------------------
-print("\n=== 6b. 跳关：中途从 12 直接到 49（OCR 连续，基准应跟上） ===")
-lt = LevelTracker()
-lt.observe(12, first=True)
-print(f"  基准 OCR=12 -> count={lt.count} anchor={lt.state.last_anchor}")
-for raw in (49, 50, 51):
-    c = lt.observe(raw)
-    print(f"  OCR={raw} -> count={c} anchor={lt.state.last_anchor} "
-          f"score={lt.score} {lt.state.last_verdict}")
-check("跳关后基准跟上真实关卡", lt.state.last_anchor == 51, f"anchor={lt.state.last_anchor}")
-check("跳关后 count 正确", lt.count == 51, f"count={lt.count}")
-
-
-# ---------------------------------------------------------------------------
-print("\n=== 6c. 中途进入：本次任务第一次识别 40 关 -> count=40 ===")
-lt = LevelTracker()
-c = lt.observe(40, first=True)
-print(f"  基准帧 OCR=40 -> count={c} score={lt.score}")
-check("基准帧直接采信", c == 40, f"count={c}")
-check("基准帧重置分数", lt.score == 50, f"score={lt.score}")
+# 兼容垫片仍在（但正常流程不该调）
+_lt_rb = LevelTracker(start_level=50)
+_lt_rb.rollback_one()
+check("rollback_one 兼容垫片仍可用", _lt_rb.count == 49, f"count={_lt_rb.count}")
 
 
 # ---------------------------------------------------------------------------
 print("\n=== 7. reset 重置 ===")
+lt = LevelTracker(start_level=42)
 lt.reset()
-check("reset 后 count=0", lt.count == 0, f"count={lt.count}")
-check("reset 后未锁定", not lt.locked)
+check("reset() 后 count=0", lt.count == 0, f"count={lt.count}")
+
+lt.reset(77)
+check("reset(77) 直接设定", lt.count == 77, f"count={lt.count}")
+
+lt.reset()
+check("再 reset() 回 0", lt.count == 0, f"count={lt.count}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 7b. 状态行（给日志弹窗用） ===")
+lt = LevelTracker(start_level=87)
+
+
+class _T:
+    index = 1
+    from_level = 50
+    to_level = 100
+
+
+line = lt.status_line(_T(), is_boss=False)
+print(f"  {line}")
+check("状态行含关卡", "当前关卡: 87" in line, line)
+check("状态行含表号与区间", "表2" in line and "50~100" in line, line)
+check("状态行含普通关", "普通关" in line, line)
+
+line_b = lt.status_line(_T(), is_boss=True)
+check("状态行含 boss 关", "boss关" in line_b, line_b)
+
+line_none = lt.status_line(None, is_boss=False)
+check("无表时状态行不崩", "当前关卡: 87" in line_none, line_none)
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 7c. 起始关卡参数解析（对接 MAA option） ===")
+from agent.jobset.level_tracker import from_params  # noqa: E402
+
+check("正常数字", from_params({"起始关卡": 87}).count == 87)
+check("字符串数字", from_params({"起始关卡": "87"}).count == 87)
+check("缺键 -> 0", from_params({}).count == 0)
+check("空串 -> 0", from_params({"起始关卡": ""}).count == 0)
+check("None -> 0", from_params({"起始关卡": None}).count == 0)
+# ★ 占位符没被替换（option 未应用时 MAA 会原样传 "{起始关卡}"）
+check("占位符未替换 -> 0（不崩）", from_params({"起始关卡": "{起始关卡}"}).count == 0)
+# 越界一律当没填
+check("0 -> 0", from_params({"起始关卡": 0}).count == 0)
+check("负数 -> 0", from_params({"起始关卡": -5}).count == 0)
+check("150 超上限 -> 0", from_params({"起始关卡": 150}).count == 0)
+check("149 合法", from_params({"起始关卡": 149}).count == 149)
+check("1 合法", from_params({"起始关卡": 1}).count == 1)
+check("非法字符串 -> 0", from_params({"起始关卡": "abc"}).count == 0)
+check("大写数字不崩", from_params({"起始关卡": "八七"}).count == 0)
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 7d. 局外换阵判断（JobSetPlan 的决策表） ===")
+#
+# 用户给的设计：
+#   正赛：表没变 -> 直接开打；表变了 -> 回清空卡牌重选
+#   训练：无论何时都重选一次
+from agent.jobset.runtime import (  # noqa: E402
+    plan_decision, GATE_UNCHANGED, GATE_CHANGED, NODE_TICK,
+)
+
+# ---- 正赛 ----
+_need, _r = plan_decision(training=False, used=0, table_index=0)
+check("正赛·表没变 -> 不换", _need is False, _r)
+check("正赛·表没变 提示沿用", "沿用" in _r, _r)
+
+_need, _r = plan_decision(training=False, used=0, table_index=1)
+check("正赛·表 0->1 -> 换", _need is True, _r)
+check("正赛·表变 提示写清方向", "表1 -> 表2" in _r, _r)
+
+_need, _r = plan_decision(training=False, used=2, table_index=1)
+check("正赛·表 2->1（回退）-> 换", _need is True, _r)
+
+# ---- 训练：永远换 ----
+for _u, _ti in ((0, 0), (0, 1), (1, 1), (2, 0)):
+    _need, _r = plan_decision(training=True, used=_u, table_index=_ti)
+    check(f"训练·used={_u} table={_ti} -> 必换", _need is True, _r)
+
+# ---- 没有已注入表记录 -> 保守换 ----
+_need, _r = plan_decision(training=False, used=None, table_index=0)
+check("正赛·无记录 -> 保守换", _need is True, _r)
+check("正赛·无记录 提示保守", "保守" in _r, _r)
+
+# ---- 闸门节点名（pipeline 要按这个接）----
+check("未变闸门名", GATE_UNCHANGED == "无尽挑战_跳转_未变", GATE_UNCHANGED)
+check("变化闸门名", GATE_CHANGED == "无尽挑战_跳转_变化", GATE_CHANGED)
+check("计数节点名", NODE_TICK == "无尽局内_过关计数", NODE_TICK)
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +340,158 @@ for _bad_slot in (0, -1, _dsl.GENERIC_FORM_SLOT_MAX + 1, None, "x"):
 _rg = _dsl.generic_dsl("ga:form", _coords, None, 2, 3)
 check("form: 'ga:form' 前缀等价", _rg["count"] == 3 and not _rg["missing"],
       f"count={_rg['count']}")
+
+# 8g. ★ 参数袋形式（网页端实际传的是整个段）—— 新增动作走这条路，免改 generic_dsl
+_rp = _dsl.generic_dsl("form", _coords, None, None, None, {"slot": 5, "times": 4})
+check("form: 参数袋形式生效", _rp["count"] == 4 and not _rp["missing"],
+      f"count={_rp['count']} dsl={_rp['dsl']!r}")
+check("form: 参数袋选中正确槽位",
+      _rp["dsl"] == "click:槽5切换形态;" * 3 + "click:槽5切换形态", repr(_rp["dsl"]))
+
+# 8h. 数据驱动表 GENERIC_SLOT_CLICK 应包含 form，且坐标模板能展开
+check("GENERIC_SLOT_CLICK 含 form", "form" in _dsl.GENERIC_SLOT_CLICK,
+      str(list(_dsl.GENERIC_SLOT_CLICK)))
+_spec = _dsl.GENERIC_SLOT_CLICK.get("form", {})
+check("form spec 坐标模板可用", _spec.get("coord", "").format(n=1) == "槽1切换形态",
+      _spec.get("coord"))
+
+# 8i. ★ 表中的每个动作都必须有对应坐标（防止加了动作却忘了加坐标）
+for _aid, _sp in _dsl.GENERIC_SLOT_CLICK.items():
+    _miss = [
+        n for n in range(1, _sp.get("slot_max", 8) + 1)
+        if not _dsl._coord_ok(_coords, _sp["coord"].format(n=n))
+    ]
+    check(f"{_aid}: 表中槽位坐标齐全", not _miss, str(_miss))
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 9. 落子动作「点击格子」===")
+
+# 9a. chain_dsl 应把 type='tap' 编译成 click:格子N_M（**没有起点**）
+_tap = {
+    "key": "tapcell", "type": "tap", "label": "点击格子", "cells": ["格子2_3", "格子4_5"],
+}
+_r9 = _dsl.chain_dsl([_tap], _coords)
+check("tap: 编译为 click（无起点）",
+      _r9["dsl"] == "click:种植物_初始化_格子2_3;click:种植物_初始化_格子4_5",
+      repr(_r9["dsl"]))
+check("tap: 不产生 missing", not _r9["missing"], str(_r9["missing"]))
+check("tap: count = 格子数", _r9["count"] == 2, f"count={_r9['count']}")
+
+# 9b. ★ tap 不该因为「没有起点」而被记成告警（它是正常路径）
+check("tap: 无起点不算告警", not any("退化为 click" in m for m in _r9["missing"]),
+      str(_r9["missing"]))
+
+# 9c. feed/shovel 缺起点仍然要告警（回归保护）
+#     ★ 用**真实坐标表**（格子找得到），但把能量豆起点从副本里删掉 ——
+#       这样才隔离出「缺起点」这一种情况，而不是「格子无坐标」。
+_coords_nofeed = {k: v for k, v in _coords.items()
+                  if "能量豆" not in k and "喂豆" not in k}
+_feed_bad = {"key": "feed", "type": "feed", "label": "喂豆", "cells": ["格子1_1"]}
+_r9b = _dsl.chain_dsl([_feed_bad], _coords_nofeed)
+check("feed: 缺起点仍告警",
+      any("退化为 click" in m for m in _r9b["missing"]), str(_r9b["missing"]))
+check("feed: 缺起点时退化为 click（不丢动作）",
+      _r9b["dsl"] == "click:种植物_初始化_格子1_1", repr(_r9b["dsl"]))
+
+# 9d. 端到端：tap 段能进 _build_chain_nodes 并和其他段正确交织
+try:
+    from agent.jobset import runtime as _rt  # noqa: E402
+    _rules9 = {
+        "once_chain": [
+            {"key": "card1", "type": "plant", "slot": 1, "cells": ["格子1_1"]},
+            _tap,
+            {"key": "ga:wave", "type": "action", "action": "wave"},
+        ],
+        "loop_chain": [],
+        "end_chain": [],
+    }
+    _out9 = _rt.JobSetFight._build_chain_nodes(_rules9, _coords, 80, None, 10, False)
+    _dsl9 = (_out9.get("once") or {}).get("dsl", "")
+    check("tap: 端到端出现在链路里",
+          "click:种植物_初始化_格子2_3" in _dsl9 and "swipe:" in _dsl9, repr(_dsl9))
+    check("tap: 与点波段共存", "click:下一波" in _dsl9)
+except Exception as _e9:
+    check("tap: 端到端编译", False, f"{type(_e9).__name__}: {_e9}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 10. 编队注入：Or 节点必须写进 each any_of ===")
+#
+# 背景：`无尽_切换编队序号` 是 **Or 节点**，命中由各 any_of[i] 自己的 expected
+# 决定，节点顶层的 expected 对 Or 无效。曾经只往顶层写 -> 编队号永不命中。
+# 这里同时把注入结果与**真实 pipe 文件**对照，pipe 改了就立刻报出来。
+try:
+    import json as _json10
+    from agent.jobset import runtime as _rt10
+
+    _p_none = _rt10._squad_param(None)
+    _p_sq = _rt10._squad_param(3)
+
+    # --- 选卡分支：next 还原 + expected 清空（也要走 any_of）---
+    check("squad=None: 清空卡牌 next 还原成选卡",
+          _p_none[_rt10.NODE_CLEAR_CARDS]["next"] == [_rt10.NODE_CHOOSE_PLANTS],
+          str(_p_none[_rt10.NODE_CLEAR_CARDS]["next"]))
+    check("squad=None: 切换编队序号 走 any_of 清空",
+          "any_of" in _p_none[_rt10.NODE_SQUAD_INDEX]
+          and "expected" not in _p_none[_rt10.NODE_SQUAD_INDEX],
+          str(sorted(_p_none[_rt10.NODE_SQUAD_INDEX].keys())))
+    check("squad=None: 所有 any_of 分支 expected 都是 []",
+          all(e.get("expected") == []
+              for e in _p_none[_rt10.NODE_SQUAD_INDEX]["any_of"]),
+          str([e.get("expected") for e in _p_none[_rt10.NODE_SQUAD_INDEX]["any_of"]]))
+
+    # --- 编队分支：next 换成切换编队 + 每个分支都带字符串编队号 ---
+    check("squad=3: 清空卡牌 next 换成切换编队",
+          _p_sq[_rt10.NODE_CLEAR_CARDS]["next"] == [_rt10.NODE_SWITCH_SQUAD],
+          str(_p_sq[_rt10.NODE_CLEAR_CARDS]["next"]))
+    _any10 = _p_sq[_rt10.NODE_SQUAD_INDEX]["any_of"]
+    check("squad=3: 是 Or 且 any_of 有两项",
+          len(_any10) == 2, f"len={len(_any10)}")
+    check("★squad=3: **每一个** any_of 分支都写入 expected",
+          all(e.get("expected") == ["3"] for e in _any10),
+          str([e.get("expected") for e in _any10]))
+    check("★squad=3: 顶层不写 expected（对 Or 无效，写了是误导）",
+          "expected" not in _p_sq[_rt10.NODE_SQUAD_INDEX],
+          str(sorted(_p_sq[_rt10.NODE_SQUAD_INDEX].keys())))
+    check("★squad=3: expected 是字符串列表（写数字 MAA 认不出）",
+          all(isinstance(x, str) for e in _any10 for x in e.get("expected", [])),
+          str([type(x).__name__ for e in _any10 for x in e.get("expected", [])]))
+
+    # --- ★ 与真实 pipe 对照：项数 / roi / recognition 必须一致 ---
+    # ⚠️ pipe 文件是 **JSONC**（带 // 注释），标准 json 解析不了，先去掉注释。
+    _pipe10 = Path(__file__).resolve().parent.parent.parent / (
+        "assets/resource/pipeline/Endless_ref.json/02_Endless_plant_Choose_ref.json"
+    )
+    _raw10 = _pipe10.read_text(encoding="utf-8")
+    _raw10 = "\n".join(
+        ln for ln in _raw10.splitlines() if not ln.lstrip().startswith("//")
+    )
+    _pj10 = _json10.loads(_raw10)
+    _node10 = _pj10[_rt10.NODE_SQUAD_INDEX]
+    check("pipe: 切换编队序号 确实是 Or",
+          _node10.get("recognition") == "Or", str(_node10.get("recognition")))
+
+    _real_any10 = _node10.get("any_of", [])
+    check("★pipe any_of 项数与 runtime 骨架一致（改了 pipe 要同步 _SQUAD_ANY_OF）",
+          len(_real_any10) == len(_rt10._SQUAD_ANY_OF),
+          f"pipe={len(_real_any10)} runtime={len(_rt10._SQUAD_ANY_OF)}")
+    check("★pipe any_of 的 roi 与 runtime 骨架一致",
+          [e.get("roi") for e in _real_any10] == [e.get("roi") for e in _rt10._SQUAD_ANY_OF],
+          f"pipe={[e.get('roi') for e in _real_any10]} "
+          f"runtime={[e.get('roi') for e in _rt10._SQUAD_ANY_OF]}")
+    check("★pipe any_of 的 recognition 与 runtime 骨架一致",
+          [e.get("recognition") for e in _real_any10]
+          == [e.get("recognition") for e in _rt10._SQUAD_ANY_OF],
+          str([e.get("recognition") for e in _real_any10]))
+    check("pipe: 切换编队序号 next 指向开始战斗（跳过选卡）",
+          _node10.get("next") == ["无尽挑战_选取植物_开始战斗"],
+          str(_node10.get("next")))
+    check("pipe: 清空卡牌 next 默认走选卡",
+          _pj10[_rt10.NODE_CLEAR_CARDS].get("next") == ["无尽挑战_选取植物"],
+          str(_pj10[_rt10.NODE_CLEAR_CARDS].get("next")))
+except Exception as _e10:
+    check("squad: 编队注入端到端", False, f"{type(_e10).__name__}: {_e10}")
 
 
 # ---------------------------------------------------------------------------

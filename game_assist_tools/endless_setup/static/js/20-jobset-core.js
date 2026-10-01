@@ -25,7 +25,8 @@ function jobNewTable() {
         deckNo: 1,
         loopPlant: false,
         oncePlant: false,
-        inheritBoss: true,
+        // （inheritBoss 已移除：boss 链永远用本表自己的 boardLate，
+        //   见 27-jobset-board.js 的 jobBuild）
         waveEnabled: false,
         slots: {},
         // ---- 普通关配置 ----

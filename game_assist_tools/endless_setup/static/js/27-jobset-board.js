@@ -30,7 +30,13 @@ function jobPickItemsToCancel(r, c, items, onDone) {
 
         const ico = document.createElement('span');
         ico.className = 'cc-ico';
-        if (it.type === 'feed') {
+        // ★ 落子动作图标由注册表给（新增动作自动生效）
+        const _ccAct = (typeof jobBoardActionOfKey === 'function') ? jobBoardActionOfKey(it.id) : null;
+        if (_ccAct) {
+            jobAppendIconImg(ico, jobBoardActionImg(_ccAct), {
+                cls: 'cc-ico-img', size: 40, alt: _ccAct.name, fallbackText: _ccAct.icon || '⚡'
+            });
+        } else if (it.type === 'feed') {
             jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'cc-ico-img', size: 40, alt: '喂豆', fallbackText: '🫘' });
         } else if (it.type === 'shovel') {
             jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'cc-ico-img', size: 40, alt: '铲子', fallbackText: '🧹' });
@@ -182,11 +188,12 @@ function jobStepId(s) {
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
     if (s.kind === 'generic' || s.kind === 'wait') {
         const ms = (s.ms === undefined || s.ms === null) ? '' : ('#' + s.ms);
-        // ★ 切换形态：槽位/次数也是参数，必须进 id —— 否则「槽1点1次」和
-        //   「槽2点3次」会撞成同一个 id，勾选/拖动定位就会串位。
-        const sl = (s.slot === undefined || s.slot === null) ? '' : ('@' + s.slot);
-        const tm = (s.times === undefined || s.times === null) ? '' : ('x' + s.times);
-        return s.key + ms + sl + tm + uid;
+        // ★ 带参数的动作：参数也要进 id —— 否则「槽1点1次」和「槽2点3次」
+        //   会撞成同一个 id，勾选/拖动定位就会串位。
+        //   参数部分由动作定义驱动（jobParamsIdentity），新增参数无需改这里。
+        const ga = jobGenericActionOfKey(s.key);
+        const pid = jobParamsIdentity(ga, s);
+        return s.key + ms + pid + uid;
     }
     return s.key + '#' + s.gidx + uid;
 }
@@ -198,16 +205,6 @@ function jobStepIdentity(s) {
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
     if (s.kind === 'generic' || s.kind === 'wait') return s.key + uid;
     return s.key + '#' + s.gidx + uid;
-}
-
-// ★ 把「切换形态」的槽位/次数输入夹到合法区间。
-//   非法输入（空、NaN、0、负数、超上限）一律回落到 fallback。
-function jobClampFormNum(v, lo, hi, fallback) {
-    let n = parseInt(v, 10);
-    if (!Number.isFinite(n)) return fallback;
-    if (n < lo) return lo;
-    if (n > hi) return hi;
-    return n;
 }
 
 // 按「不含参数的身份」在列表里定位（改 ms 时用）
@@ -961,15 +958,18 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
 
     const key = st.key;
     const gIdx = st.gidx;
-    const isFeed = (key === 'feed');
+    // ★ 落子动作（喂豆/铲子/点击格子/扩展…）统一由注册表判定 + 取图标
+    const act = (typeof jobBoardActionOfKey === 'function') ? jobBoardActionOfKey(key) : null;
+    const isFeed = (key === 'feed');                 // 兼容注册表未加载
     const isShovel = (key === 'shovel');
-    const slotNo = isFeed || isShovel ? null : Number(String(key).replace('card', ''));
+    const isAction = !!act || isFeed || isShovel;
+    const slotNo = isAction ? null : Number(String(key).replace('card', ''));
     const plantName = slotNo ? t.slots[slotNo] : null;
     const place = jobPlacementsOf(board, key, which)[gIdx];
 
     const wrap = document.createElement('div');
     wrap.className = 'seq-chain' + ' m-' + which
-        + ((isFeed || isShovel) ? ' seq-chain-compact' : '');
+        + (isAction ? ' seq-chain-compact' : '');
     wrap.draggable = true;
     wrap.dataset.key = key;
     wrap.dataset.which = which;
@@ -992,7 +992,12 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     // ★ 植物缩略图（保留并放大一点）：用棋盘上那一株自带的 plant.img
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    if (isFeed) {
+    if (act) {
+        // ★ 落子动作：图标由注册表给（新增动作自动生效）
+        jobAppendIconImg(ico, jobBoardActionImg(act), {
+            cls: 'seq-ico-img', size: 20, alt: act.name, fallbackText: act.icon || '⚡'
+        });
+    } else if (isFeed) {
         jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 20, alt: '喂豆', fallbackText: '🫘' });
     } else if (isShovel) {
         jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 20, alt: '铲子', fallbackText: '🧤' });
@@ -1014,7 +1019,17 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
 
     const hl = document.createElement('span');
     hl.className = 'seq-slot';
-    hl.textContent = isFeed ? '喂豆' : (isShovel ? '铲子' : ('槽' + slotNo + '：' + plantName));
+    // ★ 落子动作（喂豆/铲子/点击格子…）直接用注册表里的名字。
+    //   以前这里只判 feed/shovel，新动作会掉进 '槽null：null' 分支。
+    if (act) {
+        hl.textContent = act.name;
+    } else if (isFeed) {
+        hl.textContent = '喂豆';
+    } else if (isShovel) {
+        hl.textContent = '铲子';
+    } else {
+        hl.textContent = '槽' + slotNo + '：' + plantName;
+    }
     head.appendChild(hl);
 
     // 该株在棋盘上的格子坐标
@@ -1168,66 +1183,80 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
         head.appendChild(unit);
     }
 
-    // ★ 切换形态：槽位 + 次数就地可改。
-    //   存回时与等待的 ms 一样，用「不含参数的身份」定位自己
-    //   （改了参数 jobStepId 就变了，不能先改再按 jobStepId 找）。
-    if (ga && ga.hasSlot) {
-        const applyForm = function (slot, times) {
+    // ★ 带参数的通用动作：默认只显示一行**可读摘要**（如「槽3 丨 2次」），
+    //   点它才展开成输入框直接在原位编辑。
+    //
+    //   为什么不用「一直显示输入框」：
+    //     侧栏 (#seqDrawer) 固定 360px，块头还要放 拖柄/序号/图标/名字/
+    //     勾选框/⏱/✕ —— 再塞两个数字框进去，宽度必然不够，
+    //     数字会被压没（视觉上就是「被遮住」）。摘要文字是纯文本，
+    //     宽度自适应且**永远不会被压得看不见**。
+    if (ga && jobActionHasParams(ga)) {
+        const applyParam = function (p, v) {
             const steps = jobResolveSteps(t, which, board);
             const i = jobFindStepByIdentity(steps, st);
             if (i !== -1) {
-                steps[i].slot = slot;
-                steps[i].times = times;
-                st.slot = slot;
-                st.times = times;
+                steps[i][p.key] = v;
+                st[p.key] = v;
                 jobStoreSteps(t, which, board, steps);
                 jobSaveLocal();
             }
             jobRenderSeqChains();
         };
 
-        const sel = document.createElement('select');
-        sel.className = 'seq-form-slot';
-        sel.title = '切换哪个槽位的形态';
-        sel.draggable = false;
-        for (let i = 1; i <= (ga.slotMax || 8); i++) {
-            const op = document.createElement('option');
-            op.value = String(i);
-            op.textContent = '槽' + i;
-            sel.appendChild(op);
-        }
-        sel.value = String((st.slot === undefined || st.slot === null) ? (ga.defaultSlot || 1) : st.slot);
-        sel.addEventListener('mousedown', function (e) { e.stopPropagation(); });
-        sel.addEventListener('click', function (e) { e.stopPropagation(); });
-        sel.addEventListener('change', function (e) {
+        // ---- 摘要态 ----
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'seq-param-chip';
+        chip.draggable = false;
+        chip.textContent = jobParamsSummary(ga, st);
+        chip.title = '点击修改参数';
+        chip.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        chip.addEventListener('click', function (e) {
             e.stopPropagation();
-            const cur = (st.times === undefined || st.times === null) ? (ga.defaultTimes || 1) : st.times;
-            applyForm(jobClampFormNum(sel.value, 1, ga.slotMax || 8, 1), cur);
+            chip.style.display = 'none';       // 摘要藏起来，换成输入框
+            editors.style.display = '';
+            const first = editors.querySelector('input');
+            if (first) { first.focus(); first.select(); }
         });
-        head.appendChild(sel);
+        head.appendChild(chip);
 
-        const tx = document.createElement('input');
-        tx.type = 'number';
-        tx.className = 'seq-form-times';
-        tx.min = '1';
-        tx.max = String(ga.timesMax || 20);
-        tx.step = '1';
-        tx.value = String((st.times === undefined || st.times === null) ? (ga.defaultTimes || 1) : st.times);
-        tx.title = '点击几次（填几就点几）';
-        tx.draggable = false;
-        tx.addEventListener('mousedown', function (e) { e.stopPropagation(); });
-        tx.addEventListener('click', function (e) { e.stopPropagation(); });
-        tx.addEventListener('change', function (e) {
-            e.stopPropagation();
-            const cur = (st.slot === undefined || st.slot === null) ? (ga.defaultSlot || 1) : st.slot;
-            applyForm(cur, jobClampFormNum(tx.value, 1, ga.timesMax || 20, 1));
+        // ---- 编辑态（默认隐藏）----
+        const editors = document.createElement('span');
+        editors.className = 'seq-param-editors';
+        editors.style.display = 'none';
+        editors.addEventListener('mousedown', function (e) { e.stopPropagation(); });
+        editors.addEventListener('click', function (e) { e.stopPropagation(); });
+
+        jobActionParams(ga).forEach(function (p) {
+            if (p.prefix) {
+                const pre = document.createElement('span');
+                pre.className = 'seq-param-affix';
+                pre.textContent = p.prefix;
+                editors.appendChild(pre);
+            }
+            editors.appendChild(jobBuildParamControl(p, st[p.key], {
+                width: 30,
+                onChange: function (v) { applyParam(p, v); }
+            }));
+            if (p.suffix) {
+                const suf = document.createElement('span');
+                suf.className = 'seq-param-affix';
+                suf.textContent = p.suffix;
+                editors.appendChild(suf);
+            }
         });
-        head.appendChild(tx);
 
-        const xu = document.createElement('span');
-        xu.className = 'seq-ms-unit';
-        xu.textContent = '次';
-        head.appendChild(xu);
+        // 编辑完（失焦离开整组）就收回摘要态
+        editors.addEventListener('focusout', function () {
+            setTimeout(function () {
+                if (editors.contains(document.activeElement)) return;
+                editors.style.display = 'none';
+                chip.style.display = '';
+            }, 120);
+        });
+
+        head.appendChild(editors);
     }
 
     // 勾选框
@@ -1292,7 +1321,12 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
 }
 
 function jobSlotLabel(t, key) {
-    if (key === 'feed') return '喂豆';
+    // ★ 落子动作名由注册表给（喂豆/铲子/点击格子/未来扩展）
+    if (typeof jobBoardActionOfKey === 'function') {
+        const act = jobBoardActionOfKey(key);
+        if (act) return act.name;
+    }
+    if (key === 'feed') return '喂豆';       // 注册表未加载时的兜底
     if (key === 'shovel') return '铲子';
     const s = Number(key.replace('card', ''));
     return '槽' + s + (t.slots[s] ? ('（' + t.slots[s] + '）') : '');
@@ -1477,97 +1511,14 @@ function jobRenderSlots() {
     if (!t) return;
     const box = document.getElementById('jobSlots');
     box.innerHTML = '';
-    for (let i = 1; i <= 9; i++) {
-        const isFeed = (i === 9);
-        const name = isFeed ? '' : (t.slots[i] || '');
-        const info = isFeed ? null : jobFindPlant(name);
+    // ★ 只循环 8 个植物槽；落子动作（喂豆/铲子/点击格子…）在下面由注册表渲染。
+    //   以前这里是 `i <= 9`，第 9 轮拿 t.slots[9]（undefined）当植物渲染，
+    //   会多出一个名字是 null 的空槽。
+    for (let i = 1; i <= 8; i++) {
+        const name = (t.slots[i] || '');
+        const info = jobFindPlant(name);
         const chip = document.createElement('div');
         const armed = (jobArmedSlot === i);
-        if (isFeed) {
-            // 喂豆位置：独立于 8 个植物槽位的操作，选中后在棋盘落子标记
-            const brk = document.createElement('span');
-            brk.style.cssText = 'flex-basis:100%;height:0;';   // 换行，与植物槽位分开
-            box.appendChild(brk);
-            chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
-                + (armed ? '#2d7aff' : '#fca5a5') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
-            if (armed) chip.className = 'job-slot-armed';
-            const dot = document.createElement('span');
-            dot.style.cssText = 'font-size:15px;';
-            jobAppendIconImg(dot, JOB_UI_IMG.feed, { cls: 'slot-ico-img', size: 44, alt: '喂豆', fallbackText: '🫘' });
-            const lbl = document.createElement('span');
-            lbl.style.cssText = 'font-size:12px;';
-            lbl.textContent = '喂豆';
-            chip.appendChild(dot);
-            chip.appendChild(lbl);
-            chip.title = '点击选中后在棋盘落子（右键切换单次/循环：' + jobModeLabel(jobSlotMode(t, 'feed')) + '）';
-            chip.addEventListener('click', () => {
-                jobArmedSlot = (jobArmedSlot === 9) ? 0 : 9;
-                jobRenderSlots();
-                setStatus(jobArmedSlot ? '已选中「喂豆」，点击棋盘格子标记喂豆位置' : '');
-            });
-            chip.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                const m = jobToggleSlotMode(t, 'feed');
-                jobRenderSlots();
-                jobRenderSeqChains();
-                jobSaveLocal();
-                setStatus('🔄 喂豆 → ' + jobModeLabel(m));
-            });
-            {
-                const _fm = jobSlotMode(t, 'feed');
-                {
-                    const fb = document.createElement('span');
-                    fb.className = 'slot-mode-badge' + (_fm === 'once' ? ' is-once'
-                        : (_fm === 'end' ? ' is-end' : ' is-loop'));
-                    fb.textContent = (_fm === 'once') ? '1×' : (_fm === 'end' ? '🚩' : '⟳');
-                    fb.title = '放置形态：' + jobModeLabel(_fm) + '（右键切换）';
-                    chip.appendChild(fb);
-                }
-            }
-            box.appendChild(chip);
-
-            // ---- 铲子：与喂豆同一行，选中后在棋盘落子作为标记 ----
-            const shovel = document.createElement('div');
-            const sArmed = (jobArmedSlot === 10);
-            shovel.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
-                + (sArmed ? '#2d7aff' : '#c4b5fd') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
-            if (sArmed) shovel.className = 'job-slot-armed';
-            const sDot = document.createElement('span');
-            sDot.style.cssText = 'font-size:15px;';
-            jobAppendIconImg(sDot, JOB_UI_IMG.shovel, { cls: 'slot-ico-img', size: 44, alt: '铲子', fallbackText: '🧤' });
-            const sLbl = document.createElement('span');
-            sLbl.style.cssText = 'font-size:12px;';
-            sLbl.textContent = '铲子';
-            shovel.appendChild(sDot);
-            shovel.appendChild(sLbl);
-            shovel.title = '点击选中后在棋盘落子（右键切换单次/循环：' + jobModeLabel(jobSlotMode(t, 'shovel')) + '）';
-            shovel.addEventListener('click', () => {
-                jobArmedSlot = (jobArmedSlot === 10) ? 0 : 10;
-                jobRenderSlots();
-                setStatus(jobArmedSlot ? '已选中「铲子」，点击棋盘格子标记铲除位置' : '');
-            });
-            shovel.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                const m = jobToggleSlotMode(t, 'shovel');
-                jobRenderSlots();
-                jobRenderSeqChains();
-                jobSaveLocal();
-                setStatus('🔄 铲子 → ' + jobModeLabel(m));
-            });
-            {
-                const _sm = jobSlotMode(t, 'shovel');
-                {
-                    const sb = document.createElement('span');
-                    sb.className = 'slot-mode-badge' + (_sm === 'once' ? ' is-once'
-                        : (_sm === 'end' ? ' is-end' : ' is-loop'));
-                    sb.textContent = (_sm === 'once') ? '1×' : (_sm === 'end' ? '🚩' : '⟳');
-                    sb.title = '放置形态：' + jobModeLabel(_sm) + '（右键切换）';
-                    shovel.appendChild(sb);
-                }
-            }
-            box.appendChild(shovel);
-            continue;
-        }
         chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
             + (armed ? '#2d7aff' : '#d0d7de') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
         if (armed) chip.className = 'job-slot-armed';
@@ -1652,6 +1603,92 @@ function jobRenderSlots() {
         });
         box.appendChild(chip);
     }
+
+    // ---- ★ 落子动作（喂豆/铲子/点击格子/未来扩展）----
+    //   全部由 15-board-actions.js 的注册表驱动：
+    //     · builtin:true 的（喂豆/铲子）常驻显示
+    //     · inMore:true 的（点击格子…）**在棋盘里**或**正被选中**时才显示
+    //   新增一个落子动作**不需要改这段**。
+    //
+    //   ★ 这里的判定必须和 W/S 的循环判定同源（jobBoardActionCycleable），
+    //     否则会出现「面板上看不见、却能按 W/S 选中」的错位。
+    //     `isArmed` 单独放行：选中后要留着它，才能继续往棋盘落子。
+    //   ★ 换行：与上面 8 个植物槽分开一行。
+    const brk = document.createElement('span');
+    brk.style.cssText = 'flex-basis:100%;height:0;';
+    box.appendChild(brk);
+
+    const _acts = (typeof JOB_BOARD_ACTIONS !== 'undefined') ? JOB_BOARD_ACTIONS : [];
+    _acts.forEach(function (act) {
+        const isArmed = (jobArmedSlot === act.armedNo);
+        // 非内置动作：没落在棋盘上就不占地方（左侧更干净）
+        if (!act.builtin && !isArmed && !jobBoardActionHasPlacement(act)) return;
+
+        const el = document.createElement('div');
+        el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;'
+            + 'border:2px solid ' + (isArmed ? '#2d7aff' : (act.color || '#cbd5e1'))
+            + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
+        if (isArmed) el.className = 'job-slot-armed';
+
+        const dot = document.createElement('span');
+        dot.style.cssText = 'font-size:15px;';
+        jobAppendIconImg(dot, jobBoardActionImg(act), {
+            cls: 'slot-ico-img', size: 44, alt: act.name, fallbackText: act.icon || '⚡'
+        });
+        el.appendChild(dot);
+
+        const lbl = document.createElement('span');
+        lbl.style.cssText = 'font-size:12px;';
+        lbl.textContent = act.name;
+        el.appendChild(lbl);
+
+        el.title = (act.desc || '') + '（右键切换单次/循环：'
+            + jobModeLabel(jobSlotMode(t, act.id)) + '）';
+
+        el.addEventListener('click', function () {
+            jobArmedSlot = isArmed ? 0 : act.armedNo;
+            jobRenderSlots();
+            setStatus(jobArmedSlot ? ('已选中「' + act.name + '」，点击棋盘格子放置') : '');
+        });
+        el.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            const m = jobToggleSlotMode(t, act.id);
+            jobRenderSlots();
+            jobRenderSeqChains();
+            jobSaveLocal();
+            setStatus('🔄 ' + act.name + ' → ' + jobModeLabel(m));
+        });
+
+        const _m = jobSlotMode(t, act.id);
+        const badge = document.createElement('span');
+        badge.className = 'slot-mode-badge' + (_m === 'once' ? ' is-once'
+            : (_m === 'end' ? ' is-end' : ' is-loop'));
+        badge.textContent = (_m === 'once') ? '1×' : (_m === 'end' ? '🚩' : '⟳');
+        badge.title = '放置形态：' + jobModeLabel(_m) + '（右键切换）';
+        el.appendChild(badge);
+
+        box.appendChild(el);
+    });
+
+    // ---- ★「更多」：落子动作的扩展入口 ----
+    //   点开弹窗选一个动作，选中后即可在棋盘落子。
+    //   弹窗内容同样来自注册表，新增动作自动出现。
+    const more = document.createElement('div');
+    more.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fafbfc;'
+        + 'border:2px dashed #94a3b8;border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
+    const mDot = document.createElement('span');
+    mDot.style.cssText = 'font-size:15px;color:#64748b;font-weight:700;';
+    mDot.textContent = '＋';
+    const mLbl = document.createElement('span');
+    mLbl.style.cssText = 'font-size:12px;color:#475569;';
+    mLbl.textContent = '更多';
+    more.appendChild(mDot);
+    more.appendChild(mLbl);
+    more.title = '更多落子动作（点击选择）';
+    more.addEventListener('click', function () {
+        if (typeof jobOpenBoardMoreList === 'function') jobOpenBoardMoreList();
+    });
+    box.appendChild(more);
 }
 
 // ============================================================
@@ -1670,38 +1707,194 @@ function jobRenderSlots() {
 //   注意：在输入框里打字时不响应（否则改毫秒数会误触）。
 // ============================================================
 
-// W/S 的循环顺序：1..8（植物）→ 9（喂豆）→ 10（铲子）
-const JOB_SLOT_CYCLE = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+// W/S 的循环顺序：1..8（植物）→ 当前**允许循环**的落子动作。
+//
+//   ★ 由注册表驱动，新增动作自动进循环，本函数不需要改。
+//
+//   ★★ 关键：扩展动作（inMore）**必须已落在当前关的棋盘上**才进循环
+//      （见 jobBoardActionCycleable）。内置动作（喂豆/铲子）永远可循环。
+//
+//   为什么必须是**函数**而不是常量：棋盘上的落子在编辑过程中随时增减，
+//   常量只在脚本加载时算一次，用户「选完更多动作 → 落子」后循环列表不会更新，
+//   于是选完之后按 W/S 仍然找不到它（或反过来，把棋盘上的子清掉后仍能循环到）。
+//   所以每次按 W/S 都重新计算。
+//
+//   ★ cur：当前已选中的 armedNo。即使它此刻在棋盘上没有落子，
+//     也**必须**留在列表里 —— 否则按 W/S 会「跳过自己」，无法从它切走。
+function jobSlotCycleList(cur) {
+    const a = [1, 2, 3, 4, 5, 6, 7, 8];
+    if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
+        JOB_BOARD_ACTIONS.forEach(function (act) {
+            if (!act || typeof act.armedNo !== 'number') return;
+            // 内置的（喂豆/铲子）常驻；扩展的只有「在棋盘里」或「正被选中」才进
+            if (jobBoardActionCycleable(act) || act.armedNo === cur) a.push(act.armedNo);
+        });
+    } else {
+        a.push(9, 10);   // 注册表没加载时的兜底：喂豆 / 铲子
+    }
+    a.sort(function (x, y) { return x - y; });
+    return a;
+}
 
 // ★ 把 jobArmedSlot 的数字编号转成「槽位 key」。
-//   注意 jobSlotKeyOf 认的是字符串 'feed'/'shovel'，
-//   而 jobArmedSlot 用 9/10 表示它们 —— 直接传数字会得到 'card9'/'card10'（错的）。
+//   注意 jobSlotKeyOf 认的是字符串，而 jobArmedSlot 用 9/10/11 表示落子动作 ——
+//   直接传数字会得到 'card9'/'card10'（错的）。所以先查注册表。
 function jobSlotKeyOfArmed(s) {
-    if (s === 9) return 'feed';
-    if (s === 10) return 'shovel';
+    if (typeof jobBoardActionByArmedNo === 'function') {
+        const act = jobBoardActionByArmedNo(s);
+        if (act) return act.id;
+    }
     return jobSlotKeyOf(s);
 }
 
 // 该槽位在界面上显示的名字（用于状态提示）
 function jobSlotDisplayName(t, s) {
-    if (s === 9) return '喂豆';
-    if (s === 10) return '铲子';
+    if (typeof jobBoardActionByArmedNo === 'function') {
+        const act = jobBoardActionByArmedNo(s);
+        if (act) return act.name;
+    }
     const nm = (t && t.slots) ? (t.slots[s] || '') : '';
     return '槽' + s + (nm ? '（' + nm + '）' : '（未设置）');
 }
 
+// ============================================================
+// ★ 棋盘落子区的「更多」—— 动作列表弹窗
+//
+//   与右侧通用动作的「更多」(#moreList) 是**两套**：
+//     · 右侧 #moreList     -> 往**链上**插通用动作（无格子）
+//     · 这里 #boardMoreList -> 选一个**落子动作**，选中后在棋盘上摆
+//
+//   ★ 列表内容来自 15-board-actions.js 的注册表（JOB_BOARD_ACTIONS 里
+//     inMore:true 的那些）—— 新增落子动作**不需要改本文件**。
+// ============================================================
+
+function jobOpenBoardMoreList() {
+    const modal = document.getElementById('boardMoreList');
+    if (!modal) return;
+    jobRenderBoardMoreList();
+    modal.classList.add('bml-open');
+}
+
+function jobCloseBoardMoreList() {
+    const modal = document.getElementById('boardMoreList');
+    if (modal) modal.classList.remove('bml-open');
+}
+
+function jobRenderBoardMoreList() {
+    const box = document.getElementById('bmlBody');
+    if (!box) return;
+    box.innerHTML = '';
+
+    const list = (typeof jobBoardMoreActions === 'function')
+        ? jobBoardMoreActions() : [];
+
+    if (!list.length) {
+        const hint = document.createElement('div');
+        hint.className = 'bml-empty';
+        hint.textContent = '（暂无更多落子动作）';
+        box.appendChild(hint);
+        return;
+    }
+
+    const t = jobTables[currentTable];
+    const boss = jobIsBossBoard();
+
+    list.forEach(function (act) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'bml-item';
+
+        const ico = document.createElement('span');
+        ico.className = 'bml-ico';
+        jobAppendIconImg(ico, jobBoardActionImg(act), {
+            cls: 'bml-ico-img', size: 24, alt: act.name, fallbackText: act.icon || '⚡'
+        });
+        btn.appendChild(ico);
+
+        const txt = document.createElement('div');
+        txt.className = 'bml-txt';
+        const nm = document.createElement('div');
+        nm.className = 'bml-name';
+        nm.textContent = act.name;
+        txt.appendChild(nm);
+        if (act.desc) {
+            const ds = document.createElement('div');
+            ds.className = 'bml-desc';
+            ds.textContent = act.desc;
+            txt.appendChild(ds);
+        }
+        btn.appendChild(txt);
+
+        // 角标：当前形态 + 已落几个
+        if (t) {
+            const badge = document.createElement('span');
+            badge.className = 'bml-badge';
+            const m = jobSlotMode(t, act.id);
+            const n = jobPlacementCountAllModes(act.id, boss);
+            badge.textContent = jobModeLabel(m) + (n ? ' · ' + n + ' 个' : '');
+            btn.appendChild(badge);
+        }
+
+        btn.addEventListener('click', function () {
+            jobCloseBoardMoreList();
+            jobArmedSlot = act.armedNo;
+            jobRenderSlots();
+            setStatus('已选中「' + act.name + '」，点击棋盘格子放置');
+        });
+
+        btn.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            const m = jobToggleSlotMode(t, act.id);
+            jobRenderSlots();
+            jobRenderSeqChains();
+            jobSaveLocal();
+            jobRenderBoardMoreList();
+            setStatus('🔄 ' + act.name + ' → ' + jobModeLabel(m));
+        });
+
+        box.appendChild(btn);
+    });
+}
+
+let jobBoardMoreBound = false;
+
+function jobBindBoardMore() {
+    if (jobBoardMoreBound) return;
+    const modal = document.getElementById('boardMoreList');
+    if (!modal) return;
+
+    const close = document.getElementById('bmlClose');
+    if (close) close.addEventListener('click', jobCloseBoardMoreList);
+
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) jobCloseBoardMoreList();
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') jobCloseBoardMoreList();
+    });
+
+    jobBoardMoreBound = true;
+}
+
 // 切换选中的槽位：dir = +1 下一个（S），-1 上一个（W）
+//
+//   ★ 循环列表每次现算（jobSlotCycleList），所以「棋盘上有没有落子」
+//     的变化立刻生效 —— 扩展动作没落在棋盘上时**不会被循环到**。
 function jobCycleSlot(dir) {
     const t = jobTables[currentTable];
     if (!t) return;
 
-    const n = JOB_SLOT_CYCLE.length;
-    let i = JOB_SLOT_CYCLE.indexOf(jobArmedSlot);
+    const list = jobSlotCycleList(jobArmedSlot);
+    const n = list.length;
+    if (!n) return;
+
+    let i = list.indexOf(jobArmedSlot);
     // 当前没选中（0）时给一个合理起点：
-    //   按 S（下一个）→ 从槽1 开始；按 W（上一个）→ 从铲子 开始
+    //   按 S（下一个）→ 从槽1 开始；按 W（上一个）→ 从列表末位 开始
     if (i === -1) i = (dir > 0) ? -1 : 0;
 
-    const next = JOB_SLOT_CYCLE[((i + dir) % n + n) % n];
+    const next = list[((i + dir) % n + n) % n];
     jobArmedSlot = next;
     jobRenderSlots();
 
@@ -2059,8 +2252,9 @@ function jobBuildChain(t, board, which, forceBoss) {
     jobEnsureSeq(board);
     // ★ 传入 board：让 jobGetChainOrder 的覆盖率修复用**正确的棋盘**
     //   （导出 boss 链时要用 bossBoard，不能靠 tab 猜）
-    // ★ forceBoss：导出 boss 链必须显式传 true —— 因为 bossBoard 可能是
-    //   上一张表的棋盘（inheritBoss），靠引用判断会被误判成普通关，
+    // ★ forceBoss：导出 boss 链必须显式传 true —— bossBoard 取的是
+    //   t.boardLate（表自己的 boss 棋盘），它的引用不等于全局 boardLate
+    //   （全局那份是当前编辑表的拷贝），靠 === 判断会误判成普通关，
     //   结果读了 t.loopOrder，把普通关的通用动作串进 boss 关。
     const segs = jobGetChainOrder(t, which, board, forceBoss);
 
@@ -2083,18 +2277,13 @@ function jobBuildChain(t, board, which, forceBoss) {
                 item.ms = (seg.ms === undefined || seg.ms === null)
                     ? (ga.defaultMs || 1000) : Number(seg.ms);
             }
-            // ★ 切换形态必须带上槽位与次数 —— agent 端用它们定位
-            //   「槽N切换形态」坐标并展开成 N 个 click:N。
-            if (ga.hasSlot) {
-                const sv = (seg.slot === undefined || seg.slot === null)
-                    ? (ga.defaultSlot || 1) : Number(seg.slot);
-                item.slot = Math.max(1, Math.min(ga.slotMax || 8, sv || 1));
-            }
-            if (ga.hasTimes) {
-                const tv = (seg.times === undefined || seg.times === null)
-                    ? (ga.defaultTimes || 1) : Number(seg.times);
-                item.times = Math.max(1, Math.min(ga.timesMax || 20, tv || 1));
-            }
+            // ★ 带参数的通用动作：把声明的参数逐个带上（声明式 ——
+            //   动作定义里加一个参数，这里自动导出，不需要改这段）。
+            //   agent 端 dsl.generic_dsl 用它们编译出实际的 DSL。
+            jobActionParams(ga).forEach(function (p) {
+                const v = jobParamValue(seg, p);
+                if (v !== undefined && v !== null) item[p.key] = v;
+            });
             out.push(item);
             return;
         }
@@ -2110,21 +2299,29 @@ function jobBuildChain(t, board, which, forceBoss) {
         let label = seg.key;
         if (slot !== null) {
             label = (t.slots && t.slots[slot]) ? t.slots[slot] : seg.key;
-        } else if (seg.key === 'feed') {
-            label = '喂豆';
-        } else if (seg.key === 'shovel') {
-            label = '铲子';
         }
 
-        const type = (seg.key === 'feed') ? 'feed'
-            : (seg.key === 'shovel') ? 'shovel'
-                : 'plant';
+        // ★ type 决定 agent 端怎么编译这段。落子动作的 type 由注册表给
+        //   （dslType）：tap -> click:格子 / feed、shovel -> swipe:起点,格子
+        const _act = (typeof jobBoardActionOfKey === 'function')
+            ? jobBoardActionOfKey(seg.key) : null;
+        let type;
+        if (_act) {
+            type = _act.dslType || _act.id;
+            if (!label || label === seg.key) label = _act.name;
+        } else if (seg.key === 'feed') {
+            type = 'feed'; label = '喂豆';       // 注册表未加载时的兼容兜底
+        } else if (seg.key === 'shovel') {
+            type = 'shovel'; label = '铲子';
+        } else {
+            type = 'plant';
+        }
 
         out.push({
             key: seg.key,
-            slot: slot,                 // 植物槽号；feed/shovel 为 null
-            type: type,                 // plant | feed | shovel
-            label: label,               // 植物名 / 喂豆 / 铲子
+            slot: slot,                 // 植物槽号；落子动作为 null
+            type: type,                 // plant | feed | shovel | tap | ...
+            label: label,
             mode: mode,                 // once | loop
             cells: places.map(function (p) { return '格子' + (p.c + 1) + '_' + (p.r + 1); })
         });
@@ -2199,8 +2396,11 @@ function jobBuild() {
     jobSaveCurrentBoard();
     const worlds = [...document.querySelectorAll('#jobWorlds input:checked')].map(cb => cb.value);
     const tables = jobTables.map((t, ti) => {
-        const prev = ti > 0 ? jobTables[ti - 1] : null;
-        const bossBoard = t.inheritBoss && prev ? prev.boardLate : t.boardLate;
+        // ★ boss 链永远用**本表自己的** boardLate 构建。
+        //   以前有 inheritBoss：为 true 时拿上一张表的棋盘来建链 ——
+        //   但它在编辑器里没有任何开关、也不随 JSON 持久化，
+        //   导致「表2 的 boss 落子改了却按表1 导出」（静默丢配置）。
+        const bossBoard = t.boardLate;
         const plants = jobSlotPlants(t.slots);
         return {
             from_level: t.from_level,

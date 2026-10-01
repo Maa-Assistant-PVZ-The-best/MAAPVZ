@@ -31,6 +31,20 @@ app = Flask(__name__, static_folder=STATIC_DIR)
 CONFIG_FILE = os.path.join(BASE_DIR, 'config.json')
 
 
+@app.after_request
+def _no_cache(resp):
+    """静态资源一律禁缓存。
+
+    这是开发/配置工具：JS 改动后用户只需要刷新页面就能拿到新代码。
+    之前没这个头，浏览器启发式缓存导致「改了 JS 但页面还在跑旧代码」，
+    保存出来的作业集 JSON 用的还是旧导出逻辑（表2 boss 链沿用表1 的 bug
+    就是这样被旧代码又写回去的）。
+    """
+    resp.headers['Cache-Control'] = 'no-store, must-revalidate'
+    resp.headers['Pragma'] = 'no-cache'
+    return resp
+
+
 def ensure_jobs_dir():
     os.makedirs(JOBS_DIR, exist_ok=True)
 

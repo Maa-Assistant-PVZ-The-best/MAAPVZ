@@ -100,7 +100,31 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .cell.job-n8 .job-p8, .cell.job-n9 .job-p8 { left:25px; top:46px; }
 .cell.job-n9 .job-p9 { left:46px; top:46px; }
 
+/* ---- 同格超过 9 个：3×3 摆满后不再继续塞，改为右下角「+N」角标 ----
+   ★ 放开重复落子后一格可能放十几个。9 个已经占满 3×3，
+     第 10 个起**不渲染缩略图**（避免堆在一起看不清），
+     只在右下角显示一个「+N」角标告诉用户还剩几个。
+     N 由 JS 写在 .job-overflow 的文本里（见 08-board-data.js）。 */
+.cell .job-overflow {
+    position:absolute; right:2px; bottom:2px;
+    min-width:14px; height:14px; line-height:14px;
+    padding:0 3px; border-radius:7px;
+    background:#dc2626; color:#fff;
+    font-size:9px; font-weight:700; text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.4);
+    z-index:6; pointer-events:none; box-sizing:border-box;
+    white-space:nowrap;
+}
+
 /* 喂豆 / 铲子标记：与植物一样参与缩略图排布（job-n 分档 + job-p 序号定位） */
+/* ---- 落子动作标记（喂豆 / 铲子 / 点击格子 / 未来扩展）----
+   ★ 用 `.tag.job-mark` 这个**统一类**选中所有落子动作标记。
+     不要再按 type 逐个列举（以前写 `.tag.feed, .tag.shovel`）——
+     每加一个动作就要回来补一次，忘了就完全没尺寸、没定位，
+     图片会退回原始尺寸并被裁掉。
+     `job-mark` 由 08-board-data.js 渲染时挂上；feed/shovel 的旧选择器
+     保留作兼容。 */
+.cell .tag.job-mark,
 .cell .tag.feed, .cell .tag.shovel {
     position:absolute; padding:0; line-height:0;
     display:flex; align-items:center; justify-content:center;
@@ -108,19 +132,31 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
     transition:width .16s ease, height .16s ease;
 }
 /* 尺寸与定位：完全复用植物的 job-n 分档 + job-p 序号 */
+.cell.job-n1 .tag.job-mark,
 .cell.job-n1 .tag.feed, .cell.job-n1 .tag.shovel { left:3px; top:3px; width:58px; height:58px; }
+.cell.job-n2 .tag.job-mark,
 .cell.job-n2 .tag.feed, .cell.job-n2 .tag.shovel { width:27px; height:27px; top:50%; transform:translateY(-50%); }
+.cell.job-n3 .tag.job-mark, .cell.job-n4 .tag.job-mark,
 .cell.job-n3 .tag.feed, .cell.job-n3 .tag.shovel,
 .cell.job-n4 .tag.feed, .cell.job-n4 .tag.shovel { width:27px; height:27px; }
+.cell.job-n5 .tag.job-mark, .cell.job-n6 .tag.job-mark, .cell.job-n7 .tag.job-mark,
+.cell.job-n8 .tag.job-mark, .cell.job-n9 .tag.job-mark,
 .cell.job-n5 .tag.feed, .cell.job-n5 .tag.shovel,
 .cell.job-n6 .tag.feed, .cell.job-n6 .tag.shovel,
 .cell.job-n7 .tag.feed, .cell.job-n7 .tag.shovel,
 .cell.job-n8 .tag.feed, .cell.job-n8 .tag.shovel,
 .cell.job-n9 .tag.feed, .cell.job-n9 .tag.shovel { width:17px; height:17px; border-radius:2px; }
 
-/* 格内喂豆/铲子图片：撑满标记容器 */
-.cell .tag.feed .tag-feed-img,
-.cell .tag.shovel .tag-shovel-img {
+/* 格内「落子动作」标记的图片：撑满标记容器
+   ★ 必须用**统一类** `job-mark-img` 选择，**不要**写成
+     `.tag.feed .tag-feed-img` / `.tag.shovel .tag-shovel-img` 这种
+     「父 type + 子类名」配对 —— 两者一旦对不上，选择器就不命中，
+     图片会退回**原始尺寸**（如 500×500），被 .cell{overflow:hidden} 一裁，
+     就只剩「中心一小块」。
+     这正是「喂豆/铲子/点击格子只显示图片正中心」的原因。 */
+.cell .tag .job-mark-img,
+.cell .tag .tag-feed-img,
+.cell .tag .tag-shovel-img {
     display:block; width:100%; height:100%;
     object-fit:contain; object-position:center;
     user-select:none; -webkit-user-drag:none; pointer-events:none;
@@ -169,6 +205,10 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
     display:flex; align-items:center; gap:6px; padding:4px 8px;
     background:#f1f5f9; font-size:12px; font-weight:600; color:#334155;
     border-bottom:1px solid #e2e8f0;
+    /* ★ 允许换行：块头里可能塞很多控件（如「切换形态」的槽位下拉 + 次数输入）。
+       不换行时，任何超宽子元素都会被 .seq-chain 的 overflow:hidden 裁掉，
+       表现为「右边的勾选框 / ✕ 删不掉、也看不见」。换行后最差是掉到第二行。 */
+    flex-wrap: wrap; row-gap: 3px;
 }
 .seq-chain-head .seq-grip { color:#94a3b8; font-size:13px; letter-spacing:-1px; }
 .seq-chain-head .seq-order {
@@ -408,6 +448,8 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .cell .tag { font-size:9px; border-radius:3px; padding:0 4px; line-height:16px; white-space:nowrap; }
 .cell .tag.card { background:#bfdbfe; }
 .cell .tag.patch { background:#d1fae5; }
+/* 落子动作标记：透明底 + 无内边距（图片自己撑满） */
+.cell .tag.job-mark { background:transparent; padding:0; line-height:0; }
 .cell .tag.shovel { background:transparent; padding:0; line-height:0; }
 .cell .tag.guard { background:#fde68a; }
 .cell .tag.feed { background:transparent; padding:0; line-height:0; }
@@ -1018,21 +1060,50 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .seq-ms:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
 .seq-ms-unit { font-size: 9px; color: #818cf8; margin-left: -2px; }
 
-/* 切换形态块的「槽位」下拉 + 「次数」输入框 */
-.seq-form-slot {
-    flex: 0 0 auto; margin-left: 4px;
-    padding: 1px 2px; font-size: 10px;
+/* 参数摘要（默认态）——纯文本，宽度自适应，永远不会被压得看不见 */
+.seq-param-chip {
+    flex: 0 0 auto; margin-left: 2px; padding: 0 4px;
+    height: 15px; line-height: 13px;
     border: 1px solid #a5f3fc; border-radius: 4px;
-    background: #fff; color: #0e7490; font-family: inherit; cursor: pointer;
+    background: #ecfeff; color: #0e7490;
+    font-size: 10px; font-weight: 700; font-family: inherit;
+    white-space: nowrap; cursor: pointer;
 }
-.seq-form-slot:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,.15); }
-.seq-form-times {
-    width: 42px; flex: 0 0 42px; margin-left: 4px;
-    padding: 1px 4px; font-size: 10px; text-align: right;
+.seq-param-chip:hover { background: #cffafe; border-color: #0891b2; }
+/* 编辑态容器（默认隐藏，点摘要才展开） */
+.seq-param-editors { display: inline-flex; align-items: center; flex: 0 0 auto; }
+
+/* 参数输入框（chip 内联编辑用）
+   ★ 三个坑，全踩过：
+     1) 全局 `select, input { width:100% }` 在 flex 行里会撑满整行，
+        把后面的勾选框 / ✕ **挤出 .seq-chain(overflow:hidden) 的可视区**
+        （表现为「按钮不见了」，但 DOM 里其实存在）—— 必须显式锁宽。
+     2) `type="number"` 的 **spinner 上下箭头占约 16px**。
+        用户要求「删掉槽位的上下选择」，所以这里统一
+        `appearance:none` 关掉 spinner（同时也省下这 16px）。
+     3) 关掉 spinner 后文字仍要居中，宽度可以压到 26px。 */
+.seq-param-input {
+    width: 30px; min-width: 30px; max-width: 30px;
+    flex: 0 0 30px;
+    margin-left: 1px; padding: 0 1px;
+    font-size: 10px; line-height: 14px; text-align: center;
     border: 1px solid #a5f3fc; border-radius: 4px;
     background: #fff; color: #0e7490; font-family: inherit;
+    /* 关掉 number 的上下箭头（Chrome/Safari/Firefox/Edge 四家写法都要） */
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
-.seq-form-times:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,.15); }
+.seq-param-input::-webkit-outer-spin-button,
+.seq-param-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+.seq-param-input:focus { outline: none; border-color: #0891b2; box-shadow: 0 0 0 2px rgba(8,145,178,.15); }
+/* 参数单位字（「槽」「次」）—— 缩小并贴紧 */
+.seq-param-affix {
+    font-size: 9px; color: #0e7490; margin-left: 1px; flex: 0 0 auto;
+}
 
 /* 缩略图：链条里的植物头像 */
 .seq-ico .seq-thumb-img,
@@ -1162,38 +1233,6 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #morePicker .mp-desc { font-size: 10px; color: #94a3b8; margin-top: 2px; }
 #morePicker .mp-label { font-size: 11px; color: #64748b; margin-bottom: 6px; }
 
-/* 槽位 1-8 选择 */
-#morePicker .mp-slots { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-#morePicker .mp-slot {
-    flex: 1 1 0; min-width: 34px; padding: 7px 0; cursor: pointer;
-    border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
-    font-size: 12px; font-weight: 700; color: #475569; font-family: inherit;
-    transition: all .12s ease;
-}
-#morePicker .mp-slot:hover { border-color: #67e8f9; background: #f0fdff; }
-#morePicker .mp-slot.mp-slot-on {
-    border-color: #0891b2; background: #0891b2; color: #fff;
-    box-shadow: 0 2px 8px rgba(8,145,178,.30);
-}
-
-/* 次数输入 */
-#morePicker .mp-times {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
-}
-#morePicker .mp-step {
-    width: 30px; height: 30px; flex: none; cursor: pointer;
-    border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
-    font-size: 15px; font-weight: 700; color: #475569; line-height: 1; font-family: inherit;
-}
-#morePicker .mp-step:hover { border-color: #67e8f9; background: #f0fdff; color: #0891b2; }
-#morePicker .mp-times-input {
-    width: 68px; padding: 6px 8px; text-align: center;
-    border: 1px solid #cbd5e1; border-radius: 8px;
-    font-size: 13px; font-weight: 700; color: #0f172a; font-family: inherit;
-}
-#morePicker .mp-times-input:focus { outline: none; border-color: #0891b2; }
-#morePicker .mp-times-hint { font-size: 10px; color: #94a3b8; }
-
 /* 目标链切换（与 #genPicker 同构） */
 #morePicker .mp-target {
     display: flex; align-items: center; gap: 10px;
@@ -1306,17 +1345,129 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .gen-act .ga-chip-loop  { background:#f1f5f9; color:#475569; border-color:#e2e8f0; }
 /* 0 次的压暗，但仍显示图标（让用户知道有三个可能的归属） */
 .gen-act .ga-chip-zero { opacity: .38; font-weight: 500; }
-/* 「更多动作」占位：虚线、不可点、视觉上弱化 */
+/* 「更多动作」按钮：可点，但要和上面三个实心动作视觉区分（虚线圈） */
 .gen-act-more {
     border-style: dashed !important;
-    border-color: #cbd5e1 !important;
+    border-color: #94a3b8 !important;
     background: #fafbfc !important;
-    cursor: default !important;
-    opacity: .7;
+    cursor: pointer !important;
 }
-.gen-act-more:hover { transform: none !important; background: #fafbfc !important; }
-.gen-act-more .ga-ico { font-size: 18px; color: #cbd5e1; font-weight: 400; }
-.gen-act-more .ga-name { color: #94a3b8; }
+.gen-act-more:hover {
+    transform: none !important;
+    background: #f1f5f9 !important;
+    border-color: #64748b !important;
+}
+.gen-act-more .ga-ico { font-size: 18px; color: #64748b; font-weight: 700; }
+.gen-act-more .ga-name { color: #475569; }
+
+/* ============ 「更多动作」列表（第一级：选动作） ============ */
+#moreList {
+    position: fixed; inset: 0; z-index: 10080;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#moreList.ml-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#moreList .ml-panel {
+    width: min(360px, 90vw);
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#moreList .ml-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0;
+}
+#moreList .ml-dot { width: 6px; height: 6px; border-radius: 50%; background: #0891b2; }
+#moreList .ml-title { font-size: 14px; font-weight: 700; color: #0891b2; }
+#moreList .ml-close {
+    width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#moreList .ml-close:hover { background: #e2e8f0; }
+#moreList .ml-body { padding: 10px 12px; }
+#moreList .ml-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 12px 0; }
+#moreList .ml-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 11px; margin-bottom: 6px;
+    border: 1px solid #e2e8f0; border-radius: 10px; background: #fff;
+    cursor: pointer; text-align: left; font-family: inherit;
+    transition: all .12s ease;
+}
+#moreList .ml-item:last-child { margin-bottom: 0; }
+#moreList .ml-item:hover { border-color: #67e8f9; background: #f0fdff; transform: translateX(2px); }
+#moreList .ml-item .ml-ico { font-size: 20px; flex: 0 0 auto; display: inline-flex; }
+#moreList .ml-item .ml-txt { flex: 1; min-width: 0; }
+#moreList .ml-item .ml-name { font-size: 13px; font-weight: 700; color: #334155; }
+#moreList .ml-item .ml-desc { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+#moreList .ml-item .ml-go { color: #cbd5e1; font-size: 14px; flex: 0 0 auto; }
+#moreList .ml-item:hover .ml-go { color: #0891b2; }
+
+/* ============ 棋盘落子「更多」列表（#boardMoreList） ============
+   与右侧通用动作的 #moreList 同构，但管的是「落子」而不是「链上动作」。 */
+#boardMoreList {
+    position: fixed; inset: 0; z-index: 10080;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#boardMoreList.bml-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#boardMoreList .bml-panel {
+    width: min(360px, 90vw);
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#boardMoreList .bml-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0;
+}
+#boardMoreList .bml-dot { width: 6px; height: 6px; border-radius: 50%; background: #ea580c; }
+#boardMoreList .bml-title { font-size: 14px; font-weight: 700; color: #ea580c; }
+#boardMoreList .bml-close {
+    width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#boardMoreList .bml-close:hover { background: #e2e8f0; }
+#boardMoreList .bml-body { padding: 10px 12px; }
+#boardMoreList .bml-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 12px 0; }
+#boardMoreList .bml-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 11px; margin-bottom: 6px;
+    border: 1px solid #e2e8f0; border-radius: 10px; background: #fff;
+    cursor: pointer; text-align: left; font-family: inherit;
+    transition: all .12s ease;
+}
+#boardMoreList .bml-item:last-child { margin-bottom: 0; }
+#boardMoreList .bml-item:hover { border-color: #fdba74; background: #fff7ed; transform: translateX(2px); }
+#boardMoreList .bml-item .bml-ico { font-size: 20px; flex: 0 0 auto; display: inline-flex; }
+#boardMoreList .bml-item .bml-txt { flex: 1; min-width: 0; }
+#boardMoreList .bml-item .bml-name { font-size: 13px; font-weight: 700; color: #334155; }
+#boardMoreList .bml-item .bml-desc { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+#boardMoreList .bml-item .bml-badge {
+    flex: 0 0 auto; font-size: 10px; padding: 1px 6px; border-radius: 6px;
+    background: #ffedd5; color: #c2410c; font-weight: 700; white-space: nowrap;
+}
+
+/* ============ 参数弹窗里的参数行 ============ */
+#morePicker .mp-params { margin-bottom: 4px; }
+#morePicker .mp-param {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+#morePicker .mp-param-label {
+    font-size: 11px; color: #64748b; flex: 0 0 62px; text-align: right;
+}
+#morePicker .mp-param-inp {
+    width: 68px !important; min-width: 68px !important; max-width: 68px !important;
+    flex: 0 0 68px !important;
+    padding: 6px 8px; text-align: center;
+    border: 1px solid #cbd5e1; border-radius: 8px;
+    font-size: 13px; font-weight: 700; color: #0f172a; font-family: inherit;
+}
+#morePicker .mp-param-inp:focus { outline: none; border-color: #0891b2; }
+#morePicker .mp-param-hint { font-size: 10px; color: #94a3b8; }
+#morePicker .mp-back {
+    background: #fff; border: 1px solid #cbd5e1; color: #475569;
+}
+#morePicker .mp-back:hover { background: #f1f5f9; }
 
 /* 弹窗里的「本次已插入 N 次」回显 */
 #genPicker .gp-inserted {

@@ -178,6 +178,32 @@ GENERIC_FORM_SLOT_MAX = 8
 # 切换次数上限 —— 防止用户误填 999 把整条链拖垮。
 GENERIC_FORM_TIMES_MAX = 20
 
+# ---------------------------------------------------------------------------
+# ★★ 可扩展的「按槽位点 N 次」通用动作表
+#
+#   这一族动作的形态完全一样：选一个槽位 -> 点对应的按钮 -> 点 N 次。
+#   新增同类动作（「滑飞弹」「使用神器」等）**只需在这里加一行**，
+#   generic_dsl 和网页端都无需改动（网页端在 24-jobset-fields.js 的
+#   JOB_MORE_ACTIONS 里加对应定义，params 用同样的 slot/times 键）。
+#
+#   字段：
+#     coord        坐标键模板，{n} 会被替换成槽位号
+#     slot_max     槽位上限
+#     slot_param   段上表示槽位的字段名（默认 'slot'）
+#     times_param  段上表示次数的字段名（默认 'times'）
+#     times_max    次数上限（默认 GENERIC_FORM_TIMES_MAX）
+#
+#   ★ 坐标表里对应的键必须齐全，否则该槽位会被记 missing 并跳过
+#     （宁可少点一次，也不点错位置）。
+# ---------------------------------------------------------------------------
+GENERIC_SLOT_CLICK: Dict[str, Dict[str, Any]] = {
+    "form": {
+        "coord": "槽{n}切换形态",
+        "slot_max": GENERIC_FORM_SLOT_MAX,
+        "times_max": GENERIC_FORM_TIMES_MAX,
+    },
+}
+
 # 捡豆：要滑的 5 条线（起始点键, 终点键）
 GENERIC_BEAN_LINES = [
     ("1阳光起始点", "1阳光终点"),
@@ -232,12 +258,32 @@ def form_point(coords: Dict[str, Any], slot: Any) -> Optional[str]:
     return _coord_any(coords, f"槽{n}切换形态")
 
 
+def _slot_click_point(
+    coords: Dict[str, Any],
+    spec: Dict[str, Any],
+    slot: Any,
+) -> Optional[str]:
+    """按 GENERIC_SLOT_CLICK 的 spec 求「槽N<后缀>」坐标键名。
+
+    spec["coord"] 里的 {n} 会被替换成槽位号，例如 "槽{n}切换形态"。
+    ★ 越界/非法一律返回 None（不夹取）—— 宁可不点，也不点错位置。
+    """
+    try:
+        n = int(slot)
+    except (TypeError, ValueError):
+        return None
+    if not 1 <= n <= spec.get("slot_max", GENERIC_FORM_SLOT_MAX):
+        return None
+    return _coord_any(coords, spec["coord"].format(n=n))
+
+
 def generic_dsl(
     action: str,
     coords: Dict[str, Any],
     ms: Any = None,
     slot: Any = None,
     times: Any = None,
+    params: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """把一个通用动作翻成 BatchSwipe DSL。
 
@@ -245,16 +291,50 @@ def generic_dsl(
     ms:     仅 wait 用 —— 等待的毫秒数（网页端输入框填的值），缺省/非法时用 1000ms
     slot:   仅 form 用 —— 槽位号 1..8（决定点哪个「槽N切换形态」）
     times:  仅 form 用 —— 点击次数，缺省/非法/越界时用 1（上限见 GENERIC_FORM_TIMES_MAX）
+    params: ★ 通用参数袋 —— 网页端段上的所有自定义参数（{key: value}）。
+            新增「带参数的通用动作」时优先走这里，见下方 GENERIC_SLOT_CLICK。
     返回 {"dsl": str, "missing": [...], "count": int}
     """
     aid = str(action or "").strip()
     if aid.startswith("ga:"):
         aid = aid[3:]
 
+    params = params if isinstance(params, dict) else {}
+
+    # ★ 兼容：老调用点是位置参数 slot/times，把它们并进 params，
+    #   这样下面所有分支统一从 params 取值。显式 params 优先。
+    merged: Dict[str, Any] = {}
+    if slot is not None:
+        merged["slot"] = slot
+    if times is not None:
+        merged["times"] = times
+    merged.update(params)
+
     parts: List[str] = []
     missing: List[str] = []
 
-    if aid in GENERIC_CLICK_KEY:
+    # ★★ 通用「按槽位点 N 次」动作 —— 数据驱动，见下方 GENERIC_SLOT_CLICK。
+    #    新增同类动作（如「滑飞弹」「使用神器」）只需往那张表里加一行。
+    if aid in GENERIC_SLOT_CLICK:
+        spec = GENERIC_SLOT_CLICK[aid]
+        key = _slot_click_point(coords, spec, merged.get(spec.get("slot_param", "slot")))
+        if key is None:
+            # 报错里把 {n} 还原成 N，别让用户看到模板占位符
+            _label = spec["coord"].replace("{n}", "N")
+            missing.append(
+                f"{aid}：槽位 {merged.get(spec.get('slot_param', 'slot'))!r} 无效"
+                f"或坐标表缺少「{_label}」(N=1..{spec.get('slot_max', 8)})"
+            )
+        else:
+            n = _clamp_int(
+                merged.get(spec.get("times_param", "times")),
+                1,
+                spec.get("times_max", GENERIC_FORM_TIMES_MAX),
+                1,
+            )
+            parts.extend([f"click:{key}"] * n)
+
+    elif aid in GENERIC_CLICK_KEY:
         key = _coord_any(coords, GENERIC_CLICK_KEY[aid])
         if key is None:
             missing.append(f"{aid}：坐标表缺少「{GENERIC_CLICK_KEY[aid]}」")
@@ -266,19 +346,6 @@ def generic_dsl(
         #   网页端填的是毫秒（默认 1000），这里换算成秒 —— 1ms 精度会保留。
         sec = _as_seconds(ms, 1.0)
         parts.append(f"sleep:{sec:g}")
-
-    elif aid == "form":
-        # ★ 切换形态：点击「槽N切换形态」按钮 times 次。
-        #   不做形态档位换算 —— 用户填几次就点几次（由用户自己在链里插「等待」控制节奏）。
-        key = form_point(coords, slot)
-        if key is None:
-            missing.append(
-                f"form：槽位 {slot!r} 无效或坐标表缺少「槽N切换形态」(N=1.."
-                f"{GENERIC_FORM_SLOT_MAX})"
-            )
-        else:
-            n = _clamp_int(times, 1, GENERIC_FORM_TIMES_MAX, 1)
-            parts.extend([f"click:{key}"] * n)
 
     elif aid == "bean":
         lines: List[str] = []
@@ -422,6 +489,7 @@ def chain_dsl(
                 seg.get("ms"),
                 seg.get("slot"),
                 seg.get("times"),
+                seg,                      # ★ 整个段都当参数袋 —— 新动作免改这里
             )
             if r["dsl"]:
                 parts.append(r["dsl"])
@@ -437,6 +505,8 @@ def chain_dsl(
             src = find_feed_point(coords)
         elif typ == "shovel":
             src = find_shovel_point(coords)
+        # ★ 其余 type（tap / 以及未来新增的落子动作）**故意不设起点** ——
+        #   落到下面的 `src is None` 分支，编译成 click:格子N_M。
 
         for cell in seg.get("cells") or []:
             dst = find_grass_point(coords, str(cell))
@@ -444,8 +514,9 @@ def chain_dsl(
                 missing.append(f"{typ}:{seg.get('label')} cell={cell}（格子无坐标）")
                 continue
             if src is None:
-                # 找不到起点就退化为点击（至少不丢动作）
+                # 没有起点就是「纯点击」（tap 类动作的正常路径，不是错误）
                 parts.append(f"click:{dst}")
+                # 只有 feed/shovel 才该有起点；它们缺起点才值得告警
                 if typ in ("feed", "shovel"):
                     missing.append(f"{typ}:{seg.get('label')} 无起点坐标，退化为 click")
             else:

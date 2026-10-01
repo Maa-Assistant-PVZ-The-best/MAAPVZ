@@ -149,31 +149,26 @@ function placePlantOnBoard(board, slot, r, c) {
     const cellArr = board[r] && board[r][c];
     if (!cellArr) return false;
     const t0 = jobTables[currentTable];
-    const key = (slot === 9) ? 'feed' : (slot === 10 ? 'shovel' : 'card' + slot);
+    // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）统一走注册表；
+    //   不在注册表里的就是植物槽 cardN。
+    const act = (typeof jobBoardActionByArmedNo === 'function')
+        ? jobBoardActionByArmedNo(slot) : null;
+    const key = act ? act.id : 'card' + slot;
     const mode = jobSlotMode(t0, key);          // 当前形态：单次 / 循环
 
-    if (slot === 9) {                                   // 槽9 = 喂豆位置
-        // 同一格：同形态只允许一个；单次允许重复（但喂豆通常一格一个）
-        if (cellArr.some(it => it.id === 'feed' && jobItemMode(it) === mode)) return false;
+    // ★★ 同格可以重复放 —— 所有动作、所有链都放开（用户明确要求）。
+    //   以前这里有「循环形态同格限 1 个 / 单次形态限 12 个」的限制，
+    //   导致喂豆和铲子无法像植物那样在同一格叠加。
+    //   现在完全不去重、不设上限：放几个就几个，写进链里就是几个动作。
+    //   ★ 唯一的例外：植物槽必须先在槽位面板里配了植物名才能落子。
+    if (act) {
         saveBoardState();
-        cellArr.push({ id: 'feed', label: '喂豆', type: 'feed', mode: mode,
-                       col: c + 1, row: r + 1, seq: jobNextSeq(board, 'feed', mode) });
+        cellArr.push(jobBoardActionItem(act, mode, r, c, jobNextSeq(board, act.id, mode)));
         return true;
     }
-    if (slot === 10) {                                  // 槽10 = 铲子标记
-        if (cellArr.some(it => it.id === 'shovel' && jobItemMode(it) === mode)) return false;
-        saveBoardState();
-        cellArr.push({ id: 'shovel', label: '铲子', type: 'shovel', mode: mode,
-                       col: c + 1, row: r + 1, seq: jobNextSeq(board, 'shovel', mode) });
-        return true;
-    }
+
     const name = t0 && t0.slots[slot];
     if (!name) return false;
-
-    // 循环形态：同格同槽只能一个；单次形态：可在同一格重复种（上限 12 次防误点）
-    const _same = cellArr.filter(it => it.id === 'card' + slot && jobItemMode(it) === mode).length;
-    if (mode === 'loop' && _same >= 1) return false;
-    if (mode === 'once' && _same >= 12) return false;
 
     const info = jobFindPlant(name) || {};
     saveBoardState();

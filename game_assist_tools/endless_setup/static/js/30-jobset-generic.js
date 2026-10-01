@@ -232,11 +232,11 @@ function jobRenderGenActionsInto(hostId) {
     // 首次填充次数角标
     jobRefreshGenCounts();
 
-    // ★ 优化5：「更多动作」按钮 -> 打开 #morePicker（目前弹窗里只有「切换形态」）
+    // ★ 「更多动作」按钮 -> 先打开动作列表（#moreList），选完再进参数弹窗
     const more = document.createElement('button');
     more.className = 'gen-act gen-act-more';
     more.type = 'button';
-    more.title = '更多动作（切换形态）';
+    more.title = '更多动作（点击选择要插入的动作）';
     const mIco = document.createElement('span');
     mIco.className = 'ga-ico';
     mIco.textContent = '＋';
@@ -245,7 +245,7 @@ function jobRenderGenActionsInto(hostId) {
     mNm.className = 'ga-name';
     mNm.textContent = '更多';
     more.appendChild(mNm);
-    more.addEventListener('click', function () { jobOpenMorePicker(); });
+    more.addEventListener('click', function () { jobOpenMoreList(); });
     box.appendChild(more);
 }
 
@@ -302,86 +302,162 @@ function jobBindGenPicker() {
 }
 
 // ============================================================
-// 「更多」弹窗（#morePicker）—— 目前只有「切换形态」
+// 「更多」动作 —— 两级弹窗
 //
-//   段形状：{ key: 'ga:form', ga: 'form', slot: N, times: M }
-//     slot  : 1-8，决定运行时点哪个「槽N切换形态」坐标
-//     times : 点击次数，填几就点几（不做形态档位换算）
+//   第一级 #moreList   ：列出 JOB_MORE_ACTIONS 里的动作，选一个
+//   第二级 #morePicker ：按该动作的 params 声明自动渲染参数，再选链并插入
+//
+//   ★ 扩展方式：往 JOB_MORE_ACTIONS 里加一个动作定义（含 params）即可，
+//     列表和参数 UI 都会自动出来，**本文件的弹窗代码不需要改**。
+//
+//   段形状示例（切换形态）：{ key: 'ga:form', ga: 'form', slot: N, times: M }
 // ============================================================
 
-let jobMoreTarget = 'once';     // 目标链（默认单次链）
-let jobMoreSlot = 1;            // 选中的槽位
-let jobMoreTimes = 1;           // 点击次数
+let jobMoreTarget = 'once';      // 目标链（默认单次链）
+let jobMoreAction = null;        // 当前在第二级里编辑的动作定义
+let jobMoreValues = {};          // 当前参数值 { slot: 1, times: 2 }
 
-function jobOpenMorePicker() {
+// ---- 第一级：动作列表 ----
+
+function jobOpenMoreList() {
+    const modal = document.getElementById('moreList');
+    if (!modal) return;
+    jobRenderMoreList();
+    modal.classList.add('ml-open');
+}
+
+function jobRenderMoreList() {
+    const box = document.getElementById('mlBody');
+    if (!box) return;
+    box.innerHTML = '';
+
+    const list = (typeof JOB_MORE_ACTIONS !== 'undefined' && Array.isArray(JOB_MORE_ACTIONS))
+        ? JOB_MORE_ACTIONS : [];
+
+    if (!list.length) {
+        const hint = document.createElement('div');
+        hint.className = 'ml-empty';
+        hint.textContent = '（暂无更多动作）';
+        box.appendChild(hint);
+        return;
+    }
+
+    list.forEach(function (ga) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'ml-item';
+        btn.title = '插入「' + (ga.name || ga.id) + '」';
+
+        const ico = document.createElement('span');
+        ico.className = 'ml-ico';
+        jobAppendIconImg(ico, ga.img, {
+            cls: 'ga-ico-img', size: 24, alt: ga.name,
+            fallbackText: ga.icon || '⚡'
+        });
+        btn.appendChild(ico);
+
+        const txt = document.createElement('div');
+        txt.className = 'ml-txt';
+        const nm = document.createElement('div');
+        nm.className = 'ml-name';
+        nm.textContent = ga.name || ga.id;
+        txt.appendChild(nm);
+        if (ga.desc) {
+            const ds = document.createElement('div');
+            ds.className = 'ml-desc';
+            ds.textContent = ga.desc;
+            txt.appendChild(ds);
+        }
+        btn.appendChild(txt);
+
+        const go = document.createElement('span');
+        go.className = 'ml-go';
+        go.textContent = '›';
+        btn.appendChild(go);
+
+        btn.addEventListener('click', function () {
+            jobCloseMoreList();
+            jobOpenMorePicker(ga.id);
+        });
+        box.appendChild(btn);
+    });
+}
+
+function jobCloseMoreList() {
+    const modal = document.getElementById('moreList');
+    if (modal) modal.classList.remove('ml-open');
+}
+
+// ---- 第二级：参数 + 选链 ----
+
+function jobOpenMorePicker(gaId) {
     const modal = document.getElementById('morePicker');
     if (!modal) return;
 
-    const ga = (typeof JOB_FORM_ACTION !== 'undefined') ? JOB_FORM_ACTION : null;
+    const ga = gaId ? jobGenericActionById(gaId) : null;
+    if (!ga) return;
+    jobMoreAction = ga;
+
+    // 参数初值：取各参数的 def
+    jobMoreValues = {};
+    jobActionParams(ga).forEach(function (p) {
+        jobMoreValues[p.key] = (p.def === undefined || p.def === null) ? 0 : p.def;
+    });
     jobMoreTarget = 'once';
-    jobMoreSlot = ga ? (ga.defaultSlot || 1) : 1;
-    jobMoreTimes = ga ? (ga.defaultTimes || 1) : 1;
 
     const nm = document.getElementById('mpName');
     const desc = document.getElementById('mpDesc');
     const ico = document.getElementById('mpIco');
-    if (ico && ga) ico.textContent = ga.icon || '🔄';
-    if (nm && ga) nm.textContent = ga.name || '切换形态';
-    if (desc && ga) desc.textContent = ga.desc || '';
+    if (ico) jobAppendIconImg(ico, ga.img, {
+        cls: 'ga-ico-img', size: 28, alt: ga.name, fallbackText: ga.icon || '⚡'
+    });
+    if (nm) nm.textContent = ga.name || ga.id;
+    if (desc) desc.textContent = ga.desc || '';
 
-    jobRenderMoreSlots();
-    jobRenderMoreTimes();
+    jobRenderMoreParams();
     jobRenderMoreTarget();
 
     modal.classList.add('mp-open');
-
-    // 回显「本次已插入 N 次」
-    const tip = document.getElementById('mpInserted');
-    if (tip) {
-        const t = jobTables[currentTable];
-        const board = jobIsBossBoard() ? boardLate : boardEarly;
-        const used = jobGenUsageIn(t, jobMoreTarget, board, 'form');
-        tip.textContent = used > 0 ? ('本次已插入 ' + used + ' 次') : '';
-    }
+    jobRefreshMoreInserted();
 }
 
-// 渲染 1-8 槽按钮
-function jobRenderMoreSlots() {
-    const box = document.getElementById('mpSlots');
+// ★ 参数区：完全按 ga.params 渲染 —— 这是「可扩展」的核心。
+function jobRenderMoreParams() {
+    const box = document.getElementById('mpParams');
     if (!box) return;
     box.innerHTML = '';
 
-    const max = (typeof JOB_FORM_ACTION !== 'undefined' && JOB_FORM_ACTION.slotMax)
-        ? JOB_FORM_ACTION.slotMax : 8;
+    const ga = jobMoreAction;
+    const ps = jobActionParams(ga);
+    if (!ps.length) return;
 
-    for (let i = 1; i <= max; i++) {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.className = 'mp-slot' + (i === jobMoreSlot ? ' mp-slot-on' : '');
-        b.textContent = i;
-        b.dataset.slot = i;
-        b.title = '切换第 ' + i + ' 槽植物的形态';
-        b.addEventListener('click', function () {
-            jobMoreSlot = i;
-            jobRenderMoreSlots();
+    ps.forEach(function (p) {
+        const row = document.createElement('div');
+        row.className = 'mp-param';
+
+        const lab = document.createElement('span');
+        lab.className = 'mp-param-label';
+        lab.textContent = (p.label || p.key) + '：';
+        row.appendChild(lab);
+
+        const ctrl = jobBuildParamControl(p, jobMoreValues[p.key], {
+            className: 'mp-param-inp',
+            width: 68,
+            onChange: function (v) { jobMoreValues[p.key] = v; jobRefreshMoreInserted(); },
+            onEnter: function () { jobConfirmMorePicker(); }
         });
-        box.appendChild(b);
-    }
-}
+        row.appendChild(ctrl);
 
-// 把次数写进输入框（夹在 1..timesMax）
-function jobRenderMoreTimes() {
-    const inp = document.getElementById('mpTimes');
-    if (inp) inp.value = String(jobMoreTimes);
-}
+        // 范围提示（只在有上限时显示，避免噪音）
+        if (p.max !== undefined && p.max !== null) {
+            const hint = document.createElement('span');
+            hint.className = 'mp-param-hint';
+            hint.textContent = (p.min !== undefined ? p.min : 0) + ' - ' + p.max;
+            row.appendChild(hint);
+        }
 
-function jobClampMoreTimes(v) {
-    const max = (typeof JOB_FORM_ACTION !== 'undefined' && JOB_FORM_ACTION.timesMax)
-        ? JOB_FORM_ACTION.timesMax : 20;
-    let n = parseInt(v, 10);
-    if (!Number.isFinite(n) || n < 1) n = 1;
-    if (n > max) n = max;
-    return n;
+        box.appendChild(row);
+    });
 }
 
 function jobRenderMoreTarget() {
@@ -407,18 +483,29 @@ function jobCloseMorePicker() {
     if (modal) modal.classList.remove('mp-open');
 }
 
-// 确认插入：把「切换形态」段追加到目标链末尾
+// 回显「该链已插入 N 次」
+function jobRefreshMoreInserted() {
+    const tip = document.getElementById('mpInserted');
+    if (!tip) return;
+    const ga = jobMoreAction;
+    if (!ga) { tip.textContent = ''; return; }
+    const t = jobTables[currentTable];
+    const board = jobIsBossBoard() ? boardLate : boardEarly;
+    const used = jobGenUsageIn(t, jobMoreTarget, board, ga.id);
+    tip.textContent = used > 0 ? ('该链已插入 ' + used + ' 次') : '';
+}
+
+// 确认插入：把段追加到目标链末尾
 //   ★ 与 #genPicker 一致：不关弹窗，可连续插入。
 function jobConfirmMorePicker() {
     const modal = document.getElementById('morePicker');
     if (!modal) return;
 
+    const ga = jobMoreAction;
+    if (!ga) { jobCloseMorePicker(); return; }
+
     const t = jobTables[currentTable];
     if (!t) { jobCloseMorePicker(); return; }
-
-    // 从输入框读回次数（用户可能直接手输）
-    const inp = document.getElementById('mpTimes');
-    if (inp) jobMoreTimes = jobClampMoreTimes(inp.value);
 
     const board = jobIsBossBoard() ? boardLate : boardEarly;
     // ★ 兜底：boss 关没有收尾链。即使 jobMoreTarget 因为某些竞态残留成 'end'，
@@ -430,26 +517,23 @@ function jobConfirmMorePicker() {
     const field = jobChainField(which, board);
     if (!Array.isArray(t[field])) t[field] = [];
 
-    // ★ 必须带 ga:'form' —— 运行时靠 key 的 'ga:' 前缀（或 type:'action'）
+    // ★ 必须带 ga:<id> —— 运行时靠 key 的 'ga:' 前缀（或 type:'action'）
     //   判定这是通用动作段，否则会被当成植物段丢弃。
-    t[field].push({
-        key: JOB_GA_PREFIX + 'form',
-        ga: 'form',
-        slot: jobMoreSlot,
-        times: jobMoreTimes
-    });
+    const seg = { key: JOB_GA_PREFIX + ga.id, ga: ga.id };
+    jobApplyParamsToSeg(seg, ga, jobMoreValues);
+    t[field].push(seg);
 
     jobSaveLocal();
     jobRenderSeqChains();
     jobRefreshGenCounts();
 
     const meta = JOB_CHAIN_META[which] || JOB_CHAIN_META.once;
-    const used = jobGenUsageIn(t, which, board, 'form');
-    setStatus('＋ 已插入「切换形态（槽' + jobMoreSlot + ' × ' + jobMoreTimes
-        + '）」到' + meta.short + '末尾（该链已用 ' + used + ' 次）');
+    const used = jobGenUsageIn(t, which, board, ga.id);
+    const summary = jobParamsSummary(ga, seg);
+    setStatus('＋ 已插入「' + (ga.name || ga.id) + (summary ? '（' + summary + '）' : '')
+        + '」到' + meta.short + '末尾（该链已用 ' + used + ' 次）');
 
-    const tip = document.getElementById('mpInserted');
-    if (tip) tip.textContent = '本次已插入 ' + used + ' 次';
+    jobRefreshMoreInserted();
 }
 
 let jobMorePickerBound = false;
@@ -457,49 +541,37 @@ let jobMorePickerBound = false;
 function jobBindMorePicker() {
     if (jobMorePickerBound) return;
     const modal = document.getElementById('morePicker');
-    if (!modal) return;
+    const list = document.getElementById('moreList');
+    if (!modal && !list) return;
 
+    // ---- 第一级 ----
+    const mlClose = document.getElementById('mlClose');
+    if (mlClose) mlClose.addEventListener('click', jobCloseMoreList);
+    if (list) {
+        list.addEventListener('click', function (e) {
+            if (e.target === list) jobCloseMoreList();
+        });
+    }
+
+    // ---- 第二级 ----
     const close = document.getElementById('mpClose');
     if (close) close.addEventListener('click', jobCloseMorePicker);
 
     const cancel = document.getElementById('mpCancel');
     if (cancel) cancel.addEventListener('click', jobCloseMorePicker);
 
+    const back = document.getElementById('mpBack');
+    if (back) back.addEventListener('click', function () {
+        jobCloseMorePicker();
+        jobOpenMoreList();
+    });
+
     const ok = document.getElementById('mpOk');
     if (ok) ok.addEventListener('click', jobConfirmMorePicker);
 
-    // 点击遮罩关闭
     modal.addEventListener('click', function (e) {
         if (e.target === modal) jobCloseMorePicker();
     });
-
-    // 次数：加减按钮
-    const down = document.getElementById('mpTimesDown');
-    const up = document.getElementById('mpTimesUp');
-    if (down) down.addEventListener('click', function () {
-        jobMoreTimes = jobClampMoreTimes(jobMoreTimes - 1);
-        jobRenderMoreTimes();
-    });
-    if (up) up.addEventListener('click', function () {
-        jobMoreTimes = jobClampMoreTimes(jobMoreTimes + 1);
-        jobRenderMoreTimes();
-    });
-
-    // 次数：手输 —— 失焦/回车时夹取，避免用户留下 0 或 999
-    const inp = document.getElementById('mpTimes');
-    if (inp) {
-        inp.addEventListener('blur', function () {
-            jobMoreTimes = jobClampMoreTimes(inp.value);
-            jobRenderMoreTimes();
-        });
-        inp.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') {
-                jobMoreTimes = jobClampMoreTimes(inp.value);
-                jobRenderMoreTimes();
-                jobConfirmMorePicker();
-            }
-        });
-    }
 
     // 目标链：左右箭头 / 点击整行 / 右键，都能循环切换
     const prev = document.getElementById('mpPrev');
@@ -508,15 +580,23 @@ function jobBindMorePicker() {
     if (prev) prev.addEventListener('click', function (e) { e.stopPropagation(); jobCycleMoreTarget(-1); });
     if (next) next.addEventListener('click', function (e) { e.stopPropagation(); jobCycleMoreTarget(1); });
     if (row) {
-        row.addEventListener('click', function () { jobCycleMoreTarget(1); });
+        row.addEventListener('click', function () { jobCycleMoreTarget(1); jobRefreshMoreInserted(); });
         row.addEventListener('contextmenu', function (e) {
             e.preventDefault();
             jobCycleMoreTarget(-1);
+            jobRefreshMoreInserted();
         });
     }
 
+    // Esc：第二级开着就退回第一级，否则关掉列表
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') jobCloseMorePicker();
+        if (e.key !== 'Escape') return;
+        if (modal.classList.contains('mp-open')) {
+            jobCloseMorePicker();
+            jobOpenMoreList();
+        } else {
+            jobCloseMoreList();
+        }
     });
 
     jobMorePickerBound = true;
