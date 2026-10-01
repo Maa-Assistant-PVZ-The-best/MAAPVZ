@@ -542,6 +542,35 @@ except Exception as _e11:
 
 
 # ---------------------------------------------------------------------------
+print("\n=== 12. 自动计数：主界面关卡文本解析 ===")
+try:
+    from types import SimpleNamespace as _NS12
+    from agent.jobset import runtime as _rt12
+
+    check("解析: 「第87关」-> 87", _rt12._parse_level_text("第87关") == 87)
+    check("解析: 「第 5 关」-> 5", _rt12._parse_level_text("第 5 关") == 5)
+    check("解析: 裸数字「123」-> 123", _rt12._parse_level_text("123") == 123)
+    check("解析: 无数字 -> None", _rt12._parse_level_text("无尽挑战") is None)
+    check("解析: 空串 -> None", _rt12._parse_level_text("") is None)
+    check("解析: None -> None", _rt12._parse_level_text(None) is None)
+
+    _argv12 = _NS12(reco_detail=_NS12(
+        best_result=_NS12(text="第87关"),
+        filtered_results=[], all_results=[]))
+    check("reco: best_result.text 取得到", _rt12._reco_text(_argv12) == "第87关")
+
+    _argv12b = _NS12(reco_detail=_NS12(
+        best_result=None,
+        filtered_results=[_NS12(text="第5关")], all_results=[]))
+    check("reco: best 为空回退 filtered", _rt12._reco_text(_argv12b) == "第5关")
+
+    _argv12c = _NS12(reco_detail=None)
+    check("reco: 无识别详情 -> None", _rt12._reco_text(_argv12c) is None)
+except Exception as _e12:
+    check("自动计数解析", False, f"{type(_e12).__name__}: {_e12}")
+
+
+# ---------------------------------------------------------------------------
 print("\n" + "=" * 52)
 if FAILED:
     print(f"FAILED {len(FAILED)}: {FAILED}")

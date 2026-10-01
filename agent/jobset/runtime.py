@@ -29,6 +29,7 @@ JobSetInfo        只读查询当前状态（调试用，不产生副作用）�
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -88,6 +89,44 @@ def _parse_param(raw: Any) -> Dict[str, Any]:
     return {}
 
 
+def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> None:
+    """按关卡 lv 预热选卡 / 编队注入（JobSetLoad 与 JobSetAutoCount 共用）。
+
+    ★ 故意**不锁表**（不动 table_index）：「本关用哪张表」的最终决定权
+      在 JobSetStage / JobSetFight（它们才知道是不是 boss 关、换阵走到哪）。
+      这里只是把「预计表」的选卡植物 + 编队注入好，让首帧进选卡界面
+      就有正确的东西可用。
+
+    ★ plan_table_index 会记下预热的是哪张表 —— 局外换阵节点
+      （JobSetPlan）靠它判断「表有没有变」。这是不走 _apply_table 的
+      注入路径，所以手动记一笔。
+    """
+    lv = lv if lv > 0 else 1
+    table = js.pick_table(lv)
+    _log(f"预热：关卡={lv} -> 预计表{table.index + 1}（关卡 {table.from_level} 起）")
+
+    # 选卡参数先用「预计表」注入，保证首帧进选卡界面时有植物可选
+    try:
+        context.override_pipeline({
+            "无尽挑战_选取植物": {
+                "custom_action_param": json.dumps(
+                    {"植物列表": table.plants}, ensure_ascii=False
+                )
+            }
+        })
+        _log(f"已注入选卡参数（预计）：{table.plants}")
+    except Exception as e:
+        # override 失败不该致命：日志留痕，继续走
+        _log(f"注入选卡参数失败（{type(e).__name__}: {e}），下游可能拿到空参数")
+
+    # ★ 编队切换：同样按「预计表」先注入一次。
+    #   这样首帧进选卡界面时，「清空卡牌」的 next 就已经是对的
+    #   （选卡 or 切换编队），不会先走错分支再纠正。
+    _inject_squad(context, table.squad)
+
+    _STATE["plan_table_index"] = table.index
+
+
 def _ensure_tracker(param: Dict[str, Any]) -> LevelTracker:
     """取得/初始化本进程的计数器。"""
     tr = _STATE.get("tracker")
@@ -96,6 +135,45 @@ def _ensure_tracker(param: Dict[str, Any]) -> LevelTracker:
         _STATE["tracker"] = tr
         _log("计数器已初始化")
     return tr
+
+
+_LEVEL_TEXT_RE = re.compile(r"(\d+)")
+
+
+def _parse_level_text(text: str) -> Optional[int]:
+    """从「第87关」之类的关卡文本里解析关卡号；解析不出返回 None。"""
+    if not text:
+        return None
+    m = _LEVEL_TEXT_RE.search(str(text))
+    if not m:
+        return None
+    try:
+        lv = int(m.group(1))
+    except ValueError:
+        return None
+    return lv if lv > 0 else None
+
+
+def _reco_text(argv: Any) -> Optional[str]:
+    """从 custom action 的 argv 里取本次识别的 OCR 文本（best > filtered > all）。
+
+    ★ 节点本身是 OCR 识别（expected=["第"]），命中后 MAA 会把识别详情
+      一起传给 action（reco_detail）—— 不用自己再截图识别一次。
+    """
+    reco = getattr(argv, "reco_detail", None)
+    if reco is None:
+        return None
+    cands = []
+    best = getattr(reco, "best_result", None)
+    if best is not None:
+        cands.append(best)
+    cands.extend(getattr(reco, "filtered_results", None) or [])
+    cands.extend(getattr(reco, "all_results", None) or [])
+    for r in cands:
+        t = getattr(r, "text", None)
+        if t:
+            return str(t)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -599,13 +677,13 @@ class JobSetLoad(CustomAction):
         #     · 换卡可以发生在**局外**（这就是「不重开」的关键）
         tr = from_params(param)
         if tr.count > 0:
-            _log(f"起始关卡={tr.count}（由参数给定，本局不再做 OCR 识别）")
+            _log(f"起始关卡={tr.count}（由参数给定）")
         else:
-            _log("⚠️ 未给定起始关卡 -> 计数器从 0 起。"
-                 "请在 option 里填「起始关卡」，否则表选择会落回第 1 张表")
+            _log("未给定起始关卡 -> 计数器暂从 0 起；若流程走「自动计数」节点，"
+                 "会用主界面识别到的关卡号覆盖，否则请在 option 里填「起始关卡」")
         _STATE["tracker"] = tr
 
-        # ---- 当前阵容 ----
+        # ---- 当前阵容（预热） ----
         #
         # ★ 这里**故意不锁表**（table_index 保持 None）。
         #   原因：JobSetLoad 只是「预热」—— 它按起始关卡预估一张表，
@@ -617,40 +695,54 @@ class JobSetLoad(CustomAction):
         #   不会因为「预估表 ≠ 实际表」而误触发换阵容。
         _STATE["table_index"] = None
 
-        # ★ 有了计数器，这里的「预估」不再是「猜」——
-        #   起始关卡就是真实关卡，所以算出来的表就是对的表。
+        # ★ 有了计数器，这里的「预估」不再是「猜」—— 起始关卡就是真实关卡。
+        #   （若流程走了「无尽挑战_自动计数」，它识别出主界面关卡号后会
+        #   再调一次预热，把这里可能不准的预热纠正过来。）
         lv = tr.count if tr.count > 0 else 1
-        table = js.pick_table(lv)
-        _log(
-            f"载入完成：起始关卡={lv} "
-            f"-> 预计表{table.index + 1}（关卡 {table.from_level} 起）"
-        )
+        _prewarm_for_level(context, js, lv)
 
-        # 选卡参数先用「预计表」注入，保证首帧进选卡界面时有植物可选；
-        # 真实关卡识别出来后，JobSetFight 会按识别结果重新注入。
-        try:
-            context.override_pipeline({
-                "无尽挑战_选取植物": {
-                    "custom_action_param": json.dumps(
-                        {"植物列表": table.plants}, ensure_ascii=False
-                    )
-                }
-            })
-            _log(f"已注入选卡参数（预计）：{table.plants}")
-        except Exception as e:
-            # override 失败不该致命：日志留痕，继续走
-            _log(f"注入选卡参数失败（{type(e).__name__}: {e}），下游可能拿到空参数")
+        return _ok()
 
-        # ★ 编队切换：同样按「预计表」先注入一次。
-        #   这样首帧进选卡界面时，「清空卡牌」的 next 就已经是对的
-        #   （选卡 or 切换编队），不会先走错分支再纠正。
-        _inject_squad(context, table.squad)
 
-        # ★ 记下「当前已注入的是哪张表」——局外换阵节点（JobSetPlan）
-        #   靠它判断「表有没有变」。
-        #   这里是**唯一**不走 _apply_table 的注入路径（预热），所以手动记一笔。
-        _STATE["plan_table_index"] = table.index
+# ---------------------------------------------------------------------------
+# JobSetAutoCount —— 挂在「无尽挑战_自动计数」
+# ---------------------------------------------------------------------------
 
+@AgentServer.custom_action("JobSetAutoCount")
+class JobSetAutoCount(CustomAction):
+    """自动计数：把主界面识别到的「第X关」设为计数器初始关卡。
+
+    挂在「无尽挑战_自动计数」上（recognition=OCR 盯主界面的关卡名区域）。
+    OCR 命中后 MAA 会把识别详情随 argv.reco_detail 传进来，
+    这里解析出关卡号并设为计数器初始值：
+
+        「第87关」 -> 87 -> tracker.reset(87)
+
+    ★ 设完关卡必须**重新预热**选卡/编队：JobSetLoad 预热时计数器可能还是
+      option 里的「起始关卡」（甚至 0），预热的表不一定是要打的表。
+
+    ★ 解析失败**不致命**：保留计数器原值、日志告警、流程继续 ——
+      这样「手动填起始关卡」的用法即使路过本节点也不受影响。
+    """
+
+    def run(self, context: Context, argv) -> Any:
+        text = _reco_text(argv)
+        lv = _parse_level_text(text or "")
+        if lv is None:
+            cur = _STATE.get("tracker")
+            _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号"
+                 f" -> 保持计数器原值（{cur.count if cur else 0}）")
+            return _ok()
+
+        tr = _ensure_tracker({})
+        tr.reset(lv)
+        _log(f"📟 自动计数：识别到「{text}」-> 起始关卡 = {tr.count}")
+
+        js: Optional[JobSet] = _STATE.get("jobset")
+        if js is not None:
+            _prewarm_for_level(context, js, tr.count)
+        else:
+            _log("⚠️ 作业集未载入（JobSetLoad 未执行？）-> 只设了计数器，没做预热")
         return _ok()
 
 
