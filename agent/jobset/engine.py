@@ -123,23 +123,6 @@ def _as_int(v: Any, default: Optional[int] = None) -> Optional[int]:
         return default
 
 
-def _as_bool(v: Any, default: bool = False) -> bool:
-    """宽松取布尔：兼容 1/0、"true"/"True"/"yes"/"是"。"""
-    if v is None:
-        return default
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, (int, float)):
-        return bool(v)
-    if isinstance(v, str):
-        s = v.strip().lower()
-        if s in ("1", "true", "yes", "y", "on", "是"):
-            return True
-        if s in ("0", "false", "no", "n", "off", "否", ""):
-            return False
-    return default
-
-
 def _norm_plants(v: Any) -> List[str]:
     """规范化植物名列表：去空、去重（保序）、去首尾空白。"""
     if not isinstance(v, (list, tuple)):
@@ -224,35 +207,6 @@ class Table:
         """
         raw = raw if isinstance(raw, dict) else {}
         wait_after = wait_after if isinstance(wait_after, dict) else {}
-
-        def _cells(key: str) -> List[str]:
-            v = raw.get(key)
-            if not isinstance(v, (list, tuple)):
-                return []
-            out = []
-            for x in v:
-                if isinstance(x, str) and x.strip():
-                    out.append(x.strip())
-            return out
-
-        # plant: [{"slot": "1", "cells": [...]}, ...] —— 保留多个格子可重复（同一格多次种）
-        plants: List[Dict[str, Any]] = []
-        raw_plant = raw.get("plant")
-        if isinstance(raw_plant, (list, tuple)):
-            for item in raw_plant:
-                if not isinstance(item, dict):
-                    continue
-                cells = [
-                    c.strip() for c in (item.get("cells") or [])
-                    if isinstance(c, str) and c.strip()
-                ]
-                if not cells:
-                    continue
-                slot = item.get("slot")
-                plants.append({
-                    "slot": str(slot) if slot not in (None, "") else None,
-                    "cells": cells,
-                })
 
         # sequence: 落子顺序 [{slot, order, type, label, cell}, ...]
         # ★ 权威来源是 once_chain / loop_chain（见下）；sequence 只作为旧数据回退。
@@ -381,12 +335,6 @@ class Table:
             return out
 
         return {
-            "plant": plants,
-            "feed": _cells("feed"),
-            "shovel": _cells("shovel"),
-            "wave": _as_bool(raw.get("wave"), False),
-            "loop": _as_bool(raw.get("loop"), False),
-            "once": _as_bool(raw.get("once"), False),
             "sequence": sequence,
             "once_chain": _chain("once_chain"),
             "loop_chain": _chain("loop_chain"),

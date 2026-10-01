@@ -1,6 +1,7 @@
 # 作业集重构 —— 方案（已定案 + 实施记录）
 
-> 状态：**阶段 1（砍 OCR）已实施**。阶段 2–4（`compiled`）待做。
+> 状态：**阶段 1–6 全部完成**（砍 OCR → 计数器 → compiled 预编译 → 运行时只吃
+> compiled → 删回退路径 → 考古清理）。重构收官。
 > 本文档取代早先的「待拍板」版本，四个决策点都已定案，见 §4。
 
 ---
@@ -320,29 +321,62 @@ check_graph.py                     →  仅 6 个预存在空壳告警，**无�
 
 ### 6.3 死代码
 
-| 位置 | 东西 |
-| --- | --- |
-| `runtime.py:356,358` | `FIGHT_NODE_TPL` / `GA_NODE_TPL` 定义未用 |
-| `runtime.py:60` | `_STATE["skip_detect"]` 声明未读写 |
-| `runtime.py` 尾部 | `JobSetArmSkip` / `JobSetSkipCheck` 注释残留 |
-| `dsl.py:464-632` | `chain_dsl`/`rules_dsl`/`sequence_dsl` 生产路径不用 |
-| `engine.py:383-394` | `plant`/`feed`/`shovel`/`wave`/`once`/`loop` 未使用 |
-| 作业集 | `innerWaits`、`bossEndOrder`、`boss.end_chain` 无消费者 |
+| 位置 | 东西 | 状态 |
+| --- | --- | --- |
+| ~~`runtime.py`~~ | ~~`FIGHT_NODE_TPL` / `GA_NODE_TPL` 定义未用~~ | ✅ 已删（阶段 3） |
+| ~~`runtime.py`~~ | ~~`_STATE["skip_detect"]` 声明未读写~~ | ✅ 已删（阶段 6） |
+| ~~`runtime.py` 尾部~~ | ~~`JobSetArmSkip` / `JobSetSkipCheck` 注释残留~~ | ✅ 已删（阶段 6） |
+| ~~`runtime.py` JobSetStage~~ | ~~`_recognize`/`_parse_day`/`_extract_text`/`DEFAULT_ROI`（OCR 死代码）~~ | ✅ 已删（阶段 6） |
+| ~~`dsl.py:383-632`~~ | ~~`plant_dsl`/`simple_dsl`/`chain_dsl`/`rules_dsl`/`sequence_dsl` 生产路径不用~~ | ✅ 已删（阶段 6）；`report.py` 改走 `compile.build_fight_override`（打的是真编译产物），feed/shovel 缺起点告警并入真编译器 |
+| ~~`engine.py`~~ | ~~`plant`/`feed`/`shovel`/`wave`/`once`/`loop` 未使用~~ | ✅ 已删（阶段 6）：`_norm_rules` 只留 `sequence`（report.py 用）+ 三条链 |
+| ~~作业集~~ | ~~`innerWaits`、`bossEndOrder`、`boss.end_chain` 无消费者~~ | ✅ 已删（阶段 6）：HTML 不再导出（innerWaits 全删；boss 收尾链永不执行故不导出），载入侧兼容旧文件 |
+| ~~pipeline~~ | ~~`确认阶段_*` 节点里的 `识别roi`/`识别节点` 死参数~~ | ✅ 已删（阶段 6）；`局内识别天数`/`局内过滤文字颜色` 节点已不存在 |
 
 ---
 
-## 7. 后续阶段
+## 7. 阶段 2–5 实施记录（已完成，2026-10-02）
 
-```
-阶段 2  定 compiled 格式草案（纸面）
-阶段 3  HTML 生成 compiled + 作业集加 format 字段
-阶段 4  运行时：优先读 compiled / 回落现编译，两份并存 + 对拍
-阶段 5  等价性验证通过后，删掉旧编译路径
-阶段 6  考古清理（§6 三个 bug + 死代码）
+### 阶段 2：compiled 格式草稿
+
+用真实作业集（`pvz_20260930_150606`）手工推演了 compiled 该长什么样。
+格式定案（粒度 B）：
+
+```jsonc
+{
+  "format": 2,
+  "tables": [{
+    // ……现有字段原样保留（权威源，编辑器载入用）
+    "compiled": {
+      "normal": { /* 完整 override 字典：节点名 -> 要盖的字段 */ },
+      "boss":   { /* 同上；未配置 boss 时是短路形态（等结算） */ }
+    }
+  }]
+}
 ```
 
-**阶段 5 的关键**：先证明「新产物 ≡ 老路径，DSL 逐字节相同」，再删老路径。
-`selfcheck.py` 现有断言可直接当验收标准。
+### 阶段 3：保存时预编译
+
+| 文件 | 改动 |
+| --- | --- |
+| `agent/jobset/compile.py` | **新建**。纯函数编译器（无 maa 依赖）：`build_chain_nodes`（链->DSL）+ `build_fight_override`（表×变体 -> 完整 override 字典）+ `compile_jobset`（整份作业集 -> format:2）。链节点名/ref 触发/槽位白名单等常量全部搬入 |
+| `game_assist_tools/endless_setup/pvz.py` | `/save_job` 落盘前调 `compile_jobset`；编译失败报错且不保存。另加：静态资源禁缓存头 + 端口占用守卫（见 §9） |
+| `agent/jobset/runtime.py` | `JobSetFight.run` 改为优先 `compiled`，旧格式回退共享编译器；删 ~240 行装配代码 |
+
+**为什么编译在 pvz.py 而不是浏览器 JS**：DSL 语法（swipe/click/sleep/every/ref/@）
+的规则全在 Python `dsl.py`，移植 JS 必然漂移。「HTML 一次编译好」=
+存进文件的 JSON 一次到位，不要求在浏览器里算。
+
+### 阶段 4：等价比对 + 实跑验证
+
+- **静态等价**：`compile_jobset` 输出与运行时旧装配逻辑**逐字节一致**（真实作业集，4 个变体全对）
+- **实跑验证**：日志出现 `使用预编译 compiled（normal 变体，6 个节点）`，普通关 + boss 关行为正常
+
+### 阶段 5：删回退路径
+
+`JobSetFight` 不再现编译：没有 `compiled` 块的作业集**明确报错**
+（"请用编辑器重新保存一次"），不再静默回退。
+顺手修的潜伏 bug：`everyN` 原来误读表级字段（恒为 None -> 恒为 10），
+HTML 导出在作业集顶层，现在编译器按顶层读，「高级设置-识别结算速率」真正生效。
 
 ---
 
@@ -352,3 +386,22 @@ check_graph.py                     →  仅 6 个预存在空壳告警，**无�
 - 改 pipeline 后用 `check_resource.py` / `reload`
 - `check_graph.py` 退出码为 1（有问题时 `sys.exit`），属预期
 - 用户会**自己在 MAA option 界面**加「起始关卡」输入框（运行时不关心它从哪来）
+
+---
+
+## 9. ★ 端口僵尸事故（2026-10-02，值得记录）
+
+**症状**：改了 pvz.py 后用户反复"重启"pvz.bat、反复保存，作业集始终没有 compiled 块。
+
+**根因**：Werkzeug 开发服务器默认 SO_REUSEADDR，**Windows 上这允许多进程绑同一端口**。
+一个昨天启动的旧服务器进程一直占着 5000；之后每次启动的新实例都显示
+"Running on http://127.0.0.1:5000"，但**请求全被旧进程吃掉**（路由给最先绑定者）。
+flask.log 每次被新实例截断，所以日志里永远只有启动行、没有请求行。
+
+**修复**：
+1. `pvz.py` 启动前 `_ensure_port_free()`：用**不带** SO_REUSEADDR 的裸 bind 试占，
+   失败就打印排查方法并 `sys.exit(2)` —— 假启动从此不可能。
+2. 排查命令：`netstat -ano | findstr :5000`（看是否有多个 PID 绑同一端口）。
+
+**教训**：`Get-NetTCPConnection` 在某些沙箱/权限下会**漏报**监听 socket；
+`netstat -ano` 才是可靠来源。

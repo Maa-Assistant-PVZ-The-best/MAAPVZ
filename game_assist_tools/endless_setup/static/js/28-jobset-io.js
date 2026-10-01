@@ -131,10 +131,11 @@ function jobApplyLoaded(job, code) {
         // ---- boss 关独立配置 ----
         // ★ 旧作业集没有 boss* 字段 -> **保持 null**，boss 关只会等结算、不做种植。
         //   不自动从普通关拷贝（用户明确要求）。
+        // ★ bossEndOrder 已从导出中移除（boss 关永不执行收尾链），
+        //   旧文件里残留的该字段会被无视。
         if (t.bossSlotModes === undefined) t.bossSlotModes = {};
         if (!Array.isArray(t.bossSlotOrder)) t.bossSlotOrder = null;
         if (!Array.isArray(t.bossLoopOrder)) t.bossLoopOrder = null;
-        if (!Array.isArray(t.bossEndOrder)) t.bossEndOrder = null;
         if (!t.bossWaitAfter || typeof t.bossWaitAfter !== 'object') t.bossWaitAfter = {};
         // 收尾参数（缺省默认 15000 / 6000；仅普通关）
         if (typeof t.endPostDelay !== 'number') t.endPostDelay = 15000;
@@ -158,15 +159,11 @@ function jobApplyLoaded(job, code) {
             if (!t.deckNo) t.deckNo = 1;
         }
         delete t.squad;   // 编辑器内部只留 lineupMode/deckNo，导出时再由 jobBuild 生成
-        if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {}, end: {} };
-        if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
-        if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
-        if (!t.innerWaits.end || typeof t.innerWaits.end !== 'object') t.innerWaits.end = {};
+        // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         // 三条链的顺序（缺了会让链条顺序错乱 / 收尾链看起来是空的）
         if (!Array.isArray(t.slotOrder)) t.slotOrder = null;
         if (!Array.isArray(t.loopOrder)) t.loopOrder = null;
         if (!Array.isArray(t.endOrder)) t.endOrder = null;
-        if (!Array.isArray(t.bossEndOrder)) t.bossEndOrder = null;
         // 棋盘落点补齐 mode/seq（旧数据没有这两个字段）
         ['boardEarly', 'boardLate'].forEach(function (bk) {
             (t[bk] || []).forEach(function (rowArr) {

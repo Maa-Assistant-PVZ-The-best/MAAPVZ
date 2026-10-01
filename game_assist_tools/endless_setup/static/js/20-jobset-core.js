@@ -42,11 +42,11 @@ function jobNewTable() {
         // ---- boss 关配置（与普通关完全独立；null = 未配置 -> boss 关只等结算）----
         bossSlotOrder: null,      // boss 关单次链顺序
         bossLoopOrder: null,      // boss 关循环链顺序
-        bossEndOrder: null,       // boss 关收尾链顺序（运行时忽略，boss 关无收尾）
+        // （bossEndOrder 已移除：boss 关永不执行收尾链，字段不再导出）
         bossSlotModes: {},        // boss 关槽位形态
         bossWaitAfter: {},        // boss 关动作后等待
         supplyPicks: null,        // 补给选取顺序（每个阵容独立；null -> 首次渲染时填默认）
-        innerWaits: { once: {}, loop: {}, end: {} },   // 槽块内部的等待节点
+        // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         boardEarly: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => [])),
         boardLate: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))
     };
@@ -72,7 +72,6 @@ function jobNewTable() {
         // boss 关配置：上一张表配过才沿用（没配就保持 null -> boss 关只等结算）
         if (Array.isArray(last.bossSlotOrder)) t.bossSlotOrder = last.bossSlotOrder.slice();
         if (Array.isArray(last.bossLoopOrder)) t.bossLoopOrder = last.bossLoopOrder.slice();
-        if (Array.isArray(last.bossEndOrder)) t.bossEndOrder = last.bossEndOrder.slice();
         if (last.bossSlotModes) t.bossSlotModes = JSON.parse(JSON.stringify(last.bossSlotModes));
         if (last.bossWaitAfter) t.bossWaitAfter = JSON.parse(JSON.stringify(last.bossWaitAfter));
     }

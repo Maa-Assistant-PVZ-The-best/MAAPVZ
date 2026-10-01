@@ -2430,15 +2430,15 @@ function jobBuild() {
             endAfterAction: (t.endAfterAction === 'restart' ? 'restart' : 'sub'),
             endSubAction: (t.endSubAction === 'once' || t.endSubAction === 'end' ? t.endSubAction : 'loop'),
             // boss 关配置：null = 未配置 -> 运行时 boss 关不做种植，只等结算
+            // ★ bossEndOrder 不再导出：boss 关永不执行收尾链（运行时会忽略）。
             bossSlotModes: Object.assign({}, t.bossSlotModes || {}),
             bossSlotOrder: Array.isArray(t.bossSlotOrder) ? t.bossSlotOrder.slice() : null,
             bossLoopOrder: Array.isArray(t.bossLoopOrder) ? t.bossLoopOrder.slice() : null,
-            bossEndOrder: Array.isArray(t.bossEndOrder) ? t.bossEndOrder.slice() : null,
             bossWaitAfter: Object.assign({}, t.bossWaitAfter || {}),
             // 补给选取顺序（boss 关专属，每个阵容独立）
             supplyPicks: Array.isArray(t.supplyPicks)
                 ? JSON.parse(JSON.stringify(t.supplyPicks)) : null,
-            innerWaits: JSON.parse(JSON.stringify(t.innerWaits || { once: {}, loop: {} })),
+            // （innerWaits 已移除：从未有过消费者，纯遗留字段）
 
             // ---- 棋盘本体（必须导出！否则保存后载入/切换作业集时阵容全丢）----
             boardEarly: JSON.parse(JSON.stringify(t.boardEarly || [])),
@@ -2465,7 +2465,7 @@ function jobBuild() {
                 wave: t.waveEnabled === true,
                 once_chain: jobBuildChain(t, bossBoard, 'once', true),
                 loop_chain: jobBuildChain(t, bossBoard, 'loop', true),
-                end_chain: jobBuildChain(t, bossBoard, 'end', true),
+                // ★ 不导出 end_chain：boss 关永不执行收尾链（运行时强制忽略）
                 sequence: jobExtractSequence(bossBoard, t.slots, t)
             }
         };

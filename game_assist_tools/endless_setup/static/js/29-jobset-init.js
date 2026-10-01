@@ -59,10 +59,10 @@ function jobLoadLocal() {
             }
             if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
             // boss 关独立配置（旧缓存没有 -> 保持 null，boss 关只等结算）
+            // （bossEndOrder 已从导出移除：boss 关永不执行收尾链）
             if (t.bossSlotModes === undefined) t.bossSlotModes = {};
             if (!Array.isArray(t.bossSlotOrder)) t.bossSlotOrder = null;
             if (!Array.isArray(t.bossLoopOrder)) t.bossLoopOrder = null;
-            if (!Array.isArray(t.bossEndOrder)) t.bossEndOrder = null;
             if (!t.bossWaitAfter || typeof t.bossWaitAfter !== 'object') t.bossWaitAfter = {};
             // 收尾参数（缺省默认 15000 / 6000；仅普通关）
             if (typeof t.endPostDelay !== 'number') t.endPostDelay = 15000;
@@ -70,10 +70,7 @@ function jobLoadLocal() {
             if (t.endAfterAction !== 'restart') t.endAfterAction = 'sub';
             if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
             if (!Array.isArray(t.endOrder)) t.endOrder = null;
-            if (!t.innerWaits || typeof t.innerWaits !== 'object') t.innerWaits = { once: {}, loop: {}, end: {} };
-            if (!t.innerWaits.once || typeof t.innerWaits.once !== 'object') t.innerWaits.once = {};
-            if (!t.innerWaits.loop || typeof t.innerWaits.loop !== 'object') t.innerWaits.loop = {};
-            if (!t.innerWaits.end || typeof t.innerWaits.end !== 'object') t.innerWaits.end = {};
+            // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         });
         const m = data.meta || {};
         // 元信息只有「名字 + 代码」（代码/版本/最大关卡输入框已移除）

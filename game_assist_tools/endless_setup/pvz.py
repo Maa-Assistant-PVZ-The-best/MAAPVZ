@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify, send_from_directory
-import os, json, re, shutil
+import os, json, re, shutil, sys
 
 # 以脚本所在目录为基准（保持成熟版 static/ 结构；用绝对路径，便于 agent 直接拉起而无需 cd）
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -138,18 +138,44 @@ def list_jobs():
 
 @app.route('/save_job', methods=['POST'])
 def save_job():
-    """保存作业集 JSON 到 jobs/<code>.json"""
+    """保存作业集 JSON 到 jobs/<code>.json
+
+    ★ 保存时预编译（「HTML 一次编译好」）：写入文件前给每张表生成
+      compiled.normal / compiled.boss —— 完整 override 字典，运行时
+      直接 override_pipeline() 零翻译。编译器是 agent/jobset/compile.py
+      的纯函数（无 maa 依赖，本服务器可直接 import）。
+      编译失败 -> 报错且不保存：静默保存未编译 JSON 会让 runtime 走
+      回退编译，格式漂移就藏住了。
+    """
     try:
         data = request.get_json()
         code = str(data.get('code', '')).strip()
         if not code or not re.fullmatch(r'[A-Za-z0-9_-]+', code):
             return jsonify({'status': 'error', 'msg': '作业集代码不合法（仅字母数字_-）'}), 400
+        try:
+            data = _compile_jobset(data)
+        except Exception as ce:
+            import traceback
+            traceback.print_exc()
+            return jsonify({'status': 'error',
+                            'msg': f'作业集编译失败（未保存）: {ce}'}), 500
         ensure_jobs_dir()
         with open(os.path.join(JOBS_DIR, code + '.json'), 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        return jsonify({'status': 'success', 'msg': '已保存作业集 ' + code})
+        return jsonify({'status': 'success', 'msg': '已保存作业集 ' + code + '（含预编译）'})
     except Exception as e:
         return jsonify({'status': 'error', 'msg': str(e)}), 500
+
+
+def _compile_jobset(data):
+    """调 agent.jobset.compile.compile_jobset，打印编译摘要到服务器日志。"""
+    if PROJECT_DIR not in sys.path:
+        sys.path.insert(0, PROJECT_DIR)
+    from agent.jobset.compile import compile_jobset
+    print('[compile] 开始编译作业集...', flush=True)
+    out = compile_jobset(data, log=lambda m: print(f'[compile] {m}', flush=True))
+    print('[compile] 完成', flush=True)
+    return out
 
 
 @app.route('/load_job', methods=['GET'])
@@ -215,6 +241,31 @@ def set_current_job():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 
+def _ensure_port_free(host: str, port: int) -> None:
+    """启动前确认端口空闲，被占用就直接退出（大声报错）。
+
+    ★ 为什么需要：Werkzeug 开发服务器默认带 SO_REUSEADDR，而在 Windows 上
+      这个标志允许**多个进程同时绑同一个端口**——后启动的实例显示
+      "Running on http://127.0.0.1:5000"，其实收不到任何请求，
+      请求全被最先绑定的旧进程吃掉。
+      实际踩过：旧服务器（改代码前启动的）一直占着 5000，
+      用户反复重启 pvz.bat 都「成功启动」但保存作业集时跑的还是旧逻辑。
+
+    检查用**不带** SO_REUSEADDR 的裸 bind：端口被占时必然失败。
+    """
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind((host, port))
+    except OSError:
+        print(f"[致命] 端口 {port} 已被占用 —— 很可能已经有一个 pvz.py 在运行！", flush=True)
+        print("       旧进程会吃掉所有请求（本进程启动了也收不到）。", flush=True)
+        print("       请先关掉旧进程：netstat -ano | findstr :5000 查 PID 后 taskkill /PID <pid> /F", flush=True)
+        sys.exit(2)
+    finally:
+        s.close()
+
+
 if __name__ == '__main__':
     # 老版本把作业集放在 <根>/assets/resource/jobs，新版改到资源目录下。
     # 这里迁移一次，避免老用户升级后作业集「消失」。
@@ -226,4 +277,5 @@ if __name__ == '__main__':
         print(f"[jobset] 旧作业集迁移失败（不影响启动）: {_e}")
 
     # 保持成熟版端口 5000；关闭 reloader，便于被 bat / agent 以后台进程拉起后稳定存活
+    _ensure_port_free("127.0.0.1", 5000)
     app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)

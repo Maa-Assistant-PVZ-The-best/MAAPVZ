@@ -36,10 +36,13 @@ try:
         print(f"    {t!r}")
         print(f"      lineup.plants = {t.plants}")
         print(f"      slots         = {t.slots}")
-        print(f"      non_boss: plant={len(t.non_boss['plant'])} "
-              f"feed={len(t.non_boss['feed'])} shovel={len(t.non_boss['shovel'])} "
+        print(f"      non_boss: once={len(t.non_boss['once_chain'])}段 "
+              f"loop={len(t.non_boss['loop_chain'])}段 "
+              f"end={len(t.non_boss['end_chain'])}段 "
               f"seq={len(t.non_boss['sequence'])}")
-        print(f"      boss    : plant={len(t.boss['plant'])} seq={len(t.boss['sequence'])}")
+        print(f"      boss    : once={len(t.boss['once_chain'])}段 "
+              f"loop={len(t.boss['loop_chain'])}段 "
+              f"seq={len(t.boss['sequence'])}")
     # ★ 不校验具体代码：作者每次「保存作业集」都会生成带新时间戳的 code
     #   （pvz_2026...），写死某个值必然过期。只校验「确实载入成功」。
     check("载入成功", bool(js.code) and len(js.tables) > 0,
@@ -367,20 +370,24 @@ for _aid, _sp in _dsl.GENERIC_SLOT_CLICK.items():
 # ---------------------------------------------------------------------------
 print("\n=== 9. 落子动作「点击格子」===")
 
-# 9a. chain_dsl 应把 type='tap' 编译成 click:格子N_M（**没有起点**）
+from agent.jobset import compile as _cpl  # noqa: E402
+
+# 9a. 真编译器（compile.build_chain_nodes）应把 type='tap' 编译成 click:格子N_M
+#     （**没有起点**）；DSL 带 every:/ref: 前缀，所以断言用包含而非全等。
 _tap = {
     "key": "tapcell", "type": "tap", "label": "点击格子", "cells": ["格子2_3", "格子4_5"],
 }
-_r9 = _dsl.chain_dsl([_tap], _coords)
+_logs9a: list = []
+_out9a = _cpl.build_chain_nodes(
+    {"once_chain": [_tap], "loop_chain": [], "end_chain": []},
+    _coords, 80, None, 10, False, log=_logs9a.append)
+_dsl9a = (_out9a.get("once") or {}).get("dsl", "")
 check("tap: 编译为 click（无起点）",
-      _r9["dsl"] == "click:种植物_初始化_格子2_3;click:种植物_初始化_格子4_5",
-      repr(_r9["dsl"]))
-check("tap: 不产生 missing", not _r9["missing"], str(_r9["missing"]))
-check("tap: count = 格子数", _r9["count"] == 2, f"count={_r9['count']}")
+      "click:种植物_初始化_格子2_3;click:种植物_初始化_格子4_5" in _dsl9a,
+      repr(_dsl9a))
 
-# 9b. ★ tap 不该因为「没有起点」而被记成告警（它是正常路径）
-check("tap: 无起点不算告警", not any("退化为 click" in m for m in _r9["missing"]),
-      str(_r9["missing"]))
+# 9b. ★ tap 不该因为「没有起点」而产生任何告警（它是正常路径）
+check("tap: 无起点不算告警", not _logs9a, str(_logs9a))
 
 # 9c. feed/shovel 缺起点仍然要告警（回归保护）
 #     ★ 用**真实坐标表**（格子找得到），但把能量豆起点从副本里删掉 ——
@@ -388,15 +395,19 @@ check("tap: 无起点不算告警", not any("退化为 click" in m for m in _r9[
 _coords_nofeed = {k: v for k, v in _coords.items()
                   if "能量豆" not in k and "喂豆" not in k}
 _feed_bad = {"key": "feed", "type": "feed", "label": "喂豆", "cells": ["格子1_1"]}
-_r9b = _dsl.chain_dsl([_feed_bad], _coords_nofeed)
+_logs9c: list = []
+_out9c = _cpl.build_chain_nodes(
+    {"once_chain": [_feed_bad], "loop_chain": [], "end_chain": []},
+    _coords_nofeed, 80, None, 10, False, log=_logs9c.append)
+_dsl9c = (_out9c.get("once") or {}).get("dsl", "")
 check("feed: 缺起点仍告警",
-      any("退化为 click" in m for m in _r9b["missing"]), str(_r9b["missing"]))
+      any("退化为 click" in m for m in _logs9c), str(_logs9c))
 check("feed: 缺起点时退化为 click（不丢动作）",
-      _r9b["dsl"] == "click:种植物_初始化_格子1_1", repr(_r9b["dsl"]))
+      "click:种植物_初始化_格子1_1" in _dsl9c, repr(_dsl9c))
 
-# 9d. 端到端：tap 段能进 _build_chain_nodes 并和其他段正确交织
+# 9d. 端到端：tap 段能进 build_chain_nodes 并和其他段正确交织
 try:
-    from agent.jobset import runtime as _rt  # noqa: E402
+    from agent.jobset import compile as _cpl  # noqa: E402
     _rules9 = {
         "once_chain": [
             {"key": "card1", "type": "plant", "slot": 1, "cells": ["格子1_1"]},
@@ -406,7 +417,7 @@ try:
         "loop_chain": [],
         "end_chain": [],
     }
-    _out9 = _rt.JobSetFight._build_chain_nodes(_rules9, _coords, 80, None, 10, False)
+    _out9 = _cpl.build_chain_nodes(_rules9, _coords, 80, None, 10, False)
     _dsl9 = (_out9.get("once") or {}).get("dsl", "")
     check("tap: 端到端出现在链路里",
           "click:种植物_初始化_格子2_3" in _dsl9 and "swipe:" in _dsl9, repr(_dsl9))
@@ -492,6 +503,42 @@ try:
           str(_pj10[_rt10.NODE_CLEAR_CARDS].get("next")))
 except Exception as _e10:
     check("squad: 编队注入端到端", False, f"{type(_e10).__name__}: {_e10}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 11. boss 判定防染色（91 关误判回归保护）===")
+#
+# 背景：链首节点 param 被预编译注入覆盖成 {}，跨关时只能靠 state；
+# state 原来只置位不复位 -> boss 关的 True 残留染色下一关
+#（85(boss) -> 86 误判、90(boss) -> 91 误判，实跑两次复现）。
+# 修复：_resolve_is_boss 把判定钉在关卡号上 + JobSetPlan/Load 复位。
+try:
+    from agent.jobset import runtime as _rt11
+
+    # 1) boss 关（90）：头像路径显式 true -> 钉在 90
+    check("boss判定: 显式 true -> True",
+          _rt11._resolve_is_boss({"是boss关": True}, 90) is True)
+    check("boss判定: 判定钉在 90",
+          _rt11._STATE.get("is_boss_level") == 90,
+          str(_rt11._STATE.get("is_boss_level")))
+
+    # 2) 同一关内 param 已空 -> 仍读得到 True（链首反复调用场景）
+    check("boss判定: 同关空 param -> True",
+          _rt11._resolve_is_boss({}, 90) is True)
+
+    # 3) ★ 核心回归：跨到 91 关 -> 必须 False（事故现场）
+    check("★boss判定: 跨关不染色（91 关）",
+          _rt11._resolve_is_boss({}, 91) is False)
+
+    # 4) 显式 false 也钉关卡（JobSetStage 普通关路径的写法）
+    check("boss判定: 显式 false -> False 且钉住",
+          _rt11._resolve_is_boss({"是boss关": False}, 91) is False
+          and _rt11._STATE.get("is_boss_level") == 91,
+          str(_rt11._STATE.get("is_boss_level")))
+    check("boss判定: 同关空 param -> False",
+          _rt11._resolve_is_boss({}, 91) is False)
+except Exception as _e11:
+    check("boss判定: 防染色", False, f"{type(_e11).__name__}: {_e11}")
 
 
 # ---------------------------------------------------------------------------

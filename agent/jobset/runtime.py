@@ -5,10 +5,11 @@
 ----------
 JobSetLoad        载入作业集、初始化关卡计数器，把「当前阵容」暴露给后续节点。
                   挂在空壳节点「无尽挑战_加载作业集代码」上。
-JobSetStage       识别当前天数 -> 计数/计分 -> 必要时换阵容重开。
+JobSetStage       纯计数器阶段确认：取关卡 -> boss 对齐 -> 必要时换阵容重开。
                   挂在「无尽挑战_确认自己当前阶段」。
-JobSetFight       核心：把三条链（单次/循环/收尾）拼成 DSL 注入组合动作节点，
+JobSetFight       局内种植：把当前表的预编译 override（compiled 块）零翻译注入，
                   并覆盖补给链顺序。挂在「无尽局内_单次/循环种植」。
+                  （链 -> DSL 的编译在作业集保存时由 compile.py 完成。）
 JobSetInfo        只读查询当前状态（调试用，不产生副作用）。
 
 ⚠️ 曾经还有 7 个动作，因三链重构 / pipe 化后不再需要而删除：
@@ -40,7 +41,8 @@ from maa.custom_recognition import CustomRecognition
 from .engine import JobSet, JobSetError, load_jobset
 from .level_tracker import LevelTracker, from_params
 from .level_tracker import BOSS_SNAP as _BOSS_SNAP
-from . import dsl as _dsl
+# 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
+from .compile import CHAIN_NODE_TPL, KIND_CN
 
 # ---------------------------------------------------------------------------
 # 进程级单例状态
@@ -54,14 +56,8 @@ _STATE: Dict[str, Any] = {
     "tracker": LevelTracker,
     "table_index": None,   # 当前活动表序号（换阵容时变化）
     "error": None,
-    # ★ 换阵容后的一次性「跳过识别」标记。
-    #   重开打的还是同一关，再识别一次会得到同样的关卡号 ->
-    #   又会判定「不需要换」-> 死循环。所以换阵容重开后置 True，
-    #   进关时消费掉（读一次就清），直接按新表种植。
-    "skip_detect": False,
-    # ★ 本次任务里 JobSetStage 是否已经跑过第一次（基准帧）。
-    #   第一次调用会无条件采信 OCR 作为起始关卡并重建基准，
-    #   之后才进入「得分匹配」模式。
+    # ★ 本次任务里 JobSetStage 是否已经跑过第一次。
+    #   首次进入阶段确认时重置表指针，避免沿用上一次任务的表。
     "stage_seen": False,
 }
 
@@ -432,7 +428,6 @@ class JobSetPlan(CustomAction):
         {
           "训练模式": false,   # true = 无条件换阵（每关都重选，训练模式用）
           "计数": false,       # true = 顺便把计数器 +1（把 tick 与 plan 合成一个节点时用）
-          "是boss关": false,    # 仅用于播报显示
           "未变节点": "无尽挑战_跳转_未变",
           "变化节点": "无尽挑战_跳转_变化"
         }
@@ -456,6 +451,14 @@ class JobSetPlan(CustomAction):
             lv_new = tr.tick()
             _log(f"过关计数：{before} -> {lv_new}（已点继续挑战/继续训练）")
 
+        # ★ 每关开局把 boss 判定清零 —— 它是「只进不出」的粘滞状态：
+        #   boss 关由头像路径（无尽局内_BOSS关种植，param 显式 true）置 True，
+        #   但原来没有任何代码负责置回 False，导致 boss 关的**下一关**被
+        #   染色成 boss（91 关误判事故）。本节点每关开局必跑（局外），
+        #   是最天然的复位点；JobSetFight 侧另有「按关卡号钉住」的双保险。
+        _STATE["is_boss"] = False
+        _STATE["is_boss_level"] = None
+
         if js is None:
             _log("尚未载入作业集（JobSetLoad 未执行）-> 无法判断阵容")
             return _fail()
@@ -465,7 +468,11 @@ class JobSetPlan(CustomAction):
         training = bool(param.get("训练模式"))
 
         # ---- 播报（每关都报；两种模式都经过本节点）----
-        _log(f"📋 {tr.status_line(table, bool(param.get('是boss关')))}")
+        # ★ 「本关是否 boss」此时还不知道（头像识别在局内才发生），
+        #   param 里的「是boss关」键早已没人传 —— 只能用计数器**预测**：
+        #   boss 关恒定 5 的倍数、计数器有 snap_boss 对齐，
+        #   所以 lv % 5 == 0 即「预计 boss 关」（仅影响显示，不影响判定）。
+        _log(f"📋 {tr.status_line(table, lv > 0 and lv % _BOSS_SNAP == 0)}")
 
         # ★ 补给预告（只有正赛有补给，且只在 boss 关**前一关**出现）：
         #   用户说明：84 关末尾点继续挑战 -> 直接出现补给选择（因为 85 是 boss 关）。
@@ -558,6 +565,11 @@ class JobSetLoad(CustomAction):
             _STATE["tracker"] = None
             _STATE["table_index"] = None
             _log("已重置作业集状态（重新开始任务）")
+
+        # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
+        #   （上一任务若停在 boss 关，True 会带进本任务第一关）。
+        _STATE["is_boss"] = False
+        _STATE["is_boss_level"] = None
 
         # ---- 载入作业集 ----
         code = str(param.get("作业集代码") or "").strip()
@@ -668,26 +680,32 @@ class JobSetInfo(CustomAction):
 # ---------------------------------------------------------------------------
 # JobSetFight —— 局内种植：把当前表的链翻成 DSL 注入组合动作节点
 # ---------------------------------------------------------------------------
+#
+# 链节点名 / ref 触发 / 槽位白名单等常量已搬到 compile.py（保存时预编译共用）。
+# 死定义 FIGHT_NODE_TPL / GA_NODE_TPL（「每段一个节点」时代的残留）已删除。
 
-# 组合动作节点名模板（03_Endless_fight/）
-FIGHT_NODE_TPL = "无尽挑战_{slot}组合动作_{kind}"
-# 通用动作（点波/捡豆/加速）：无格子的虚拟槽位，节点名独立
-GA_NODE_TPL = "无尽挑战_通用动作_{kind}"
-# ★ 三条链各一个节点（见 0301Endless_fight_1.json）
-CHAIN_NODE_TPL = "无尽挑战_组合动作_{kind}"
-KIND_CN = {"once": "单次", "loop": "循环", "end": "收尾"}
 
-# ★ 组合动作里的 ref 触发节点（识别命中即停本批、跟随 next）
-REF_SETTLE = "无尽局内_继续挑战"      # 结算画面（正赛）
-REF_LAST_WAVE = "无尽挑战_收尾"       # 最后一波（僵尸头像）-> 跳收尾链
-REF_TRAIN = "无尽训练_继续训练"       # 结算画面（训练模式）
+def _resolve_is_boss(param: Dict[str, Any], lv: int) -> bool:
+    """判定本关是否 boss 关（带跨关防染色，供 JobSetFight 调用）。
 
-# 槽位 key -> 节点里的中文序数
-_SLOT_NODE_NAME = {
-    "card1": "一槽", "card2": "二槽", "card3": "三槽", "card4": "四槽",
-    "card5": "五槽", "card6": "六槽", "card7": "七槽", "card8": "八槽",
-    "shovel": "铲子", "feed": "喂豆",
-}
+    1) param 显式给了 是boss关 -> 用它，并把判定**钉在本关**（供同关的
+       后续空 param 调用读取 —— 链首节点会被反复触发）。
+    2) param 没给 -> 只允许吃「本关」记下的 state；跨关一律普通关。
+
+    ★ 为什么必须带关卡号：链首节点「无尽局内_单次种植/循环种植」的 param
+      会被预编译注入永久覆盖成 {}（compile.py 刻意置空），跨关时 param 里
+      没有任何判定信息。而 state 原来只置位、不复位 —— boss 关记下的
+      True 会残留到下一关，把它染色成 boss 关（91 关误判事故）。
+      JobSetPlan 每关开局还会再清一次（双保险）。
+    """
+    if "是boss关" in param:
+        is_boss = bool(param.get("是boss关"))
+        _STATE["is_boss"] = is_boss
+        _STATE["is_boss_level"] = lv
+        return is_boss
+    return (bool(_STATE.get("is_boss"))
+            and _STATE.get("is_boss_level") == lv)
+
 
 # ---------------------------------------------------------------------------
 # 补给选取（04_Endless_Supply.json）
@@ -728,17 +746,15 @@ SUPPLY_ID_VIEW = "view"
 
 @AgentServer.custom_action("JobSetFight")
 class JobSetFight(CustomAction):
-    """把当前阵容的「单次链 / 循环链」翻成 BatchSwipe DSL 并注入组合动作节点。
+    """局内种植：把当前表的预编译 override（compiled 块）注入 pipeline。
 
     参数：
         {"是boss关": false}      # boss 判定由 pipeline 侧完成并传入
         {"关卡": 55}             # 可选，缺省用计数器当前值
-        {"间隔": 0.1}            # 可选，动作间隔（BatchSwipe 的 @N 前缀）
-        {"滑动时长": 80}         # 可选，swipe 的 duration
 
-    注入方式：每个槽位/铲子/喂豆都有「单次」和「循环」两个节点，
-    本动作把它们各自的 custom_action_param 写成对应段落的 DSL。
-    节点为空（该槽在这条链里没落子）时写成空串，BatchSwipe 会直接跳过。
+    ★ 只吃预编译（作业集 format:2）：链 -> BatchSwipe DSL 的编译在保存时
+      由 pvz.py 调用 agent/jobset/compile.py 完成，这里零翻译直接注入。
+      旧格式作业集（没有 compiled 块）会明确报错，去编辑器重新保存一次即可。
     """
 
     def run(self, context: Context, argv) -> Any:
@@ -757,18 +773,9 @@ class JobSetFight(CustomAction):
         except (TypeError, ValueError):
             lv = 1
 
-        # ★ boss 判定来源（按优先级）：
-        #   1) param 里显式给了 是boss关  -> 用 param（最外层触发点会传）
-        #   2) param 没给                 -> 用上次记录在 state 里的值
-        #      因为链首节点「无尽局内_单次种植」会被反复调用，它的 param 是
-        #      注入时写死的空值；真正「本关是不是 boss」记在 state 里。
-        if "是boss关" in param:
-            is_boss = bool(param.get("是boss关"))
-            _STATE["is_boss"] = is_boss
-        else:
-            is_boss = bool(_STATE.get("is_boss"))
-        swipe_ms = int(param.get("滑动时长") or 80)
-        interval = param.get("间隔")
+        # ★ boss 判定：规则与防染色机制见 _resolve_is_boss 的注释
+        #   （91 关误判事故的修复点）。
+        is_boss = _resolve_is_boss(param, lv)
 
         # ★ 优先用 JobSetStage 已经锁定好的表，保证「选卡」与「种植」是同一张表。
         #   只有 JobSetStage 没跑过（table_index 为 None）时才自己按关卡算。
@@ -841,193 +848,46 @@ class JobSetFight(CustomAction):
         # ★ boss 关未配置（作业集里没有 bossSlotOrder/bossLoopOrder）时：
         #   不做任何种植，直接**等结算** —— 只保留「继续挑战」的识别与点击。
         #   这符合用户要求：「如果没有 Boss 字段的话，就直接等待结算」。
-        if is_boss:
-            has_boss_cfg = bool(
-                table.raw.get("bossSlotOrder")
-                or table.raw.get("bossLoopOrder")
-                or rules.get("once_chain")
-                or rules.get("loop_chain")
-            )
-            if not has_boss_cfg:
-                _log("★ boss 关未配置种植链 -> 不种植，直接等结算（只保留继续挑战识别）")
-                context.override_pipeline({
-                    "无尽局内_单次种植": {
-                        "action": "Custom",
-                        "custom_action": "JobSetFight",
-                        "custom_action_param": {},
-                        "pre_delay": 0,
-                        "post_delay": 0,
-                        # 空 next 链 -> 交给管道去识别「继续挑战」等结算
-                        "next": ["无尽局内_继续挑战"],
-                    },
-                    "无尽局内_循环种植": {
-                        "action": "Custom",
-                        "custom_action": "JobSetFight",
-                        "custom_action_param": {},
-                        "pre_delay": 0,
-                        "post_delay": 0,
-                        "next": ["无尽局内_继续挑战"],
-                    },
-                    "无尽挑战_收尾": {"enabled": False},
-                })
-                return _ok()
+        #   判定逻辑与 compile.build_fight_override 内部的短路一致（同源数据）。
+        _boss_short = bool(is_boss) and not bool(
+            table.raw.get("bossSlotOrder")
+            or table.raw.get("bossLoopOrder")
+            or rules.get("once_chain")
+            or rules.get("loop_chain")
+        )
 
-        coords = _dsl.load_coords()
-        if not coords:
-            _log("坐标表为空（agent/assets/resource/coords.json 未找到）")
+        # ★ 只吃预编译（format:2）：作业集保存时 pvz.py 已把 override 算好写进
+        #   table.compiled（normal/boss 两个变体），运行时零翻译直接注入。
+        #   没有 compiled 块 = 旧格式作业集 -> 明确报错，去编辑器重新保存一次即可。
+        compiled = table.raw.get("compiled")
+        variant = compiled.get("boss" if is_boss else "normal") \
+            if isinstance(compiled, dict) else None
+        if not (isinstance(variant, dict) and variant):
+            _log("❌ 作业集没有 compiled 块（旧格式）—— "
+                 "请用编辑器打开该作业集重新保存一次（保存时会自动预编译）")
+            return _fail()
+        override = variant
+        _log(f"使用预编译 compiled（{'boss' if is_boss else 'normal'}"
+             f" 变体，{len(variant)} 个节点）")
 
-        # ★ 三条链各一个节点（不再按段拆分）
-        #
-        # 整条链的动作拼成一条 BatchSwipe DSL，一次跑完。
-        # 中途靠 every:N 定期识别「有没有结算」，命中即停本批、跟随 next。
-        # ★ 识别结算速率（网页端「高级设置」，默认 10）
-        every_n = int(table.raw.get("everyN") or 10)
-        if every_n < 1:
-            every_n = 10
-
-        # 收尾链是否存在（决定组合动作里要不要挂「最后一波」触发）
-        # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
-        _end_chain = rules.get("end_chain") or []
-        has_end = bool(_end_chain) and not is_boss
-
-        chain_nodes = self._build_chain_nodes(
-            rules, coords, swipe_ms, interval, every_n, has_end)
-
-        once_node = chain_nodes.get("once")
-        loop_node = chain_nodes.get("loop")
-        end_node = chain_nodes.get("end")
-
-        # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
-        if is_boss:
-            end_node = None
-        # has_end 已在上面（构建组合动作前）算过，用于决定 ref 触发
-
-        # ★ 收尾链的可调参数（网页端「棋盘下侧」编辑，作业集导出）：
-        #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms）
-        #   · 「收尾超时时间」 = **收尾链末尾追加的 sleep 秒数**（默认 6000ms -> 6s）
-        #   · 「收尾超时后动作」 = sub（执行子动作）/ restart（重开）
-        #   · 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
-        def _num(v: Any, default: int) -> int:
+        # ---- boss 未配置短路：只等结算，不动补给（保持旧行为）----
+        if _boss_short:
             try:
-                return int(float(v))
-            except (TypeError, ValueError):
-                return default
+                context.override_pipeline(override)
+                _log(f"已注入 {len(override)} 个节点")
+            except Exception as e:
+                _log(f"注入失败（{type(e).__name__}: {e}）")
+                return _fail()
+            return _ok()
 
-        end_post_delay = _num(table.raw.get("endPostDelay"), 15000)
-        end_last_post_delay = _num(table.raw.get("endLastPostDelay"), 6000)
-        end_after_action = str(table.raw.get("endAfterAction") or "sub").strip()
-        end_sub_action = str(table.raw.get("endSubAction") or "loop").strip()
-        if end_sub_action not in ("once", "loop", "end"):
-            end_sub_action = "loop"
-
-        override: Dict[str, Any] = {}
-
-        # ---- 1) 三个组合动作节点 ----
-        #
-        # next 结构：
-        #     ["无尽局内_继续挑战",   <- 结算出现了就点它（放第一位，命中即走）
-        #      "无尽挑战_收尾",       <- 没结算但检测到最后一波 -> 跳收尾链
-        #      <跑完这条链之后去哪>]  <- 没结算也没到最后一波 -> 继续下一环
-        #
-        #   单次链 -> 无尽局内_循环种植
-        #   循环链 -> 自己（自循环）
-        #   收尾链 -> 「收尾超时后动作」（sub/restart）
-        if once_node:
-            nxt = ["无尽局内_继续挑战"]
-            if has_end:
-                nxt.append("无尽挑战_收尾")
-            nxt.append("无尽局内_循环种植")
-            override[once_node["node"]] = {
-                "action": "Custom",
-                "custom_action": "BatchSwipe",
-                "custom_action_param": once_node["dsl"],
-                "pre_delay": 0,
-                "post_delay": 0,
-                "next": nxt,
-            }
-
-        if loop_node:
-            nxt = ["无尽局内_继续挑战"]
-            if has_end:
-                nxt.append("无尽挑战_收尾")
-            nxt.append(loop_node["node"])          # 自循环
-            override[loop_node["node"]] = {
-                "action": "Custom",
-                "custom_action": "BatchSwipe",
-                "custom_action_param": loop_node["dsl"],
-                "pre_delay": 0,
-                "post_delay": 0,
-                "next": nxt,
-            }
-        else:
-            # ★ 循环链为空：节点仍然存在，只是 DSL 是一个空动作（sleep:5）
-            #   靠 next 自循环等待结算/收尾。sleep 稍长避免空转时疯狂刷屏。
-            nxt = ["无尽局内_继续挑战"]
-            if has_end:
-                nxt.append("无尽挑战_收尾")
-            nxt.append("无尽挑战_组合动作_循环")  # 自循环
-            override["无尽挑战_组合动作_循环"] = {
-                "action": "Custom",
-                "custom_action": "BatchSwipe",
-                "custom_action_param": "sleep:5",
-                "pre_delay": 0,
-                "post_delay": 0,
-                "next": nxt,
-            }
-
-        if end_node:
-            # 收尾链跑完：先看结算，没结算再走「收尾超时后动作」
-            if end_after_action == "restart":
-                after = ["无尽挑战_收尾重开"]
-            elif end_sub_action == "once":
-                after = ["无尽局内_单次种植"]
-            elif end_sub_action == "end":
-                after = ["无尽挑战_收尾"]
-            else:
-                after = ["无尽局内_循环种植"]
-            # ★「收尾超时时间」不再是 post_delay，而是末尾的 sleep 动作
-            dsl = end_node["dsl"]
-            if end_last_post_delay > 0:
-                dsl = f"{dsl};sleep:{end_last_post_delay / 1000.0:g}" if dsl \
-                    else f"sleep:{end_last_post_delay / 1000.0:g}"
-            override[end_node["node"]] = {
-                "action": "Custom",
-                "custom_action": "BatchSwipe",
-                "custom_action_param": dsl,
-                "pre_delay": 0,
-                "post_delay": 0,
-                "next": ["无尽局内_继续挑战"] + after,
-            }
-
-        # ---- 2) 链首节点：各自指向自己的那条链 ----
-        once_next = [once_node["node"]] if once_node else ["无尽局内_循环种植"]
-        # ★ 循环链为空也要进 —— 上面的 override 已经把它写成了
-        #   「sleep:0.1 空动作 + 自循环等待结算」，所以这里永远指向它。
-        #   以前是 loop_node 为 None 就给空 next -> 链断 -> Task.Failed
-        #   （表现为「一到循环种植就停了」）。
-        loop_next = [CHAIN_NODE_TPL.format(kind=KIND_CN["loop"])]
-
-        # 记录本关的 boss 状态，供链首节点复用
         _STATE["is_boss"] = is_boss
+        _STATE["is_boss_level"] = lv
 
-        override["无尽局内_单次种植"] = {
-            "action": "Custom",
-            "custom_action": "JobSetFight",
-            "custom_action_param": {},          # 空 -> 由 state 决定
-            "pre_delay": 0,
-            "post_delay": 0,
-            "next": once_next,
-        }
-        override["无尽局内_循环种植"] = {
-            "action": "Custom",
-            "custom_action": "JobSetFight",
-            "custom_action_param": {},          # 空 -> 由 state 决定
-            "pre_delay": 0,
-            "post_delay": 0,
-            "next": loop_next,
-        }
+        # （组合动作节点 / 收尾 / 收尾重开的装配已全部搬进 compile.build_fight_override，
+        #   本函数只负责：选表 -> 取 compiled -> override_pipeline -> 补给。）
 
-        # ---- 3) 「无尽局内_继续挑战」——**不再覆盖** ----
+        # ---- 2) 「无尽局内_继续挑战」——**不覆盖**（见下方血泪注释）----
+
         #
         # 这个节点的内容已经写死在 03_Endless_fight/0300Endless_fight.json：
         #     next = ["无尽局内_补给", "无尽挑战_选取植物_开始战斗"]
@@ -1042,45 +902,7 @@ class JobSetFight(CustomAction):
         #       custom 一旦写同名字段就会把它顶掉。
         #       需要调整落点时，改 pipe JSON，而不是在 custom 里重写。
 
-        # ---- 3b) 收尾检测节点：检测到最后一波 -> 执行收尾链 -> 等结算 ----
-        #
-        # 「无尽挑战_收尾」是 TemplateMatch 识别（僵尸头像出现在右上角 = 最后一波）。
-        #   · 配了收尾链（棋盘上有「收尾」形态的落子）-> enabled=True，next 指向收尾链第一段；
-        #   · 没配 -> enabled=False（保持 pipeline 里的空壳，不参与）。
-        # post_delay 由网页端「棋盘下侧」编辑（默认 15000ms）。
-        #
-        # override_pipeline 是深合并：这里只改 enabled / next / post_delay，
-        # 识别配置（recognition=TemplateMatch / template / roi / green_mask）
-        # 沿用 pipeline 里 03-1-01 写死的值。
-        if has_end:
-            override["无尽挑战_收尾"] = {
-                "enabled": True,
-                "post_delay": end_post_delay,
-                "next": [end_node["node"]],
-            }
-        else:
-            override["无尽挑战_收尾"] = {"enabled": False}
-
-        # ---- 3c) 收尾重开节点：**已 pipe 化，运行时不再注入** ----
-        #
-        # 「无尽挑战_收尾重开」现在是一个纯 pipe 节点（03-1-01）：
-        #     next   = ["通用_重开_暂停"]
-        #     anchor = {"下一个动作": "无尽挑战_识别开始战斗_清空卡牌"}
-        # 重开完靠 [Anchor]下一个动作 回到锚点直接开局。
-        #
-        # 曾经这里用 CustomAction（JobSetEndRestart）跑 run_task 串两次调用，
-        # 但 run_task 是同步的，pipe 的 next 表达不了——于是写了 40 行 Python。
-        # 改成 pipe 后那 40 行完全不需要：next + [Anchor] 天然能表达。
-        #
-        # ★ 唯一还需要运行时管的是 enabled：
-        #   壳节点在 pipeline 里是 enabled=false（避免没配收尾链时参与识别），
-        #   只有作业集选了「重开」且配了收尾链时才启用。
-        if has_end and end_after_action == "restart":
-            override["无尽挑战_收尾重开"] = {"enabled": True}
-        else:
-            override["无尽挑战_收尾重开"] = {"enabled": False}
-
-        # ---- 4) 自检：注入的 next 目标是否都存在 ----
+        # ---- 3) 自检：注入的 next 目标是否都存在 ----
         #
         # 踩过的坑：曾把「无尽局内_继续挑战」的 next 指向一个已被注释掉的节点，
         # 结果点完继续挑战后找不到后继 -> 3ms 内整条任务结束（表现为 Task.Failed）。
@@ -1090,14 +912,16 @@ class JobSetFight(CustomAction):
         try:
             context.override_pipeline(override)
             _log(f"已注入 {len(override)} 个节点")
-            # 打印三条链各自的动作数
+            # 打印三条链各自的动作数（从 override 读 DSL，compiled/现编译两路通用）
             for kind, cn in (("once", "单次"), ("loop", "循环"), ("end", "收尾")):
-                node = chain_nodes.get(kind)
-                if not node:
+                node_name = CHAIN_NODE_TPL.format(kind=KIND_CN[kind])
+                body = override.get(node_name)
+                dsl = (body or {}).get("custom_action_param")
+                if not isinstance(dsl, str):
                     _log(f"  [{cn}链] （空）")
                     continue
-                n = len([x for x in node["dsl"].split(";") if x.strip()])
-                _log(f"  [{cn}链] {node['node']}  共 {n} 条动作")
+                n = len([x for x in dsl.split(";") if x.strip()])
+                _log(f"  [{cn}链] {node_name}  共 {n} 条动作")
         except Exception as e:
             _log(f"注入失败（{type(e).__name__}: {e}）")
             return _fail()
@@ -1216,154 +1040,21 @@ class JobSetFight(CustomAction):
         else:
             _log("next 目标自检通过")
 
-    @classmethod
-    def _build_chain_nodes(
-        cls,
-        rules: Dict[str, Any],
-        coords: Dict[str, Any],
-        swipe_ms: int,
-        interval: Any,
-        every_n: int = 10,
-        has_end: bool = False,
-    ) -> Dict[str, Optional[Dict[str, Any]]]:
-        """三条链各生成**一个**节点（整条链拼成一条 DSL）。
-
-        返回 {"once": {"node": 节点名, "kind": "once", "dsl": "..."} 或 None,
-              "loop": ..., "end": ...}
-        链为空时对应项为 None（不生成节点）。
-
-        ★ 为什么整条链一个节点（而不是旧做法的「每段一个节点」）：
-          旧做法节点数随链长膨胀（20+），每段跑完都要回「继续挑战」识别一次。
-          现在整条链一次跑完，中途靠 every:N 定期识别结算，
-          命中即停本批、跟随 next —— 既省节点又不容易乱点。
-        """
-        out: Dict[str, Optional[Dict[str, Any]]] = {"once": None, "loop": None, "end": None}
-
-        # ★ 三条链各一个节点：整条链的动作拼成**一条** BatchSwipe DSL。
-        #   节点名固定（见 0301Endless_fight_1.json）：
-        #       无尽挑战_组合动作_单次 / _循环 / _收尾
-        #
-        #   为什么不按段拆节点（旧做法）：
-        #     旧做法每段一个节点、靠 next 串起来，节点数随链长膨胀（20+），
-        #     而且每段跑完都要回「继续挑战」识别一次，开销大。
-        #     现在整条链一次跑完，中途靠 every:N 定期识别结算
-        #     （识别结算速率在网页端「高级设置」里配，默认 10）。
-        for kind, field in (
-            ("once", "once_chain"),
-            ("loop", "loop_chain"),
-            ("end", "end_chain"),
-        ):
-            chain = rules.get(field) or []
-            parts: List[str] = []
-
-            for seg in chain:
-                key = str(seg.get("key") or "").strip()
-                typ = str(seg.get("type") or "plant").lower()
-
-                # ---- 通用动作段（点波/捡豆/加速/等待/切换形态）：没有格子，整段 = 一条 DSL ----
-                if typ == "action" or key.startswith("ga:"):
-                    r = _dsl.generic_dsl(
-                        seg.get("action") or key,
-                        coords,
-                        seg.get("ms"),
-                        seg.get("slot"),
-                        seg.get("times"),
-                        seg,          # ★ 整个段都当参数袋 —— 新动作免改这里
-                    )
-                    if r["dsl"]:
-                        parts.append(r["dsl"])
-                    for m in r["missing"]:
-                        _log(f"  ⚠️ 通用动作跳过：{m}")
-                    continue
-
-                # ★ 只对**植物槽**做白名单校验。
-                #   落子动作（feed/shovel/tapcell/未来扩展）不在 _SLOT_NODE_NAME 里，
-                #   以前这里一刀切 `continue` 会把它们**静默丢弃** ——
-                #   表现为「网页端配了、跑起来没执行」，非常难查。
-                #   现在：植物槽必须有名（否则是真错误），其余交给下面的
-                #   通用起点逻辑处理（找不到起点 -> 编译成 click:格子）。
-                _is_plant_slot = key.startswith("card") or key.startswith("patch_slot")
-                if _is_plant_slot and key not in _SLOT_NODE_NAME:
-                    _log(f"  ⚠️ 未知植物槽 {key!r}，跳过")
-                    continue
-
-                # 决定这一段每株的起点
-                src = None
-                if typ == "plant":
-                    ordinal = _dsl.ordinal_of(seg.get("slot"))
-                    src = _dsl.find_slot_point(coords, ordinal) if ordinal else None
-                elif typ == "feed":
-                    src = _dsl.find_feed_point(coords)
-                elif typ == "shovel":
-                    src = _dsl.find_shovel_point(coords)
-                # ★ typ == "tap"（点击格子）：**故意不设起点** —— 落到下面的
-                #   `src is None` 分支，编译成 click:格子N_M。这正是要的语义。
-
-                # 该段每个落点的「动作后等待」秒数（与 cells 等长，来自 waitAfter）
-                waits = seg.get("waits") or []
-
-                for i, cell in enumerate(seg.get("cells") or []):
-                    dst = _dsl.find_grass_point(coords, str(cell))
-                    if dst is None:
-                        continue
-                    if src is None:
-                        parts.append(f"click:{dst}")
-                    else:
-                        parts.append(f"swipe:{src},{dst},{swipe_ms}")
-                    # 等待：这个动作之后插入 sleep:N（BatchSwipe 支持 sleep:秒）
-                    try:
-                        sec = float(waits[i]) if i < len(waits) else 0.0
-                    except (TypeError, ValueError):
-                        sec = 0.0
-                    if sec > 0:
-                        parts.append(f"sleep:{sec:g}")
-
-            body = ";".join(parts)
-            if not body:
-                continue
-            # ★ 识别触发（放在动作之前，是「触发条件」不是动作）：
-            #   ref:无尽局内_继续挑战  —— 结算画面出现 -> 停本批、跟随 next
-            #   ref:无尽挑战_收尾      —— 检测到最后一波 -> 停本批，next 里会跳收尾链
-            #   ref:无尽训练_继续训练  —— 训练模式的结算按钮（正赛下识别不到，无害）
-            #
-            #   这几个 ref 复用 pipe 节点里已定义的识别配置，无需写 ROI。
-            #   收尾链自己**不加**「收尾」触发（它已经在收尾链里了，避免自跳）。
-            refs: List[str] = [REF_SETTLE]
-            if kind != "end" and has_end:
-                refs.append(REF_LAST_WAVE)
-            refs.append(REF_TRAIN)
-            body = "ref:" + "|".join(refs) + ";" + body
-
-            # ★ every:N —— 每 N 个动作识别一遍「有无结算」（识别结算速率）
-            if every_n and every_n > 1:
-                body = f"every:{every_n};{body}"
-            if interval not in (None, ""):
-                body = f"@{interval};{body}"
-
-            out[kind] = {
-                "node": CHAIN_NODE_TPL.format(kind=KIND_CN[kind]),
-                "kind": kind,
-                "dsl": body,
-            }
-
-        return out
-
-
-
 @AgentServer.custom_action("JobSetStage")
 class JobSetStage(CustomAction):
-    """识别当前天数 -> 计数/计分 -> 必要时换阵容重开。
+    """纯计数器版阶段确认：取计数器关卡 -> boss 对齐 -> 必要时换阵容重开。
+
+    ★ 已彻底砍掉天数 OCR（实测不稳：81 读成 21、87 读成 89）。
+      关卡号完全由「起始关卡 + 过关计数」推导；
+      boss 关靠 pipeline 侧的头像模板匹配判定，是唯一的外部校准信号。
 
     参数（全部可选）：
         {
-          "识别roi": [555,61,414,81],   # 天数识别区域（缺省用旧版实测值）
-          "识别节点": "无尽挑战_局内识别天数",  # 也可直接引用已有 OCR 节点
           "通用重开节点": "通用_重开_暂停",     # 换阵容时调用的重开任务
+          "重开后回跳节点": "无尽挑战_识别开始战斗_清空卡牌",
           "重开": false                   # true = 强制走一次换阵容（调试用）
         }
     """
-
-    DEFAULT_ROI = [555, 61, 414, 81]
 
     def run(self, context: Context, argv) -> Any:
         param = _parse_param(getattr(argv, "custom_action_param", None))
@@ -1518,142 +1209,6 @@ class JobSetStage(CustomAction):
 
     # -- 内部 --------------------------------------------------------------
 
-    def _recognize(self, context: Context, param: Dict[str, Any]) -> Optional[int]:
-        """跑一次天数 OCR，返回整数关卡；失败返回 None。
-
-        ★ run_recognition_direct(reco_type, reco_param, image) 的第三个参数
-          是一张**已经截好的图**，必须自己先 post_screencap 拿到。
-          （之前漏传 image，直接 TypeError。）
-        """
-        roi = list(param.get("识别roi") or self.DEFAULT_ROI)
-        replace = param.get("替换") or [["g", "9"], ["G", "6"], ["《", "8"]]
-
-        try:
-            from maa.pipeline import JRecognitionType, JOCR
-        except Exception:
-            _log("当前 MaaFw 不支持 run_recognition_direct")
-            return None
-
-        if not hasattr(context, "run_recognition_direct"):
-            _log("context 没有 run_recognition_direct")
-            return None
-
-        # ---- 1) 先截图 ----
-        image = None
-        try:
-            ctl = context.tasker.controller
-            image = ctl.post_screencap().wait().get()
-        except Exception as e:
-            _log(f"天数识别：截图失败（{type(e).__name__}: {e}）")
-            return None
-        if image is None:
-            _log("天数识别：截图为空")
-            return None
-
-        # ---- 2) 直接对这张图跑 OCR ----
-        text = ""
-        try:
-            detail = context.run_recognition_direct(
-                JRecognitionType.OCR,
-                JOCR(only_rec=True, roi=roi, replace=replace),
-                image,
-            )
-            text = self._extract_text(detail)
-        except Exception as e:
-            _log(f"天数识别异常（{type(e).__name__}: {e}）")
-            return None
-
-        if not text:
-            _log("天数识别：未读到文字")
-            return None
-        return self._parse_day(str(text))
-
-    @staticmethod
-    def _parse_day(text: str) -> Optional[int]:
-        """从 OCR 文本里取出关卡数字。
-
-        ★ 现在 roi 只覆盖**数字区**（不再包含「第 / 关」），所以优先走纯数字路径。
-          但保留「第N关 / 第N天」的兼容分支 —— roi 万一放宽了也不会失效。
-
-        真实日志出现过这些形态：
-            "55"                  纯数字（现在的常态）
-            "第55关" / "第 55 关"   带「第N关」（旧 roi 会读到）
-            "亚瑟的挑战-第8关"      带前缀的关卡名
-
-        规则（按优先级）：
-          1. 整串就是个纯数字 -> 直接用（现在的常态）
-          2. 「第 <数字> 关」
-          3. 「第 <数字> 天」
-          4. 取最后一段里的数字（兼容 "A-B第8关"）
-          5. 整串里最后一个数字
-        """
-        import re as _re
-
-        s = text.strip()
-        if not s:
-            return None
-
-        # 1) 纯数字（只 OCR 数字区时的常态）
-        if _re.fullmatch(r"\d{1,3}", s):
-            return int(s)
-        # 2) 第N关
-        m = _re.search(r"第\s*(\d{1,3})\s*关", s)
-        if m:
-            return int(m.group(1))
-        # 3) 第N天
-        m = _re.search(r"第\s*(\d{1,3})\s*天", s)
-        if m:
-            return int(m.group(1))
-        # 4) 取最后一段里的数字（兼容「A-B第8关」这类）
-        tail = _re.split(r"[-_/|]", s)[-1]
-        nums = _re.findall(r"\d{1,3}", tail)
-        if nums:
-            return int(nums[-1])
-        # 5) 兜底：整串里最后一个数字
-        nums = _re.findall(r"\d{1,3}", s)
-        if nums:
-            return int(nums[-1])
-        return None
-
-    @staticmethod
-    def _extract_text(detail: Any) -> str:
-        """从 run_recognition_direct 的返回值里取出 OCR 文本。
-
-        真实返回是 RecognitionDetail，文本在 `.best_result.text`；
-        为兼容不同版本/字典形态，逐层尝试 best_result / text / all / detail。
-        """
-        if detail is None:
-            return ""
-
-        def _from(obj: Any) -> str:
-            if obj is None:
-                return ""
-            if isinstance(obj, str):
-                return obj.strip()
-            for attr in ("best_result", "text", "all", "detail"):
-                v = getattr(obj, attr, None)
-                if v is None and isinstance(obj, dict):
-                    v = obj.get(attr)
-                if v is None:
-                    continue
-                got = _from(v)
-                if got:
-                    return got
-            if isinstance(obj, (list, tuple)):
-                for it in obj:
-                    got = _from(it)
-                    if got:
-                        return got
-            return ""
-
-        txt = _from(detail)
-        if txt:
-            return txt
-        inner = getattr(detail, "detail", None)
-        if inner is None and isinstance(detail, dict):
-            inner = detail.get("detail")
-        return _from(inner)
-
     @staticmethod
     def _apply_table(context: Context, js: JobSet, table: Any) -> bool:
         """把指定表的阵容与种植逻辑注入 pipeline。
@@ -1679,22 +1234,4 @@ class JobSetStage(CustomAction):
         except Exception as e:
             _log(f"切换表失败（{type(e).__name__}: {e}）")
             return False
-
-
-# ---------------------------------------------------------------------------
-# 【已移除】JobSetArmSkip / JobSetSkipCheck
-#
-# 原设计：换阵容重开后打一个「跳过天数识别」的一次性标记，
-#         进关时消费掉，避免重复识别导致再次判定换阵容 -> 死循环。
-#
-# 移除原因：这套「正向 + inverse 反向」的写法在 pipeline 侧不好接，
-#           用户决定自己重写这一段流程。
-#
-# 如果以后要恢复，注意两点：
-#   1) 选表必须用「回退前」的关卡号（last_raw），不能用已被 rollback 减过的 count，
-#      否则会算回上一张表。
-#   2) inverse 兄弟节点必须显式写进正向节点的 next 里，否则未命中时会卡死。
-#
-# 相关状态 _STATE["skip_detect"] 保留（无害），重新启用时可直接复用。
-# ---------------------------------------------------------------------------
 
