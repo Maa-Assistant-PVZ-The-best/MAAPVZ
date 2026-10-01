@@ -276,6 +276,95 @@
                             ]
                         }
                     }
+                },
+                {
+                    "name": "毁蛇(蛇果)",
+                    "description": "卡槽见公告,需月卡",
+                    "option": [
+                        "huin_snake_关卡选择"
+                    ],
+                    "pipeline_override": {
+                        "无尽挑战_埃及": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_海盗港湾": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_狂野西部": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_功夫世界": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_未来世界": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_黑暗时代": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_巨浪沙滩": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_冰河世界": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_天空之城": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_失落之城": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_摇滚年代": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_恐龙危机": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_摩登世界": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_蒸汽时代": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_复兴时代": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        },
+                        "无尽挑战_童话世界": {
+                            "next": [
+                                "RuinSnakeEntry"
+                            ]
+                        }
+                    }
                 }
             ]
         }
