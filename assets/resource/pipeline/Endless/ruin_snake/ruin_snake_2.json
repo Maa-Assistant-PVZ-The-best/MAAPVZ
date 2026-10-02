@@ -3,6 +3,7 @@
         "action": "DoNothing",
         "timeout": 60000,
         "next": [
+            "ruin_snake_前期_识别boss关",
             "ruinsnake_前期_识别开始战斗"
         ]
     },
@@ -68,7 +69,6 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第四个槽位",
         "end": "种植物_初始化_格子3_2",
-        "pre_delay": 0,
         "next": [
             "ruinsnake_前期_种瓷砖2"
         ]
@@ -77,7 +77,6 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第四个槽位",
         "end": "种植物_初始化_格子1_5",
-        "pre_delay": 0,
         "next": [
             "ruinsnake_前期_抛花1"
         ]
@@ -86,7 +85,7 @@
         "action": "Swipe",
         "begin": "种植物_初始化_第一个槽位",
         "end": "种植物_初始化_格子1_5",
-        "pre_delay": 0,
+        "pre_delay": 900,
         "next": [
             "ruinsnake_前期_点波1"
         ]
@@ -118,6 +117,9 @@
     "ruinsnake_前期_开葫芦": {
         "action": "Click",
         "target": "神器_初始化_葫芦大体型",
+        "anchor": {
+            "断网检测": "ruinsnake_2-51关"
+        },
         "next": [
             "ruinsnake_前期_点波"
         ]
@@ -130,11 +132,13 @@
             1,
             3
         ],
-        "repeat": 70,
+        "repeat": 120,
         "post_delay": 10,
         "pre_delay": 10,
         "next": [
-            "ruinsnake_前期_结算"
+            "ruinsnake_前期_结算",
+            "断网检测",
+            "ruinsnake_前期_喂豆球果"
         ]
     },
     "ruinsnake_前期_结算": {

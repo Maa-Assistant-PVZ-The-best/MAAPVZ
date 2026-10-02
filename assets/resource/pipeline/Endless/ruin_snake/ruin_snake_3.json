@@ -3,7 +3,9 @@
         "action": "DoNothing",
         "timeout": 60000,
         "next": [
-            "ruinsnake_后期_识别开始战斗"
+            "ruin_snake_后期_识别boss关",
+            "ruinsnake_后期_识别开始战斗",
+            "wujin_返回"
         ]
     },
     "ruinsnake_后期_识别开始战斗": {
@@ -88,7 +90,7 @@
         "begin": "种植物_初始化_第二个槽位",
         "end": "种植物_初始化_格子3_3",
         "pre_delay": 0,
-        "post_delay": 50,
+        "post_delay": 200,
         "next": [
             "ruinsnake_后期_种胆小菇1"
         ]
@@ -98,7 +100,7 @@
         "begin": "种植物_初始化_第六个槽位",
         "end": "种植物_初始化_格子6_3",
         "pre_delay": 0,
-        "post_delay": 50,
+        "post_delay": 200,
         "next": [
             "ruinsnake_后期_种胆小菇2"
         ]
@@ -108,7 +110,12 @@
         "begin": "种植物_初始化_第六个槽位",
         "end": "种植物_初始化_格子6_4",
         "pre_delay": 0,
-        "post_delay": 50,
+        "post_delay": 200,
+        "anchor": {
+            "下一个动作": "ruinsnake_51-149关_过渡",
+            "初始化": "ruin_snake_1关",
+            "断网检测": "ruinsnake_51-149关"
+        },
         "next": [
             "ruinsnake_后期_点波1"
         ]
@@ -158,6 +165,7 @@
         "end": "种植物_初始化_格子1_5",
         "pre_delay": 0,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_后期_喂豆毁灭菇2"
         ]
     },
@@ -166,18 +174,15 @@
         "begin": "种植物_初始化_能量豆位置",
         "end": "种植物_初始化_格子1_5",
         "pre_delay": 0,
-        "anchor": {
-            "下一个动作": "ruinsnake_51-149关_过渡"
-        },
         "next": [
+            "通用_无尽_识别结算",
+            "断网检测",
             "ruinsnake_后期_点波2"
         ]
     },
     "ruinsnake_51-149关_识别结算": {
         "action": "DoNothing",
-        "anchor": {
-            "[Anchor]初始化": "ruin_snake_1关"
-        },
+        "post_delay": 2000,
         "next": [
             "通用_无尽_识别结算",
             "ruinsnake_后期_种毁灭菇2"
