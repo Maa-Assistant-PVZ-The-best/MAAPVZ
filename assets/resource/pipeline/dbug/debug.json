@@ -1,38 +1,26 @@
 {
-    "SelectPlants_Entry": {
-        "action": "Custom",
-        "custom_action": "SelectPlants",
-        "custom_action_param": {
-            "植物列表": [
-                "苹果迫击炮",
-                "芦荟医师",
-                "菜问",
-                "寒冰射手",
-                "豌豆射手",
-                "火龙草",
-                "电击蓝莓",
-                "大嘴花"
-            ],
-            "搜索roi": [
-                138,
-                389,
-                595,
-                302
-            ],
-            "核对roi": [
-                269,
-                92,
-                371,
-                63
-            ],
-            "选卡界面槽位检查": true,
-            "匹配阈值": 0.7
-        }
+    "测试": {
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar expand-notifications"
+            }
+        },
+        "post_delay": 4000,
+        "next": [
+            "测试2"
+        ]
     },
-    "debug_识别一下解包植物": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "General/plant/plant_ref_card/橙卡/duckpear/duckpear.png"
+    "测试2": {
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar collapse"
+            }
+        },
+        "post_delay": 400,
+        "next": [
+            "测试"
         ]
     }
 }
