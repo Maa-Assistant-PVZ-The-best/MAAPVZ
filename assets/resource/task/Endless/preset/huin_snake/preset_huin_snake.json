@@ -2,6 +2,7 @@
     "option": {
         "huin_snake_关卡选择": {
             "type": "select",
+            "label": "关卡选择",
             "cases": [
                 {
                     "name": "第一关布阵",

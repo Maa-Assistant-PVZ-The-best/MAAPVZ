@@ -169,6 +169,9 @@
         "end": "种植物_初始化_格子6_1",
         "post_delay": 50,
         "pre_delay": 50,
+        "anchor": {
+            "下一个动作": "ruinsnake_boss_前期_过渡"
+        },
         "next": [
             "ruinsnake_boss_前期_喂豆胆小菇2"
         ]
@@ -177,9 +180,10 @@
         "action": "Swipe",
         "begin": "种植物_初始化_能量豆位置",
         "end": "种植物_初始化_格子5_3",
-        "post_delay": 4000,
-        "pre_delay": 0,
+        "post_delay": 3000,
+        "pre_delay": 1000,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_前期_抛花2"
         ]
     },
@@ -190,6 +194,7 @@
         "post_delay": 50,
         "pre_delay": 50,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_前期_喂豆胆小菇3"
         ]
     },
@@ -200,6 +205,7 @@
         "post_delay": 4000,
         "pre_delay": 0,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_前期_抛花3"
         ]
     },
@@ -209,10 +215,8 @@
         "end": "种植物_初始化_格子1_5",
         "post_delay": 50,
         "pre_delay": 50,
-        "anchor": {
-            "下一个动作": "ruinsnake_boss_前期_过渡"
-        },
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_前期_过渡"
         ]
     },
@@ -221,8 +225,7 @@
         "pre_delay": 2000,
         "next": [
             "通用_无尽_识别结算",
-            "ruinsnake_前期_识别开始战斗",
-            "ruinsnake_boss_前期_喂豆胆小菇3"
+            "ruinsnake_前期_识别开始战斗"
         ]
     },
     "ruin_snake_后期_识别boss关": {
@@ -394,6 +397,9 @@
         "end": "种植物_初始化_格子6_1",
         "post_delay": 50,
         "pre_delay": 50,
+        "anchor": {
+            "下一个动作": "ruinsnake_boss_后期_过渡"
+        },
         "next": [
             "ruinsnake_boss_后期_喂豆胆小菇2"
         ]
@@ -405,6 +411,7 @@
         "post_delay": 4000,
         "pre_delay": 0,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_后期_抛花2"
         ]
     },
@@ -415,6 +422,7 @@
         "post_delay": 50,
         "pre_delay": 50,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_后期_喂豆胆小菇3"
         ]
     },
@@ -425,6 +433,7 @@
         "post_delay": 4000,
         "pre_delay": 0,
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_后期_抛花3"
         ]
     },
@@ -434,10 +443,8 @@
         "end": "种植物_初始化_格子1_5",
         "post_delay": 50,
         "pre_delay": 50,
-        "anchor": {
-            "下一个动作": "ruinsnake_boss_后期_过渡"
-        },
         "next": [
+            "通用_无尽_识别结算",
             "ruinsnake_boss_后期_过渡"
         ]
     },
@@ -446,8 +453,7 @@
         "pre_delay": 2000,
         "next": [
             "通用_无尽_识别结算",
-            "ruinsnake_后期_识别开始战斗",
-            "ruinsnake_boss_后期_喂豆胆小菇3"
+            "ruinsnake_后期_识别开始战斗"
         ]
     },
 }

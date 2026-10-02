@@ -29,20 +29,32 @@
     "准备卡双赢": {
         "action": "DoNothing",
         "next": [
-            "返回桌面"
+            "下拉通知栏"
         ]
     },
-    "返回桌面": {
-        "action": "ClickKey",
+    "下拉通知栏": {
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar expand-notifications"
+            }
+        },
         "post_delay": 4500,
-        "key": 3,
         "next": [
             "返回游戏"
         ]
     },
     "返回游戏": {
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar collapse"
+            }
+        },
+        "post_delay": 1000,
         "next": [
-            "选择渠道服"
+            "识别是否掉血",
+            "下拉通知栏"
         ]
     }, //到这一段
     "识别是否掉血": {
