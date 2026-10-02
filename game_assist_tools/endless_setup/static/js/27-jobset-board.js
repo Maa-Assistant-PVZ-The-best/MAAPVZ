@@ -2184,6 +2184,29 @@ async function jobLoadPlants() {
     return plantCache;
 }
 
+// ---- 植物图片资源可用性（字段由后端 /plants 扫 plant_ref_card 实况注入）----
+//   p.has_img: bool                        p.super: 'none' | 'missing' | 'collected'
+// 字段缺失（旧缓存 / 接口异常）时当作「有图」，避免误伤全部植物。
+function jobPlantAvail(p) {
+    if (!p || p.has_img === undefined || p.has_img === null) return { hasImg: true, sup: 'none' };
+    return { hasImg: !!p.has_img, sup: p.super || 'none' };
+}
+
+// 选择器卡片的悬停提示（走 02-tooltip.js 的 data-tooltip，1 秒延迟，支持多行）
+function jobPlantCardTip(p, dupSlot) {
+    const av = jobPlantAvail(p);
+    const lines = [];
+    lines.push(dupSlot
+        ? (p.name + '（已被 槽' + dupSlot + ' 使用，不能重复选择）')
+        : (p.name + '（' + (p.rarity || '?') + '卡）'));
+    if (!av.hasImg) lines.push('⛔ 没有这个植物的图片资源');
+    else if (av.sup === 'missing') lines.push('⚠️ 缺少超装的植物资源');
+    else if (av.sup === 'collected') lines.push('✅ 超装资源已收集');
+    else lines.push('（该植物无超装）');
+    lines.push('右键' + (jobIsFav(p) ? '取消收藏' : '收藏'));
+    return lines.join('\n');
+}
+
 function jobOpenPicker(slot) {
     currentSlotEditing = slot;
     const modal = document.getElementById('plantPicker');
@@ -2260,8 +2283,7 @@ function jobRefreshFavMark(p, isFav) {
     } else if (!isFav && old) {
         old.remove();
     }
-    card.title = (p.name + '（' + (p.rarity || '?') + '卡）')
-        + '\u2003右键' + (isFav ? '取消收藏' : '收藏');
+    card.setAttribute('data-tooltip', jobPlantCardTip(p, 0));
 }
 
 // 卡槽下边框中央的心形（宽度约占卡片 1/4，压在下边框上）
@@ -2324,6 +2346,11 @@ function jobSlotOfPlant(name, excludeSlot) {
 function jobConfirmPick() {
     const p = plantPickList && plantPickList[plantPickIndex];
     if (!p) return;
+    // 无图植物禁选（键盘回车路径也走这里）
+    if (!jobPlantAvail(p).hasImg) {
+        setStatus('⛔「' + p.name + '」没有图片资源，无法选择');
+        return;
+    }
     const dup = jobSlotOfPlant(p.name, currentSlotEditing);
     if (dup) {
         setStatus('⚠️「' + p.name + '」已被 槽' + dup + ' 使用，同一植物不能重复选择');
@@ -2383,15 +2410,21 @@ function jobRenderPlantGrid() {
         if (nm) usedBy[nm] = s;
     }
     plantPickAvailable = [];
-    list.forEach((pl, i) => { if (!usedBy[pl.name]) plantPickAvailable.push(i); });
+    let _noImgCnt = 0;
+    list.forEach((pl, i) => {
+        const av = jobPlantAvail(pl);
+        if (!av.hasImg) _noImgCnt++;
+        if (!usedBy[pl.name] && av.hasImg) plantPickAvailable.push(i);
+    });
     if (plantPickAvailable.length && plantPickAvailable.indexOf(plantPickIndex) === -1) {
         plantPickIndex = plantPickAvailable[0];
     } else if (!plantPickAvailable.length && list.length) {
         plantPickIndex = 0;
     }
-    const _usedCnt = list.length - plantPickAvailable.length;
+    const _usedCnt = list.length - plantPickAvailable.length - _noImgCnt;
     if (countEl) countEl.textContent = '共 ' + list.length + ' 种'
         + (_usedCnt ? '（' + _usedCnt + ' 种已被其它槽位占用）' : '')
+        + (_noImgCnt ? '（' + _noImgCnt + ' 种无图不可选）' : '')
         + (plantPickAvailable.length ? '（W/S 或 ↑↓ 切换，A/D 跳 5 个，回车确认）' : '');
     if (!list.length) {
         grid.innerHTML = '<span style="grid-column:1/-1;color:#888;padding:20px;">没有匹配的植物</span>';
@@ -2399,16 +2432,18 @@ function jobRenderPlantGrid() {
     }
     list.forEach((p, idx) => {
         const dupSlot = usedBy[p.name] || 0;
+        const av = jobPlantAvail(p);
+        const noImg = !av.hasImg;
+        const blocked = dupSlot || noImg;
         const cell = document.createElement('div');
         cell.className = 'job-card';
         cell.style.animationDelay = Math.min(idx, 20) * 9 + 'ms';   // 错峰入场（不超过 20 项）
         cell.style.cssText += 'display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px;'
-            + (dupSlot ? 'cursor:not-allowed;opacity:0.38;' : 'cursor:pointer;')
-            + (!dupSlot && idx === plantPickIndex ? 'outline:3px solid #2d7aff;outline-offset:2px;background:#eff6ff;' : '');
-        cell.title = (dupSlot
-            ? (p.name + '（已被 槽' + dupSlot + ' 使用，不能重复选择）')
-            : (p.name + '（' + (p.rarity || '?') + '卡）'))
-            + '\u2003右键' + (jobIsFav(p) ? '取消收藏' : '收藏');
+            + (blocked ? 'cursor:not-allowed;opacity:0.38;' : 'cursor:pointer;')
+            + (!blocked && idx === plantPickIndex ? 'outline:3px solid #2d7aff;outline-offset:2px;background:#eff6ff;' : '');
+        // 悬停提示走自定义 tooltip 系统（1 秒延迟），不用原生 title（会双层提示）
+        cell.setAttribute('data-tooltip', jobPlantCardTip(p, dupSlot));
+        cell.setAttribute('data-tooltip-delay', '1000');
 
         // 品质底图铺底（网页端铺，不改图）
         const rare = (typeof p.rare === 'number') ? p.rare : (RARITY_TO_RARE[p.rarity] || 0);
@@ -2422,7 +2457,11 @@ function jobRenderPlantGrid() {
         img.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:86%;width:86%;object-fit:contain;';
         img.onerror = function () { this.style.display = 'none'; };
         frame.appendChild(img);
-        if (dupSlot) {
+        if (noImg) {
+            // 无图植物：灰化 + 左上角叉叉（通用标记，见 02-tooltip.js），禁选
+            frame.style.filter = 'grayscale(1)';
+            jobCardXMark(frame);
+        } else if (dupSlot) {
             frame.style.filter = 'grayscale(1)';
             const badge = document.createElement('span');
             badge.textContent = '槽' + dupSlot;
@@ -2441,6 +2480,10 @@ function jobRenderPlantGrid() {
         cell.appendChild(frame);
         cell.appendChild(nm);
         cell.addEventListener('click', () => {
+            if (noImg) {
+                setStatus('⛔「' + p.name + '」没有图片资源，无法选择');
+                return;
+            }
             plantPickIndex = idx;
             jobConfirmPick();
         });
@@ -2693,6 +2736,14 @@ function jobBuild() {
         worlds,
         max_level: 149,            // 最大关卡固定 149
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
+        // 局外选卡（无尽局外 80 选，32-jobset-outer.js）：作业集级，与换阵无关
+        //   plants 有序（阵容表锁定植物在前，其余按点击顺序）；mode = auto/oneclick/confirm
+        //   一键选取/直接点确定 时局内不读列表 -> 导出空 plants，作业集 JSON 不记选择
+        outer_pick: (function () {
+            if (typeof jobOuterPick === 'undefined') return { plants: [], mode: 'auto' };
+            const m = jobOuterPick.mode || 'auto';
+            return { plants: (m === 'auto') ? (jobOuterPick.plants || []).slice() : [], mode: m };
+        })(),
         tables
     };
 }

@@ -86,6 +86,13 @@ function jobResetEditor(quiet) {
     jobNewTable();                     // 建一张干净的空白表
     jobRenumberTables();
 
+    // 局外选卡（作业集级）一并清空
+    if (typeof jobOuterPick !== 'undefined') {
+        jobOuterPick.plants = [];
+        jobOuterPick.mode = 'auto';
+        if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+    }
+
     // 世界复选框全不勾
     document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = false; });
     // 阵容表表单恢复默认（关卡区间由 jobRenumberTables 统一算，不在表单里）
@@ -180,6 +187,14 @@ function jobApplyLoaded(job, code) {
     currentTable = 0;
     const worlds = Array.isArray(job.worlds) ? job.worlds : [];
     document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = worlds.includes(cb.value); });
+    // 局外选卡（作业集级）：旧作业集没有该字段 -> 空列表 + auto；
+    // mode 为 oneclick/confirm 时 JSON 本就不存 plants，读进来也置空
+    const _op = (job.outer_pick && typeof job.outer_pick === 'object') ? job.outer_pick : {};
+    const _opm = (['auto', 'oneclick', 'confirm'].indexOf(_op.mode) !== -1) ? _op.mode : 'auto';
+    jobOuterPick.mode = _opm;
+    jobOuterPick.plants = (_opm === 'auto' && Array.isArray(_op.plants))
+        ? _op.plants.filter(function (x) { return typeof x === 'string' && x; }) : [];
+    jobOuterRefreshBadge();
     jobLoadTable(0, true);
     jobRenderTabs();
     jobFillForm();
@@ -213,6 +228,12 @@ async function jobDelete() {
         jobTables = [];
         jobNewTable();
         currentTable = 0;
+        // 局外选卡（作业集级）一并清空
+        if (typeof jobOuterPick !== 'undefined') {
+            jobOuterPick.plants = [];
+            jobOuterPick.mode = 'auto';
+            if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+        }
         jobLoadTable(0, true);
         jobRenderTabs();
         jobRenderSlots();

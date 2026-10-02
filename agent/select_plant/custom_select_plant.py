@@ -16,6 +16,11 @@ custom_select_plant.py —— custom 选植物逻辑（MAA CustomAction / Custom
     5. 保底机制：滑动后连续两帧截图相似（基本没滚动），判定本轮没找到，滑回最顶上重找。
        回顶次数**不写死**：等于「本轮实际下滑了几次 + 3」（见 DEFAULT_BACKTOP 注释）。
     6. 不足 8 个植物：全部找完后滑回最顶上，把剩余空槽按顺序依次点一遍占位。
+    7. 可选开关（缺省 = 旧行为，互不影响）：
+       - 「无尽局外选卡」：80 选卡模式（无尽局外「选择挑战植物」，无文本界面）。
+         一帧内对所有未选植物匹配、命中即点、按名除名，触底回顶重扫；
+         隐含不做核对 / 槽位检查 / 占位填充。详见 SPEC_endless_select.md。
+       - 「核对」「占位填充」「槽位上限」「尺度」均可单独关 / 调。
 
 实现依赖：
     - maa.agent / maa.custom_action / maa.custom_recognition（MAAPVZ venv 里有）
@@ -173,6 +178,16 @@ class SelectPlants(CustomAction):
           "保底连续帧": 2,           // 连续多少帧相似判定到达列表尽头
           "最多重试": 6,             // 回顶重扫最多几轮
           "最多滑动步数": 40,         // ★ 单轮向下扫描最多滑几次（到列表尽头由保底机制判定）
+
+          // ---- 可选开关（缺省 = 旧行为）----
+          "无尽局外选卡": false,     // ★ 80 选卡模式：一帧多目标，命中即点、按名除名，
+                                     //    一次性把「植物列表」里全部 80 个选完；
+                                     //    隐含不做核对/槽位检查/占位填充，无槽位上限
+          "核对": true,              // false = 点击即成功，不做 OCR/槽位核对（无文本界面）
+          "占位填充": true,          // false = 结尾不做占位填充
+          "槽位上限": 8,             // 仅单目标模式：最多处理列表前几个（局外选卡不生效）
+          "尺度": [1.0],             // 匹配多尺度；单目标缺省 0.85~1.15，局外选卡缺省 [1.0]
+          "局外点击间隔": 150,        // 无尽局外选卡模式每次点击之间的间隔 ms
         }
     """
 
@@ -309,6 +324,14 @@ class SelectPlants(CustomAction):
                 fill_positions = list(self.DEFAULT_FILL_POSITIONS)
             fill_click_gap = int(param.get("填充点击间隔", 100))
 
+            # ---- 可选开关（缺省 = 旧行为；runtime 注入只带「植物列表」，不会撞名）----
+            endless_mode = self._to_bool(param.get("无尽局外选卡"))
+            verify = self._to_bool(param.get("核对", True))
+            fill_enabled = self._to_bool(param.get("占位填充", True))
+            slot_limit = max(1, int(param.get("槽位上限", 8)))
+            scales = param.get("尺度") or param.get("scales")
+            endless_click_gap = int(param.get("局外点击间隔", 150))
+
             # 解析每个目标 -> (中文名, 英文名, 品质, 模板列表, 有效槽位roi)
             targets = []
             for zh in plants:
@@ -335,17 +358,28 @@ class SelectPlants(CustomAction):
                 print("[SelectPlants] 植物列表为空 -> 跳过选卡，直接占位填充",
                       file=sys.stderr, flush=True)
 
+            # ---- 无尽局外选卡模式（80 选卡）：一帧多目标，与单目标路径完全分离 ----
+            # 隐含：不做核对 / 槽位检查 / 占位填充；触底回顶机制与单目标一致。
+            if endless_mode:
+                ok = self._run_endless_select(
+                    context, ctl, targets, search_roi,
+                    swipe, backtop, threshold, scales,
+                    post_swipe_wait, endless_click_gap,
+                    sim_threshold, backoff_frames,
+                    max_retry, max_slides)
+                return CustomAction.RunResult(success=ok)
+
             # ---- 槽位状态：-1=跳过/未用 0=未就绪 1=已就绪 ----
-            slot_done = [False] * min(8, len(targets))
+            slot_done = [False] * min(slot_limit, len(targets))
 
             # ---- 可选：先在选卡界面检查 1..8 槽是否已是对应植物 ----
             if check_slots_first:
                 self._precheck_slots(context, ctl, targets, slot_rois,
-                                     threshold, slot_done)
+                                     threshold, slot_done, slot_limit, scales)
 
             # ---- 主循环：逐个植物 ----
             for i, tgt in enumerate(targets):
-                if i >= 8:
+                if i >= slot_limit:
                     break
                 if self._stopped(context):
                     return CustomAction.RunResult(success=False)
@@ -361,14 +395,17 @@ class SelectPlants(CustomAction):
                     slot_xy[i] if i < len(slot_xy) else None,
                     backtop, swipe, threshold, post_swipe_wait,
                     post_click_wait, sim_threshold, backoff_frames,
-                    max_retry, max_slides)
+                    max_retry, max_slides, verify, scales)
                 if placed:
                     slot_done[i] = True
 
             # ---- 占位填充：滑回最顶后填剩余位置 ----
             # ---- 占位填充：滑回最顶后，依次快速点击填充位置 ----
             # 填充位置 = 用户传入的「填充位置」，未传则用内置默认 DEFAULT_FILL_POSITIONS。
-            if not fill_positions:
+            if not fill_enabled:
+                print("[SelectPlants] 占位填充已关闭，跳过",
+                      file=sys.stderr, flush=True)
+            elif not fill_positions:
                 print("[SelectPlants] 没有可用的填充位置，跳过占位",
                       file=sys.stderr, flush=True)
             else:
@@ -531,13 +568,13 @@ class SelectPlants(CustomAction):
 
     # ---- 槽位核对：模板匹配 -> 是否已含目标植物 ----
     @staticmethod
-    def _slot_has(img, tgt_templates, slot_roi, threshold):
+    def _slot_has(img, tgt_templates, slot_roi, threshold, scales=None):
         if slot_roi is None or len(slot_roi) != 4:
             return False
         if slot_roi[2] <= 0 or slot_roi[3] <= 0:
             return False
         hit = PM.find_best(img, tgt_templates, roi=slot_roi,
-                           threshold=threshold)
+                           threshold=threshold, scales=scales)
         return hit is not None
 
     # ---- 位置否定记忆：判断一个卡位(topleft x,y,w,h)中心是否落在任一已否定框内 ----
@@ -555,18 +592,20 @@ class SelectPlants(CustomAction):
                 return True
         return False
 
-    # ---- 预先检查 1..8 槽 ----
-    def _precheck_slots(self, context, ctl, targets, slot_rois, threshold, slot_done):
+    # ---- 预先检查 1..N 槽 ----
+    def _precheck_slots(self, context, ctl, targets, slot_rois, threshold,
+                        slot_done, slot_limit=8, scales=None):
         img = self._screen(ctl)
         if img is None:
             return
         for i, tgt in enumerate(targets):
-            if i >= 8:
+            if i >= slot_limit:
                 break
             if self._stopped(context):
                 return
             sr = slot_rois[i] if i < len(slot_rois) else None
-            if self._slot_has(img, tgt["templates"], sr, threshold):
+            if self._slot_has(img, tgt["templates"], sr, threshold,
+                              scales=scales):
                 slot_done[i] = True
                 print(f"[SelectPlants] 槽位检查: #{i+1} 已是 **{tgt['zh']}**",
                       file=sys.stderr, flush=True)
@@ -576,13 +615,15 @@ class SelectPlants(CustomAction):
             self, context, ctl, tgt, slot_index, search_roi, verify_roi,
             slot_roi, slot_xy, backtop, swipe, threshold,
             post_swipe_wait, post_click_wait, sim_threshold,
-            backoff_frames, max_retry, max_slides):
+            backoff_frames, max_retry, max_slides, verify=True, scales=None):
         """返回 True=该槽已正确放入目标植物。
 
         两个计数器分工（旧版是一个，所以最多只能下滑 6 屏）：
             slide_count —— 本轮已经往下滑了几次；回顶次数 = slide_count + 3。
             retry       —— 回顶重扫了几轮（只有「滑到底」或「核验失败」才涨）。
         每轮回顶后 slide_count 归零，于是回顶次数始终贴合列表真实长度。
+
+        verify=False 时点击即视为成功（无文本界面，无法核对）。
         """
         max_slides = max(1, int(max_slides))
 
@@ -610,7 +651,7 @@ class SelectPlants(CustomAction):
             found = None
             candidates = PM.match_plants(img, tgt["templates"],
                                          roi=search_roi, threshold=threshold,
-                                         topk=60)
+                                         scales=scales, topk=60)
             # 同一卡位常被多个尺度/皮肤模板命中，按中心粗去重，避免 top 候选被同一位置占满
             seen_centers = set()
             deduped = []
@@ -637,6 +678,14 @@ class SelectPlants(CustomAction):
                 self._click(ctl, cx, cy)
                 time.sleep(post_click_wait / 1000.0)
 
+                # ---- 核对关闭：点击即成功（无文本界面，无核对手段）----
+                if not verify:
+                    print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** "
+                          f"核对已关闭，点击即通过",
+                          file=sys.stderr, flush=True)
+                    self._do_swipe_backtop(ctl, backtop, slide_count)
+                    return True
+
                 # ---- 核对：(a) OCR 名字 为主, (b) 槽位识别 仅当 OCR 读不到时兜底 ----
                 img2 = self._screen(ctl)
                 ocr_text = self._ocr_roi_text(context, img2, verify_roi)
@@ -650,7 +699,8 @@ class SelectPlants(CustomAction):
                     # 槽位核对用更高阈值降低误报（threshold+0.1, 封顶0.9）
                     slot_thr = min(0.90, round(threshold + 0.10, 3))
                     slot_hit = self._slot_has(img2, tgt["templates"],
-                                              slot_roi, slot_thr)
+                                              slot_roi, slot_thr,
+                                              scales=scales)
                     ok = slot_hit
                 print(f"[SelectPlants] 核对 #{slot_index+1}: "
                       f"ocr='{ocr_text}' ocr_hit={ocr_hit} slot_hit={slot_hit} -> ok={ok}",
@@ -726,6 +776,115 @@ class SelectPlants(CustomAction):
         print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 达到重试上限"
               f"({max_retry} 轮)，放弃", file=sys.stderr, flush=True)
         return False
+
+    # ---- 无尽局外选卡：一帧多目标，命中即点、按名除名，触底回顶重扫 ----
+    def _run_endless_select(self, context, ctl, targets, search_roi, swipe,
+                            backtop, threshold, scales, post_swipe_wait,
+                            click_gap, sim_threshold, backoff_frames,
+                            max_retry, max_slides):
+        """无尽局外 80 选卡（「选择挑战植物」界面，无文本、无核对手段）。
+
+        与单目标路径的差别：
+            - 每帧对「所有未选植物」逐个 find_best，命中几个点几个，
+              一趟下滑扫完整个列表，而不是一个植物扫一趟；
+            - 点击后按植物名除名（每张卡在列表里唯一，除名后不再为它匹配），
+              避免下一帧又命中同一张已打勾的卡 -> 重复点 = 取消选中；
+            - 同一帧内已点过的位置框不再点（防两个模板误中同一卡位，
+              把刚选上的又点掉）；
+            - 一帧一个都没中才滑一屏；触底判定 / 动态回顶（下滑次数+3）
+              与单目标路径完全一致。
+
+        返回 True = 全部选中；重试上限仍有剩余 -> 打日志 + False。
+        （手截图严格对照时理论上不会漏，漏了就是该报警的信号。）
+        """
+        remaining = list(targets)
+        if not remaining:
+            print("[SelectPlants] 局外选卡: 植物列表为空，直接完成",
+                  file=sys.stderr, flush=True)
+            return True
+        if scales is None:
+            # 手截图与界面同尺度，单尺度足够且快（84 模板 × 7 尺度每帧太贵）；
+            # 要抗截图偏差就传 "尺度":[0.95,1.0,1.05]。
+            scales = (1.0,)
+
+        # 顶点重启扫描（还没滑过 -> 按 0+3 次刷）
+        self._do_swipe_backtop(ctl, backtop, 0)
+
+        retry = 0
+        slide_count = 0          # 本轮回顶之后，已经向下扫了几屏
+        identical_run = 0
+        sim = 0.0
+
+        while remaining and retry <= max_retry:
+            if self._stopped(context):
+                return False
+            img = self._screen(ctl)
+            if img is None:
+                time.sleep(0.3)
+                continue
+
+            # ---- 这帧里能点几个点几个 ----
+            clicked_boxes = []   # 本帧已点位置框：同帧排他
+            hits = []
+            for tgt in remaining:
+                hit = PM.find_best(img, tgt["templates"], roi=search_roi,
+                                   threshold=threshold, scales=scales)
+                if hit is None:
+                    continue
+                if self._center_in_any([hit["x"], hit["y"], hit["w"], hit["h"]],
+                                       clicked_boxes):
+                    continue
+                hits.append((tgt, hit))
+                clicked_boxes.append([hit["x"], hit["y"], hit["w"], hit["h"]])
+
+            if hits:
+                for tgt, hit in hits:
+                    cx = hit["x"] + hit["w"] // 2
+                    cy = hit["y"] + hit["h"] // 2
+                    print(f"[SelectPlants] 局外选卡: 选中 **{tgt['zh']}** "
+                          f"({hit['name']}, score={hit['score']:.3f}) "
+                          f"点击 ({cx},{cy})",
+                          file=sys.stderr, flush=True)
+                    self._click(ctl, cx, cy)
+                    time.sleep(click_gap / 1000.0)
+                    remaining.remove(tgt)
+                identical_run = 0
+                # 点完画面变了（打勾），重截一帧再判，不滑动
+                continue
+
+            # ---- 这帧一个都没中 -> 滑一屏 ----
+            # 保底机制与单目标相同：单次滑动前后几乎无变化，连续 backoff_frames
+            # 次判定到达列表尽头；slide_count 上限兜底防死循环。
+            img_before = PL.bgr_to_gray(img)
+            self._do_swipe(ctl, swipe)
+            slide_count += 1          # 记下这轮滑了几屏，回顶次数由它决定
+            time.sleep(post_swipe_wait / 1000.0)
+            img_after = self._screen(ctl)
+            if img_after is None:
+                time.sleep(0.3)
+                continue
+            sim = self._gray_sim(img_before, PL.bgr_to_gray(img_after))
+            identical_run = identical_run + 1 if sim >= sim_threshold else 0
+
+            if identical_run >= backoff_frames or slide_count >= max_slides:
+                print(f"[SelectPlants] 局外选卡: 本轮下滑 {slide_count} 次 "
+                      f"(剩 {len(remaining)} 个未选中)，回顶重扫 "
+                      f"(retry {retry + 1}/{max_retry})",
+                      file=sys.stderr, flush=True)
+                self._do_swipe_backtop(ctl, backtop, slide_count)
+                retry += 1
+                slide_count = 0       # 新的一轮，回顶次数重新按「本轮」计
+                identical_run = 0
+
+        if remaining:
+            names = "、".join(t["zh"] for t in remaining)
+            print(f"[SelectPlants] 局外选卡: 达到重试上限({max_retry} 轮)，仍有 "
+                  f"{len(remaining)} 个未选中: {names}",
+                  file=sys.stderr, flush=True)
+            return False
+        print(f"[SelectPlants] 局外选卡: {len(targets)} 个植物全部选中",
+              file=sys.stderr, flush=True)
+        return True
 
     @staticmethod
     def _gray_sim(ga, gb):

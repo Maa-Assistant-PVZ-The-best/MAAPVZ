@@ -8,9 +8,10 @@ plant_lib.py —— 植物名映射 + 卡槽模板解析（纯 numpy/pillow，�
 1) 中英文对照: 解析 `植物中英文对照表.md`
     中文名 -> (英文名, 品质)  品质 ∈ {橙,紫,蓝,绿,白}
 
-2) 模板路径解析: 解析 `plant_ref_card/<品质>/` 目录
-     - 平坦文件:      <品质>/<英文名>.png                 （单一模板）
-     - 皮肤子文件夹:  <品质>/<英文名>/<英文名>*.png        （多个皮肤模板，命中其一即算命中）
+2) 模板路径解析: 解析 `plant_ref_card/<品质目录>/` 目录
+     - 品质目录名：orange_card / purple_card / blue_card / green_card / white_card
+     - 平坦文件:      <品质目录>/<英文名>.png                 （单一模板）
+     - 皮肤子文件夹:  <品质目录>/<英文名>/<英文名>*.png        （多个皮肤模板，命中其一即算命中）
      -> resolve_templates(英文名, 品质) 返回该植物全部候选模板文件
 
 说明:
@@ -44,13 +45,13 @@ DEFAULT_TEMPLATE_DIR = os.environ.get(
         / "assets" / "resource" / "image" / "General" / "plant" / "plant_ref_card"),
 )
 
-# 品质别名 -> 目录名（吉利/兼容）
+# 品质 -> 目录名（英文目录名，避免网页端/工具链的中文路径问题）
 QUALITY_FOLDER = {
-    "橙": "橙卡",
-    "紫": "紫卡",
-    "蓝": "蓝卡",
-    "绿": "绿卡",
-    "白": "白卡",
+    "橙": "orange_card",
+    "紫": "purple_card",
+    "蓝": "blue_card",
+    "绿": "green_card",
+    "白": "white_card",
 }
 
 

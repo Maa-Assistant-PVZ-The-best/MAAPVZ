@@ -76,7 +76,7 @@
   #exportNoteModal                          导出卡槽备注询问弹窗
   ============================================================================ -->
 <!-- 样式：主样式 + 第三方 Fluent UI 样式（保持原层叠顺序） -->
-<link rel="stylesheet" href="/static/css/base.css">
+<link rel="stylesheet" href="/static/css/base.css?v=2">
 <link rel="stylesheet" href="/static/css/vendor-fluent.css">
 </head>
 <body>
@@ -312,6 +312,9 @@
                 </label>
                 <span style="font-size:11px;color:#94a3b8;">跳过选卡，直接切编队开打</span>
             </span>
+            <button class="btn" id="outerPickBtn"
+                    data-tooltip="无尽局外 80 选卡（作用于整个作业集，与换阵无关）：阵容表里的植物自动锁定并优先选取，其余按点击顺序补选"
+                    data-tooltip-delay="1000">🌐 局外选卡 <span id="outerPickCount" style="background:#2d7aff;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:2px;">0</span></button>
         </div>
     </div>
     <!-- 植物选择器弹层 -->
@@ -328,6 +331,54 @@
                 <span id="plantPickerCount" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
             </div>
             <div id="plantGrid" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-content:start;"></div>
+        </div>
+    </div>
+
+    <!-- 局外选卡弹层（无尽局外 80 选；逻辑见 32-jobset-outer.js） -->
+    <div id="outerPicker" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
+        <div style="background:#fff;border-radius:12px;width:640px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
+                <b>局外选卡（无尽 · 选 80）</b>
+                <input type="text" id="outerSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
+                <button class="btn" id="outerClear"
+                        data-tooltip="清空所有手动选择的植物（阵容表里的植物保留）"
+                        data-tooltip-delay="1000">清空</button>
+                <button class="btn" id="outerPickerClose">关闭</button>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f1f5f9;background:#fafbfc;">
+                <span style="font-size:12px;color:#64748b;">卡槽品质：</span>
+                <span id="outerRarityFilter" style="display:flex;flex-wrap:wrap;gap:6px;"></span>
+                <label style="font-size:12px;color:#64748b;display:inline-flex;align-items:center;gap:4px;"
+                       data-tooltip="显示排序（不影响已选顺序——选取优先级永远是点击先后，黄框锁定植物永远最先）"
+                       data-tooltip-delay="1000">排序
+                    <select id="outerSortMode" style="width:auto;">
+                        <option value="default">默认顺序</option>
+                        <option value="rare_desc">橙卡优先</option>
+                        <option value="rare_asc">白卡优先</option>
+                        <option value="selected">已选优先</option>
+                    </select>
+                </label>
+                <span id="outerPickCountText" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
+                <span style="font-size:12px;color:#64748b;">局内执行方式：</span>
+                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
+                       data-tooltip="默认：进入局外选卡页后，按上面的列表顺序自动选取（表内植物优先）"
+                       data-tooltip-delay="1000">
+                    <input type="radio" name="outerPickMode" value="auto" checked> 按列表自动选取
+                </label>
+                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
+                       data-tooltip="局内改用游戏自带的「一键选取」（选的是你游戏内收藏的植物），不再按列表自动选"
+                       data-tooltip-delay="1000">
+                    <input type="radio" name="outerPickMode" value="oneclick"> 一键选取
+                </label>
+                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
+                       data-tooltip="局内不再选卡，直接点「确定」（你在游戏内已经配好 80 个）"
+                       data-tooltip-delay="1000">
+                    <input type="radio" name="outerPickMode" value="confirm"> 直接点击确定
+                </label>
+            </div>
+            <div id="outerGrid" style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-content:start;"></div>
         </div>
     </div>
 
@@ -497,4 +548,5 @@
 <script src="/static/js/29-jobset-init.js"></script>
 <script src="/static/js/30-jobset-generic.js"></script>
 <script src="/static/js/31-jobset-adv.js"></script>
+<script src="/static/js/32-jobset-outer.js"></script>
 </body></html>

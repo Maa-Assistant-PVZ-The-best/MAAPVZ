@@ -22,6 +22,21 @@ from plant_lib import (
 )
 
 
+# 模板磁盘缓存：无尽局外选卡（80 选卡）每帧要对几十棵植物跑匹配，
+# 不缓存的话每帧都把几十张 PNG 重新读盘 + 解码 + 灰度化。
+# 模板运行期不会变，按路径缓存即可。
+_TPL_CACHE = {}
+
+
+def _load_template_cached(path):
+    key = str(path)
+    v = _TPL_CACHE.get(key)
+    if v is None:
+        v = load_template_png(path)
+        _TPL_CACHE[key] = v
+    return v
+
+
 def _ncc_fft(scene_gray, templ_gray, mask=None):
     """一次 FFT 归一化互相关，返回与 scene 等大的相关图 (NaN 表示该处方差为 0/无有效数据)。
 
@@ -137,7 +152,7 @@ def match_plants(
 
     best = []
     for path in templates:
-        tgray, mask = load_template_png(path)
+        tgray, mask = _load_template_cached(path)
         th, tw = tgray.shape
 
         for k in scales:

@@ -21,7 +21,11 @@ function jobSaveLocal() {
                 },
                 currentTable: currentTable,
                 tables: jobTables,
-                rarityFilter: plantRarityFilter
+                rarityFilter: plantRarityFilter,
+                // 局外选卡（作业集级；32-jobset-outer.js）
+                outerPick: (typeof jobOuterPick !== 'undefined')
+                    ? { plants: (jobOuterPick.plants || []).slice(), mode: jobOuterPick.mode || 'auto' }
+                    : { plants: [], mode: 'auto' }
             };
             localStorage.setItem(JOBSET_LS_KEY, JSON.stringify(data));
         } catch (e) { console.warn('[jobset] 本地保存失败', e); }
@@ -83,6 +87,13 @@ function jobLoadLocal() {
             document.querySelectorAll('#jobWorlds input').forEach(cb => { cb.checked = m.worlds.includes(cb.value); });
         }
         if (typeof data.rarityFilter === 'string') plantRarityFilter = data.rarityFilter;
+        // 局外选卡（作业集级）；旧缓存没有 -> 空列表 + auto
+        if (typeof jobOuterPick !== 'undefined') {
+            const _op = (data.outerPick && typeof data.outerPick === 'object') ? data.outerPick : {};
+            jobOuterPick.plants = Array.isArray(_op.plants) ? _op.plants.filter(function (x) { return typeof x === 'string' && x; }) : [];
+            jobOuterPick.mode = (['auto', 'oneclick', 'confirm'].indexOf(_op.mode) !== -1) ? _op.mode : 'auto';
+            if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+        }
         currentTable = Math.min(Math.max(0, parseInt(data.currentTable) || 0), jobTables.length - 1);
         return true;
     } catch (e) { console.warn('[jobset] 本地恢复失败', e); return false; }

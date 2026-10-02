@@ -94,12 +94,80 @@ def save_config():
 
 # ================= 作业集（JobSet）API =================
 
+# ---- 选卡模板目录（/plants 据此标注「无图植物 / 缺超装」）----
+# 与 agent/select_plant/plant_lib.py 的 QUALITY_FOLDER 同一口径（英文目录名）。
+PLANT_CARD_DIR = os.path.join(RESOURCE_DIR, "image", "General", "plant", "plant_ref_card")
+# 无尽局外 80 选卡的模板目录（手截图，只有平铺，无皮肤夹）
+PLANT_ENDLESS_DIR = os.path.join(RESOURCE_DIR, "image", "General", "plant", "plant_ref_endless")
+PLANT_QUALITY_FOLDER = {"橙": "orange_card", "紫": "purple_card", "蓝": "blue_card",
+                        "绿": "green_card", "白": "white_card"}
+
+
+def _scan_plant_dir(root):
+    """扫一个植物模板目录：{品质: {"flat": {英文名,...}, "subs": {英文名: png数}}}
+
+    - flat：平铺单模板 <品质目录>/<英文名>.png
+    - subs：皮肤子文件夹 <品质目录>/<英文名>/ 里的 png 数量
+      （1 张 = 只有基础卡、缺超装图；>=2 张 = 超装已收集；不存在 = 该植物无超装）
+    每次请求现扫（目录很小，且用户会手动增删截图，不能缓存）。
+    """
+    out = {}
+    if not os.path.isdir(root):
+        return out
+    for q, folder in PLANT_QUALITY_FOLDER.items():
+        qdir = os.path.join(root, folder)
+        info = {"flat": set(), "subs": {}}
+        if os.path.isdir(qdir):
+            for name in os.listdir(qdir):
+                p = os.path.join(qdir, name)
+                if os.path.isfile(p) and name.lower().endswith(".png"):
+                    info["flat"].add(name[:-4])
+                elif os.path.isdir(p):
+                    cnt = sum(1 for f in os.listdir(p)
+                              if f.lower().endswith(".png")
+                              and os.path.isfile(os.path.join(p, f)))
+                    info["subs"][name] = cnt
+        out[q] = info
+    return out
+
+
+def _dir_has_img(info, en):
+    """单个目录的判定：平铺或皮肤夹里有图即算有。"""
+    if not en:
+        return False
+    if en in info.get("flat", set()):
+        return True
+    sub_cnt = info.get("subs", {}).get(en)
+    return sub_cnt is not None and sub_cnt >= 1
+
+
 @app.route('/plants', methods=['GET'])
 def list_plants():
-    """返回植物列表（槽位选植物面板用）：中文名 / 品质 / 头像 URL"""
+    """返回植物列表（槽位选植物面板用）：中文名 / 品质 / 头像 URL
+
+    ★ 附带模板目录实况（网页端据此打叉禁选 + 悬停提示）：
+      - has_img / super：plant_ref_card（局内 8 槽选卡）实况，
+        super = 'none'（无皮肤夹）/ 'missing'（缺超装图）/ 'collected'（超装已收集）
+      - has_img_endless：plant_ref_endless（无尽局外 80 选卡）有没有图
+    """
     try:
         with open(os.path.join(STATIC_DIR, 'plants.json'), encoding='utf-8') as f:
             plants = json.load(f)
+        scan = _scan_plant_dir(PLANT_CARD_DIR)
+        scan_e = _scan_plant_dir(PLANT_ENDLESS_DIR)
+        for pl in plants:
+            rarity = str(pl.get("rarity", "")).strip()
+            en = str(pl.get("en") or "").strip()
+            info = scan.get(rarity) or {}
+            pl["has_img"] = _dir_has_img(info, en)
+            sub_cnt = info.get("subs", {}).get(en)   # None = 无皮肤夹
+            if sub_cnt is None:
+                pl["super"] = "none"
+            elif sub_cnt >= 2:
+                pl["super"] = "collected"
+            else:
+                pl["super"] = "missing"
+            pl["has_img_endless"] = _dir_has_img(scan_e.get(rarity) or {}, en)
         return jsonify({'status': 'success', 'plants': plants})
     except Exception as e:
         return jsonify({'status': 'error', 'msg': str(e)}), 500

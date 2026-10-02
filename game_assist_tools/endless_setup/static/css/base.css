@@ -492,7 +492,7 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     border-radius: 6px;
     font-size: 13px;
     max-width: 320px;
-    z-index: 9999;
+    z-index: 12000;   /* 必须高于所有弹层（plantPicker/outerPicker=9999，exportNoteModal=10000），否则悬停提示被压在弹层下面 */
     pointer-events: none;
     opacity: 0;
     transition: opacity 0.15s ease;
@@ -500,8 +500,35 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     line-height: 1.4;
     border: 1px solid #475569;
     font-weight: 400;
+    white-space: pre-line;   /* 支持 \n 多行提示（植物卡片的资源状态等） */
 }
 .tooltip-box.visible { opacity: 1; }
+
+/* 通用「叉叉」不可用标记：卡片左上角红叉（植物选择器无图植物等）。
+   生成入口：02-tooltip.js 的 jobCardXMark(frameEl)，悬停文案走容器 data-tooltip。 */
+.job-x-mark {
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    z-index: 4;
+    width: 16px;
+    height: 16px;
+    line-height: 15px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    background: #dc2626;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,.35);
+}
+
+/* ============================================================
+   局外选卡（无尽 80 选）：卡片布局样式全部内联在
+   32-jobset-outer.js 的 jobOuterRenderGrid 里（与槽位选择器同套路，
+   不依赖本文件的类，避免 CSS 加载差异导致排版崩坏）。
+   ============================================================ */
 
 /* ================= 动效（选取植物 / 放置植物） ================= */
 @keyframes jobCardIn {
