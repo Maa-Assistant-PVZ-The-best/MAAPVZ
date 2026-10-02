@@ -1,17 +1,26 @@
 {
     "测试": {
-        "action": "ClickKey",
-        "post_delay": 1000,
-        "key": 3,
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar expand-notifications"
+            }
+        },
+        "post_delay": 4000,
         "next": [
             "测试2"
         ]
     },
     "测试2": {
-        "timeout": 180000,
-        "action": "StartApp",
-        "package": "com.popcap.pvz2cthd4399",
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "cmd statusbar collapse"
+            }
+        },
         "post_delay": 400,
-        "next": []
+        "next": [
+            "测试"
+        ]
     }
 }
