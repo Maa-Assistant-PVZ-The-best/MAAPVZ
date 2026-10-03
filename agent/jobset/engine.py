@@ -63,6 +63,9 @@ def _pick_resource_dir() -> Path:
 
 _RESOURCE_DIR = _pick_resource_dir()
 
+# 公开别名（runtime 等需要定位 pipeline/图片等资源文件时用）
+RESOURCE_DIR = _RESOURCE_DIR
+
 DEFAULT_JOBS_DIR = _RESOURCE_DIR / "jobs"
 
 # 旧版布局的作业集位置：<根>/assets/resource/jobs。
@@ -395,6 +398,18 @@ class JobSet:
         ] if isinstance(worlds, (list, tuple)) else []
 
         self.max_level: Optional[int] = _as_int(raw.get("max_level"), None)
+
+        # ---- 无尽局外 80 选卡（作业集级；网页端 32-jobset-outer.js 导出）----
+        #   mode:   auto     = 按 plants 列表自动选（runtime 注入到 80 选卡 custom 节点）
+        #           oneclick = 跳过自动选卡，直接点游戏内「一键选取」
+        #           confirm  = 复用当前配置（跳过整个 80 选卡流程）
+        #   plants: 有序中文名（阵容表锁定植物在前 + 手动点击顺序）；
+        #           mode ≠ auto 时网页端导出为空（局内不读列表）
+        op = raw.get("outer_pick")
+        op = op if isinstance(op, dict) else {}
+        _op_mode = str(op.get("mode") or "auto").strip()
+        self.outer_pick_mode: str = _op_mode if _op_mode in ("auto", "oneclick", "confirm") else "auto"
+        self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:

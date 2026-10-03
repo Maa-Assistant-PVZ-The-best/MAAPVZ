@@ -2778,6 +2778,21 @@ function jobCurrentCode() {
 
 async function jobSave() {
     const msg = document.getElementById('jobStatus');
+    // 无尽局外选卡校验：「按列表自动选取」必须选够 80 个；
+    // 不够就提示改用「一键选取」/「复用当前配置」（确认后仍可强制保存）
+    if (typeof jobOuterPick !== 'undefined' && jobOuterPick.mode === 'auto') {
+        const n = (typeof jobOuterEffective === 'function')
+            ? jobOuterEffective().length : (jobOuterPick.plants || []).length;
+        if (n < 80) {
+            const go = window.confirm(
+                '⚠️ 无尽局外选卡还没有选够 80 个（当前 ' + n + ' 个）。\n\n'
+                + '局外 80 选卡是必配项：\n'
+                + '· 在「局外选卡」里选够 80 个（可用「补齐空选」一键补满）\n'
+                + '· 或把局内执行方式改成「一键选取」/「复用当前配置」\n\n'
+                + '仍要保存吗？');
+            if (!go) return;
+        }
+    }
     // 名字必填：保存前问用户
     let name = jobCurrentName();
     const input = window.prompt('为这个作业集取一个名字吧', name || '');

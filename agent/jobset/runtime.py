@@ -39,7 +39,7 @@ from maa.context import Context
 from maa.custom_action import CustomAction
 from maa.custom_recognition import CustomRecognition
 
-from .engine import JobSet, JobSetError, load_jobset
+from .engine import JobSet, JobSetError, load_jobset, RESOURCE_DIR
 from .level_tracker import LevelTracker, from_params
 from .level_tracker import BOSS_SNAP as _BOSS_SNAP
 # 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
@@ -223,6 +223,95 @@ NODE_CLEAR_CARDS = "无尽挑战_识别开始战斗_清空卡牌"
 NODE_CHOOSE_PLANTS = "无尽挑战_选取植物"
 NODE_SWITCH_SQUAD = "无尽挑战_切换编队"
 NODE_SQUAD_INDEX = "无尽_切换编队序号"
+
+# ---- 无尽局外 80 选卡（作业集级 outer_pick 的注入目标）----
+# pipe 文件：06_Endless_80plant_choose/0601~0603
+NODE_OUTER_GATE = "无尽挑战_检查是否需要选植物"              # 闸口：OCR「选择挑战植物」，next 由 runtime 按模式分流
+NODE_OUTER_PICK = "无尽80植物编辑方案1_准备选择80个植物"      # SelectPlants custom（无尽局外选卡）
+NODE_OUTER_AUTO_ENTRY = "无尽挑战_80植物界面_选项1_清空植物"  # auto：清空链入口
+NODE_OUTER_ONECLICK = "无尽选卡_80个植物_一键选择"            # oneclick：点一键选择（自带 next -> 确定）
+NODE_OUTER_CONFIRM = "无尽选卡_80个植物_确定"                 # 确定按钮（next -> 识别开始战斗）
+_OUTER_PICK_PIPE_PARTS = (
+    "pipeline", "Endless_ref.json", "06_Endless_80plant_choose", "0601_80plant_choose_1.json",
+)
+
+
+def _apply_outer_pick(context: Context, js) -> None:
+    """把作业集级 outer_pick（无尽局外 80 选卡）注入 pipeline。失败只记日志。
+
+    按 mode 覆盖「无尽挑战_检查是否需要选植物」的 next 分流：
+      - auto:     next -> 清空链入口（清空 -> 全部植物 -> SelectPlants 自动选 ->
+                  确定），并把 plants 合并进 pipe 节点**现有的**
+                  custom_action_param 注入（搜索roi/滑动/回顶/匹配阈值是用户
+                  在 pipe 里实测的，必须保留；custom_action_param 是整体替换，
+                  所以先读 pipe 再合并）；
+      - oneclick: next -> 「无尽选卡_80个植物_一键选择」（它自带 next -> 确定）；
+      - confirm:  next -> 「无尽选卡_80个植物_确定」—— 复用当前配置，直接确定。
+
+    auto 但 plants 为空（旧作业集/没配）-> 退化为复用当前配置 + 告警，
+    保证流程不会停在选卡界面没人点确定。
+    """
+    mode = getattr(js, "outer_pick_mode", "auto")
+    plants = getattr(js, "outer_pick_plants", []) or []
+
+    if mode == "oneclick":
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_ONECLICK]},
+            })
+            _log("局外选卡=一键选取：「选择挑战植物」-> 一键选择 -> 确定")
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+
+    if mode == "confirm":
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_CONFIRM]},
+            })
+            _log("局外选卡=复用当前配置：「选择挑战植物」-> 直接点确定")
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+
+    # auto：闸口 -> 清空链；plants 合并进 pipe 现有参数（坐标是用户实测的，不能丢）
+    if not plants:
+        _log("局外选卡=按列表自动选取，但作业集 outer_pick.plants 为空 —— "
+             "退化为「复用当前配置」直接点确定"
+             "（要自动选：去网页端「局外选卡」配置后重新保存作业集）")
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_CONFIRM]},
+            })
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+    merged = {"无尽局外选卡": True, "植物列表": plants}
+    pipe_path = RESOURCE_DIR.joinpath(*_OUTER_PICK_PIPE_PARTS)
+    try:
+        with open(pipe_path, "r", encoding="utf-8") as f:
+            node = (json.load(f) or {}).get(NODE_OUTER_PICK) or {}
+        base = node.get("custom_action_param")
+        if isinstance(base, str):
+            base = json.loads(base)
+        if isinstance(base, dict):
+            merged = {**base, **merged}     # 植物列表/开关覆盖，坐标参数保留
+    except Exception as e:
+        _log(f"读取 80 选卡 pipe 参数失败，坐标将用 custom 缺省值"
+             f"（{type(e).__name__}: {e}）")
+    try:
+        context.override_pipeline({
+            NODE_OUTER_GATE: {"next": [NODE_OUTER_AUTO_ENTRY]},
+            NODE_OUTER_PICK: {
+                "custom_action_param": json.dumps(merged, ensure_ascii=False),
+            },
+        })
+        _log(f"局外选卡=按列表自动选取：「选择挑战植物」-> 清空 -> 自动选 "
+             f"{len(plants)} 个 -> 确定；已注入 {plants[:5]}"
+             f"{'...' if len(plants) > 5 else ''}")
+    except Exception as e:
+        _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+
 
 # 选卡 / 编队两条分支各自的下一步
 NEXT_PICK_PLANTS = [NODE_CHOOSE_PLANTS]
@@ -700,6 +789,9 @@ class JobSetLoad(CustomAction):
         #   再调一次预热，把这里可能不准的预热纠正过来。）
         lv = tr.count if tr.count > 0 else 1
         _prewarm_for_level(context, js, lv)
+
+        # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
+        _apply_outer_pick(context, js)
 
         return _ok()
 

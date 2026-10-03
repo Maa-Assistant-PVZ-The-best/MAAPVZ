@@ -45,6 +45,13 @@ DEFAULT_TEMPLATE_DIR = os.environ.get(
         / "assets" / "resource" / "image" / "General" / "plant" / "plant_ref_card"),
 )
 
+# 无尽局外 80 选卡模板根目录（与 plant_ref_card 同级；同样从 __file__ 推算，打包后可移植）
+ENDLESS_TEMPLATE_DIR = os.environ.get(
+    "SELECT_PLANT_ENDLESS_TEMPLATE_DIR",
+    str(Path(__file__).resolve().parent.parent.parent
+        / "assets" / "resource" / "image" / "General" / "plant" / "plant_ref_endless"),
+)
+
 # 品质 -> 目录名（英文目录名，避免网页端/工具链的中文路径问题）
 QUALITY_FOLDER = {
     "橙": "orange_card",

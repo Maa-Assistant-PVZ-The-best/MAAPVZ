@@ -8,7 +8,7 @@
 //                      局内 custom（SelectPlants 无尽局外选卡模式）按此顺序选取。
 //   outer_pick.mode:   'auto'     按列表自动选取（默认）
 //                      'oneclick' 用游戏内的「一键选取」
-//                      'confirm'  直接点「确定」（局内已手动配好 80 个）
+//                      'confirm'  复用当前配置（局内已手动配好 80 个）
 //
 // 图片资源以 plant_ref_endless 为准（后端 /plants 注入 has_img_endless）：
 //   无图 -> 灰化 + 左上角叉叉 + 禁选（叉叉复用 02-tooltip.js 的 jobCardXMark）。
@@ -432,7 +432,7 @@ function jobOuterOnModeChange(radio) {
     jobOuterApplyModeUI();               // 一键选取/直接点确定 -> 封锁选择区
     jobOuterRenderGrid();                // 刷新计数行提示（保留滚动位置）
     jobOuterRefreshBadge();
-    const label = { auto: '按列表自动选取', oneclick: '一键选取（游戏内）', confirm: '直接点击确定' }[v] || v;
+    const label = { auto: '按列表自动选取', oneclick: '一键选取（游戏内）', confirm: '复用当前配置' }[v] || v;
     setStatus('✅ 局内执行方式：' + label);
 }
 
