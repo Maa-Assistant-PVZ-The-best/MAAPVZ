@@ -161,12 +161,17 @@ def list_plants():
             info = scan.get(rarity) or {}
             pl["has_img"] = _dir_has_img(info, en)
             sub_cnt = info.get("subs", {}).get(en)   # None = 无皮肤夹
+            # ★ 超装按个数算：皮肤夹里的 png 数 - 1（第 1 张是基础卡，其余才是超装）。
+            #   有的植物需要 3 张识别图（本体 + 2 个超装），光知道「有没有」不够。
             if sub_cnt is None:
                 pl["super"] = "none"
+                pl["super_count"] = 0
             elif sub_cnt >= 2:
                 pl["super"] = "collected"
+                pl["super_count"] = sub_cnt - 1
             else:
                 pl["super"] = "missing"
+                pl["super_count"] = 0
             pl["has_img_endless"] = _dir_has_img(scan_e.get(rarity) or {}, en)
         return jsonify({'status': 'success', 'plants': plants})
     except Exception as e:

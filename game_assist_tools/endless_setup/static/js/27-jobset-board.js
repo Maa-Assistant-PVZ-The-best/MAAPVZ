@@ -2288,10 +2288,14 @@ async function jobLoadPlants() {
 
 // ---- 植物图片资源可用性（字段由后端 /plants 扫 plant_ref_card 实况注入）----
 //   p.has_img: bool                        p.super: 'none' | 'missing' | 'collected'
+//   p.super_count: 超装资源个数（皮肤夹 png 数 - 1，第 1 张是基础卡）
 // 字段缺失（旧缓存 / 接口异常）时当作「有图」，避免误伤全部植物。
 function jobPlantAvail(p) {
-    if (!p || p.has_img === undefined || p.has_img === null) return { hasImg: true, sup: 'none' };
-    return { hasImg: !!p.has_img, sup: p.super || 'none' };
+    if (!p || p.has_img === undefined || p.has_img === null) return { hasImg: true, sup: 'none', supCount: 0 };
+    // super_count 是后加的字段，旧缓存没有 -> collected 至少算 1 个
+    const cnt = (typeof p.super_count === 'number') ? p.super_count
+        : (p.super === 'collected' ? 1 : 0);
+    return { hasImg: !!p.has_img, sup: p.super || 'none', supCount: cnt };
 }
 
 // 选择器卡片的悬停提示（走 02-tooltip.js 的 data-tooltip，1 秒延迟，支持多行）
@@ -2307,8 +2311,8 @@ function jobPlantCardTip(p, dupSlot, selSlot) {
         lines.push(p.name + '（' + (p.rarity || '?') + '卡）');
     }
     if (!av.hasImg) lines.push('⛔ 没有这个植物的图片资源');
-    else if (av.sup === 'missing') lines.push('⚠️ 缺少超装的植物资源');
-    else if (av.sup === 'collected') lines.push('✅ 超装资源已收集');
+    else if (av.sup === 'collected') lines.push('✅ 有 ' + av.supCount + ' 个超装资源');
+    else if (av.sup === 'missing') lines.push('⚠️ 该植物有超装但未收集（皮肤夹里只有基础卡）');
     else lines.push('（该植物无超装）');
     lines.push('右键' + (jobIsFav(p) ? '取消收藏' : '收藏'));
     return lines.join('\n');
@@ -2603,6 +2607,16 @@ function jobRenderPlantGrid() {
             badge.textContent = '槽' + selSlot;
             badge.style.cssText = 'position:absolute;right:2px;top:2px;background:#2d7aff;color:#fff;font-size:9px;line-height:14px;border-radius:4px;padding:0 4px;z-index:2;';
             frame.appendChild(badge);
+        }
+        // ⚠️ 只有 missing 才警告：有皮肤夹但里面只有 1 张基础卡
+        //   = 游戏内该植物带超装、但超装图没收集，戴超装上场会识别不到。
+        //   none（无皮肤夹、单张平铺 png）= 本身就不带超装的植物，不警告。
+        if (!noImg && av.sup === 'missing') {
+            const warn = document.createElement('span');
+            warn.textContent = '⚠️';
+            warn.style.cssText = 'position:absolute;left:2px;top:2px;font-size:22px;line-height:24px;z-index:2;'
+                + 'filter:drop-shadow(0 1px 2px rgba(0,0,0,.55));';
+            frame.appendChild(warn);
         }
         // ♥ 收藏标记（下边框中央，被边框"咬断"）
         if (jobIsFav(p)) {
