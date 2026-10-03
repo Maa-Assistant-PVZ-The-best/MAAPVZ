@@ -336,6 +336,49 @@ _CLEAR_CARDS_ORIG = {
     "next": [NODE_CHOOSE_PLANTS],
 }
 
+# ---------------------------------------------------------------------------
+# 用户可见 focus 播报（MFAAvalonia 日志面板上用户实际看到的消息）
+#   focus 是普通节点字段（override_pipeline 深合并，不碰 next），
+#   节点完成时由 MAA 弹出。三种播报：
+#     1. 加载作业集：「已加载作业集：xx」+ 当前使用块（JobSetLoad 写在本节点上）
+#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上，只有变化分支才跑）
+#     3. 每关：「当前关卡：N」（JobSetPlan 写在两个「开始战斗」节点上，
+#        替代 pipe 里静态的「boss关」focus）
+# ---------------------------------------------------------------------------
+NODE_LOAD = "无尽挑战_加载作业集代码"
+
+
+def _set_focus(context: Context, node: str, text: str) -> None:
+    """给节点写用户可见 focus 文本；失败只告警，不影响流程。"""
+    try:
+        context.override_pipeline({node: {"focus": text}})
+    except Exception as e:
+        _log(f"⚠️ 写 focus 失败（{node}）：{type(e).__name__}: {e}")
+
+
+def _focus_lineup_block(table, is_boss: bool) -> str:
+    """「当前使用」播报块：表N + 8 槽（没选满的槽位显示「补位」）+ 编队/神器。
+
+    boss 关且该表有 boss 专属配置时标题带「（boss 配置）」；
+    编队模式（无植物列表）显示编队号而不是 8 个槽位。
+    """
+    head = f"当前使用：表{table.index + 1}"
+    if is_boss and (table.boss_plants
+                    or table.boss_squad is not None
+                    or table.boss_artifact is not None):
+        head += "（boss 配置）"
+    lines = [head]
+    plants = table.eff_plants(is_boss)
+    if plants:
+        lines += [plants[i] if i < len(plants) else "补位" for i in range(8)]
+    else:
+        squad = table.eff_squad(is_boss)
+        lines.append(f"切换编队：{squad}" if squad is not None else "（本表无选卡）")
+    art = table.eff_artifact(is_boss)
+    if art:
+        lines.append(f"神器：{art}")
+    return "\n".join(lines)
+
 
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
@@ -789,6 +832,24 @@ class JobSetPlan(CustomAction):
             if not ok:
                 _log("⚠️ 换阵注入失败，仍会回「清空卡牌」重选，但选卡参数可能是旧的")
 
+        # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
+        #   关卡号挂在两个「开始战斗」节点上（未变/变化两分支必走其一），
+        #   覆盖掉 pipe 里静态的「boss关」focus；
+        #   「当前使用」块挂在「清空卡牌」上（只有变化分支才跑到）。
+        #   换表但阵容相同被跳过（未变分支，清空卡牌不跑）时，
+        #   把阵容块并到「开始战斗」的关卡号消息前面，保证换表一定有提示。
+        switched = used is None or used != table.index
+        if switched:
+            block = _focus_lineup_block(table, upcoming_boss)
+            _set_focus(context, NODE_CLEAR_CARDS, block)
+        else:
+            block = None
+        lv_msg = f"当前关卡：{lv}"
+        if block and not need:
+            lv_msg = block + "\n" + lv_msg
+        _set_focus(context, NODE_BATTLE_START, lv_msg)
+        _set_focus(context, NODE_START_FIGHT, lv_msg)
+
         # ---- 翻闸门（每次都写，避免残留上一次的判断）----
         #
         # ★ 「不给这个参数」和「显式给空串」是两件事：
@@ -922,6 +983,14 @@ class JobSetLoad(CustomAction):
 
         # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
         _apply_outer_pick(context, js)
+
+        # ---- 用户可见 focus：已加载作业集 + 当前使用阵容 ----
+        #   写在本节点（无尽挑战_加载作业集代码）上，节点完成时弹出；
+        #   阵容块按预估表（与预热同口径）生成。
+        table0 = js.pick_table(lv)
+        _set_focus(context, NODE_LOAD,
+                   f"已加载作业集：{js.name}\n"
+                   + _focus_lineup_block(table0, lv > 0 and lv % _BOSS_SNAP == 0))
 
         return _ok()
 

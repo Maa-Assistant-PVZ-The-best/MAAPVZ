@@ -1014,3 +1014,54 @@ static registries = {
 | 启动网页 | 双击 `pvz.bat`（自动挑带 flask 的解释器），端口 **5000** |
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
+
+---
+
+## 13. 归档：历史设计文档（2026-10-03 并入本节，原独立文件已删除）
+
+> 三份文档的**有效信息全部压在这里**，实施过程细节（阶段勾选清单等）去 git 历史里找。
+> 运行时会被代码读取的 md 只有 `agent/select_plant/植物中英文对照表.md`（数据表，不在此列）。
+
+### 13.1 作业集数据流重构定案（原 `REFACTOR_PLAN.md`，阶段 1–6 已于 2026-10-02 收官）
+
+- **总原则**：HTML 负责「算」，运行时负责「盖」。作业集 JSON 里**没有** pipe 字段；
+  `compiled` 预编译块（`format:2`）在编辑器保存时生成，运行时 `override_pipeline(compiled)` 零翻译。
+- **覆盖顺序钉死**：compiled 先盖，编队/补给/选卡后盖（后盖赢）；
+  永不覆盖 `无尽局内_继续挑战.next`（顶掉训练模式的血泪）。
+- **关卡判断三件套**：boss = 头像模板匹配；结束 = 结算按钮匹配；
+  关卡号 = 起始关卡 + 过关计数器（数字 OCR 不稳已砍，实测 81→21、87→89）。
+  计数器挂在「点继续挑战/继续训练」之后——重开不经过该点，天然不误加；
+  boss 关对齐 5 的倍数自愈。状态行刷新时机 = 识别到「开始战斗」。
+- **everyN 读作业集顶层**（历史上误读表级字段恒为 None → 恒为 10）。
+- **端口僵尸事故**：Werkzeug 的 SO_REUSEADDR 在 Windows 允许多进程绑同一端口
+  → 旧进程吃掉所有请求、日志被截断成只有启动行。`pvz.py` 启动前裸 bind 试占，
+  失败即退出；排查用 `netstat -ano`（`Get-NetTCPConnection` 会漏报监听 socket）。
+
+### 13.2 SelectPlants 局外 80 选卡 SPEC（原 `agent/select_plant/SPEC_endless_select.md`）
+
+- **背景**：局外 80 选卡界面卡片**没有文字** → OCR 核对不可用；漏选必须报错而非默默跳过。
+  模板在 `plant_ref_endless`（手动截图，目录结构同 `plant_ref_card`，`resolve_templates` 复用）。
+- **设计**：不新建 custom，`SelectPlants` 全部开关化，**缺省值 = 旧行为**：
+  `无尽局外选卡`（80 模式，隐含不做核对/槽位检查/占位填充）、`核对`、`占位填充`、
+  `槽位上限`（仅单目标）、`尺度`（局外缺省 `[1.0]`，手截图同尺度）、`局外点击间隔`、
+  `模板目录`（按模式自动选，`__file__` 相对推算，pipeline 不写绝对路径）。
+- **严格顺序 + 当前帧优先**（两种模式共有）：放完一个**不回顶**，下一个先看当前帧，
+  没有才按「上一棒下滑屏数 + 3」回顶重扫；80 卡位顺序 = 优先级。
+  旧「一帧多目标」模式**已废弃**（点击顺序由界面布局决定 ≠ 列表顺序）。
+- **防呆**：按名除名——点过的植物移出待选集（重复点 = 取消选中）。
+- **性能**：`_TPL_CACHE` 模板磁盘缓存（84 模板×多尺度每帧太贵）。
+- **接线**：闸口节点 `无尽挑战_检查是否需要选植物` 的 `next` 留空，由 runtime
+  `_apply_outer_pick`（挂在 JobSetLoad）按作业集 `outer_pick.mode` 覆盖分流：
+  `auto` → 清空→自动选→确定；`oneclick` → 一键选择→确定；`confirm` → 直接确定。
+  注入前先读 pipe 节点现有参数合并（`custom_action_param` 整体替换）。
+  auto 但 plants 为空 → 退化为「复用当前配置」+ 告警，不卡界面。
+
+### 13.3 SelectPlants 动态回顶 SPEC（原 `agent/select_plant/SPEC_backtop.md`）
+
+- **回顶次数 = 本轮实际下滑次数 + 3**（每轮回顶后 `slide_count` 清零，+3 永远贴合列表真实长度）。
+- ❗ **回顶坐标固定** `(381,401) → (381,611)`（往下刷 = 列表往上翻），
+  **不能**复用滑动坐标的反向（实测有 bug）。
+- **解耦**：`最多滑动步数`=40（单轮下扫上限）与 `最多重试`=6（回顶重扫上限）是两个计数器
+  ——旧版混用导致最多只扫 6 屏，靠写死的 `repeat=30` 硬顶。
+- `回顶.duration` 缺省 600（旧的 80 是配 30 连刷用的）；显式传 `回顶.repeat` 仍走旧固定次数。
+- 验收 selfcheck：`agent\select_plant\selfcheck_backtop.py`。

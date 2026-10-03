@@ -782,6 +782,53 @@ except Exception as _e13:
 
 
 # ---------------------------------------------------------------------------
+# §14 用户可见 focus 播报块（_focus_lineup_block）
+# ---------------------------------------------------------------------------
+print("\n== §14 focus 播报块 ==")
+try:
+    from agent.jobset import engine as _eng14
+    from agent.jobset import runtime as _rt14
+
+    # 5 个植物 -> 8 槽，后 3 槽显示「补位」
+    _t14 = _eng14.Table({"from_level": 1, "lineup": {
+        "plants": ["大喷菇", "菜问", "大嘴花", "豌豆射手", "向日葵"]}}, 0)
+    _blk = _rt14._focus_lineup_block(_t14, False)
+    _lines = _blk.split("\n")
+    check("focus块: 标题是当前使用+表号", _lines[0] == "当前使用：表1", _lines[0])
+    check("focus块: 5 植物 -> 8 行（补位凑满）",
+          _lines[1:6] == ["大喷菇", "菜问", "大嘴花", "豌豆射手", "向日葵"]
+          and _lines[6:] == ["补位", "补位", "补位"], str(_lines))
+    check("focus块: 无神器不带神器行", not any("神器" in l for l in _lines))
+
+    # 带神器 -> 末尾有神器行
+    _t14a = _eng14.Table({"from_level": 1, "lineup": {
+        "plants": ["大喷菇"], "artifact": "治愈神器"}}, 0)
+    _blk = _rt14._focus_lineup_block(_t14a, False)
+    check("focus块: 神器行在末尾", _blk.split("\n")[-1] == "神器：治愈神器", _blk)
+
+    # 编队模式（无植物）-> 显示编队号而不是槽位
+    _t14b = _eng14.Table({"from_level": 1, "lineup": {"plants": [], "deck": "2"},
+                          "squad": 2}, 0)
+    _blk = _rt14._focus_lineup_block(_t14b, False)
+    check("focus块: 编队模式显示编队号",
+          "切换编队：2" in _blk and "补位" not in _blk, _blk)
+
+    # boss 专属配置 -> 标题带「（boss 配置）」且用 boss 阵容
+    _t14c = _eng14.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                          "boss_lineup": {"plants": ["大嘴花"]}}, 0)
+    _blk = _rt14._focus_lineup_block(_t14c, True)
+    check("focus块: boss 配置标题+用 boss 阵容",
+          _blk.split("\n")[0] == "当前使用：表1（boss 配置）"
+          and "大嘴花" in _blk and "大喷菇" not in _blk, _blk)
+    # boss 无专属配置 -> 标题无标记、沿用普通关
+    _blk = _rt14._focus_lineup_block(_t14, True)
+    check("focus块: boss 无专属 -> 沿用普通关",
+          _blk.split("\n")[0] == "当前使用：表1" and "大喷菇" in _blk, _blk)
+except Exception as _e14:
+    check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
+
+
+# ---------------------------------------------------------------------------
 print("\n" + "=" * 52)
 if FAILED:
     print(f"FAILED {len(FAILED)}: {FAILED}")
