@@ -331,3 +331,4 @@ function jobInit() {
         else if (k === 'd' || e.key === 'ArrowRight') { e.preventDefault(); jobMovePick(5); }
     });
 }
+

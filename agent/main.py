@@ -16,6 +16,13 @@ sys.path.insert(0, str(project_root_dir / "select_plant"))
 
 from maa.agent.agent_server import AgentServer
 from maa.toolkit import Toolkit
+
+# ★ 退出看门狗：任务停止/结束时 python 进程随之退出（MFA 只停 tasker 不断连）。
+#   事件驱动（Tasker.Task 终态通知），零反向查询——不要用轮询 tasker.running
+#   的方案（句柄在 action 结束即被回收，会报 tasker not found / 误自杀）。
+import exit_watchdog
+exit_watchdog.register_tasker_sink(AgentServer)
+
 from actions.single_action import SingleAction
 from actions.batch_swipe import BatchSwipe
 

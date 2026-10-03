@@ -1014,6 +1014,7 @@ static registries = {
 | 启动网页 | 双击 `pvz.bat`（自动挑带 flask 的解释器），端口 **5000** |
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
+| 退出看门狗 | `agent/exit_watchdog.py`：MFA 停任务只停 tasker 不断连，python.exe 会残留。**事件驱动**：注册 agent 侧 tasker sink（`AgentServer.add_tasker_sink`），收到 `Tasker.Task` 终态事件（停止/成功/失败）→ 宽限 3s `os._exit`。⚠️ 不要用轮询 `tasker.running` 的方案：context/tasker 句柄在 action 结束即被服务端回收，轮询会发空 id 反向请求（客户端报 `tasker not found`）且局内无 custom 的长窗口会误自杀。注册点在 `main.py` import 区 |
 
 ---
 
@@ -1034,8 +1035,13 @@ static registries = {
   boss 关对齐 5 的倍数自愈。状态行刷新时机 = 识别到「开始战斗」。
 - **everyN 读作业集顶层**（历史上误读表级字段恒为 None → 恒为 10）。
 - **端口僵尸事故**：Werkzeug 的 SO_REUSEADDR 在 Windows 允许多进程绑同一端口
-  → 旧进程吃掉所有请求、日志被截断成只有启动行。`pvz.py` 启动前裸 bind 试占，
-  失败即退出；排查用 `netstat -ano`（`Get-NetTCPConnection` 会漏报监听 socket）。
+  → 旧进程吃掉所有请求、日志被截断成只有启动行。`pvz.py` 启动前裸 bind 试占；
+  排查用 `netstat -ano`（`Get-NetTCPConnection` 会漏报监听 socket）。
+  **2026-10-04 起改为挤占接管**：端口被占时读共享 PID 文件
+  `~/.maapvz_pvz_editor.pid`（每个实例启动时登记自己；不用 %TEMP%——会被运行环境
+  重定向；不用 CIM/WMI——部分环境拒绝访问），记录在案的 PID 正在监听 →
+  是上一个编辑器实例 → taskkill 接管（同时调多个仓库实例时后启动的赢）；
+  对不上 → 别人的程序占端口，报错退出不抢。
 
 ### 13.2 SelectPlants 局外 80 选卡 SPEC（原 `agent/select_plant/SPEC_endless_select.md`）
 
@@ -1045,8 +1051,10 @@ static registries = {
   `无尽局外选卡`（80 模式，隐含不做核对/槽位检查/占位填充）、`核对`、`占位填充`、
   `槽位上限`（仅单目标）、`尺度`（局外缺省 `[1.0]`，手截图同尺度）、`局外点击间隔`、
   `模板目录`（按模式自动选，`__file__` 相对推算，pipeline 不写绝对路径）。
-- **严格顺序 + 当前帧优先**（两种模式共有）：放完一个**不回顶**，下一个先看当前帧，
-  没有才按「上一棒下滑屏数 + 3」回顶重扫；80 卡位顺序 = 优先级。
+- **严格顺序 + 当前帧优先**（两种模式共有）：放完一个**不回顶**，下一个先看当前帧；
+  当前帧没有就**顺势往下滑**（2026-10-03 改，不再直接回顶），滑到底才反弹回顶；
+  **触底反弹不算失败次数**——选中/点到任何东西就清零，连续 `最多重试`（默认 6）次
+  触底都没进展才放弃。80 卡位顺序 = 优先级。
   旧「一帧多目标」模式**已废弃**（点击顺序由界面布局决定 ≠ 列表顺序）。
 - **防呆**：按名除名——点过的植物移出待选集（重复点 = 取消选中）。
 - **性能**：`_TPL_CACHE` 模板磁盘缓存（84 模板×多尺度每帧太贵）。

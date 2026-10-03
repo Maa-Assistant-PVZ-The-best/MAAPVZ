@@ -314,29 +314,101 @@ def set_current_job():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 
+def _listener_pids(port: int):
+    """netstat 找占用某端口的 LISTENING PID。
+    （别用 Get-NetTCPConnection——某些环境会漏报监听 socket，netstat 才可靠）"""
+    import subprocess
+    try:
+        out = subprocess.run(["netstat", "-ano"], capture_output=True,
+                             text=True, timeout=10).stdout
+    except Exception:
+        return set()
+    pids = set()
+    for line in out.splitlines():
+        parts = line.split()
+        if (len(parts) >= 5 and parts[0].upper() == "TCP"
+                and parts[3].upper() == "LISTENING"
+                and parts[1].rsplit(":", 1)[-1] == str(port)):
+            try:
+                pids.add(int(parts[4]))
+            except ValueError:
+                pass
+    return pids
+
+
+# ★ 跨仓库共享的 PID 标记文件：所有 pvz.py 实例（不管哪个仓库检出）启动时都写这里。
+#   端口被占时用它认亲——记录在案的 PID 正在监听 = 上一个编辑器实例，可杀。
+#   不碰 CIM/WMI（Get-CimInstance 在部分环境「拒绝访问」，不可靠）；
+#   也不用 %TEMP%（部分运行环境会重定向 TEMP，实例间会读到不同目录）——用用户主目录。
+PID_FILE = os.path.join(os.path.expanduser("~"), ".maapvz_pvz_editor.pid")
+
+
+def _read_pid_file():
+    try:
+        with open(PID_FILE, "r", encoding="utf-8") as f:
+            return int(f.read().strip())
+    except Exception:
+        return None
+
+
+def _write_pid_file():
+    try:
+        with open(PID_FILE, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+    except Exception as e:
+        # 写失败 = 下次启动无法认亲接管（端口冲突时只能手动杀），大声一点
+        print(f"[pvz] ⚠️ PID 标记文件写入失败（{PID_FILE}）：{e}", flush=True)
+
+
 def _ensure_port_free(host: str, port: int) -> None:
-    """启动前确认端口空闲，被占用就直接退出（大声报错）。
+    """启动前确认端口空闲；被占且占用者是上一个 pvz.py -> 杀掉旧实例接管。
 
     ★ 为什么需要：Werkzeug 开发服务器默认带 SO_REUSEADDR，而在 Windows 上
       这个标志允许**多个进程同时绑同一个端口**——后启动的实例显示
       "Running on http://127.0.0.1:5000"，其实收不到任何请求，
-      请求全被最先绑定的旧进程吃掉。
-      实际踩过：旧服务器（改代码前启动的）一直占着 5000，
-      用户反复重启 pvz.bat 都「成功启动」但保存作业集时跑的还是旧逻辑。
+      请求全被最先绑定的旧进程吃掉（端口僵尸事故）。
 
-    检查用**不带** SO_REUSEADDR 的裸 bind：端口被占时必然失败。
+    ★ 2026-10-04 改（进程挤占接管，取代关页签自杀方案）：
+      端口被占时读共享 PID 文件：记录在案的 PID 正在监听 -> 是上一个编辑器实例，
+      taskkill 接管——同时调试多个仓库实例时，后启动的赢，不用手动清端口。
+      监听者对不上 PID 文件 -> 别人的程序占了端口，报错退出（不抢）。
     """
     import socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.bind((host, port))
-    except OSError:
-        print(f"[致命] 端口 {port} 已被占用 —— 很可能已经有一个 pvz.py 在运行！", flush=True)
-        print("       旧进程会吃掉所有请求（本进程启动了也收不到）。", flush=True)
-        print("       请先关掉旧进程：netstat -ano | findstr :5000 查 PID 后 taskkill /PID <pid> /F", flush=True)
+    import subprocess
+    import time as _time
+
+    def _try_bind() -> bool:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind((host, port))   # 不带 SO_REUSEADDR 的裸 bind：被占必然失败
+            return True
+        except OSError:
+            return False
+        finally:
+            s.close()
+
+    if _try_bind():
+        return
+
+    listeners = _listener_pids(port)
+    recorded = _read_pid_file()
+    if recorded is not None and recorded in listeners:
+        print(f"[pvz] 端口 {port} 被上一个编辑器实例占用（PID {recorded}），"
+              f"关闭它以接管", flush=True)
+        subprocess.run(["taskkill", "/PID", str(recorded), "/F"],
+                       capture_output=True, timeout=10)
+        for _ in range(30):          # 最多等 6 秒让端口释放
+            if _try_bind():
+                return
+            _time.sleep(0.2)
+        print(f"[致命] 已关闭旧实例但端口 {port} 仍未释放，启动失败", flush=True)
         sys.exit(2)
-    finally:
-        s.close()
+
+    print(f"[致命] 端口 {port} 被未知进程占用（PID {sorted(listeners) or '?'}），"
+          f"不是记录在案的编辑器实例，不自动杀。", flush=True)
+    print(f"       请手动处理：netstat -ano | findstr :{port} 查 PID 后 "
+          f"taskkill /PID <pid> /F", flush=True)
+    sys.exit(2)
 
 
 if __name__ == '__main__':
@@ -351,4 +423,5 @@ if __name__ == '__main__':
 
     # 保持成熟版端口 5000；关闭 reloader，便于被 bat / agent 以后台进程拉起后稳定存活
     _ensure_port_free("127.0.0.1", 5000)
+    _write_pid_file()   # 登记自己 -> 下一个实例启动时凭它认亲并接管端口
     app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)
