@@ -206,6 +206,7 @@ function jobInit() {
         jobRenderTabs();
         jobFillForm();
         jobSaveLocal();
+        if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新
         setStatus('🗑 已删除阵容，剩余 ' + jobTables.length + ' 个');
     });
 

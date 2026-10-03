@@ -340,6 +340,9 @@
             <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
                 <b>局外选卡（无尽 · 选 80）</b>
                 <input type="text" id="outerSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
+                <button class="btn" id="outerFillBtn"
+                        data-tooltip="自动把未选的植物补到 80 个（按当前排序从头扫，跳过无图植物；新补的接在现有已选后面）"
+                        data-tooltip-delay="1000">补齐空选</button>
                 <button class="btn" id="outerClear"
                         data-tooltip="清空所有手动选择的植物（阵容表里的植物保留）"
                         data-tooltip-delay="1000">清空</button>
@@ -358,6 +361,9 @@
                         <option value="selected">已选优先</option>
                     </select>
                 </label>
+                <button class="btn" id="outerReorderBtn" style="padding:2px 10px;font-size:12px;"
+                        data-tooltip="重排已选植物的选取顺序：进入后只显示已选植物，序号清零，按你想要的优先级依次点击（先点的先选）；再点「完成排序」退出"
+                        data-tooltip-delay="1000">调整排序</button>
                 <span id="outerPickCountText" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">

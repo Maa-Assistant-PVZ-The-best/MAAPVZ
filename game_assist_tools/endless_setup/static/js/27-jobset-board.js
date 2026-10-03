@@ -1784,6 +1784,7 @@ function jobRenderSlots() {
             jobRenderSlots();
             jobRenderSeqChains();
             jobSaveLocal();
+            if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新
             if (had) setStatus('已清空 槽' + i + '（' + had + '）'
                 + (removed ? '，棋盘上 ' + removed + ' 个落点也已移除' : ''));
         });
@@ -2374,6 +2375,7 @@ function jobConfirmPick() {
     jobRenderSlots();
     jobRenderSeqChains();
     jobSaveLocal();
+    if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新（锁定集合变了）
     const st = document.getElementById('jobStatus');
     if (st) {
         st.textContent = '已选中 槽' + currentSlotEditing + '（' + p.name + '），点击棋盘格子落子'
@@ -2737,12 +2739,14 @@ function jobBuild() {
         max_level: 149,            // 最大关卡固定 149
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
         // 局外选卡（无尽局外 80 选，32-jobset-outer.js）：作业集级，与换阵无关
-        //   plants 有序（阵容表锁定植物在前，其余按点击顺序）；mode = auto/oneclick/confirm
-        //   一键选取/直接点确定 时局内不读列表 -> 导出空 plants，作业集 JSON 不记选择
+        //   plants = 有效选取顺序（阵容表锁定植物实时派生排前 + 手动点击顺序）；
+        //   mode = auto/oneclick/confirm；一键选取/直接点确定 时局内不读列表 -> 导出空 plants
         outer_pick: (function () {
             if (typeof jobOuterPick === 'undefined') return { plants: [], mode: 'auto' };
             const m = jobOuterPick.mode || 'auto';
-            return { plants: (m === 'auto') ? (jobOuterPick.plants || []).slice() : [], mode: m };
+            const ps = (m === 'auto' && typeof jobOuterEffective === 'function')
+                ? jobOuterEffective() : [];
+            return { plants: ps, mode: m };
         })(),
         tables
     };
