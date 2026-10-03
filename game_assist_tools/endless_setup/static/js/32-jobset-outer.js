@@ -162,9 +162,11 @@ function jobOuterLockedPlants() {
 // ★ 锁定植物【不写入】jobOuterPick.plants：它们只从阵容表派生。否则从表里
 //   移除后会残留成"手动已选"、且若无图还点不掉 —— 表现为"取消不掉的黑框"。
 //   这样局外选卡就严格对应遍历的阵容表：表里有就有，移除即消失。
+// ★ 封顶 80：80 选卡界面最多选 80 个，多出的从末尾砍（优先级最低的牺牲）。
 function jobOuterEffective() {
     const locked = jobOuterLockedPlants();
-    return locked.concat((jobOuterPick.plants || []).filter(function (n) { return locked.indexOf(n) === -1; }));
+    return locked.concat((jobOuterPick.plants || []).filter(function (n) { return locked.indexOf(n) === -1; }))
+        .slice(0, 80);
 }
 
 // 打开面板时清理持久列表：只保留「名单里有、有局外图、且未被阵容表锁定」的手动选择。

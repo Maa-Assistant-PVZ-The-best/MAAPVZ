@@ -409,7 +409,8 @@ class JobSet:
         op = op if isinstance(op, dict) else {}
         _op_mode = str(op.get("mode") or "auto").strip()
         self.outer_pick_mode: str = _op_mode if _op_mode in ("auto", "oneclick", "confirm") else "auto"
-        self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))
+        # 封顶 80：界面最多选 80 个，多出的从末尾砍（网页端已截，这里兜底）
+        self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))[:80]
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:

@@ -2793,6 +2793,36 @@ async function jobSave() {
             if (!go) return;
         }
     }
+    // 图片资源检查：阵容表植物缺局内图 / 局外已选植物缺局外图 —— 局内将永远选不到它
+    {
+        await jobLoadPlants();
+        const missIn = [], missOut = [];
+        (jobTables || []).forEach(function (t) {
+            for (let s = 1; s <= 8; s++) {
+                const n = t && t.slots ? t.slots[s] : '';
+                if (!n) continue;
+                const p = (typeof jobFindPlant === 'function') ? jobFindPlant(n) : null;
+                if ((!p || p.has_img === false) && missIn.indexOf(n) === -1) missIn.push(n);
+            }
+        });
+        if (typeof jobOuterPick !== 'undefined' && jobOuterPick.mode === 'auto'
+                && typeof jobOuterEffective === 'function') {
+            jobOuterEffective().forEach(function (n) {
+                const p = (typeof jobFindPlant === 'function') ? jobFindPlant(n) : null;
+                if ((!p || p.has_img_endless === false) && missOut.indexOf(n) === -1) missOut.push(n);
+            });
+        }
+        if (missIn.length || missOut.length) {
+            const lines = [];
+            missIn.forEach(function (n) { lines.push('· ' + n + ' —— 缺少局内图片资源'); });
+            missOut.forEach(function (n) { lines.push('· ' + n + ' —— 缺少局外图片资源'); });
+            const go = window.confirm(
+                '⚠️ 以下植物缺少图片资源，局内将无法识别选取：\n\n'
+                + lines.join('\n')
+                + '\n\n确定保存？');
+            if (!go) return;
+        }
+    }
     // 名字必填：保存前问用户
     let name = jobCurrentName();
     const input = window.prompt('为这个作业集取一个名字吧', name || '');
