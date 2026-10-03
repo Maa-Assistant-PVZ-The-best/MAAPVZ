@@ -1180,7 +1180,12 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     const isShovel = (key === 'shovel');
     const isAction = !!act || isFeed || isShovel;
     const slotNo = isAction ? null : Number(String(key).replace('card', ''));
-    const plantName = slotNo ? t.slots[slotNo] : null;
+    // ★ 链芯片上的植物名按链所属棋盘语境取：boss 链显示 boss 有效槽位（逐槽沿用普通关）
+    const plantName = slotNo
+        ? ((typeof jobSlotNameCtx === 'function')
+            ? jobSlotNameCtx(t, slotNo, typeof boardLate !== 'undefined' && board === boardLate)
+            : t.slots[slotNo])
+        : null;
     const place = jobPlacementsOf(board, key, which)[gIdx];
 
     const wrap = document.createElement('div');
@@ -1545,7 +1550,10 @@ function jobSlotLabel(t, key) {
     if (key === 'feed') return '喂豆';       // 注册表未加载时的兜底
     if (key === 'shovel') return '铲子';
     const s = Number(key.replace('card', ''));
-    return '槽' + s + (t.slots[s] ? ('（' + t.slots[s] + '）') : '');
+    const _nm = (typeof jobSlotNameCtx === 'function')
+        ? jobSlotNameCtx(t, s, (typeof jobIsBossBoard === 'function') && jobIsBossBoard())
+        : t.slots[s];
+    return '槽' + s + (_nm ? ('（' + _nm + '）') : '');
 }
 
 function jobClearSeqOver() {
@@ -1727,14 +1735,27 @@ function jobRenderSlots() {
     if (!t) return;
     const box = document.getElementById('jobSlots');
     box.innerHTML = '';
+    // ★ flex-wrap + 显式 justify-content:flex-start（严格左对齐，防继承）。
+    //   固定 4 列网格的方案试过了：列宽太窄、筹码被迫压缩，更怪 —— 已回滚。
+    // ★ boss 棋盘 tab 下编辑的是 boss 槽位覆盖层（t.bossSlots，三态）：
+    //   沿用（半透明）  -> ✕ = 删除（boss 关不用这个槽）
+    //   覆盖（正常色）  -> ✕ = 取消覆盖、回到沿用
+    //   已删除（半透明）-> ↩ = 恢复沿用；点槽体 = 选 boss 植物（变成覆盖）
+    const _bossCtx = (typeof jobIsBossBoard === 'function') && jobIsBossBoard();
     // ★ 只循环 8 个植物槽；落子动作（喂豆/铲子/点击格子…）在下面由注册表渲染。
     //   以前这里是 `i <= 9`，第 9 轮拿 t.slots[9]（undefined）当植物渲染，
     //   会多出一个名字是 null 的空槽。
     for (let i = 1; i <= 8; i++) {
-        const name = (t.slots[i] || '');
+        const name = (typeof jobSlotNameCtx === 'function') ? jobSlotNameCtx(t, i, _bossCtx) : (t.slots[i] || '');
+        const _st = (_bossCtx && typeof jobBossSlotState === 'function') ? jobBossSlotState(t, i) : null;
+        const _inherited = _st === 'inherit';
+        const _blocked = _st === 'blocked';
         const info = jobFindPlant(name);
         const chip = document.createElement('div');
         const armed = (jobArmedSlot === i);
+        // ★ 一行一个（固定格式）：筹码保持内容自然宽度，每个筹码后面跟一个
+        //   强制换行元素（见循环末尾的 brk）-> 永远竖排、靠左，
+        //   任何槽删除/改名导致筹码变窄都不会再被 flex-wrap 塞进同一行。
         chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
             + (armed ? '#2d7aff' : '#d0d7de') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
         if (armed) chip.className = 'job-slot-armed';
@@ -1751,25 +1772,88 @@ function jobRenderSlots() {
             frame.appendChild(im);
         }
         const label = document.createElement('span');
-        label.style.cssText = 'font-size:12px;';
-        label.textContent = '槽' + i + ': ' + (name || '未设置');
+        label.style.cssText = 'font-size:12px;white-space:nowrap;';
+        label.textContent = '槽' + i + ': ' + (_blocked ? '已删除' : (name || '未设置'));
         const edit = document.createElement('span');
         edit.textContent = '✎';
         edit.title = '更换植物';
-        edit.style.cssText = 'font-size:12px;color:#2d7aff;padding:0 2px;';
+        edit.style.cssText = 'font-size:12px;color:#2d7aff;padding:0 2px;flex:0 0 auto;';
         edit.addEventListener('click', (e) => { e.stopPropagation(); jobOpenPicker(i); });
 
         chip.appendChild(frame);
         chip.appendChild(label);
         chip.appendChild(edit);
+        // 沿用 / 已删除槽：半透明显示（已删除再加一道红色虚线框区分）
+        if (_inherited || _blocked) chip.style.opacity = '0.55';
+        if (_blocked) chip.style.borderStyle = 'dashed';
 
-        // 清空按钮（原来右键清空，现在右键让位给「切换形态」）
+        // 槽位操作按钮（原来右键清空，现在右键让位给「切换形态」）
+        //   普通关语境：✕ = 清槽位 + 清两块棋盘该槽落点
+        //   boss 语境：沿用槽 ✕ = 删除（不用这个槽）；覆盖槽 ✕ = 取消覆盖回沿用；
+        //             已删除槽 ↩ = 恢复沿用
         const clr = document.createElement('span');
-        clr.textContent = '✕';
-        clr.title = '清空该槽位（同时清掉棋盘上该槽的落点）';
-        clr.style.cssText = 'font-size:11px;color:#ef4444;padding:0 2px;';
+        clr.textContent = _blocked ? '↩' : '✕';
+        clr.title = !_bossCtx ? '清空该槽位（同时清掉棋盘上该槽的落点）'
+            : _inherited ? '删除沿用：boss 关不再使用这个槽（普通关不受影响）'
+            : _blocked ? '恢复沿用普通关该槽'
+            : '取消 boss 覆盖，回到沿用普通关';
+        clr.style.cssText = 'font-size:11px;padding:0 2px;flex:0 0 auto;color:' + (_blocked ? '#2d7aff' : '#ef4444') + ';';
         clr.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (_bossCtx) {
+                t.bossSlots = t.bossSlots || {};
+                if (_inherited) {
+                    // 沿用 -> 删除：boss 关不再使用这个槽；boss 棋盘上的该槽落点清掉
+                    // （只清 boss 棋盘 —— 普通关该槽的植物和落点都不动）
+                    const hadB = name;
+                    t.bossSlots[i] = null;
+                    if (jobArmedSlot === i) jobArmedSlot = 0;
+                    const removedB = jobPurgeSlotOnBoard(boardLate, i);
+                    if (removedB) {
+                        try { renderAllBoards(); } catch (err) { }
+                        try { updatePreview(); } catch (err) { }
+                    }
+                    jobRenderSlots();
+                    jobRenderSeqChains();
+                    jobSaveLocal();
+                    if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+                    setStatus('已在 boss 关删除 槽' + i + (hadB ? '（' + hadB + '）' : '')
+                        + '，普通关不受影响（点 ↩ 可恢复沿用）'
+                        + (removedB ? '；boss 棋盘 ' + removedB + ' 个落点已移除' : ''));
+                    return;
+                }
+                if (_blocked) {
+                    // 已删除 -> 恢复沿用（删除标记去掉）
+                    delete t.bossSlots[i];
+                    jobRenderSlots();
+                    jobRenderSeqChains();
+                    jobSaveLocal();
+                    if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+                    setStatus('槽' + i + ' 已恢复沿用普通关'
+                        + (t.slots[i] ? '「' + t.slots[i] + '」' : ''));
+                    return;
+                }
+                // 覆盖 -> 取消覆盖回沿用；boss 棋盘落点同步回普通关植物
+                const hadB = name;
+                delete t.bossSlots[i];
+                const inh = t.slots[i] || '';
+                if (inh) {
+                    try { jobSyncSlotPlantOnBoard(boardLate, i, inh); } catch (err) { }
+                } else {
+                    // 普通关该槽也是空 -> 清掉 boss 棋盘上的孤儿落点
+                    jobPurgeSlotOnBoard(boardLate, i);
+                }
+                if (jobArmedSlot === i) jobArmedSlot = 0;
+                try { renderAllBoards(); } catch (err) { }
+                try { updatePreview(); } catch (err) { }
+                jobRenderSlots();
+                jobRenderSeqChains();
+                jobSaveLocal();
+                if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+                setStatus('已取消 槽' + i + '（' + hadB + '）的 boss 覆盖'
+                    + (inh ? '，回到沿用普通关「' + inh + '」' : ''));
+                return;
+            }
             const had = t.slots[i];
             t.slots[i] = '';
             if (jobArmedSlot === i) jobArmedSlot = 0;
@@ -1790,18 +1874,24 @@ function jobRenderSlots() {
         });
         chip.appendChild(clr);
 
-        // 形态角标：单次（灰）/ 循环（蓝）
+        // 形态角标：单次（灰）/ 循环（蓝）（已删除的槽没有形态，不显示）
         const _mode = jobSlotMode(t, jobSlotKeyOf(i));
-        {
+        if (!_blocked) {
             const mb = document.createElement('span');
             mb.className = 'slot-mode-badge' + (_mode === 'once' ? ' is-once'
                 : (_mode === 'end' ? ' is-end' : ' is-loop'));
+            mb.style.flex = '0 0 auto';
             mb.textContent = (_mode === 'once') ? '1×' : (_mode === 'end' ? '🚩' : '⟳');
             mb.title = '放置形态：' + jobModeLabel(_mode) + '（右键切换）';
             chip.appendChild(mb);
         }
 
-        chip.title = name ? ('点击选中后在棋盘落子：' + name + '　|　右键切换单次/循环/收尾：' + jobModeLabel(_mode)) : '点击选择植物';
+        chip.title = _blocked
+            ? 'boss 关已删除该槽（不沿用普通关）　|　点击选择 boss 植物变成覆盖，或点 ↩ 恢复沿用'
+            : name
+                ? ('点击选中后在棋盘落子：' + name + (_inherited ? '（沿用普通关）' : '')
+                    + '　|　右键切换单次/循环/收尾：' + jobModeLabel(_mode))
+                : (_bossCtx ? '点击选择 boss 关植物（覆盖普通关该槽）' : '点击选择植物');
         chip.addEventListener('click', () => {
             if (!name) { jobOpenPicker(i); return; }
             jobArmedSlot = (jobArmedSlot === i) ? 0 : i;
@@ -1809,9 +1899,10 @@ function jobRenderSlots() {
             const st = document.getElementById('jobStatus');
             if (st) st.textContent = jobArmedSlot ? ('已选中 槽' + i + '（' + name + '），点击棋盘格子落子') : '';
         });
-        // 右键：切换单次 / 循环 / 单次+循环
+        // 右键：切换单次 / 循环 / 单次+循环（已删除的槽没有形态可切）
         chip.addEventListener('contextmenu', (e) => {
             e.preventDefault();
+            if (_blocked) return;
             const m = jobToggleSlotMode(t, jobSlotKeyOf(i));
             jobRenderSlots();
             jobRenderSeqChains();
@@ -1819,6 +1910,10 @@ function jobRenderSlots() {
             setStatus('🔄 槽' + i + '（' + (name || '未设置') + '）→ ' + jobModeLabel(m));
         });
         box.appendChild(chip);
+        // 强制换行：一行一个槽位，永远竖排（内容再窄也不会两个挤一行）
+        const rowBrk = document.createElement('span');
+        rowBrk.style.cssText = 'flex-basis:100%;height:0;';
+        box.appendChild(rowBrk);
     }
 
     // ---- ★ 落子动作（喂豆/铲子/点击格子/未来扩展）----
@@ -1906,6 +2001,10 @@ function jobRenderSlots() {
         if (typeof jobOpenBoardMoreList === 'function') jobOpenBoardMoreList();
     });
     box.appendChild(more);
+
+    // ★ 槽位一有增删覆盖，boss 阵容下拉（沿用/换卡/编队）跟着变 ——
+    //   选项集合由「两个棋盘的槽位是否一致」驱动（见 21 的 jobRefreshBossLineupUI）。
+    try { if (typeof jobRefreshBossLineupUI === 'function') jobRefreshBossLineupUI(); } catch (e) { }
 }
 
 // ============================================================
@@ -1964,13 +2063,15 @@ function jobSlotKeyOfArmed(s) {
     return jobSlotKeyOf(s);
 }
 
-// 该槽位在界面上显示的名字（用于状态提示）
+// 该槽位在界面上显示的名字（用于状态提示）—— 按当前编辑 tab 语境取有效植物
 function jobSlotDisplayName(t, s) {
     if (typeof jobBoardActionByArmedNo === 'function') {
         const act = jobBoardActionByArmedNo(s);
         if (act) return act.name;
     }
-    const nm = (t && t.slots) ? (t.slots[s] || '') : '';
+    const nm = t ? ((typeof jobSlotNameCtx === 'function')
+        ? jobSlotNameCtx(t, s, (typeof jobIsBossBoard === 'function') && jobIsBossBoard())
+        : (t.slots ? (t.slots[s] || '') : '')) : '';
     return '槽' + s + (nm ? '（' + nm + '）' : '（未设置）');
 }
 
@@ -2194,12 +2295,17 @@ function jobPlantAvail(p) {
 }
 
 // 选择器卡片的悬停提示（走 02-tooltip.js 的 data-tooltip，1 秒延迟，支持多行）
-function jobPlantCardTip(p, dupSlot) {
+function jobPlantCardTip(p, dupSlot, selSlot) {
     const av = jobPlantAvail(p);
     const lines = [];
-    lines.push(dupSlot
-        ? (p.name + '（已被 槽' + dupSlot + ' 使用，不能重复选择）')
-        : (p.name + '（' + (p.rarity || '?') + '卡）'));
+    if (dupSlot) {
+        lines.push(p.name + '（已被 槽' + dupSlot + ' 使用，不能重复选择）');
+    } else if (selSlot) {
+        // 正在编辑的槽自己选中的植物（可重选，等于不换）
+        lines.push(p.name + '（当前 槽' + selSlot + ' 已选）');
+    } else {
+        lines.push(p.name + '（' + (p.rarity || '?') + '卡）');
+    }
     if (!av.hasImg) lines.push('⛔ 没有这个植物的图片资源');
     else if (av.sup === 'missing') lines.push('⚠️ 缺少超装的植物资源');
     else if (av.sup === 'collected') lines.push('✅ 超装资源已收集');
@@ -2337,9 +2443,12 @@ function jobMovePick(delta) {
 function jobSlotOfPlant(name, excludeSlot) {
     const t = jobTables[currentTable];
     if (!t || !name) return 0;
+    // ★ 查重按当前语境（普通/boss）的有效槽位：boss 覆盖槽与普通槽是两份独立配置
+    const _bossCtx = (typeof jobIsBossBoard === 'function') && jobIsBossBoard();
     for (let s = 1; s <= 8; s++) {
         if (s === excludeSlot) continue;
-        if (t.slots[s] === name) return s;
+        const nm = (typeof jobSlotNameCtx === 'function') ? jobSlotNameCtx(t, s, _bossCtx) : t.slots[s];
+        if (nm === name) return s;
     }
     return 0;
 }
@@ -2358,13 +2467,25 @@ function jobConfirmPick() {
         return;
     }
     const t = jobTables[currentTable];
-    const oldName = t ? t.slots[currentSlotEditing] : '';
-    if (t) t.slots[currentSlotEditing] = p.name;
+    const _bossCtx = (typeof jobIsBossBoard === 'function') && jobIsBossBoard();
+    const oldName = t ? ((typeof jobSlotNameCtx === 'function') ? jobSlotNameCtx(t, currentSlotEditing, _bossCtx) : t.slots[currentSlotEditing]) : '';
+    if (t) {
+        if (_bossCtx) {
+            // ★ boss 语境：写的是 boss 槽位覆盖层（不动普通关槽位）
+            t.bossSlots = t.bossSlots || {};
+            t.bossSlots[currentSlotEditing] = p.name;
+        } else {
+            t.slots[currentSlotEditing] = p.name;
+        }
+    }
 
     // ★ 关键：把棋盘上该槽已有的落点同步成新植物。
     //   落点里存的是「下子那一刻的植物快照」，不跟着槽位走 ——
     //   不同步的话，改了槽位棋盘却还是旧植物（看起来像能放好几种植物）。
-    const synced = jobSyncSlotPlantEverywhere(currentSlotEditing, p.name);
+    //   boss 语境只同步 boss 棋盘（boardLate）—— 普通棋盘的该槽仍用普通关植物。
+    const synced = _bossCtx
+        ? (function () { try { return jobSyncSlotPlantOnBoard(boardLate, currentSlotEditing, p.name); } catch (e) { return false; } })()
+        : jobSyncSlotPlantEverywhere(currentSlotEditing, p.name);
     if (synced) {
         try { renderAllBoards(); } catch (e) { }
         try { updatePreview(); } catch (e) { }
@@ -2378,7 +2499,8 @@ function jobConfirmPick() {
     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新（锁定集合变了）
     const st = document.getElementById('jobStatus');
     if (st) {
-        st.textContent = '已选中 槽' + currentSlotEditing + '（' + p.name + '），点击棋盘格子落子'
+        st.textContent = '已选中 槽' + currentSlotEditing + '（' + p.name + '）'
+            + (_bossCtx ? '（boss 关覆盖）' : '') + '，点击棋盘格子落子'
             + (synced && oldName ? '　|　棋盘上的该槽已同步改为「' + p.name + '」' : '');
     }
 }
@@ -2403,13 +2525,18 @@ function jobRenderPlantGrid() {
         return fa - fb;
     });
     plantPickList = list;
-    // 1~8 槽不允许重复：算出已被其它槽位占用的植物
+    // 1~8 槽不允许重复：算出已被其它槽位占用的植物（按当前语境的有效槽位）
     const _t = jobTables[currentTable];
+    const _pkBossCtx = (typeof jobIsBossBoard === 'function') && jobIsBossBoard();
     const usedBy = {};
+    // ★ 已选集合（含正在编辑的槽位）：用于蓝框标注「这个植物已在槽位里」，
+    //   与 usedBy 的区别是 usedBy 排除了正在编辑的槽（那个允许重选）。
+    const selectedBy = {};
     for (let s = 1; s <= 8; s++) {
+        const nm0 = _t && ((typeof jobSlotNameCtx === 'function') ? jobSlotNameCtx(_t, s, _pkBossCtx) : _t.slots[s]);
+        if (nm0 && !selectedBy[nm0]) selectedBy[nm0] = s;
         if (s === currentSlotEditing) continue;
-        const nm = _t && _t.slots[s];
-        if (nm) usedBy[nm] = s;
+        if (nm0) usedBy[nm0] = s;
     }
     plantPickAvailable = [];
     let _noImgCnt = 0;
@@ -2433,18 +2560,25 @@ function jobRenderPlantGrid() {
         return;
     }
     list.forEach((p, idx) => {
-        const dupSlot = usedBy[p.name] || 0;
+        const dupSlot = usedBy[p.name] || 0;        // 被【其它】槽占用 -> 禁选
+        const selSlot = selectedBy[p.name] || 0;    // 已被某槽选用（含正在编辑的槽）-> 蓝框
         const av = jobPlantAvail(p);
         const noImg = !av.hasImg;
         const blocked = dupSlot || noImg;
         const cell = document.createElement('div');
         cell.className = 'job-card';
         cell.style.animationDelay = Math.min(idx, 20) * 9 + 'ms';   // 错峰入场（不超过 20 项）
+        // ★ 三种视觉状态要一眼分清：
+        //   无图不可选 = 灰化 + 左上角 ✕（opacity 0.38）
+        //   已被槽位选用 = 蓝框 + 蓝色「槽N」角标（不灰化！被其它槽占用的仍禁选但保持彩色）
+        //   键盘焦点 = 蓝色外描边（outline）
         cell.style.cssText += 'display:flex;flex-direction:column;align-items:center;gap:3px;border-radius:10px;'
-            + (blocked ? 'cursor:not-allowed;opacity:0.38;' : 'cursor:pointer;')
-            + (!blocked && idx === plantPickIndex ? 'outline:3px solid #2d7aff;outline-offset:2px;background:#eff6ff;' : '');
+            + (noImg ? 'cursor:not-allowed;opacity:0.38;'
+                : dupSlot ? 'cursor:not-allowed;' : 'cursor:pointer;')
+            + (selSlot && !noImg ? 'box-shadow:inset 0 0 0 3px #2d7aff;background:#eff6ff;' : '')
+            + (!blocked && idx === plantPickIndex ? 'outline:3px solid #2d7aff;outline-offset:2px;' : '');
         // 悬停提示走自定义 tooltip 系统（1 秒延迟），不用原生 title（会双层提示）
-        cell.setAttribute('data-tooltip', jobPlantCardTip(p, dupSlot));
+        cell.setAttribute('data-tooltip', jobPlantCardTip(p, dupSlot, selSlot));
         cell.setAttribute('data-tooltip-delay', '1000');
 
         // 品质底图铺底（网页端铺，不改图）
@@ -2463,11 +2597,11 @@ function jobRenderPlantGrid() {
             // 无图植物：灰化 + 左上角叉叉（通用标记，见 02-tooltip.js），禁选
             frame.style.filter = 'grayscale(1)';
             jobCardXMark(frame);
-        } else if (dupSlot) {
-            frame.style.filter = 'grayscale(1)';
+        } else if (selSlot) {
+            // 已被槽位选用：蓝框（在 cell 上）+ 右上角蓝色「槽N」角标，不灰化
             const badge = document.createElement('span');
-            badge.textContent = '槽' + dupSlot;
-            badge.style.cssText = 'position:absolute;right:2px;top:2px;background:#ef4444;color:#fff;font-size:9px;line-height:14px;border-radius:4px;padding:0 4px;z-index:2;';
+            badge.textContent = '槽' + selSlot;
+            badge.style.cssText = 'position:absolute;right:2px;top:2px;background:#2d7aff;color:#fff;font-size:9px;line-height:14px;border-radius:4px;padding:0 4px;z-index:2;';
             frame.appendChild(badge);
         }
         // ♥ 收藏标记（下边框中央，被边框"咬断"）
@@ -2557,9 +2691,12 @@ function jobBuildChain(t, board, which, forceBoss) {
         const slot = m ? Number(m[1]) : null;
 
         // 植物槽要带上「这一段用的是哪个植物」（槽位植物表 + 段所属形态）
+        //   ★ boss 链按 boss 有效槽位取名（逐槽沿用普通关），agent 日志里看到的才是实际选的卡
         let label = seg.key;
         if (slot !== null) {
-            label = (t.slots && t.slots[slot]) ? t.slots[slot] : seg.key;
+            label = (typeof jobSlotNameCtx === 'function')
+                ? (jobSlotNameCtx(t, slot, forceBoss === true) || seg.key)
+                : ((t.slots && t.slots[slot]) ? t.slots[slot] : seg.key);
         }
 
         // ★ type 决定 agent 端怎么编译这段。落子动作的 type 由注册表给
@@ -2663,10 +2800,38 @@ function jobBuild() {
         //   导致「表2 的 boss 落子改了却按表1 导出」（静默丢配置）。
         const bossBoard = t.boardLate;
         const plants = jobSlotPlants(t.slots);
+        // ---- boss 关阵容（有效值导出）--------------------------------------
+        // bossLineupMode=''（沿用普通关）-> boss_lineup 与普通关完全一致，
+        //   运行时签名相同 -> boss 关跳过清空/选卡直接开打；
+        // 'plants' -> 逐槽求值后的完整槽位（bossSlots 三态覆盖层：覆盖用覆盖值、
+        //   已删除的槽直接不进列表、其余沿用普通关）；
+        // 'deck'   -> boss 关切到指定编队。
+        const _bMode = t.bossLineupMode || '';
+        const _bArt = (t.bossArtifact !== undefined && t.bossArtifact !== null) ? t.bossArtifact : (t.artifact || null);
+        let bossLineup, bossSquad;
+        if (_bMode === 'deck') {
+            bossLineup = { plants: [], deck: String(t.bossDeckNo || 1), artifact: _bArt };
+            bossSquad = Math.min(6, Math.max(1, Number(t.bossDeckNo) || 1));
+        } else if (_bMode === 'plants') {
+            const bp = [1, 2, 3, 4, 5, 6, 7, 8]
+                .map(i => jobSlotNameCtx(t, i, true))   // 三态求值：已删除 -> '' -> 被过滤
+                .filter(Boolean);
+            bossLineup = { plants: bp, deck: null, artifact: _bArt };
+            bossSquad = null;
+        } else {
+            // 沿用普通关
+            bossLineup = (t.lineupMode === 'deck')
+                ? { plants: [], deck: String(t.deckNo), artifact: _bArt }
+                : { plants: plants.slice(), deck: null, artifact: _bArt };
+            bossSquad = (t.lineupMode === 'deck' && t.deckNo) ? Number(t.deckNo) : null;
+        }
         return {
             from_level: t.from_level,
             to_level: t.to_level === '' ? null : Number(t.to_level),
-            lineup: t.lineupMode === 'deck' ? { plants: [], deck: String(t.deckNo) } : { plants, deck: null },
+            lineup: t.lineupMode === 'deck'
+                ? { plants: [], deck: String(t.deckNo), artifact: (t.artifact || null) }
+                : { plants, deck: null, artifact: (t.artifact || null) },
+            boss_lineup: bossLineup,
             slots: { ...t.slots },
 
             // ★ 编队切换：lineupMode='deck' 时把编队号写进 squad（1..6）。
@@ -2676,6 +2841,16 @@ function jobBuild() {
             //   于是「选卡」整段被跳过，直接切编队开打。
             //   'plants' 模式写 null，让运行时把上面两个字段还原（避免残留）。
             squad: (t.lineupMode === 'deck' && t.deckNo) ? Number(t.deckNo) : null,
+            // boss 关编队（bossLineupMode='deck' 时为 1..6；否则 null = 跟随普通关）
+            boss_squad: bossSquad,
+
+            // ---- boss 关阵容的编辑器状态（读回用；boss_lineup 是运行时的有效值）----
+            bossLineupMode: _bMode,
+            bossDeckNo: (typeof t.bossDeckNo === 'number' ? t.bossDeckNo : 1),
+            bossSlots: Object.assign({}, t.bossSlots || {}),
+            // 神器占位（暂无图片资源与 UI；运行时阵容签名已含此字段）
+            artifact: (t.artifact || null),
+            bossArtifact: (t.bossArtifact !== undefined ? t.bossArtifact : null),
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢
@@ -2720,14 +2895,15 @@ function jobBuild() {
                 sequence: jobExtractSequence(t.boardEarly, t.slots, t)
             },
             boss: {
-                plant: jobExtractPlantOps(bossBoard, t.slots),
+                // ★ boss 的植物名映射用「boss 有效槽位表」（bossSlots 覆盖 + 普通关兜底）
+                plant: jobExtractPlantOps(bossBoard, (typeof jobEffSlots === 'function') ? jobEffSlots(t, true) : t.slots),
                 feed: jobExtractCells(bossBoard, 'feed'),
                 shovel: jobExtractCells(bossBoard, 'shovel'),
                 wave: t.waveEnabled === true,
                 once_chain: jobBuildChain(t, bossBoard, 'once', true),
                 loop_chain: jobBuildChain(t, bossBoard, 'loop', true),
                 // ★ 不导出 end_chain：boss 关永不执行收尾链（运行时强制忽略）
-                sequence: jobExtractSequence(bossBoard, t.slots, t)
+                sequence: jobExtractSequence(bossBoard, (typeof jobEffSlots === 'function') ? jobEffSlots(t, true) : t.slots, t)
             }
         };
     });
@@ -2799,10 +2975,14 @@ async function jobSave() {
         const missIn = [], missOut = [];
         (jobTables || []).forEach(function (t) {
             for (let s = 1; s <= 8; s++) {
-                const n = t && t.slots ? t.slots[s] : '';
-                if (!n) continue;
-                const p = (typeof jobFindPlant === 'function') ? jobFindPlant(n) : null;
-                if ((!p || p.has_img === false) && missIn.indexOf(n) === -1) missIn.push(n);
+                // 普通关槽位 + boss 关有效槽位（覆盖层逐槽沿用普通关）都要查
+                const names = [t && t.slots ? t.slots[s] : ''];
+                if (typeof jobSlotNameCtx === 'function') names.push(jobSlotNameCtx(t, s, true));
+                names.forEach(function (n) {
+                    if (!n) return;
+                    const p = (typeof jobFindPlant === 'function') ? jobFindPlant(n) : null;
+                    if ((!p || p.has_img === false) && missIn.indexOf(n) === -1) missIn.push(n);
+                });
             }
         });
         if (typeof jobOuterPick !== 'undefined' && jobOuterPick.mode === 'auto'

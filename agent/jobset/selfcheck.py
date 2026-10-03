@@ -605,6 +605,183 @@ except Exception as _e12:
 
 
 # ---------------------------------------------------------------------------
+print("\n=== 13. boss 阵容拆分 + 阵容相同跳过选卡 ===")
+#
+# 设计（2026-10）：
+#   · 每张表可选配 boss_lineup（boss 关独立的植物/编队/神器）；
+#     缺省/未配 -> 完全沿用普通关（boss_lineup 导出的是逐槽沿用后的有效值）。
+#   · 运行时维护「当前生效阵容签名」_STATE["lineup_sig"]：
+#     与目标阵容相同 -> 「清空卡牌」改 DirectHit+DoNothing 直跳「开始战斗」
+#     （不清空、不选卡、不切编队），只换种植链（compiled 注入照旧）；
+#     不同（或首次进关签名未知）-> 还原清空卡牌节点 + 正常注入。
+try:
+    import json as _json13
+    from agent.jobset import engine as _eng13
+    from agent.jobset import runtime as _rt13
+
+    # --- Table 解析与签名 ---
+    _t_old = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]}}, 0)
+    check("boss阵容: 旧作业集 boss 沿用普通关",
+          _t_old.eff_plants(True) == ["大喷菇", "菜问"], str(_t_old.eff_plants(True)))
+    check("boss阵容: 旧作业集 boss 签名 == 普通关签名",
+          _t_old.lineup_sig(True) == _t_old.lineup_sig(False))
+
+    _t_bp = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                          "boss_lineup": {"plants": ["菜问", "大嘴花"]}}, 0)
+    check("boss阵容: boss 独立植物", _t_bp.eff_plants(True) == ["菜问", "大嘴花"])
+    check("boss阵容: 独立植物签名不同",
+          _t_bp.lineup_sig(True) != _t_bp.lineup_sig(False))
+
+    _t_bd = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                          "boss_lineup": {"plants": []}, "boss_squad": 3}, 0)
+    check("boss阵容: boss 走编队", _t_bd.eff_squad(True) == 3
+          and _t_bd.lineup_sig(True) == ("deck", 3, None), str(_t_bd.lineup_sig(True)))
+
+    _t_nd = _eng13.Table({"from_level": 1, "lineup": {"plants": [], "deck": "2"}, "squad": 2,
+                          "boss_lineup": {"plants": ["菜问"]}}, 0)
+    check("boss阵容: 普通关编队 + boss 改选卡",
+          _t_nd.eff_squad(False) == 2 and _t_nd.eff_squad(True) is None
+          and _t_nd.eff_plants(True) == ["菜问"],
+          f"normal={_t_nd.lineup_sig(False)} boss={_t_nd.lineup_sig(True)}")
+
+    _t_art = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"], "artifact": "神器A"}}, 0)
+    check("神器占位: 进入普通关签名", _t_art.lineup_sig(False) == ("plants", ("大喷菇",), "神器A"),
+          str(_t_art.lineup_sig(False)))
+    check("神器占位: boss 未配置 -> 沿用", _t_art.eff_artifact(True) == "神器A")
+
+    # --- _CLEAR_CARDS_ORIG 必须与 pipe 原值一致（改了 pipe 要同步 runtime）---
+    _pipe13 = Path(__file__).resolve().parent.parent.parent / (
+        "assets/resource/pipeline/Endless_ref.json/02_Endless_plant_Choose_ref.json"
+    )
+    _raw13 = "\n".join(
+        ln for ln in _pipe13.read_text(encoding="utf-8").splitlines()
+        if not ln.lstrip().startswith("//")
+    )
+    _cc_pipe = _json13.loads(_raw13)[_rt13.NODE_CLEAR_CARDS]
+    _cc_orig = _rt13._CLEAR_CARDS_ORIG
+    check("跳过选卡: 清空卡牌快照 recognition 与 pipe 一致",
+          _cc_orig.get("recognition") == _cc_pipe.get("recognition"),
+          f"runtime={_cc_orig.get('recognition')} pipe={_cc_pipe.get('recognition')}")
+    check("跳过选卡: 清空卡牌快照 roi 与 pipe 一致",
+          _cc_orig.get("roi") == _cc_pipe.get("roi"),
+          f"runtime={_cc_orig.get('roi')} pipe={_cc_pipe.get('roi')}")
+    check("跳过选卡: 清空卡牌快照 action/next 与 pipe 一致",
+          _cc_orig.get("action") == _cc_pipe.get("action")
+          and _cc_orig.get("next") == _cc_pipe.get("next"),
+          f"runtime next={_cc_orig.get('next')} pipe next={_cc_pipe.get('next')}")
+
+    # --- _inject_lineup 行为（假 Context 记录 override）---
+    class _FakeCtx13:
+        def __init__(self): self.overrides = []
+        def override_pipeline(self, patch): self.overrides.append(patch)
+
+    def _last_clear13(ctx):
+        # override_pipeline 对同一节点是按字段合并的，测试也要合并后再看
+        merged = {}
+        for p in ctx.overrides:
+            if _rt13.NODE_CLEAR_CARDS in p:
+                merged.update(p[_rt13.NODE_CLEAR_CARDS])
+        return merged or None
+
+    _rt13._STATE["lineup_sig"] = None
+    _t13 = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
+                         "boss_lineup": {"plants": ["大喷菇", "菜问"]}}, 0)
+
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13, False)
+    _cl = _last_clear13(_c13)
+    check("跳过选卡: 首次进关不跳（还原 OCR 点击清空）",
+          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
+          str(_cl))
+    check("跳过选卡: 首次进关注入普通关植物",
+          any("大喷菇" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides))
+
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13, True)     # boss 配置相同 -> 跳
+    _cl = _last_clear13(_c13)
+    check("★跳过选卡: boss 与普通关相同 -> DirectHit 直跳开始战斗",
+          _cl and _cl.get("recognition") == "DirectHit" and _cl.get("action") == "DoNothing"
+          and _cl.get("next") == [_rt13.NODE_BATTLE_START], str(_cl))
+
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13, True)     # 再来一次还是跳（签名没变）
+    _cl = _last_clear13(_c13)
+    check("★跳过选卡: 连续同阵容仍然跳",
+          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+
+    _t13b = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
+                          "boss_lineup": {"plants": ["大嘴花"]}}, 0)
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13b, True)    # boss 配置不同 -> 正常注入 boss 植物
+    _cl = _last_clear13(_c13)
+    check("跳过选卡: boss 不同 -> 还原清空 + 注入 boss 植物",
+          _cl and _cl.get("recognition") == "OCR"
+          and any("大嘴花" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides),
+          str(_cl))
+
+    # 换表但阵容相同（表2 配置 == 当前生效）-> 也跳
+    _t13c = _eng13.Table({"from_level": 2, "lineup": {"plants": ["大嘴花"]}}, 1)
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13c, False)   # 当前生效 = boss 的 大嘴花
+    _cl = _last_clear13(_c13)
+    check("★跳过选卡: 换表但阵容相同 -> 跳",
+          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+
+    # --- lineup_gate_adjust（闸门判断的阵容维度修正，纯函数）---
+    _ga = _rt13.lineup_gate_adjust
+    _tSame = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                           "boss_lineup": {"plants": ["大喷菇"]}}, 0)
+    _tDiff = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                           "boss_lineup": {"plants": ["菜问"]}}, 0)
+    _sigNormal = _tSame.lineup_sig(False)
+
+    # 表没变（need=False），下一关普通、签名相同 -> 不动
+    check("闸门修正: 表不变+阵容同 -> 未变",
+          _ga(False, False, _tSame, False, _sigNormal) == (False, None))
+    # 表没变，但 boss 阵容不同 -> 翻成「变化」（重选 boss 阵容）
+    _n, _r = _ga(False, False, _tDiff, True, _sigNormal)
+    check("★闸门修正: 表不变+boss 阵容不同 -> 变化", _n is True and _r and "boss" in _r,
+          f"need={_n} reason={_r}")
+    # boss 阵容相同 -> 不动（保持未变，直接开打）
+    check("闸门修正: 表不变+boss 阵容同 -> 未变",
+          _ga(False, False, _tSame, True, _sigNormal) == (False, None))
+    # 表变了（need=True）但阵容与当前相同 -> 翻成「未变」（跳过选卡）
+    _n, _r = _ga(False, True, _tSame, False, _sigNormal)
+    check("★闸门修正: 表变+阵容同 -> 未变（跳过选卡）", _n is False and _r and "跳过" in _r,
+          f"need={_n} reason={_r}")
+    # 表变且阵容不同 -> 保持变化（下一关取 boss 形态，boss 配的是 菜问）
+    check("闸门修正: 表变+阵容不同 -> 变化",
+          _ga(False, True, _tDiff, True, _sigNormal)[0] is True)
+    # 训练模式：任何情况都不修正（每关必重选）
+    check("闸门修正: 训练模式不修正",
+          _ga(True, True, _tSame, False, _sigNormal) == (True, None))
+    # 签名未知（首次进关）：保守，不修正
+    check("闸门修正: 签名未知不修正",
+          _ga(False, True, _tSame, False, None) == (True, None))
+
+    # --- ★ 训练模式下 _inject_lineup 永不跳过清空/选卡 ---
+    # （闸门只翻 next 分支，清空卡牌节点会不会被改成空跳是 _inject_lineup 说了算）
+    _rt13._STATE["training"] = True
+    _rt13._STATE["lineup_sig"] = _t13.lineup_sig(False)
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13, False)    # 签名相同但训练模式 -> 不跳
+    _cl = _last_clear13(_c13)
+    check("★训练模式: 阵容相同也不跳（清空卡牌保持 OCR 点击）",
+          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
+          str(_cl))
+    _rt13._STATE["training"] = False
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _t13, False)    # 回正赛 -> 恢复跳过
+    _cl = _last_clear13(_c13)
+    check("★回到正赛: 跳过恢复",
+          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    _rt13._STATE["training"] = None
+    _rt13._STATE["lineup_sig"] = None
+except Exception as _e13:
+    check("boss阵容/跳过选卡", False, f"{type(_e13).__name__}: {_e13}")
+
+
+# ---------------------------------------------------------------------------
 print("\n" + "=" * 52)
 if FAILED:
     print(f"FAILED {len(FAILED)}: {FAILED}")

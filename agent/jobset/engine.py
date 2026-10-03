@@ -187,6 +187,22 @@ class Table:
                 if isinstance(v, str) and v.strip():
                     self.slots[str(k)] = v.strip()
 
+        # ---- 神器（占位：暂无图片资源，网页端暂无 UI；参与导出与阵容签名）----
+        _art = lineup.get("artifact")
+        self.artifact: Optional[str] = str(_art).strip() if _art else None
+
+        # ---- boss 关阵容（boss_lineup：可与普通关不同；缺省 = 沿用普通关）----
+        #   网页端导出的是「有效值」（逐槽沿用普通关后的完整槽位），
+        #   所以这里不需要再做逐槽合并；boss_lineup 缺失（旧作业集）= 完全沿用。
+        bl = self.raw.get("boss_lineup")
+        bl = bl if isinstance(bl, dict) else {}
+        self.boss_plants: List[str] = _norm_plants(bl.get("plants"))
+        self.boss_squad: Optional[int] = _as_int(self.raw.get("boss_squad"), None)
+        if self.boss_squad is not None and not (1 <= self.boss_squad <= 6):
+            self.boss_squad = None
+        _bart = bl.get("artifact")
+        self.boss_artifact: Optional[str] = str(_bart).strip() if _bart else None
+
         # 动作后等待：{ "once|card2|2,1|2": 2, ... }（网页端 jobPlacementKey 的键）
         # ★ 普通关与 boss 关各自独立（bossWaitAfter 缺省 -> 空表）
         wa = self.raw.get("waitAfter")
@@ -376,6 +392,36 @@ class Table:
     def rules(self, is_boss: bool) -> Dict[str, Any]:
         """按是否 boss 关取种植规则。"""
         return self.boss if is_boss else self.non_boss
+
+    # -- 按关卡形态取有效阵容（boss 未单独配置 -> 沿用普通关）-----------------
+
+    def eff_plants(self, is_boss: bool) -> List[str]:
+        if is_boss and self.boss_plants:
+            return list(self.boss_plants)
+        return list(self.plants)
+
+    def eff_squad(self, is_boss: bool) -> Optional[int]:
+        # boss_squad 有值 -> boss 关走编队；boss_plants 有值 -> boss 关走选卡；
+        # 都没有 -> 沿用普通关的编队设置
+        if is_boss:
+            if self.boss_squad is not None:
+                return self.boss_squad
+            if self.boss_plants:
+                return None
+        return self.squad
+
+    def eff_artifact(self, is_boss: bool) -> Optional[str]:
+        if is_boss and self.boss_artifact is not None:
+            return self.boss_artifact
+        return self.artifact
+
+    def lineup_sig(self, is_boss: bool) -> tuple:
+        """阵容签名（含神器占位）：相同 = 局内卡牌/编队/神器完全一致，
+        运行时据此跳过清空卡牌与选卡/编队，直接开始战斗。"""
+        sq = self.eff_squad(is_boss)
+        if sq is not None:
+            return ("deck", sq, self.eff_artifact(is_boss))
+        return ("plants", tuple(self.eff_plants(is_boss)), self.eff_artifact(is_boss))
 
     def __repr__(self) -> str:
         rng = f"{self.from_level}~{self.to_level if self.to_level is not None else '-'}"

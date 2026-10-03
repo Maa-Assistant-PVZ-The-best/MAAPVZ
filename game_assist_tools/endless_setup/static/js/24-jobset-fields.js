@@ -342,6 +342,61 @@ function jobIsBossBoard() {
     } catch (e) { return false; }
 }
 
+// ---- boss 关槽位：三态覆盖层 ---------------------------------------------
+// bossSlots[i] 的 key 不存在 = 沿用普通关同槽（槽位栏半透明显示）；
+//               = null      = 明确删除（boss 关不用这个槽，也不沿用）；
+//               = '植物名'   = 覆盖成这个植物。
+// （旧数据里的空串 '' 按「沿用」兼容处理。）
+
+// 三态判定：'inherit' | 'blocked' | 'override'
+function jobBossSlotState(t, i) {
+    const b = (t && t.bossSlots) || {};
+    if (!Object.prototype.hasOwnProperty.call(b, i)) return 'inherit';
+    const v = b[i];
+    if (v === null) return 'blocked';
+    if (v) return 'override';
+    return 'inherit';   // '' 旧数据 = 沿用
+}
+
+// 指定语境（bossCtx=true=boss 关）下槽位 i 的有效植物名
+function jobSlotNameCtx(t, i, bossCtx) {
+    if (!t) return '';
+    if (bossCtx) {
+        const st = jobBossSlotState(t, i);
+        if (st === 'blocked') return '';          // 已删除：boss 关没有这个槽
+        if (st === 'override') return t.bossSlots[i];
+    }
+    return t.slots[i] || '';
+}
+
+// 当前编辑 tab 语境版（槽位栏/选择器用）
+function jobSlotNameCur(t, i) {
+    return jobSlotNameCtx(t, i, jobIsBossBoard());
+}
+
+// boss 语境下该槽是否是「沿用」（未覆盖也未删除）
+function jobSlotInherited(t, i) {
+    return jobBossSlotState(t, i) === 'inherit';
+}
+
+// 某语境下的完整有效槽位表 {1:'豌豆',...}（boss = 覆盖层三态求值）
+function jobEffSlots(t, bossCtx) {
+    const out = {};
+    for (let i = 1; i <= 8; i++) out[i] = jobSlotNameCtx(t, i, bossCtx);
+    return out;
+}
+
+// ★ boss 槽位与普通关是否一致 —— 驱动「boss 关」下拉栏的显示形态：
+//   有任何「删除」或「值不同的覆盖」都算不一致；覆盖成同名植物视为一致。
+function jobBossSlotsDiffer(t) {
+    for (let i = 1; i <= 8; i++) {
+        const st = jobBossSlotState(t, i);
+        if (st === 'blocked') return true;
+        if (st === 'override' && t.bossSlots[i] !== (t.slots[i] || '')) return true;
+    }
+    return false;
+}
+
 // 取某条链在指定 board 上对应的字段名
 //
 // ★ forceBoss：显式指定「这次按 boss 处理」，优先于引用判断。

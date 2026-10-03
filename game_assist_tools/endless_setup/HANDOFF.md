@@ -807,7 +807,72 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
 
 ---
 
+## 10.5 ★ boss 关独立阵容 + 神器占位 + 阵容相同跳过选卡（2026-10-03）
+
+一张阵容表现在有**两套选卡阵容**：普通关（`lineup`）+ boss 关（`boss_lineup`），
+外加**神器占位字段**（`artifact`，暂无图片资源、网页端暂无 UI，pipe 端用户自己写）。
+
+### 网页端模型（20/24/27/28/29/32 + index.html）
+
+- 表新增字段：`bossLineupMode`（`''`=沿用普通关 | `'plants'` | `'deck'`）、
+  `bossDeckNo`、`bossSlots`（boss 槽位**三态覆盖层**：key 不存在 = 沿用普通关同槽；
+  `null` = 已删除（boss 关不用这个槽）；字符串 = 覆盖）、
+  `artifact` / `bossArtifact`（占位，null）。
+- **语境助手**（`24-jobset-fields.js`）：`jobBossSlotState(t, i)` 三态判定 /
+  `jobSlotNameCtx(t, i, bossCtx)`（blocked → ''）/ `jobSlotInherited` /
+  `jobEffSlots(t, bossCtx)` / **`jobBossSlotsDiffer(t)`**（有任何删除或值不同的
+  覆盖 = 不一致；覆盖成同名植物算一致）。
+  凡是「显示/编辑槽位植物名」的地方一律走这里，**不要再直接读 `t.slots[i]`**
+  （boss 语境下那是错的）。
+- **「boss 关」阵容下拉是数据驱动的**（`21` 的 `jobRefreshBossLineupUI`，
+  由 `jobRenderSlots` 在每次槽位增删后调用）：
+  槽位一致 → 只显示「沿用普通关」（mode 锁定 `''`，悬停提示沿用）；
+  不一致 → 只提供「单独选卡 / 切换编队」（没有沿用项），mode 自动落到 `plants`。
+  例外：`mode='deck'` 本身算「不一致」（编队不需要槽位覆盖，否则会被静默抹掉）；
+  编队退回沿用的路径 = 先切「单独选卡」。
+- boss 棋盘 tab（'late'）下槽位栏编辑的是 `bossSlots` 覆盖层，三态 UI：
+  沿用槽半透明（✕ = **删除沿用**，只清 boss 棋盘的该槽落点）；
+  覆盖槽正常色（✕ = 取消覆盖回沿用）；
+  已删除槽半透明 + 红色虚线框（↩ = 恢复沿用，点槽体 = 选植物变成覆盖）。
+  `placePlantOnBoard` 按目标棋盘取有效植物名，boss 覆盖改动只同步 `boardLate`。
+- 导出（`jobBuild`）：`lineup`/`boss_lineup` 都带 `artifact`；
+  `boss_lineup` 永远是**有效值**（逐槽沿用后的完整 8 槽 / 编队号），
+  `boss_squad` 是运行时读的权威字段；`bossSlots`/`bossLineupMode` 等编辑器
+  状态字段一并导出（读回用）。导入（28）有反向推导：
+  手写 JSON 只给 `boss_squad` → 反推 `bossLineupMode='deck'`。
+- 局外选卡锁定集合（32 `jobOuterLockedPlants`）= 普通槽位 ∪ boss 有效槽位。
+
+### agent 端（engine / runtime）
+
+- `engine.Table`：`boss_plants` / `boss_squad` / `boss_artifact` / `artifact`；
+  有效值访问器 `eff_plants(is_boss)` / `eff_squad(is_boss)` / `eff_artifact(is_boss)`；
+  **`lineup_sig(is_boss)`** = `("deck", squad, artifact)` 或 `("plants", tuple(plants), artifact)`。
+- **阵容相同跳过**：`_STATE["lineup_sig"]` 记录当前生效阵容。
+  `_inject_lineup(context, table, is_boss)` 统一所有注入点
+  （JobSetFight 首锁/换表、JobSetPlan 换阵）：
+  签名相同 → `无尽挑战_识别开始战斗_清空卡牌` 改 `DirectHit + DoNothing`
+  直跳 `无尽挑战_选取植物_开始战斗`（不清空、不选卡、不切编队）；
+  不同 → 还原清空卡牌节点 + 正常注入。首次进关（签名 None）必走完整选卡。
+- **⚠️ `_CLEAR_CARDS_ORIG`（runtime.py）是清空卡牌节点 pipe 原值的照抄快照
+  —— 改 pipe 里这个节点必须同步它**（selfcheck §13 有一致性断言）。
+- **闸门阵容维度修正**（`lineup_gate_adjust`，纯函数）：表没变但形态阵容不同
+  → 翻「变化」重选；表变了但阵容相同 → 翻「未变」跳过。训练模式不修正
+  （每关必重选是用户设定）。boss 预判用计数器 `lv % 5 == 0`（与补给预告同口径）。
+- **★ 训练模式双层豁免**（踩过的坑）：闸门修正挡训练只翻了 next 分支，
+  但 `_inject_lineup` 的签名跳过会把「清空卡牌」节点**本身**改成 DirectHit 空跳
+  —— 分支走对了、节点被废了。所以 `_inject_lineup` 里还有第二道：
+  `_STATE["training"]` 为真时永不跳过（`JobSetPlan` 每关写入该标记，
+  Fight/Stage 的节点参数里没有「训练模式」键，只能走状态；
+  `JobSetLoad` 重置/新开局时清空）。
+- 预热（`_prewarm_for_level`）：首关是 5 的倍数时用 boss 阵容预热；
+  预热**不写** `lineup_sig`（首关必须真选）。
+
+### 验证
+
+selfcheck §13 全覆盖（解析/签名/快照一致性/跳过行为/闸门修正），全部通过。
+
 ## 11. 最近验证结果（全绿基线）
+
 
 ```
 selfcheck.py                       →  全部通过

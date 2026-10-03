@@ -166,6 +166,41 @@ function jobApplyLoaded(job, code) {
             if (!t.deckNo) t.deckNo = 1;
         }
         delete t.squad;   // 编辑器内部只留 lineupMode/deckNo，导出时再由 jobBuild 生成
+
+        // ---- boss 关阵容（boss_lineup 是运行时有效值；编辑器状态字段优先）----
+        //   bossLineupMode: '' = 沿用普通关 | 'plants' | 'deck'
+        //   bossSlots: boss 关槽位覆盖层，三态 —— key 不存在=沿用 / null=已删除 / 字符串=覆盖
+        //   旧作业集没有这些字段 -> '' + {} = boss 完全沿用普通关（行为与旧版一致）
+        const _rawBossMode = (t.bossLineupMode === 'plants' || t.bossLineupMode === 'deck') ? t.bossLineupMode : '';
+        const _bsq = Number(t.boss_squad);
+        const _bsqValid = Number.isFinite(_bsq) && _bsq >= 1 && _bsq <= 6;
+        // 手写 JSON 只给了 boss_squad 没给 bossLineupMode -> 反推为 deck
+        t.bossLineupMode = _rawBossMode || (_bsqValid ? 'deck' : '');
+        if (t.bossLineupMode === 'deck' && _bsqValid) {
+            t.bossDeckNo = _bsq;
+        } else if (!t.bossDeckNo || !Number.isFinite(Number(t.bossDeckNo))) {
+            t.bossDeckNo = 1;
+        }
+        delete t.boss_squad;
+        if (!t.bossSlots || typeof t.bossSlots !== 'object') t.bossSlots = {};
+        // 编辑器状态缺失但 boss_lineup 带选卡植物（比如手写的 JSON）-> 反推覆盖层
+        //   ★ 「空」的判定：null（已删除标记）也算有内容，不能被反推覆盖掉；
+        //     只有 undefined / ''（旧数据）才算空。
+        const _bsHasContent = Object.keys(t.bossSlots).some(function (k) {
+            const v = t.bossSlots[k];
+            return v !== undefined && v !== '';
+        });
+        if (t.bossLineupMode === 'plants'
+                && !_bsHasContent
+                && t.boss_lineup && Array.isArray(t.boss_lineup.plants) && t.boss_lineup.plants.length) {
+            t.boss_lineup.plants.forEach(function (n, i) {
+                if (n && (t.slots[i + 1] || '') !== n) t.bossSlots[i + 1] = n;
+            });
+        }
+        delete t.boss_lineup;   // 导出时由 jobBuild 重新生成有效值
+        // 神器占位（暂无 UI；读回来只是为了保存/导出时不丢）
+        if (t.artifact === undefined) t.artifact = null;
+        if (t.bossArtifact === undefined) t.bossArtifact = null;
         // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         // 三条链的顺序（缺了会让链条顺序错乱 / 收尾链看起来是空的）
         if (!Array.isArray(t.slotOrder)) t.slotOrder = null;

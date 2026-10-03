@@ -312,6 +312,28 @@
                 </label>
                 <span style="font-size:11px;color:#94a3b8;">跳过选卡，直接切编队开打</span>
             </span>
+            <label style="font-size:12px;margin-left:8px;"
+                   data-tooltip="boss 关阵容：沿用普通关 = boss 关不重新选卡直接开打；单独选卡 = boss 关用自己的 8 槽重新选（到 boss 棋盘 tab 编辑，空槽沿用普通关）；切换编队 = boss 关切到指定编队"
+                   data-tooltip-delay="1000">boss 关
+                <select id="tfBossLineupMode" style="max-width:118px;">
+                    <option value="">沿用普通关</option>
+                    <option value="plants">单独选卡</option>
+                    <option value="deck">切换编队</option>
+                </select>
+            </label>
+            <span id="tfBossDeckBox" style="display:none;">
+                <label style="font-size:12px;">编队号
+                    <select id="tfBossDeckNo" style="width:auto;"
+                            title="boss 关切换到第几个编队（1-6）">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </label>
+            </span>
             <button class="btn" id="outerPickBtn"
                     data-tooltip="无尽局外 80 选卡（作用于整个作业集，与换阵无关）：阵容表里的植物自动锁定并优先选取，其余按点击顺序补选"
                     data-tooltip-delay="1000">🌐 局外选卡 <span id="outerPickCount" style="background:#2d7aff;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:2px;">0</span></button>
@@ -384,7 +406,7 @@
         <div class="flex-col" style="flex:0 0 380px;max-width:380px;">
             <div class="panel" id="slotPlantPanel">
                 <div class="panel-title">🪴 槽位植物（点击选择；「喂豆」选中后在棋盘落子标记喂豆位置）</div>
-                <div id="jobSlots" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                <div id="jobSlots" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;"></div>
             </div>
 
             
@@ -420,6 +442,11 @@
                     </div><!-- /board-main -->
                     <div class="gen-actions" id="genActions"><!-- 由 JS 渲染 --></div>
                     </div><!-- /board-with-actions -->
+                    <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+                        <button class="btn btn-danger" id="clearBoardEarly"
+                                data-tooltip="清空普通关棋盘上的全部落子（槽位配置不受影响；可 Ctrl+Z 撤销）"
+                                data-tooltip-delay="1000">🧹 清空棋盘</button>
+                    </div>
                 <!-- 🚩 收尾参数：棋盘上有「收尾」落子时才显示（仅普通关，boss 关无收尾） -->
                 <div id="earlyEndParams" class="end-params" style="display:none;">
     <div class="end-params-title">🚩 收尾参数</div>
@@ -455,6 +482,11 @@
                     </div><!-- /board-main -->
                     <div class="gen-actions" id="genActionsBoss"><!-- 由 JS 渲染 --></div>
                     </div><!-- /board-with-actions -->
+                    <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+                        <button class="btn btn-danger" id="clearBoardLate"
+                                data-tooltip="清空 boss 关棋盘上的全部落子（槽位配置不受影响；可 Ctrl+Z 撤销）"
+                                data-tooltip-delay="1000">🧹 清空棋盘</button>
+                    </div>
                 </div>
                 <!-- ⏱️ 喂豆间隔设置面板已整体移除（小关/Boss关/Boss关2 间隔都不再用） -->
                 <!-- ============ 补给选取（boss 关专属，每个阵容独立） ============

@@ -147,12 +147,16 @@ function jobOuterAvail(p) {
 }
 
 // 所有阵容表里配置的植物（有序：表1 槽1..8 -> 表2 ...），去重
+// ★ boss 关单独配置的植物（bossSlots 覆盖层）也锁定 —— 局外 80 选必须覆盖
+//   普通关 + boss 关都会用到的植物，否则 boss 关重新选卡时选不到。
 function jobOuterLockedPlants() {
     const out = [];
     (jobTables || []).forEach(function (t) {
         for (let s = 1; s <= 8; s++) {
             const n = t && t.slots ? t.slots[s] : '';
             if (n && out.indexOf(n) === -1) out.push(n);
+            const b = (typeof jobSlotNameCtx === 'function') ? jobSlotNameCtx(t, s, true) : n;
+            if (b && out.indexOf(b) === -1) out.push(b);
         }
     });
     return out;
