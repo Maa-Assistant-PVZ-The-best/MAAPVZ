@@ -582,7 +582,19 @@ def load_jobset(
 
     d = Path(jobs_dir) if jobs_dir else DEFAULT_JOBS_DIR
     if not d.is_dir():
-        raise JobSetError(f"作业集目录不存在：{d}")
+        # ★ 打包/CI 发行包里 jobs 是用户数据目录（.gitignore 排除 + 空目录
+        #   进不了 zip），可能整个不存在 —— 本地 install.py 会建，CI 包不会。
+        #   这里自动补上，让后续报「没有作业集」的可操作错误，
+        #   而不是一句「目录不存在」把任务直接打死。
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise JobSetError(f"作业集目录不存在且无法创建：{d}")
+        raise JobSetError(
+            f"作业集目录是空的（已自动创建）：{d}\n"
+            "请先把开发仓库 assets/resource/jobs 里的作业集 JSON 拷到这个目录，"
+            "或在网页编辑器里保存一份作业集"
+        )
 
     code = (code or "").strip() or read_current_code(d)
     if not code:

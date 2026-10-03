@@ -36,6 +36,7 @@ import os
 import re
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 
@@ -212,7 +213,10 @@ class SelectPlants(CustomAction):
     # 8 个槽位的「点错取消（丢回）」点击坐标：优先读 agent 下的坐标表 coords.json
     #   coords.json 里键名：种植物_初始化_第一个槽位 ~ 第八个槽位
     #   若读不到（例如未移植 / 未在本工程里跑），回退为用槽位识别 ROI 的中心点。
-    COORDS_FILE_DEFAULT = r"D:\maapvz\MAAPVZ\agent\assets\resource\coords.json"
+    #   ★ 相对 __file__ 推算（install.py 整树拷贝 agent/，两种布局同位）——
+    #     千万别写绝对路径（打包后用户机器没有 D:\maapvz）。
+    COORDS_FILE_DEFAULT = str(
+        Path(__file__).resolve().parent.parent / "assets" / "resource" / "coords.json")
     COORDS_SLOT_KEY = (
         "种植物_初始化_第一个槽位", "种植物_初始化_第二个槽位",
         "种植物_初始化_第三个槽位", "种植物_初始化_第四个槽位",
