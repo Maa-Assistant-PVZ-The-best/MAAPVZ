@@ -366,6 +366,40 @@ for _aid, _sp in _dsl.GENERIC_SLOT_CLICK.items():
     ]
     check(f"{_aid}: 表中槽位坐标齐全", not _miss, str(_miss))
 
+# 8j. ★ 贯穿回归（engine → compile 全链路）：
+#     历史 bug —— engine._chain 把通用动作段的 slot 写死 None、times 丢弃，
+#     编译期 generic_dsl 判槽位无效 -> 整段消失 -> 局内"点不了切换形态"。
+#     上面 8b-8i 都直接测 generic_dsl，绕过了 engine 层，所以全绿也漏检。
+from agent.jobset import engine as _eng  # noqa: E402
+from agent.jobset import compile as _cpl8j  # noqa: E402
+
+_raw8j = {
+    "from_level": 1,
+    "lineup": {"plants": ["大喷菇"]},
+    "slots": {"1": "大喷菇"},
+    "non_boss": {
+        "once_chain": [
+            {"key": "card1", "slot": "1", "type": "plant",
+             "cells": ["格子2_3"], "waits": []},
+            {"key": "ga:form", "ga": "form", "type": "action",
+             "slot": 3, "times": 2, "cells": [], "waits": []},
+        ],
+        "loop_chain": [],
+    },
+}
+_rules8j = _eng.Table(_raw8j, 0).rules(False)
+_seg8j = [s for s in _rules8j.get("once_chain", []) if s.get("key") == "ga:form"]
+check("贯穿: engine 规范化保留 form 的 slot/times",
+      bool(_seg8j) and _seg8j[0].get("slot") == 3 and _seg8j[0].get("times") == 2,
+      repr(_seg8j))
+_logs8j: list = []
+_out8j = _cpl8j.build_chain_nodes(_rules8j, _coords, 80, None, 10, False,
+                                  log=_logs8j.append)
+_dsl8j = (_out8j.get("once") or {}).get("dsl", "")
+check("贯穿: 编译后 DSL 含 click:槽3切换形态 ×2",
+      _dsl8j.count("click:槽3切换形态") == 2, repr(_dsl8j))
+check("贯穿: 编译日志无「通用动作跳过」",
+      not any("通用动作跳过" in m for m in _logs8j), repr(_logs8j))
 
 # ---------------------------------------------------------------------------
 print("\n=== 9. 落子动作「点击格子」===")

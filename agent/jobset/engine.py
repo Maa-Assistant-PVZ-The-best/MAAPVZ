@@ -256,18 +256,26 @@ class Table:
                 key_name = str(seg.get("key") or "").strip()
                 typ = str(seg.get("type") or "plant").strip().lower()
 
-                # ★ 通用动作段（点波/捡豆/加速/等待）：**没有 cells**，
+                # ★ 通用动作段（点波/捡豆/加速/等待/切换形态）：**没有 cells**，
                 #   不能像普通槽那样因为「没落点」被丢掉。
                 if typ == "action" or key_name.startswith("ga:"):
                     rec: Dict[str, Any] = {
                         "key": key_name,
-                        "slot": None,
+                        # ★ 通用动作的参数必须透传（切换形态的 slot/times 等）——
+                        #   曾经这里写死 slot=None，下游 generic_dsl 拿不到槽位
+                        #   -> 整段编译为空、局内永远不执行（"点不了切换形态"）。
+                        "slot": seg.get("slot"),
                         "type": "action",
                         "action": str(seg.get("action") or key_name).strip(),
                         "label": seg.get("label") or "",
                         "cells": [],
                         "waits": [],
                     }
+                    # ★ 参数袋透传：times 及未来 params 声明新增的字段原样带下去，
+                    #   新增带参动作免改这里（ms 除外，走下面的正数守卫）。
+                    for _k, _v in seg.items():
+                        if _k not in rec and _k != "ms":
+                            rec[_k] = _v
                     # ★ 等待动作的毫秒数（网页端「等待」块里的输入框）：
                     #   必须带下去，否则运行时只能当未知动作跳过。
                     ms_val = seg.get("ms")
