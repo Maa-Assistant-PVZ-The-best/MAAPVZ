@@ -366,23 +366,15 @@
                         data-tooltip-delay="1000">调整排序</button>
                 <span id="outerPickCountText" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
                 <span style="font-size:12px;color:#64748b;">局内执行方式：</span>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="默认：进入局外选卡页后，按上面的列表顺序自动选取（表内植物优先）"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="auto" checked> 按列表自动选取
-                </label>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="局内改用游戏自带的「一键选取」（选的是你游戏内收藏的植物），不再按列表自动选"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="oneclick"> 一键选取
-                </label>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="局内不再选卡，直接复用你在游戏内已经配置好的 80 个植物"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="confirm"> 复用当前配置
-                </label>
+                <div style="position:relative;">
+                    <button class="btn" id="outerModeBtn" style="padding:3px 12px;font-size:12px;"
+                            data-tooltip="点击切换局内执行方式"
+                            data-tooltip-delay="1000">按列表自动选取 ▾</button>
+                    <div id="outerModeMenu" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:12001;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.18);min-width:240px;overflow:hidden;"></div>
+                </div>
+                <span id="outerModeDesc" style="font-size:11px;color:#94a3b8;"></span>
             </div>
             <div id="outerGrid" style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-content:start;"></div>
         </div>

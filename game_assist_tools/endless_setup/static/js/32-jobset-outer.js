@@ -29,7 +29,7 @@ const OUTER_MODE_CONFIRM = {
     confirm: '确定当前在游戏内已经配置好80个植物，且严格对应作业集'
 };
 
-// ---- 模式门禁：一键选取/直接点确定 时局内不读植物列表 -> 选择区封锁 ----
+// ---- 模式门禁：一键选取/复用当前配置 时局内不读植物列表 -> 选择区封锁 ----
 function jobOuterBlockedMode() {
     return jobOuterPick.mode !== 'auto';
 }
@@ -190,7 +190,8 @@ async function jobOpenOuterPicker() {
     jobSaveCurrentBoard();            // 防御：确保阵容表槽位是最新的
     await jobLoadPlants();            // 复用槽位选择器的缓存（含 has_img_endless）
     jobOuterNormalize();
-    jobOuterSyncModeRadios();
+    jobOuterRefreshModeBtn();
+    jobOuterCloseModeMenu();
     jobOuterApplyReorderUI();         // 先同步排序模式按钮/控件态（内部会调 ApplyModeUI）
     jobOuterRenderTabs();
     jobOuterRenderGrid();
@@ -201,6 +202,7 @@ async function jobOpenOuterPicker() {
 function jobCloseOuterPicker() {
     // 排序模式没退出就关面板 -> 自动完成排序（未重点的接在最后，不丢选择）
     if (outerReorder.active) jobOuterToggleReorder();
+    jobOuterCloseModeMenu();
     const modal = document.getElementById('outerPicker');
     if (modal) modal.style.display = 'none';
 }
@@ -413,27 +415,69 @@ function jobOuterClear() {
     setStatus('🧹 已清空手动选择的植物（阵容表植物保留）');
 }
 
-// ---- 局内执行方式（auto / oneclick / confirm），后两个带确认弹窗 ----
-function jobOuterSyncModeRadios() {
-    document.querySelectorAll('input[name="outerPickMode"]').forEach(function (r) {
-        r.checked = (r.value === jobOuterPick.mode);
+// ---- 局内执行方式（auto / oneclick / confirm）：单按钮显示当前模式 + 弹层选择 ----
+// 模式元数据表：label = 按钮/菜单显示名；desc = 菜单项副标题 + 按钮旁描述
+const OUTER_MODES = [
+    { v: 'auto',     label: '按列表自动选取', desc: '按上面的列表顺序自动选取（表内植物优先）' },
+    { v: 'oneclick', label: '一键选取',       desc: '用游戏自带的「一键选取」，优先选择的是你游戏内收藏的植物，不再按列表自动选' },
+    { v: 'confirm',  label: '复用当前配置',   desc: '局内不再选卡，直接复用你在游戏内已经配置好的 80 个植物' },
+];
+
+function jobOuterModeMeta(v) {
+    for (let i = 0; i < OUTER_MODES.length; i++) if (OUTER_MODES[i].v === v) return OUTER_MODES[i];
+    return OUTER_MODES[0];
+}
+
+// 按钮文字 + 旁侧描述跟着当前模式走
+function jobOuterRefreshModeBtn() {
+    const meta = jobOuterModeMeta(jobOuterPick.mode);
+    const btn = document.getElementById('outerModeBtn');
+    if (btn) btn.textContent = meta.label + ' ▾';
+    const desc = document.getElementById('outerModeDesc');
+    if (desc) desc.textContent = meta.desc;
+}
+
+function jobOuterCloseModeMenu() {
+    const m = document.getElementById('outerModeMenu');
+    if (m) m.style.display = 'none';
+}
+
+// 弹层内容每次打开重渲染：当前模式高亮 + ✓
+function jobOuterRenderModeMenu() {
+    const m = document.getElementById('outerModeMenu');
+    if (!m) return;
+    m.innerHTML = OUTER_MODES.map(function (o, i) {
+        const sel = o.v === jobOuterPick.mode;
+        return '<button type="button" data-mode="' + o.v + '" style="display:block;width:100%;text-align:left;padding:8px 12px;border:0;'
+            + (i < OUTER_MODES.length - 1 ? 'border-bottom:1px solid #f1f5f9;' : '')
+            + 'background:' + (sel ? '#eff6ff' : '#fff') + ';cursor:pointer;font-size:13px;">'
+            + '<b style="color:' + (sel ? '#2d7aff' : '#1f2937') + ';">' + (sel ? '✓ ' : '') + o.label + '</b><br>'
+            + '<span style="font-size:11px;color:#94a3b8;">' + o.desc + '</span></button>';
+    }).join('');
+    m.querySelectorAll('button[data-mode]').forEach(function (b) {
+        b.addEventListener('click', function () { jobOuterSetMode(b.getAttribute('data-mode')); });
     });
 }
 
-function jobOuterOnModeChange(radio) {
-    const v = radio.value;
+function jobOuterToggleModeMenu() {
+    const m = document.getElementById('outerModeMenu');
+    if (!m) return;
+    if (m.style.display === 'none') { jobOuterRenderModeMenu(); m.style.display = 'block'; }
+    else m.style.display = 'none';
+}
+
+function jobOuterSetMode(v) {
+    jobOuterCloseModeMenu();
+    if (v === jobOuterPick.mode) return;
     const tip = OUTER_MODE_CONFIRM[v];
-    if (tip && !window.confirm(tip)) {
-        jobOuterSyncModeRadios();        // 用户取消 -> 弹回原来的选择
-        return;
-    }
+    if (tip && !window.confirm(tip)) return;    // 用户取消 -> 保持原模式（按钮文字没动过）
     jobOuterPick.mode = v;
     jobSaveLocal();
-    jobOuterApplyModeUI();               // 一键选取/直接点确定 -> 封锁选择区
+    jobOuterApplyModeUI();               // 一键选取/复用当前配置 -> 封锁选择区
     jobOuterRenderGrid();                // 刷新计数行提示（保留滚动位置）
     jobOuterRefreshBadge();
-    const label = { auto: '按列表自动选取', oneclick: '一键选取（游戏内）', confirm: '复用当前配置' }[v] || v;
-    setStatus('✅ 局内执行方式：' + label);
+    jobOuterRefreshModeBtn();
+    setStatus('✅ 局内执行方式：' + jobOuterModeMeta(v).label);
 }
 
 // ---- 入口按钮上的已选数角标 ----
@@ -468,9 +512,15 @@ document.addEventListener('DOMContentLoaded', function () {
         outerSortMode = sortSel.value;
         jobOuterRenderGrid();
     });
-    document.querySelectorAll('input[name="outerPickMode"]').forEach(function (r) {
-        r.addEventListener('change', function () { jobOuterOnModeChange(r); });
+    // 局内执行方式：按钮开/关弹层；点别处或 Esc 收弹层
+    const modeBtn = document.getElementById('outerModeBtn');
+    if (modeBtn) modeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        jobOuterToggleModeMenu();
     });
+    const modeMenu = document.getElementById('outerModeMenu');
+    if (modeMenu) modeMenu.addEventListener('click', function (e) { e.stopPropagation(); });
+    document.addEventListener('click', jobOuterCloseModeMenu);
     const modal = document.getElementById('outerPicker');
     if (modal) {
         modal.addEventListener('click', function (e) {
@@ -479,6 +529,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
+        jobOuterCloseModeMenu();
         const m = document.getElementById('outerPicker');
         if (m && m.style.display !== 'none') jobCloseOuterPicker();
     });
