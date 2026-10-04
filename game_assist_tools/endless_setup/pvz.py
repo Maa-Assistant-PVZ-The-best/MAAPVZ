@@ -396,8 +396,10 @@ def _write_pid_file():
         with open(PID_FILE, "w", encoding="utf-8") as f:
             f.write(f"{os.getpid()}|{MY_ROOT}")
     except Exception as e:
-        # 写失败 = 下次启动无法认亲接管（端口冲突时只能手动杀），大声一点
-        print(f"[pvz] ⚠️ PID 标记文件写入失败（{PID_FILE}）：{e}", flush=True)
+        # 写失败 = 下次启动无法认亲接管（端口冲突时只能手动杀），大声一点。
+        # ⚠️ 警告里不能带 emoji：GBK 控制台 encode 不了 ⚠ 会让 except 块自己
+        #    再抛 UnicodeEncodeError，把"非致命"变成"服务器起不来"（踩过）。
+        print(f"[pvz] !! PID 标记文件写入失败（{PID_FILE}）：{e}", flush=True)
 
 
 def _kill_and_wait(pid: int, try_bind) -> bool:
