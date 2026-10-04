@@ -6,6 +6,18 @@
 // ⚠️ 远程作业集来源（GitPages）。留空 = 未配置，点下载会提示。
 const JOB_REMOTE_BASE = '';
 
+// ★ 作业集列表缓存：选择弹窗（#jobPickModal）从这份缓存渲染
+let _jobListCache = [];
+
+// 同步「📂 选择作业集」按钮上的文字（与隐藏的 #jobSelect 选中项一致）
+function jobSyncPickLabel() {
+    const sel = document.getElementById('jobSelect');
+    const lab = document.getElementById('jobPickLabel');
+    if (!sel || !lab) return;
+    const op = sel.options[sel.selectedIndex];
+    lab.textContent = (sel.value && op) ? op.textContent.replace(' ★当前', '') : '— 请选择 —';
+}
+
 async function jobLoadList(selectCode) {
     const sel = document.getElementById('jobSelect');
     if (!sel) return;
@@ -18,6 +30,7 @@ async function jobLoadList(selectCode) {
         const res = await fetch('/list_jobs');
         const data = await res.json();
         const jobs = (data && data.jobs) || [];
+        _jobListCache = jobs;
         // 仅在「没传参且下拉本来就是空的」时才回退到服务器 current，
         // 否则会把你手动选的「— 请选择 —」又弹回上一个作业集（残留 bug）
         if (!hasArg && !keep && data && data.current) current = data.current;
@@ -35,9 +48,155 @@ async function jobLoadList(selectCode) {
             sel.appendChild(op);
         });
         sel.value = (current && jobs.some(function (j) { return j.code === current; })) ? current : '';
+        jobSyncPickLabel();
     } catch (e) {
         console.warn('[jobset] 读取作业集列表失败', e);
     }
+}
+
+// ============================================================
+// 作业集选择弹窗（#jobPickModal，替代原下拉栏）
+//   列表 = 空白模板（永远在最上面）+ 本地作业集（从 /list_jobs 缓存渲染）。
+//   选中后写回隐藏的 #jobSelect 再走 jobOnSelect（原有载入/清空逻辑不动）。
+// ============================================================
+function jobOpenJobPicker() {
+    const modal = document.getElementById('jobPickModal');
+    if (!modal) return;
+    jobRenderJobPicker();
+    modal.classList.add('jp-open');
+    // 每次打开都重新拉一遍列表（别的窗口可能刚保存/删过）
+    jobLoadList().then(jobRenderJobPicker);
+}
+
+function jobCloseJobPicker() {
+    const modal = document.getElementById('jobPickModal');
+    if (modal) modal.classList.remove('jp-open');
+}
+
+function jobRenderJobPicker() {
+    const body = document.getElementById('jpBody');
+    if (!body) return;
+    body.innerHTML = '';
+    const sel = document.getElementById('jobSelect');
+    const curCode = sel ? sel.value : '';
+
+    const pick = function (code) {
+        if (sel) sel.value = code;
+        jobCloseJobPicker();
+        jobOnSelect();      // code='' 走「清空编辑器」，非空走「载入」
+    };
+
+    // ★ 空白模板：永远在最上面
+    const blank = document.createElement('button');
+    blank.type = 'button';
+    blank.className = 'jp-item jp-blank' + (curCode ? '' : ' jp-item-on');
+    blank.innerHTML = '<span class="jp-item-ico">✨</span><span>'
+        + '<div class="jp-item-name">空白模板</div>'
+        + '<div class="jp-item-code">从零开始（清空当前编辑器）</div></span>'
+        + (curCode ? '' : '<span class="jp-item-cur">当前</span>');
+    blank.addEventListener('click', function () { pick(''); });
+    body.appendChild(blank);
+
+    // 本地作业集
+    (_jobListCache || []).forEach(function (j) {
+        const item = document.createElement('button');
+        item.type = 'button';
+        const on = (j.code === curCode);
+        item.className = 'jp-item' + (on ? ' jp-item-on' : '');
+        item.innerHTML = '<span class="jp-item-ico">📚</span><span>'
+            + '<div class="jp-item-name">' + (j.name || j.code) + '</div>'
+            + '<div class="jp-item-code">' + j.code + '</div></span>'
+            + (on ? '<span class="jp-item-cur">当前</span>' : '');
+        item.addEventListener('click', function () { pick(j.code); });
+        body.appendChild(item);
+    });
+
+    if (!(_jobListCache || []).length) {
+        const empty = document.createElement('div');
+        empty.className = 'jp-empty';
+        empty.textContent = '（本地还没有作业集 —— 配好后点「💾 保存此作业集」）';
+        body.appendChild(empty);
+    }
+}
+
+// ★ 导出当前显示的作业集：浏览器直接下载 JSON（导出的是编辑器里的最新状态，
+//   不依赖有没有保存过 —— 走 jobBuild() 现算）。
+function jobExportJobset() {
+    const msg = document.getElementById('jobStatus');
+    let data;
+    try {
+        data = jobBuild();
+    } catch (e) {
+        if (msg) { msg.textContent = '❌ 导出失败：' + e; msg.style.color = '#dc2626'; }
+        return;
+    }
+    const fname = (jobMeta.name || jobMeta.code || '作业集').replace(/[\\/:*?"<>|]/g, '_') + '.json';
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 400);
+    if (msg) { msg.textContent = '📤 已导出「' + fname + '」'; msg.style.color = '#22a65e'; }
+}
+
+// ★ 导入作业集：读 JSON 文件 -> 装进编辑器（不自动保存，看完满意再点💾）
+function jobImportJobset(file) {
+    const msg = document.getElementById('jobStatus');
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function () {
+        try {
+            const job = JSON.parse(String(reader.result || ''));
+            if (!job || typeof job !== 'object' || !Array.isArray(job.tables) || !job.tables.length) {
+                throw new Error('不是有效的作业集文件（缺 tables）');
+            }
+            // 先整体清空再装载（与载入本地作业集同一口径，避免字段残留）
+            jobResetEditor(true);
+            jobApplyLoaded(job, job.code || '');
+            jobSyncPickLabel();
+            jobCloseJobPicker();
+            if (msg) {
+                msg.textContent = '📥 已导入「' + (jobMeta.name || jobMeta.code || file.name) + '」（未保存，确认后点💾）';
+                msg.style.color = '#d97706';
+            }
+        } catch (e) {
+            if (msg) { msg.textContent = '❌ 导入失败：' + e.message; msg.style.color = '#dc2626'; }
+        }
+    };
+    reader.onerror = function () {
+        if (msg) { msg.textContent = '❌ 读文件失败'; msg.style.color = '#dc2626'; }
+    };
+    reader.readAsText(file, 'utf-8');
+}
+
+function jobBindJobPicker() {
+    const modal = document.getElementById('jobPickModal');
+    if (!modal) return;
+    const open = document.getElementById('jobPickBtn');
+    if (open) open.addEventListener('click', jobOpenJobPicker);
+    const close = document.getElementById('jpClose');
+    if (close) close.addEventListener('click', jobCloseJobPicker);
+    // 底部：导出当前 / 导入文件
+    const exp = document.getElementById('jpExport');
+    if (exp) exp.addEventListener('click', jobExportJobset);
+    const impBtn = document.getElementById('jpImport');
+    const impFile = document.getElementById('jpImportFile');
+    if (impBtn && impFile) {
+        impBtn.addEventListener('click', function () { impFile.click(); });
+        impFile.addEventListener('change', function () {
+            const f = this.files && this.files[0];
+            this.value = '';                 // 允许重复选同一个文件
+            jobImportJobset(f);
+        });
+    }
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) jobCloseJobPicker();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('jp-open')) jobCloseJobPicker();
+    });
 }
 
 // 选中下拉项 → 载入该作业集到棋盘，并设为当前（供 Endless_ref.json 使用）
@@ -47,10 +206,11 @@ async function jobOnSelect() {
     const code = sel ? sel.value : '';
     const msg = document.getElementById('jobStatus');
 
-    if (!code) {                       // ★ 切到「请选择」= 清空所有设置
+    if (!code) {                       // ★ 切到「空白模板」= 清空所有设置
         jobResetEditor();
         await jobSetCurrent('');
-        if (msg) { msg.textContent = '已清空（未选择作业集）'; msg.style.color = '#94a3b8'; }
+        jobSyncPickLabel();
+        if (msg) { msg.textContent = '已清空（空白模板）'; msg.style.color = '#94a3b8'; }
         return;
     }
 
@@ -117,6 +277,11 @@ function jobResetEditor(quiet) {
 function jobApplyLoaded(job, code) {
     jobMeta.code = code || job.code || '';
     jobMeta.name = job.name || '';
+    // 作业集级参数：识别速率 / 调配参数（缺省回落默认值）
+    jobMeta.everyN = (Number.isFinite(+job.everyN) && +job.everyN >= 1)
+        ? Math.floor(+job.everyN) : JOB_EVERY_DEFAULT;
+    jobMeta.swipeMs = (Number.isFinite(+job.swipeMs) && +job.swipeMs >= 10)
+        ? Math.floor(+job.swipeMs) : 80;
     jobTables = Array.isArray(job.tables) ? job.tables : [];
     jobTables.forEach(function (t) {
         if (!t.slots) t.slots = {};

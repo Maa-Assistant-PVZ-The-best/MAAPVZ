@@ -202,7 +202,7 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .seq-chain.seq-over-top    { box-shadow:0 -3px 0 0 #2d7aff; }
 .seq-chain.seq-over-bottom { box-shadow:0  3px 0 0 #2d7aff; }
 .seq-chain-head {
-    display:flex; align-items:center; gap:6px; padding:4px 8px;
+    display:flex; align-items:center; gap:7px; padding:6px 10px;
     background:#f1f5f9; font-size:12px; font-weight:600; color:#334155;
     border-bottom:1px solid #e2e8f0;
     /* ★ 允许换行：块头里可能塞很多控件（如「切换形态」的槽位下拉 + 次数输入）。
@@ -411,7 +411,7 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 #seqToggle.seq-toggle-hidden { opacity:0; pointer-events:none; }
 
 #seqDrawer {
-    position:fixed; right:0; top:0; bottom:0; width:360px; max-width:90vw;
+    position:fixed; right:0; top:0; bottom:0; width:480px; max-width:92vw;
     z-index:10042; background:#fff;
     border-left:1px solid #e2e8f0;
     box-shadow:-10px 0 30px rgba(15,23,42,.18);
@@ -1038,33 +1038,33 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 
 /* ★ 紧凑块：通用动作 / 喂豆 / 铲子 —— 它们都只是「一个动作」，
    不该占一整块的高度。只保留一行头，动作就是 head 里的那个图标+名字。 */
-.seq-chain.seq-chain-compact { border-radius: 7px; }
+.seq-chain.seq-chain-compact { border-radius: 8px; }
 .seq-chain-compact .seq-chain-head {
-    padding: 3px 7px; gap: 5px;
+    padding: 5px 9px; gap: 7px;
     background: #eef2ff; border-bottom: none;
-    font-size: 11px; color: #3730a3;
+    font-size: 12px; color: #3730a3;
 }
-.seq-chain-compact .seq-chain-head .seq-grip { font-size: 11px; color: #a5b4fc; }
+.seq-chain-compact .seq-chain-head .seq-grip { font-size: 12px; color: #a5b4fc; }
 .seq-chain-compact .seq-chain-head .seq-order {
-    flex: 0 0 15px; height: 15px; line-height: 15px;
-    font-size: 9px; background: #6366f1;
+    flex: 0 0 17px; height: 17px; line-height: 17px;
+    font-size: 10px; background: #6366f1;
 }
-.seq-chain-compact .seq-chain-head .seq-ico { font-size: 12px; display: flex; align-items: center; }
-/* 紧凑块头里的缩略图（植物 / 喂豆 / 铲子）：小一点，别撑高那一行 */
+.seq-chain-compact .seq-chain-head .seq-ico { font-size: 15px; display: flex; align-items: center; }
+/* 紧凑块头里的缩略图（植物 / 喂豆 / 铲子） */
 .seq-chain-compact .seq-chain-head .seq-thumb {
     position: relative;
-    width: 16px; height: 16px; flex: 0 0 16px;
+    width: 26px; height: 26px; flex: 0 0 26px;
     display: flex; align-items: center; justify-content: center;
-    border-radius: 3px; font-size: 12px;
+    border-radius: 4px; font-size: 15px;
 }
 .seq-chain-compact .seq-chain-head .seq-thumb img,
 .seq-chain-compact .seq-chain-head .seq-thumb .seq-thumb-img {
-    width: 16px; height: 16px; object-fit: contain; display: block;
+    width: 26px; height: 26px; object-fit: contain; display: block;
 }
 .seq-chain-compact .seq-chain-head .seq-cell {
-    font-size: 9px; color: #94a3b8;
+    font-size: 10px; color: #94a3b8;
 }
-.seq-chain-compact .seq-chain-head .seq-slot { font-size: 11px; }
+.seq-chain-compact .seq-chain-head .seq-slot { font-size: 12px; }
 .seq-chain-compact .seq-chain-del { margin-left: auto; }
 /* 紧凑块内部若有 chip（喂豆/铲子带落点），横排一行不换行撑高 */
 .seq-chain-compact .seq-chain-body { padding: 2px 6px 3px; gap: 2px; }
@@ -1097,6 +1097,9 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     white-space: nowrap; cursor: pointer;
 }
 .seq-param-chip:hover { background: #cffafe; border-color: #0891b2; }
+/* 只读参数签（参数已挪进 ⚙ 弹窗调）：不可点，仅展示 */
+.seq-param-chip-ro { cursor: default; }
+.seq-param-chip-ro:hover { background: #ecfeff; border-color: #a5f3fc; }
 /* 编辑态容器（默认隐藏，点摘要才展开） */
 .seq-param-editors { display: inline-flex; align-items: center; flex: 0 0 auto; }
 
@@ -1132,17 +1135,17 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     font-size: 9px; color: #0e7490; margin-left: 1px; flex: 0 0 auto;
 }
 
-/* 缩略图：链条里的植物头像 */
+/* 缩略图：链条里的植物头像（块头图标放大一档，块整体跟着变大） */
 .seq-ico .seq-thumb-img,
 .seq-chain-head .seq-ico .seq-thumb-img {
-    width: 20px; height: 20px; object-fit: contain; display: block;
-    border-radius: 3px;
+    width: 28px; height: 28px; object-fit: contain; display: block;
+    border-radius: 4px;
 }
 
-/* 「插入等待」按钮：灰色小按钮，hover 才显眼 */
+/* 「步骤设置」按钮（⚙，插在每一步头上） */
 .seq-wbtn {
-    margin-left: 2px; padding: 0 5px; height: 17px; line-height: 15px;
-    font-size: 10px; cursor: pointer;
+    margin-left: 2px; padding: 0 6px; height: 22px; line-height: 20px;
+    font-size: 12px; cursor: pointer;
     border: 1px solid #cbd5e1; border-radius: 4px;
     background: #f8fafc; color: #64748b;
 }
@@ -1155,6 +1158,13 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 6px;
     font-size: 11px; color: #3730a3;
 }
+/* ★ 全局吸附版：固定在抽屉视口顶部，滚动不跑（不再是「当前链条最上面」） */
+.seq-selbar.seq-selbar-sticky {
+    position: sticky; top: 0; z-index: 6;
+    margin: -8px -12px 6px; padding: 6px 12px;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 10px rgba(15,23,42,.10);
+}
 .seq-selbar-tip { flex: 1; font-weight: 600; }
 .seq-selbar-clear {
     padding: 1px 8px; font-size: 11px; cursor: pointer;
@@ -1162,6 +1172,145 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     background: #fff; color: #4338ca;
 }
 .seq-selbar-clear:hover { background: #4338ca; border-color: #4338ca; color: #fff; }
+/* 「无间隔动作组」按钮（在清空已勾选的左边） */
+.seq-selbar-noint {
+    padding: 1px 8px; font-size: 11px; cursor: pointer;
+    border: 1px solid #fde68a; border-radius: 4px;
+    background: #fffbeb; color: #b45309; font-weight: 600;
+}
+.seq-selbar-noint:hover { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+
+/* 无间隔组「」成员步骤：琥珀色左边条连成一串 + 首尾圆角收拢 */
+.seq-chain.seq-noint {
+    background: #fffbeb;
+    border-left: 3px solid #f59e0b;
+    border-radius: 0 8px 8px 0;
+}
+/* 组首/组尾：半圆角收拢 + 「」角标 */
+.seq-chain.seq-noint-first { border-radius: 8px 8px 8px 0; margin-top: 2px; }
+.seq-chain.seq-noint-last  { border-radius: 0 8px 8px 8px; margin-bottom: 2px; }
+/* 「」角标：组首挂「、组尾挂」，一眼看出组的范围 */
+.seq-noint-tag {
+    font-size: 13px; font-weight: 700; color: #d97706;
+    flex: 0 0 auto; line-height: 1; user-select: none;
+}
+
+/* ============ 步骤设置弹窗（每步的 ⚙：插入等待 / 调配参数） ============ */
+#stepCfgModal {
+    position: fixed; inset: 0; z-index: 10090;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#stepCfgModal.sc-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#stepCfgModal .sc-panel {
+    width: min(320px, 88vw);
+    background: #fff; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#stepCfgModal .sc-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 16px 10px; border-bottom: 1px solid #e2e8f0;
+}
+#stepCfgModal .sc-dot { width: 6px; height: 6px; border-radius: 50%; background: #6366f1; }
+#stepCfgModal .sc-title { font-size: 13px; font-weight: 700; color: #4f46e5; }
+#stepCfgModal .sc-close {
+    width: 24px; height: 24px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 13px; line-height: 1;
+}
+#stepCfgModal .sc-close:hover { background: #e2e8f0; }
+#stepCfgModal .sc-body { padding: 14px 16px; }
+#stepCfgModal .sc-opt {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; text-align: left;
+    border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
+    font-size: 12px; font-family: inherit; color: #334155;
+}
+#stepCfgModal .sc-opt:hover { border-color: #a5b4fc; background: #eef2ff; }
+#stepCfgModal .sc-opt .sc-opt-ico { font-size: 16px; }
+#stepCfgModal .sc-opt .sc-opt-name { font-weight: 700; }
+#stepCfgModal .sc-opt .sc-opt-desc { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+#stepCfgModal .sc-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+#stepCfgModal .sc-row-label { font-size: 11px; color: #64748b; width: 60px; flex: none; }
+#stepCfgModal .sc-input {
+    flex: 1; min-width: 0; border: 1px solid #cbd5e1; border-radius: 8px;
+    padding: 5px 8px; font-size: 12px; text-align: center;
+}
+#stepCfgModal .sc-input:focus { outline: none; border-color: #6366f1; }
+#stepCfgModal .sc-unit { font-size: 10px; color: #94a3b8; flex: none; }
+#stepCfgModal .sc-tip { font-size: 10px; color: #94a3b8; line-height: 1.6; margin: 2px 0 8px; }
+#stepCfgModal .sc-foot {
+    padding: 10px 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;
+}
+#stepCfgModal .sc-back {
+    padding: 6px 12px; font-size: 12px; cursor: pointer; border-radius: 8px;
+    background: #fff; border: 1px solid #cbd5e1; color: #475569; font-family: inherit;
+}
+#stepCfgModal .sc-back:hover { background: #f1f5f9; }
+
+/* 高级设置：识别结算速率输入框右侧的说明文字（原「?」气泡改为直述） */
+.ja-help-text { font-size: 10px; color: #94a3b8; flex: 1; }
+
+/* ============ 作业集选择弹窗（替代原下拉栏） ============ */
+#jobPickModal {
+    position: fixed; inset: 0; z-index: 10095;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#jobPickModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobPickModal .jp-panel {
+    width: min(360px, 90vw); max-height: 78vh;
+    background: #fff; border-radius: 14px; overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#jobPickModal .jp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 16px 10px; border-bottom: 1px solid #e2e8f0;
+}
+#jobPickModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+#jobPickModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#jobPickModal .jp-close {
+    width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 13px; line-height: 1;
+}
+#jobPickModal .jp-close:hover { background: #e2e8f0; }
+#jobPickModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
+#jobPickModal .jp-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;
+    border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
+    font-size: 12px; font-family: inherit; color: #334155;
+}
+#jobPickModal .jp-item:hover { border-color: #93c5fd; background: #eff6ff; }
+#jobPickModal .jp-item.jp-item-on { border-color: #2563eb; background: #dbeafe; }
+#jobPickModal .jp-item .jp-item-ico { font-size: 16px; }
+#jobPickModal .jp-item .jp-item-name { font-weight: 700; }
+#jobPickModal .jp-item .jp-item-code { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+#jobPickModal .jp-item .jp-item-cur { margin-left: auto; font-size: 10px; color: #1d4ed8; font-weight: 700; }
+/* 空白模板：永远在最上面，虚线框 */
+#jobPickModal .jp-item.jp-blank {
+    border-style: dashed; border-color: #cbd5e1; background: #fff;
+}
+#jobPickModal .jp-item.jp-blank:hover { border-color: #2563eb; background: #eff6ff; }
+#jobPickModal .jp-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 10px 0 4px; }
+/* 底部固定：导出 / 导入 */
+#jobPickModal .jp-foot {
+    padding: 10px 14px; border-top: 1px solid #e2e8f0;
+    display: flex; gap: 8px; background: #f8fafc;
+}
+#jobPickModal .jp-foot button {
+    flex: 1; padding: 7px 0; cursor: pointer; border-radius: 8px;
+    font-size: 12px; font-weight: 600; font-family: inherit;
+}
+#jobPickModal .jp-exp { background: #2563eb; border: none; color: #fff; }
+#jobPickModal .jp-exp:hover { background: #1d4ed8; }
+#jobPickModal .jp-imp { background: #fff; border: 1px solid #cbd5e1; color: #475569; }
+#jobPickModal .jp-imp:hover { background: #f1f5f9; }
+
 
 .ga-badge {
     font-size: 9px; padding: 1px 5px; border-radius: 4px;
@@ -1608,9 +1757,9 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
    多选复选框 + 拖动落点指示
    ============================================================ */
 
-/* 块头里「名字后面」的多选框 */
+/* 块头里「名字后面」的多选框（放大一档，好勾） */
 .seq-chain-head .seq-pick {
-    width: 14px; height: 14px; margin: 0 6px 0 4px;
+    width: 20px; height: 20px; margin: 0 6px 0 4px;
     flex: 0 0 auto; cursor: pointer; accent-color: #2d7aff;
 }
 .seq-chain-head .seq-pick:hover { filter: brightness(.92); }

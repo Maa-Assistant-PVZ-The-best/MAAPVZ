@@ -302,14 +302,23 @@ class Table:
 
                 if not cells:
                     continue
-                out.append({
+                rec = {
                     "key": key_name,
                     "slot": str(slot) if slot not in (None, "") else None,
                     "type": typ,
                     "label": seg.get("label") or "",
                     "cells": cells,
                     "waits": _waits_for_seg(key_name, cells, which),
-                })
+                }
+                # ★ 无间隔组「」标记必须透传 —— 否则 compile 拿不到，
+                #   植物段永远不会进「」块（通用动作段走上面的全字段透传所以没事）。
+                if seg.get("noint") is True:
+                    rec["noint"] = True
+                # ★ 点击格子的连击次数也要透传（同理，别被规范化剥掉）
+                _tv = seg.get("times")
+                if isinstance(_tv, (int, float)) and _tv > 1:
+                    rec["times"] = int(_tv)
+                out.append(rec)
             return out
 
         def _waits_for_seg(key_name: str, cells: List[str], which: str) -> List[float]:

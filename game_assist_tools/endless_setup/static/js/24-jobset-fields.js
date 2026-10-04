@@ -108,18 +108,19 @@ const JOB_CUSTOM_ACT_NAME = { click: '点击', swipe: '滑动', hold: '长按', 
 function jobCustomSummary(seg) {
     if (!seg) return '';
     const act = JOB_CUSTOM_ACT_NAME[seg.act] || seg.act || '?';
-    if (seg.act === 'click') return act + '·' + (seg.from || '?');
-    if (seg.act === 'hold') return act + '·' + (seg.from || '?') + '·' + (seg.ms || 0) + 'ms';
-    if (seg.act === 'swipe') return act + '·' + (seg.from || '?') + '→' + (seg.to || '?') + '·' + (seg.ms || 0) + 'ms';
+    const tm = (Number(seg.times) > 1) ? ('×' + seg.times) : '';
+    if (seg.act === 'click') return act + '·' + (seg.from || '?') + tm;
+    if (seg.act === 'hold') return act + '·' + (seg.from || '?') + '·' + (seg.ms || 0) + 'ms' + tm;
+    if (seg.act === 'swipe') return act + '·' + (seg.from || '?') + '→' + (seg.to || '?') + '·' + (seg.ms || 0) + 'ms' + tm;
     if (seg.act === 'multi') {
         const n = Array.isArray(seg.pairs) ? seg.pairs.length : 0;
-        return act + '×' + n + '·' + (seg.ms || 0) + 'ms';
+        return act + '×' + n + '·' + (seg.ms || 0) + 'ms' + tm;
     }
     return act;
 }
 
 // 自定义动作段字段的白名单拷贝（src -> dst）；四处维护点统一走这里
-const JOB_CUSTOM_FIELDS = ['act', 'from', 'to', 'pairs'];   // ms 走公共 ms 通道
+const JOB_CUSTOM_FIELDS = ['act', 'from', 'to', 'pairs', 'times'];   // ms 走公共 ms 通道
 function jobCopyCustomFields(src, dst) {
     if (!src || !dst) return dst;
     JOB_CUSTOM_FIELDS.forEach(function (k) {

@@ -17,7 +17,11 @@ function jobSaveLocal() {
                     name: jobMeta.name || '',
                     version: '1.0',
                     maxLevel: '149',
-                    worlds: Array.from(document.querySelectorAll('#jobWorlds input:checked')).map(cb => cb.value)
+                    worlds: Array.from(document.querySelectorAll('#jobWorlds input:checked')).map(cb => cb.value),
+                    // ★ 作业集级参数：识别速率 / 默认滑动时长。
+                    //   不存的话刷新网页就丢（load 端在读它们）。
+                    everyN: jobGetEveryN(),
+                    swipeMs: jobGetSwipeMs()
                 },
                 currentTable: currentTable,
                 tables: jobTables,
@@ -83,6 +87,9 @@ function jobLoadLocal() {
         // 识别结算速率（高级设置）；旧数据没有 -> 用默认 10
         jobMeta.everyN = (Number.isFinite(+m.everyN) && +m.everyN >= 1)
             ? Math.floor(+m.everyN) : JOB_EVERY_DEFAULT;
+        // 调配参数（步骤设置弹窗）；旧数据没有 -> 默认 80ms
+        jobMeta.swipeMs = (Number.isFinite(+m.swipeMs) && +m.swipeMs >= 10)
+            ? Math.floor(+m.swipeMs) : 80;
         if (Array.isArray(m.worlds)) {
             document.querySelectorAll('#jobWorlds input').forEach(cb => { cb.checked = m.worlds.includes(cb.value); });
         }
@@ -263,6 +270,12 @@ function jobInit() {
 
     // 高级设置（识别结算速率）
     jobBindAdv();
+
+    // 步骤设置弹窗（每步的 ⚙：插入等待 / 调配参数）
+    if (typeof jobBindStepCfg === 'function') jobBindStepCfg();
+
+    // 作业集选择弹窗（📂 按钮 -> 空白模板 + 本地作业集列表）
+    if (typeof jobBindJobPicker === 'function') jobBindJobPicker();
 
     // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
     const bdEl = document.getElementById('tfBoundary');

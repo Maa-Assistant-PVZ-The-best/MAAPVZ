@@ -259,12 +259,18 @@ function jobSegsToSteps(board, segs, which) {
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
             // ★ 自定义动作的 act/from/to/pairs —— 白名单拷贝，不带上就静默丢
             if (_gaId === 'custom') jobCopyCustomFields(seg, st);
+            // ★ 无间隔组「」标记
+            if (seg.noint === true) st.noint = true;
             out.push(st);
             return;
         }
-        // 植物：展开成「一株一步」
+        // 植物：展开成「一株一步」（无间隔组标记随步骤走）
         jobSegRealGidxs(board, seg, which).forEach(function (g) {
-            out.push({ kind: 'plant', key: seg.key, gidx: g });
+            const st = { kind: 'plant', key: seg.key, gidx: g };
+            if (seg.noint === true) st.noint = true;
+            // ★ 点击格子（tap）的连击次数 —— 不带上就静默丢
+            if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
+            out.push(st);
         });
     });
     return out;
@@ -285,16 +291,25 @@ function jobStepsToSegs(steps) {
             // ★ 自定义动作的 act/from/to/pairs —— 必须写回，否则重载后参数丢失
             const _ga = jobGenericActionOfKey(st.key);
             if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, o);
+            // ★ 无间隔组「」标记
+            if (st.noint === true) o.noint = true;
             segs.push(o);
             return;
         }
         const last = segs[segs.length - 1];
+        // ★ 合并条件加「同 noint、同 times」：组内/组外、连击数不同的
+        //   同槽连续落子**不许合并**，否则无间隔组边界/连击数会被吃掉。
         if (last && last.key === st.key && Array.isArray(last.picked)
+            && !!last.noint === !!st.noint
+            && (Number(last.times) || 0) === (Number(st.times) || 0)
             && last.picked[last.picked.length - 1] === st.gidx - 1) {
             last.picked.push(st.gidx);          // 连续的继续接在后面
             return;
         }
-        segs.push({ key: st.key, from: -1, to: -1, picked: [st.gidx] });
+        const o = { key: st.key, from: -1, to: -1, picked: [st.gidx] };
+        if (st.noint === true) o.noint = true;
+        if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
+        segs.push(o);
     });
     // picked 只有一项的还原成 from/to（更干净，也更接近旧数据的样子）
     segs.forEach(function (g) {
@@ -314,7 +329,8 @@ function jobSegFingerprint(s) {
          + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '')
          + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms)
          + '|' + (s.slot === undefined || s.slot === null ? '' : s.slot)
-         + '|' + (s.times === undefined || s.times === null ? '' : s.times);
+         + '|' + (s.times === undefined || s.times === null ? '' : s.times)
+         + '|' + (s.noint === true ? 'N' : '');
     // ★ 自定义动作：参数不同就是不同动作，指纹必须带上（否则两个不同的自定义段撞成同一个）
     if (String(s.key || '') === JOB_GA_PREFIX + 'custom') fp += '|' + jobCustomIdentity(s);
     return fp;
@@ -380,6 +396,9 @@ function jobResolveSteps(t, which, board) {
     const prev = _jobLastSteps[which];
     if (prev) jobCarryUids(steps, prev);
     _jobLastSteps[which] = steps;
+    // ★ 视图级归一化：孤立的 noint 步不带「」标记渲染（组至少 2 步）。
+    //   持久化出口（jobStoreSteps）里也有一份，这里是给「载入旧数据还没改动」兜底。
+    jobNormalizeNoint(steps);
     return steps;
 }
 
@@ -443,6 +462,19 @@ function jobCarryUids(newSteps, oldSteps) {
     return newSteps;
 }
 
+// ★ 无间隔组不变量：孤立的 noint 步（前后都不是组员）自动退回普通动作。
+//   组至少要 2 步才有意义 —— 比如 1-5 成组后把 234 解散/删掉/拖走，
+//   剩下的 1 和 5 各自孤零零还带着「」标记，必须在这里清掉。
+//   所有会让链发生变化的出口最终都会走 jobStoreSteps，所以在这归一化。
+function jobNormalizeNoint(steps) {
+    (steps || []).forEach(function (st, i, arr) {
+        if (!st || st.noint !== true) return;
+        const prev = arr[i - 1], next = arr[i + 1];
+        const hasMate = (prev && prev.noint === true) || (next && next.noint === true);
+        if (!hasMate) delete st.noint;
+    });
+}
+
 // 把步骤列表存回 t[field]（压缩成旧的段格式）
 //
 // ★ 只存「链里真正记过的」内容：
@@ -454,6 +486,7 @@ function jobCarryUids(newSteps, oldSteps) {
 function jobStoreSteps(t, which, board, steps) {
     const field = jobChainField(which, board);
     const solid = (steps || []).filter(function (s) { return s && !s.synthesized; });
+    jobNormalizeNoint(solid);   // ★ 孤立 noint 步退回普通动作（组至少 2 步）
     t[field] = jobStepsToSegs(solid);
     return t[field];
 }
@@ -477,6 +510,9 @@ function jobIsPicked(which, st) {
     return !!jobSeqSel[jobPickId(which, st)];
 }
 
+// ★ Shift+点击范围多选：记录「上一次勾的是哪一步」
+let _jobLastPick = null;   // { which, id }
+
 // 一个勾选框
 function jobBuildPickBox(which, st) {
     const cb = document.createElement('input');
@@ -484,15 +520,35 @@ function jobBuildPickBox(which, st) {
     cb.className = 'seq-pick';
     const id = jobPickId(which, st);
     cb.checked = !!(jobSeqSel && jobSeqSel[id]);
-    cb.title = '勾选后可和其它勾选项一起拖动';
+    cb.title = '勾选后可和其它勾选项一起拖动；Shift+点击 = 范围多选';
     cb.draggable = false;
     cb.addEventListener('mousedown', function (e) { e.stopPropagation(); });
-    cb.addEventListener('click', function (e) { e.stopPropagation(); });
+    cb.addEventListener('click', function (e) {
+        e.stopPropagation();
+        cb._shift = e.shiftKey;      // change 事件拿不到 shiftKey，先存下来
+    });
     cb.addEventListener('change', function (e) {
         e.stopPropagation();
         if (!jobSeqSel) jobSeqSel = {};
-        if (this.checked) jobSeqSel[id] = true;
-        else delete jobSeqSel[id];
+        const applyOne = function (pid, on) {
+            if (on) jobSeqSel[pid] = true; else delete jobSeqSel[pid];
+        };
+        // ★ Shift 范围：上次勾的步 ~ 这步之间，全部设成这次的勾选状态
+        let ranged = false;
+        if (cb._shift && _jobLastPick && _jobLastPick.which === which) {
+            const t = jobTables[currentTable];
+            const steps = t ? jobResolveSteps(t, which, jobCurrentBoard()) : [];
+            const ids = steps.map(function (s) { return jobPickId(which, s); });
+            const a = ids.indexOf(_jobLastPick.id), b = ids.indexOf(id);
+            if (a >= 0 && b >= 0) {
+                const lo = Math.min(a, b), hi = Math.max(a, b);
+                for (let i = lo; i <= hi; i++) applyOne(ids[i], cb.checked);
+                ranged = true;
+            }
+        }
+        if (!ranged) applyOne(id, cb.checked);
+        _jobLastPick = { which: which, id: id };
+        cb._shift = false;
         jobRenderSeqChains();
     });
     return cb;
@@ -903,6 +959,200 @@ function jobInsertWaitAfter(t, which, board, st, ms) {
     jobAfterChainChange(t, which, '⏱ 已在下面插入一个「等待」');
 }
 
+// ============================================================
+// 步骤设置弹窗（#stepCfgModal）——每步块上的 ⚙
+//
+//   一级：两个选项 —— ① 插入等待节点  ② 调配参数
+//   二级（调配参数）：按步骤类型显示
+//       点击类（点波/捡豆/加速/自定义点击/点击格子）-> 连击次数（块上显示 ×N）
+//       切换形态 -> 槽位 + 次数
+//       等待节点 -> 等待毫秒
+//       其余（植物/喂豆/铲子/滑动类自定义）-> 默认滑动时长（作业集级 jobMeta.swipeMs）
+//   ★ 动作间隔固定 0.1s（BatchSwipe 默认），不开放调整。
+// ============================================================
+let _stepCfgCtx = null;   // { which, st } —— 弹窗服务的那一步
+
+function jobGetSwipeMs() {
+    const v = +(jobMeta && jobMeta.swipeMs);
+    return (Number.isFinite(v) && v >= 10) ? Math.floor(v) : 80;
+}
+
+// 这一步的「调配参数」该显示什么
+//   form      = 切换形态 -> 槽位 + 次数
+//   wait      = 等待节点 -> 等待毫秒（等待是时长不是动作，不给连击）
+//   clickish  = 点击类（点波/捡豆/加速/自定义点击/点击格子）-> 连击次数
+//   swipeable = 其余全部（植物/喂豆/铲子/自定义滑动/长按/多指）-> 连击次数 + 默认滑动时长
+//   ★ 连击是所有动作通用的（×N = 这个动作连做 N 次）；动作间隔固定 0.1s，不开放调整。
+function jobStepCfgKind(st) {
+    if (!st) return 'swipeable';
+    if (st.kind === 'wait') return 'wait';
+    const ga = jobGenericActionOfKey(st.key);
+    if (ga) {
+        if (ga.id === 'form') return 'form';
+        if (ga.id === 'custom') return (st.act === 'click') ? 'clickish' : 'swipeable';
+        return 'clickish';    // 点波/捡豆/加速 都是单击
+    }
+    const act = (typeof jobBoardActionOfKey === 'function') ? jobBoardActionOfKey(st.key) : null;
+    if (act && act.dslType === 'tap') return 'clickish';
+    return 'swipeable';
+}
+
+// 把参数写回那一步（按身份定位，st 的引用可能已过期）
+function jobStepCfgSave(patch) {
+    const ctx = _stepCfgCtx;
+    const t = jobTables[currentTable];
+    if (!ctx || !t) return;
+    const board = jobCurrentBoard();
+    const steps = jobResolveSteps(t, ctx.which, board);
+    let i = steps.indexOf(ctx.st);
+    if (i === -1) i = jobFindStepByIdentity(steps, ctx.st);
+    if (i === -1) return;
+    Object.assign(steps[i], patch);
+    _stepCfgCtx.st = steps[i];          // 换成新引用，连续调参不失效
+    jobStoreSteps(t, ctx.which, board, steps);
+    jobAfterChainChange(t, ctx.which, null);
+}
+
+// 二级「调配参数」按步骤类型渲染
+function jobRenderStepCfgParams() {
+    const box = document.getElementById('scParamsBody');
+    if (!box || !_stepCfgCtx) return;
+    box.innerHTML = '';
+    const kind = jobStepCfgKind(_stepCfgCtx.st);
+
+    const mkRow = function (label, unit) {
+        const row = document.createElement('div');
+        row.className = 'sc-row';
+        const lb = document.createElement('span');
+        lb.className = 'sc-row-label';
+        lb.textContent = label;
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.className = 'sc-input';
+        const un = document.createElement('span');
+        un.className = 'sc-unit';
+        un.textContent = unit || '';
+        row.appendChild(lb); row.appendChild(inp); row.appendChild(un);
+        box.appendChild(row);
+        return inp;
+    };
+    const mkTip = function (text) {
+        const tip = document.createElement('div');
+        tip.className = 'sc-tip';
+        tip.textContent = text;
+        box.appendChild(tip);
+    };
+    const bindInt = function (inp, min, max, def, apply, msg) {
+        inp.min = String(min); inp.max = String(max); inp.step = '1';
+        inp.value = def;
+        inp.addEventListener('change', function () {
+            let v = parseInt(this.value, 10);
+            if (!Number.isFinite(v) || v < min) v = def;
+            if (v > max) v = max;
+            this.value = v;
+            apply(v);
+            if (msg) setStatus(msg(v));
+        });
+    };
+
+    if (kind === 'form') {
+        const st = _stepCfgCtx.st;
+        bindInt(mkRow('槽位', '1-8（点哪个槽的切换形态）'), 1, 8,
+            Math.min(8, Math.max(1, Number(st.slot) || 1)),
+            function (v) { jobStepCfgSave({ slot: v }); },
+            function (v) { return '⚙ 切换形态槽位 = ' + v; });
+        bindInt(mkRow('次数', '次（连点几下）'), 1, 20,
+            Math.min(20, Math.max(1, Number(st.times) || 1)),
+            function (v) { jobStepCfgSave({ times: v }); },
+            function (v) { return '⚙ 切换形态次数 = ' + v; });
+        mkTip('只作用于这一步；块上会显示「槽N 丨 N次」。');
+    } else if (kind === 'wait') {
+        const st = _stepCfgCtx.st;
+        bindInt(mkRow('等待时长', 'ms'), 1, 600000,
+            Math.max(1, Number(st.ms) || 1000),
+            function (v) { jobStepCfgSave({ ms: v }); },
+            function (v) { return '⚙ 等待 = ' + v + 'ms'; });
+        mkTip('只作用于这一个等待节点。');
+    } else {
+        // ★ 连击是所有动作通用的（点击类/滑动类都有）：这个动作连做 N 次
+        const st = _stepCfgCtx.st;
+        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 20,
+            Math.min(20, Math.max(1, Number(st.times) || 1)),
+            function (v) { jobStepCfgSave({ times: v }); },
+            function (v) { return '⚙ 连击次数 = ' + v; });
+        if (kind === 'swipeable') {
+            bindInt(mkRow('滑动时长', 'ms（作业集级默认，所有滑动共用）'), 10, 5000, jobGetSwipeMs(),
+                function (v) { jobMeta.swipeMs = v; jobSaveLocal(); },
+                function (v) { return '⚙ 默认滑动时长 = ' + v + 'ms'; });
+            mkTip('连击只作用于这一步，块上显示 ×N；滑动时长是作业集级默认参数；动作间隔固定 0.1s，不可调。');
+        } else {
+            mkTip('只作用于这一步；块上会显示 ×N。');
+        }
+    }
+}
+
+function jobOpenStepCfg(which, st) {
+    const modal = document.getElementById('stepCfgModal');
+    if (!modal) return;
+    _stepCfgCtx = { which: which, st: st };
+    // 回到一级
+    const c = document.getElementById('scChoices'), p = document.getElementById('scParams');
+    const b = document.getElementById('scBack');
+    if (c) c.style.display = '';
+    if (p) p.style.display = 'none';
+    if (b) b.style.display = 'none';
+    modal.classList.add('sc-open');
+}
+
+function jobCloseStepCfg() {
+    const modal = document.getElementById('stepCfgModal');
+    if (modal) modal.classList.remove('sc-open');
+    _stepCfgCtx = null;
+}
+
+function jobBindStepCfg() {
+    const modal = document.getElementById('stepCfgModal');
+    if (!modal) return;
+    const bind = function (id, fn) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', fn);
+    };
+    bind('scClose', jobCloseStepCfg);
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) jobCloseStepCfg();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('sc-open')) jobCloseStepCfg();
+    });
+
+    // ① 插入等待节点：立刻执行并关窗
+    bind('scOptWait', function () {
+        const ctx = _stepCfgCtx;
+        const t = jobTables[currentTable];
+        if (ctx && t) {
+            jobInsertWaitAfter(t, ctx.which, jobCurrentBoard(), ctx.st);
+        }
+        jobCloseStepCfg();
+    });
+
+    // ② 调配参数：按步骤类型渲染后切到二级
+    bind('scOptParams', function () {
+        jobRenderStepCfgParams();
+        const c = document.getElementById('scChoices'), p = document.getElementById('scParams');
+        const b = document.getElementById('scBack');
+        if (c) c.style.display = 'none';
+        if (p) p.style.display = '';
+        if (b) b.style.display = '';
+    });
+    bind('scBack', function () {
+        const c = document.getElementById('scChoices'), p = document.getElementById('scParams');
+        const b = document.getElementById('scBack');
+        if (c) c.style.display = '';
+        if (p) p.style.display = 'none';
+        if (b) b.style.display = 'none';
+    });
+}
+
 // ★ 删除一步：从链里去掉 **并且** 从棋盘上删掉那一株（用户要求的联动）
 function jobDeleteStep(t, which, board, st) {
     if (!st) return;
@@ -1069,6 +1319,45 @@ function jobRenderSeqChains() {
     const board = jobCurrentBoard();
     jobEnsureSeq(board);
 
+    // ★ 全局「已勾选」工具栏：吸附在抽屉视口顶部（不是挂在某条链的最上面），
+    //   滚到哪儿都看得见、够得着。含：计数 / 「」无间隔组 / 清空已勾选。
+    const selTotal = ['once', 'loop', 'end'].reduce(function (n, w) {
+        return n + jobSelectedCount(w);
+    }, 0);
+    if (selTotal > 0) {
+        const bar = document.createElement('div');
+        bar.className = 'seq-selbar seq-selbar-sticky';
+
+        const tip = document.createElement('span');
+        tip.className = 'seq-selbar-tip';
+        tip.textContent = '已勾选 ' + selTotal + ' 项';
+        bar.appendChild(tip);
+
+        // 「」无间隔动作组：把勾选的连续步骤组成无间隔组（再点一次解散）
+        const nointBtn = document.createElement('button');
+        nointBtn.className = 'seq-selbar-noint';
+        nointBtn.textContent = '「」 无间隔组';
+        nointBtn.title = '勾选 ≥2 个连续普通步骤 -> 成组；勾选组里任意成员 -> 解散该组（其它组不受影响）';
+        nointBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            jobToggleNointGroup();
+        });
+        bar.appendChild(nointBtn);
+
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'seq-selbar-clear';
+        clearBtn.textContent = '✕ 清空已勾选';
+        clearBtn.title = '取消所有勾选';
+        clearBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            jobSeqSel = {};
+            jobRenderSeqChains();
+        });
+        bar.appendChild(clearBtn);
+
+        box.appendChild(bar);
+    }
+
     // 三条链：单次 → 循环 → 收尾（按勾选显示）
     ['once', 'loop', 'end'].forEach(function (which) {
         if (jobChainVisible[which] === false) return;
@@ -1078,6 +1367,58 @@ function jobRenderSeqChains() {
     jobRenderChainFilter();
     // ★ 同步通用动作按钮上的次数角标（链条变了 -> 次数可能变）
     if (typeof jobRefreshGenCounts === 'function') jobRefreshGenCounts();
+}
+
+// ★ 把勾选的连续步骤组成「无间隔动作组」（「」块）；已全部成组则解散。
+//   数据层：步骤 st.noint = true -> 段 seg.noint = true；
+//   compile.py 把**连续** noint 段的动作合进一个「a;b;c」块（BatchSwipe 内部不加间隔）。
+function jobToggleNointGroup() {
+    const t = jobTables[currentTable];
+    if (!t) return;
+    const board = jobCurrentBoard();
+
+    // 勾选必须落在**同一条链**
+    const hit = ['once', 'loop', 'end'].filter(function (w) { return jobSelectedCount(w) > 0; });
+    if (hit.length === 0) { setStatus('⚠️ 先勾选要成组的步骤'); return; }
+    if (hit.length > 1) { setStatus('⚠️ 无间隔组只能在一条链内组（勾选跨链了）'); return; }
+    const which = hit[0];
+
+    const steps = jobResolveSteps(t, which, board);
+    const selIdx = [];
+    steps.forEach(function (st, i) { if (jobIsPicked(which, st)) selIdx.push(i); });
+    if (!selIdx.length) { setStatus('⚠️ 先勾选要成组/解散的步骤'); return; }
+
+    // ★ 解散模式（勾选里**有**组员就进）：把勾选触及到的每个**完整组**解散 ——
+    //   自动向前后扩展到组边界，只清这些组的标记，其它组纹丝不动。
+    //   所以「勾组里任意一个成员 -> 点按钮」就能解散那一个组；勾两个组就解散两个。
+    if (selIdx.some(function (i) { return steps[i].noint === true; })) {
+        selIdx.forEach(function (i) {
+            if (steps[i].noint !== true) return;
+            let lo = i, hi = i;
+            while (lo > 0 && steps[lo - 1].noint === true) lo--;
+            while (hi < steps.length - 1 && steps[hi + 1].noint === true) hi++;
+            for (let k = lo; k <= hi; k++) delete steps[k].noint;
+        });
+        jobStoreSteps(t, which, board, steps);
+        jobSeqSel = {};
+        jobAfterChainChange(t, which, '已解散触及的无间隔组（其余组不受影响）');
+        return;
+    }
+
+    // —— 成组模式：勾选必须 >=2 且连续 ——
+    if (selIdx.length < 2) { setStatus('⚠️ 至少勾选 2 个连续步骤才能成组'); return; }
+    // 「」块在 DSL 里必须连续 —— 勾选的步骤必须相邻
+    for (let i = 1; i < selIdx.length; i++) {
+        if (selIdx[i] !== selIdx[i - 1] + 1) {
+            setStatus('⚠️ 只能把**连续**的步骤组成无间隔组（中间有空档）');
+            return;
+        }
+    }
+
+    selIdx.forEach(function (i) { steps[i].noint = true; });
+    jobStoreSteps(t, which, board, steps);
+    jobSeqSel = {};
+    jobAfterChainChange(t, which, '「」已把 ' + selIdx.length + ' 步组成无间隔动作组');
 }
 
 // 链显示下拉栏：默认全勾，点一下取消/恢复
@@ -1122,31 +1463,7 @@ function jobRenderOneChain(box, t, board, which) {
     hd.textContent = meta.icon + ' ' + meta.label;
     sec.appendChild(hd);
 
-    // ★ 只有在「已经勾了东西」的时候，才显示「清空已勾选」。
-    //   没勾任何东西时这里什么都不显示，界面保持干净。
-    const selCnt = jobSelectedCount(which);
-    if (selCnt > 0) {
-        const bar = document.createElement('div');
-        bar.className = 'seq-selbar';
-
-        const tip = document.createElement('span');
-        tip.className = 'seq-selbar-tip';
-        tip.textContent = '已勾选 ' + selCnt + ' 项';
-        bar.appendChild(tip);
-
-        const clearBtn = document.createElement('button');
-        clearBtn.className = 'seq-selbar-clear';
-        clearBtn.textContent = '✕ 清空已勾选';
-        clearBtn.title = '取消所有勾选';
-        clearBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            jobSeqSel = {};
-            jobRenderSeqChains();
-        });
-        bar.appendChild(clearBtn);
-
-        sec.appendChild(bar);
-    }
+    // （「已勾选 N 项 / 清空」工具栏已上移为抽屉级吸附栏，见 jobRenderSeqChains）
     box.appendChild(sec);
 
     const listBox = document.createElement('div');
@@ -1184,9 +1501,39 @@ function jobRenderOneChain(box, t, board, which) {
 //   wait    -> 等待（可改毫秒）
 // 每个块只代表链里的**一项**，拖动/删除都是对着一项操作。
 // ============================================================
+
+// 无间隔组「」的首尾判定：组首挂「、组尾挂」，中间成员只留色条
+function jobNointMarks(steps, pos) {
+    const st = steps && steps[pos];
+    if (!st || st.noint !== true) return { first: false, last: false };
+    return {
+        first: !(pos > 0 && steps[pos - 1] && steps[pos - 1].noint === true),
+        last: !(pos < steps.length - 1 && steps[pos + 1] && steps[pos + 1].noint === true),
+    };
+}
+
+// 把「」角标挂到块头（first -> 最左一个「；last -> 最右一个」）
+function jobAppendNointTags(head, nm) {
+    if (!nm || (!nm.first && !nm.last)) return;
+    if (nm.first) {
+        const tag = document.createElement('span');
+        tag.className = 'seq-noint-tag';
+        tag.textContent = '「';
+        tag.title = '无间隔动作组 起点（「」内动作间不加间隔）';
+        head.insertBefore(tag, head.firstChild);
+    }
+    if (nm.last) {
+        const tag = document.createElement('span');
+        tag.className = 'seq-noint-tag';
+        tag.textContent = '」';
+        tag.title = '无间隔动作组 终点';
+        head.appendChild(tag);
+    }
+}
+
 function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     if (st.kind === 'generic' || st.kind === 'wait') {
-        return jobBuildGenericBlock(t, board, st, which, pos);
+        return jobBuildGenericBlock(t, board, st, which, pos, steps);
     }
 
     const key = st.key;
@@ -1206,8 +1553,12 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     const place = jobPlacementsOf(board, key, which)[gIdx];
 
     const wrap = document.createElement('div');
+    const _nm = jobNointMarks(steps, pos);
     wrap.className = 'seq-chain' + ' m-' + which
-        + (isAction ? ' seq-chain-compact' : '');
+        + (isAction ? ' seq-chain-compact' : '')
+        + (st.noint === true ? ' seq-noint' : '')
+        + (_nm.first ? ' seq-noint-first' : '')
+        + (_nm.last ? ' seq-noint-last' : '');
     wrap.draggable = true;
     wrap.dataset.key = key;
     wrap.dataset.which = which;
@@ -1233,12 +1584,12 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     if (act) {
         // ★ 落子动作：图标由注册表给（新增动作自动生效）
         jobAppendIconImg(ico, jobBoardActionImg(act), {
-            cls: 'seq-ico-img', size: 20, alt: act.name, fallbackText: act.icon || '⚡'
+            cls: 'seq-ico-img', size: 30, alt: act.name, fallbackText: act.icon || '⚡'
         });
     } else if (isFeed) {
-        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 20, alt: '喂豆', fallbackText: '🫘' });
+        jobAppendIconImg(ico, JOB_UI_IMG.feed, { cls: 'seq-ico-img', size: 30, alt: '喂豆', fallbackText: '🫘' });
     } else if (isShovel) {
-        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 20, alt: '铲子', fallbackText: '🧤' });
+        jobAppendIconImg(ico, JOB_UI_IMG.shovel, { cls: 'seq-ico-img', size: 30, alt: '铲子', fallbackText: '🧤' });
     } else {
         const img = place && place.item && place.item.plant && place.item.plant.img;
         if (img) {
@@ -1270,6 +1621,15 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     }
     head.appendChild(hl);
 
+    // ★ 连击标记（所有动作都可以连击：×N，在这块的 ⚙ 步骤设置里调）
+    if (Number(st.times) > 1) {
+        const badge = document.createElement('span');
+        badge.className = 'seq-param-chip seq-param-chip-ro';
+        badge.textContent = '×' + st.times;
+        badge.title = '连击次数（在这块的 ⚙ 步骤设置里调）';
+        head.appendChild(badge);
+    }
+
     // 该株在棋盘上的格子坐标
     if (place) {
         const cellLbl = document.createElement('span');
@@ -1292,15 +1652,14 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
     // 勾选框
     head.appendChild(jobBuildPickBox(which, st));
 
-    // ★ 插一个「等待」到这一步后面（是一个独立的通用动作步骤，
-    //   不是「这个动作之后等待几秒」的附加属性）
+    // ★ 步骤设置（⚙）：弹窗里两个选项 —— 插入等待节点 / 调配参数
     const wbtn = document.createElement('button');
     wbtn.className = 'seq-wbtn';
-    wbtn.textContent = '⏱';
-    wbtn.title = '在这一步下面插入一个「等待」动作';
+    wbtn.textContent = '⚙';
+    wbtn.title = '步骤设置（插入等待节点 / 调配参数）';
     wbtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        jobInsertWaitAfter(t, which, board, st);
+        jobOpenStepCfg(which, st);
     });
     head.appendChild(wbtn);
 
@@ -1314,6 +1673,9 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
         jobDeleteStep(t, which, board, st);
     });
     head.appendChild(del);
+
+    // 无间隔组「」角标（组首「/组尾」）
+    jobAppendNointTags(head, _nm);
 
     wrap.appendChild(head);
 
@@ -1350,13 +1712,17 @@ function jobBuildStepBlock(t, board, st, which, pos, steps, gseq) {
 
 // 构建一个槽位块（可整块拖动排序）。seg = {key, from, to}
 // 通用动作 / 等待块（点波/捡豆/加速/等待）：没有格子，只有一个块
-function jobBuildGenericBlock(t, board, st, which, pos) {
+function jobBuildGenericBlock(t, board, st, which, pos, steps) {
     const ga = jobGenericActionOfKey(st.key) || { name: st.key, icon: '⚡' };
     const isWait = (st.kind === 'wait') || (ga.id === 'wait');
 
     const wrap = document.createElement('div');
     // ★ 通用动作是「一个动作」不是「一组植物」，用紧凑样式，别占整块高度
-    wrap.className = 'seq-chain seq-chain-generic seq-chain-compact m-' + which;
+    const _nm = jobNointMarks(steps, pos);
+    wrap.className = 'seq-chain seq-chain-generic seq-chain-compact m-' + which
+        + (st.noint === true ? ' seq-noint' : '')
+        + (_nm.first ? ' seq-noint-first' : '')
+        + (_nm.last ? ' seq-noint-last' : '');
     wrap.draggable = true;
     wrap.dataset.key = st.key;
     wrap.dataset.which = which;
@@ -1378,7 +1744,7 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 18, alt: ga.name, fallbackText: ga.icon || '⚡' });
+    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 28, alt: ga.name, fallbackText: ga.icon || '⚡' });
     head.appendChild(ico);
 
     const hl = document.createElement('span');
@@ -1431,96 +1797,37 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
         head.appendChild(unit);
     }
 
-    // ★ 带参数的通用动作：默认只显示一行**可读摘要**（如「槽3 丨 2次」），
-    //   点它才展开成输入框直接在原位编辑。
-    //
-    //   为什么不用「一直显示输入框」：
-    //     侧栏 (#seqDrawer) 固定 360px，块头还要放 拖柄/序号/图标/名字/
-    //     勾选框/⏱/✕ —— 再塞两个数字框进去，宽度必然不够，
-    //     数字会被压没（视觉上就是「被遮住」）。摘要文字是纯文本，
-    //     宽度自适应且**永远不会被压得看不见**。
+    // ★ 带参数的通用动作（切换形态）：块上只显示一行**可读摘要**（如「槽3 丨 2次」）。
+    //   参数统一在块的 ⚙ 弹窗里调 —— 不再内联输入框（块头宽度不够，会挤掉勾选/删除）。
     if (ga && jobActionHasParams(ga)) {
-        const applyParam = function (p, v) {
-            const steps = jobResolveSteps(t, which, board);
-            const i = jobFindStepByIdentity(steps, st);
-            if (i !== -1) {
-                steps[i][p.key] = v;
-                st[p.key] = v;
-                jobStoreSteps(t, which, board, steps);
-                jobSaveLocal();
-            }
-            jobRenderSeqChains();
-        };
-
-        // ---- 摘要态 ----
-        const chip = document.createElement('button');
-        chip.type = 'button';
-        chip.className = 'seq-param-chip';
-        chip.draggable = false;
+        const chip = document.createElement('span');
+        chip.className = 'seq-param-chip seq-param-chip-ro';
         chip.textContent = jobParamsSummary(ga, st);
-        chip.title = '点击修改参数';
-        chip.addEventListener('mousedown', function (e) { e.stopPropagation(); });
-        chip.addEventListener('click', function (e) {
-            e.stopPropagation();
-            chip.style.display = 'none';       // 摘要藏起来，换成输入框
-            editors.style.display = '';
-            const first = editors.querySelector('input');
-            if (first) { first.focus(); first.select(); }
-        });
+        chip.title = '参数在这块的 ⚙ 步骤设置里调';
         head.appendChild(chip);
+    }
 
-        // ---- 编辑态（默认隐藏）----
-        const editors = document.createElement('span');
-        editors.className = 'seq-param-editors';
-        editors.style.display = 'none';
-        editors.addEventListener('mousedown', function (e) { e.stopPropagation(); });
-        editors.addEventListener('click', function (e) { e.stopPropagation(); });
-
-        jobActionParams(ga).forEach(function (p) {
-            if (p.prefix) {
-                const pre = document.createElement('span');
-                pre.className = 'seq-param-affix';
-                pre.textContent = p.prefix;
-                editors.appendChild(pre);
-            }
-            editors.appendChild(jobBuildParamControl(p, st[p.key], {
-                width: 30,
-                onChange: function (v) { applyParam(p, v); }
-            }));
-            if (p.suffix) {
-                const suf = document.createElement('span');
-                suf.className = 'seq-param-affix';
-                suf.textContent = p.suffix;
-                editors.appendChild(suf);
-            }
-        });
-
-        // 编辑完（失焦离开整组）就收回摘要态
-        editors.addEventListener('focusout', function () {
-            setTimeout(function () {
-                if (editors.contains(document.activeElement)) return;
-                editors.style.display = 'none';
-                chip.style.display = '';
-            }, 120);
-        });
-
-        head.appendChild(editors);
+    // ★ 点击类动作的连击标记（点波/捡豆/加速/自定义点击）：times>1 时显示 ×N
+    if (ga && !jobActionHasParams(ga) && Number(st.times) > 1) {
+        const badge = document.createElement('span');
+        badge.className = 'seq-param-chip seq-param-chip-ro';
+        badge.textContent = '×' + st.times;
+        badge.title = '连击次数（在这块的 ⚙ 步骤设置里调）';
+        head.appendChild(badge);
     }
 
     // 勾选框
     head.appendChild(jobBuildPickBox(which, st));
 
-    // ★ 插一个「等待」到这一步后面。
-    //   用户要求「顺序链里让所有动作都可以等待」——所以**任何一步**
-    //   （植物或通用动作）都带这个按钮，点一下就在它下面插入一个独立的等待块。
+    // ★ 步骤设置（⚙）：弹窗里两个选项 —— 插入等待节点 / 调配参数
     //   （等待本身是独立的块，可以单独拖走/删掉，不是挂在动作上的属性。）
     const wbtn = document.createElement('button');
     wbtn.className = 'seq-wbtn';
-    wbtn.textContent = '⏱';
-    wbtn.title = '在这一步下面插入一个「等待」';
+    wbtn.textContent = '⚙';
+    wbtn.title = '步骤设置（插入等待节点 / 调配参数）';
     wbtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        jobInsertWaitAfter(t, which, board, st);
+        jobOpenStepCfg(which, st);
     });
     head.appendChild(wbtn);
 
@@ -1534,6 +1841,9 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
         jobDeleteStep(t, which, board, st);
     });
     head.appendChild(del);
+
+    // 无间隔组「」角标（组首「/组尾」）
+    jobAppendNointTags(head, _nm);
 
     wrap.appendChild(head);
 
@@ -2290,7 +2600,9 @@ function jobInstallSlotHotkeys() {
             const open = document.querySelector('#plantPicker.job-open')
                 || document.querySelector('#supplyPicker.sp-open')
                 || document.querySelector('#genPicker.gp-open')
-                || document.querySelector('#customPicker.cp-open');
+                || document.querySelector('#customPicker.cp-open')
+                || document.querySelector('#stepCfgModal.sc-open')
+                || document.querySelector('#jobPickModal.jp-open');
             if (open) return;
         } catch (err) { }
 
@@ -2698,6 +3010,14 @@ function jobBuildChain(t, board, which, forceBoss) {
     //   结果读了 t.loopOrder，把普通关的通用动作串进 boss 关。
     const segs = jobGetChainOrder(t, which, board, forceBoss);
 
+    // ★ 防御：孤立 noint 段不进「」（无间隔组至少 2 步，相邻同标记才算同组）
+    for (let _i = 0; _i < segs.length; _i++) {
+        const _s = segs[_i];
+        if (!_s || _s.noint !== true) continue;
+        const _p = segs[_i - 1], _n = segs[_i + 1];
+        if (!((_p && _p.noint === true) || (_n && _n.noint === true))) delete _s.noint;
+    }
+
     segs.forEach(function (seg) {
         // ★ 通用动作段（点波/捡豆/加速/等待）：没有格子，直接按"动作"导出
         const ga = jobGenericActionOfKey(seg.key);
@@ -2730,6 +3050,10 @@ function jobBuildChain(t, board, which, forceBoss) {
                 jobCopyCustomFields(seg, item);
                 if (seg.ms !== undefined && seg.ms !== null) item.ms = Number(seg.ms);
             }
+            // ★ 无间隔组「」标记：compile.py 把连续 noint 段合进一个「」块
+            if (seg.noint === true) item.noint = true;
+            // ★ 点击类动作的连击次数（点波/捡豆/加速/自定义点击；切换形态走 params 已带）
+            if (item.times === undefined && Number(seg.times) > 1) item.times = Number(seg.times);
             out.push(item);
             return;
         }
@@ -2766,14 +3090,19 @@ function jobBuildChain(t, board, which, forceBoss) {
             type = 'plant';
         }
 
-        out.push({
+        const item = {
             key: seg.key,
             slot: slot,                 // 植物槽号；落子动作为 null
             type: type,                 // plant | feed | shovel | tap | ...
             label: label,
             mode: mode,                 // once | loop
             cells: places.map(function (p) { return '格子' + (p.c + 1) + '_' + (p.r + 1); })
-        });
+        };
+        // ★ 无间隔组「」标记：compile.py 把连续 noint 段合进一个「」块
+        if (seg.noint === true) item.noint = true;
+        // ★ 点击格子的连击次数
+        if (Number(seg.times) > 1) item.times = Number(seg.times);
+        out.push(item);
     });
 
     return out;
@@ -2965,6 +3294,9 @@ function jobBuild() {
         worlds,
         max_level: 149,            // 最大关卡固定 149
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
+        // 调配参数（步骤 ⚙ 弹窗）：compile.py 的 swipe_ms。
+        // （动作间隔固定 0.1s = BatchSwipe 默认，不导出、不可调）
+        swipeMs: jobGetSwipeMs(),
         // 局外选卡（无尽局外 80 选，32-jobset-outer.js）：作业集级，与换阵无关
         //   plants = 有效选取顺序（阵容表锁定植物实时派生排前 + 手动点击顺序）；
         //   mode = auto/oneclick/confirm；一键选取/直接点确定 时局内不读列表 -> 导出空 plants

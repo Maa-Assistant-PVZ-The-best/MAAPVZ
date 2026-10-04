@@ -4,7 +4,7 @@
 <link rel="icon" type="image/png" href="https://daoyanxiaoz.github.io/Endless_Visualization_Configuration/images/PVZAA_small.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MaaPvz—可视化无尽通用框架</title>
+<title>MaaPvz—无尽挑战-作业集编辑工具</title>
 <!-- ============================================================================
   文件结构与功能说明（仅注释，不影响任何功能）
   ============================================================================
@@ -115,9 +115,61 @@
             <div class="ja-row">
                 <label class="ja-label" for="jobAdvEvery">识别结算速率</label>
                 <input type="number" id="jobAdvEvery" class="ja-input" min="1" max="999" value="10">
-                <span class="ja-help" data-tip="每执行 n 次动作，就会识别一遍游戏有无结算。识别会占用执行时长，设置太少了可能会导致动作执行很慢（例如 1）。">?</span>
+                <span class="ja-help-text">执行多少次动作就识别一次结算</span>
             </div>
             <div class="ja-hint">该设置作用于<b>所有组合动作</b>，每个作业集独立保存。</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 作业集选择弹窗（替代原下拉栏） ============ -->
+<div id="jobPickModal">
+    <div class="jp-panel">
+        <div class="jp-head">
+            <span class="jp-dot"></span>
+            <span class="jp-title">选择作业集</span>
+            <button class="jp-close" id="jpClose" title="关闭">✕</button>
+        </div>
+        <div class="jp-body" id="jpBody"><!-- JS 渲染：空白模板 + 本地作业集 --></div>
+        <div class="jp-foot">
+            <button class="jp-exp" id="jpExport" title="把当前显示的作业集下载成 JSON 文件">📤 导出当前作业集</button>
+            <button class="jp-imp" id="jpImport" title="从 JSON 文件导入作业集">📥 导入作业集</button>
+            <input type="file" id="jpImportFile" accept=".json,application/json" style="display:none;">
+        </div>
+    </div>
+</div>
+
+<!-- ============ 步骤设置弹窗（顺序链里每一步的 ⚙） ============ -->
+<div id="stepCfgModal">
+    <div class="sc-panel">
+        <div class="sc-head">
+            <span class="sc-dot"></span>
+            <span class="sc-title" id="scTitle">步骤设置</span>
+            <button class="sc-close" id="scClose" title="关闭">✕</button>
+        </div>
+        <!-- 一级：两个选项 -->
+        <div class="sc-body" id="scChoices">
+            <button class="sc-opt" id="scOptWait">
+                <span class="sc-opt-ico">⏱</span>
+                <span>
+                    <span class="sc-opt-name">插入等待节点</span>
+                    <div class="sc-opt-desc">在这一步下面插入一个独立的「等待」（默认 1000ms，可拖动/改毫秒）</div>
+                </span>
+            </button>
+            <button class="sc-opt" id="scOptParams">
+                <span class="sc-opt-ico">⚙</span>
+                <span>
+                    <span class="sc-opt-name">调配参数</span>
+                    <div class="sc-opt-desc">修改默认滑动时长 / 动作间隔（作用于整个作业集）</div>
+                </span>
+            </button>
+        </div>
+        <!-- 二级：调配参数（按步骤类型由 JS 渲染：连击/槽位次数/等待毫秒/滑动时长） -->
+        <div class="sc-body" id="scParams" style="display:none;">
+            <div id="scParamsBody"></div>
+        </div>
+        <div class="sc-foot">
+            <button class="sc-back" id="scBack" style="display:none;">← 返回</button>
         </div>
     </div>
 </div>
@@ -275,7 +327,7 @@
 </div>
 
 <div class="app">
-    <h1>🧩 无尽通用框架-可视化编辑界面</h1>
+    <h1>🧩 无尽挑战-作业集编辑工具</h1>
     <div class="toolbar">
         <button class="btn" id="undoBtn" data-tooltip="'ctrl+z'撤销上一步棋盘操作">↩ 撤销</button>
         <button class="btn" id="redoBtn" data-tooltip="'ctrl+y'重做棋盘操作">↪ 重做</button>
@@ -286,7 +338,9 @@
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px;">
             <b style="font-size:14px;">📚 作业集</b>
             <label style="font-size:12px;">选择作业集
-                <select id="jobSelect" style="min-width:190px;max-width:260px;">
+                <button class="btn" id="jobPickBtn" type="button" title="点开作业集列表">📂 <span id="jobPickLabel">— 请选择 —</span></button>
+                <!-- 隐藏的原生 select：只当状态持有器（jobLoadList/jobOnSelect/jobDelete 都读它） -->
+                <select id="jobSelect" style="display:none;">
                     <option value="">— 请选择 —</option>
                 </select>
             </label>

@@ -92,11 +92,27 @@ def build_chain_nodes(
         chain = rules.get(field) or []
         parts: List[str] = []
 
+        # ★ 无间隔组「」：连续 noint=true 的段，其动作合成一个「a;b;c」块，
+        #   BatchSwipe 内部不加间隔连发。缓冲到遇到普通段（或链尾）时 flush。
+        noint_buf: List[str] = []
+
+        def _flush_noint() -> None:
+            if noint_buf:
+                parts.append("「" + ";".join(noint_buf) + "」")
+                noint_buf.clear()
+
+        def _emit(seg: Dict[str, Any], seg_parts: List[str]) -> None:
+            if seg.get("noint"):
+                noint_buf.extend(seg_parts)
+            else:
+                _flush_noint()
+                parts.extend(seg_parts)
+
         for seg in chain:
             key = str(seg.get("key") or "").strip()
             typ = str(seg.get("type") or "plant").lower()
 
-            # ---- 通用动作段（点波/捡豆/加速/等待/切换形态）：没有格子，整段 = 一条 DSL ----
+            # ---- 通用动作段（点波/捡豆/加速/等待/切换形态/自定义）：没有格子，整段 = 一条 DSL ----
             if typ == "action" or key.startswith("ga:"):
                 r = _dsl.generic_dsl(
                     seg.get("action") or key,
@@ -107,7 +123,7 @@ def build_chain_nodes(
                     seg,          # ★ 整个段都当参数袋 —— 新动作免改这里
                 )
                 if r["dsl"]:
-                    parts.append(r["dsl"])
+                    _emit(seg, [p for p in r["dsl"].split(";") if p.strip()])
                 for m in r["missing"]:
                     log(f"  ⚠️ 通用动作跳过：{m}")
                 continue
@@ -146,18 +162,24 @@ def build_chain_nodes(
                 dst = _dsl.find_grass_point(coords, str(cell))
                 if dst is None:
                     continue
+                seg_parts: List[str] = []
+                # ★ 连击：所有动作通用（点击/滑动都 ×N = 连做 N 次）
+                n_rep = _num(seg.get("times"), 1)
+                n_rep = min(20, max(1, n_rep))
                 if src is None:
-                    parts.append(f"click:{dst}")
+                    seg_parts.extend([f"click:{dst}"] * n_rep)
                 else:
-                    parts.append(f"swipe:{src},{dst},{swipe_ms}")
+                    seg_parts.extend([f"swipe:{src},{dst},{swipe_ms}"] * n_rep)
                 # 等待：这个动作之后插入 sleep:N（BatchSwipe 支持 sleep:秒）
                 try:
                     sec = float(waits[i]) if i < len(waits) else 0.0
                 except (TypeError, ValueError):
                     sec = 0.0
                 if sec > 0:
-                    parts.append(f"sleep:{sec:g}")
+                    seg_parts.append(f"sleep:{sec:g}")
+                _emit(seg, seg_parts)
 
+        _flush_noint()   # 链尾：把末尾的无间隔组收进「」
         body = ";".join(parts)
         if not body:
             continue
@@ -453,6 +475,17 @@ def compile_jobset(raw: Dict[str, Any], log: LogFn = _noop) -> Dict[str, Any]:
 
     js = JobSet(raw, code=str(raw.get("code") or ""))
     every_n = _num(raw.get("everyN"), 10)
+    # ★ 调配参数（步骤块 ⚙ 弹窗里调）：默认滑动毫秒数 / 动作间隔秒数。
+    #   swipeMs 空 -> 80；actionInterval 空 -> 不加 @前缀（BatchSwipe 用自己的默认间隔）。
+    swipe_ms = _num(raw.get("swipeMs"), 80)
+    interval = raw.get("actionInterval")
+    if interval in (None, ""):
+        interval = None
+    else:
+        try:
+            interval = float(interval)
+        except (TypeError, ValueError):
+            interval = None
 
     out = copy.deepcopy(raw)
     out["format"] = 2
@@ -461,7 +494,8 @@ def compile_jobset(raw: Dict[str, Any], log: LogFn = _noop) -> Dict[str, Any]:
         compiled = {}
         for variant, is_boss in (("normal", False), ("boss", True)):
             ov, _chains = build_fight_override(
-                t, is_boss, coords, every_n, log=log)
+                t, is_boss, coords, every_n,
+                swipe_ms=swipe_ms, interval=interval, log=log)
             compiled[variant] = ov
         out["tables"][i]["compiled"] = compiled
 

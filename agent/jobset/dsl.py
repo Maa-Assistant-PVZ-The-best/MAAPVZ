@@ -339,7 +339,9 @@ def generic_dsl(
         if key is None:
             missing.append(f"{aid}：坐标表缺少「{GENERIC_CLICK_KEY[aid]}」")
         else:
-            parts.append(f"click:{key}")
+            # ★ 连击：网页端 ⚙ 弹窗调的 times（点一下 = 连点 N 次）
+            n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
+            parts.extend([f"click:{key}"] * n)
 
     elif aid == "custom":
         # ★ 自定义动作（网页端「更多 -> 自定义动作」）：段上带 act/from/to/ms/pairs
@@ -350,6 +352,8 @@ def generic_dsl(
         #   键名必须是坐标表里的**原名**（用户从坐标表挑的），不做前缀猜测。
         act = str(merged.get("act") or "").strip()
         ms_v = _clamp_int(merged.get("ms"), 50, 600000, 600)
+        # ★ 连击：所有自定义动作通用（点/滑/长按/多指 连做 N 次）
+        n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
 
         def _need(name: str) -> Optional[str]:
             k = str(merged.get(name) or "").strip()
@@ -361,15 +365,15 @@ def generic_dsl(
         if act == "click":
             k = _need("from")
             if k:
-                parts.append(f"click:{k}")
+                parts.extend([f"click:{k}"] * n)
         elif act == "swipe":
             a, b = _need("from"), _need("to")
             if a and b:
-                parts.append(f"swipe:{a},{b},{ms_v}")
+                parts.extend([f"swipe:{a},{b},{ms_v}"] * n)
         elif act == "hold":
             k = _need("from")
             if k:
-                parts.append(f"swipe:{k},{k},{ms_v}")
+                parts.extend([f"swipe:{k},{k},{ms_v}"] * n)
         elif act == "multi":
             raw_pairs = merged.get("pairs")
             if not isinstance(raw_pairs, list):
@@ -385,7 +389,7 @@ def generic_dsl(
                     continue
                 lines.append(f"{pa},{pb},{ms_v}")
             if len(lines) >= 2:
-                parts.append("multi:(" + ";".join(lines) + ")")
+                parts.extend(["multi:(" + ";".join(lines) + ")"] * n)
             elif not missing:
                 missing.append("自定义多指：至少需要 2 组有效坐标对")
         else:
