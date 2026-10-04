@@ -281,7 +281,8 @@
                     "name": "毁蛇(蛇果)",
                     "description": "卡槽见公告,需月卡",
                     "option": [
-                        "huin_snake_关卡选择"
+                        "huin_snake_关卡选择",
+                        "huin_snake_boss关喂豆间隔"
                     ],
                     "pipeline_override": {
                         "无尽挑战_埃及": {
