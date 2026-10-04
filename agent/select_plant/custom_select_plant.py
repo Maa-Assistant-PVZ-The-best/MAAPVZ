@@ -489,19 +489,36 @@ class SelectPlants(CustomAction):
 
     @staticmethod
     def _stopped(context):
-        """协作式停止检查：Maa 任务被关闭时 tasker.running 会变 False，
-        长循环应据此尽快退出，避免 python 停不下来。"""
+        """协作式停止检查：Maa 任务被关闭时 tasker 进入 stopping
+        （running 要等当前 action 返回才变 False——停止期间它仍是 True，
+        只查 running 会眼睁睁看着长循环继续跑，所以两个都要查）。
+
+        观测到停止时顺手通知 exit_watchdog：action 运行期间是唯一可靠的
+        停止观测点（action 外句柄即被回收）；VSCode 宿主下它会安排进程退出，
+        桌面端复用进程则无视。
+        """
         try:
             t = getattr(context, "tasker", None)
-            if t is not None:
-                run = getattr(t, "running", None)
-                if callable(run):
-                    run = run()
-                if run is False:
-                    return True
+            if t is None:
+                return False
+            stopped = False
+            for attr in ("stopping", "running"):
+                v = getattr(t, attr, None)
+                if callable(v):
+                    v = v()
+                # stopping=True 或 running=False 都算停
+                if (attr == "stopping" and v is True) or (attr == "running" and v is False):
+                    stopped = True
+                    break
+            if stopped:
+                try:
+                    import exit_watchdog
+                    exit_watchdog.on_task_stopped()
+                except Exception:
+                    pass
+            return stopped
         except Exception:
-            pass
-        return False
+            return False
 
     def _do_swipe(self, ctl, swipe, backtop=False):
         begin = swipe["end"] if backtop else swipe["begin"]

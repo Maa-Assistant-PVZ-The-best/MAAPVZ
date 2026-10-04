@@ -1014,7 +1014,7 @@ static registries = {
 | 启动网页 | 双击 `pvz.bat`（自动挑带 flask 的解释器），端口 **5000** |
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
-| 退出看门狗 | `agent/exit_watchdog.py`：MFA 停任务只停 tasker 不断连、关闭 MFA 时 `join()` 也不返回，python.exe 都会残留。两条互补路径：① agent 侧 tasker sink 收 `Tasker.Task` 终态事件（停止/成功/失败）→ 3s 后 `os._exit`；② 祖先进程监控（toolhelp32 快照记录父+祖父进程的 PID 与 exe 名，1.5s 轮询，消失或 PID 被复用即判宿主已关）→ 2s 后退出，覆盖 MFA 整体关闭。⚠️ 不要用轮询 `tasker.running` 的方案：句柄在 action 结束即被回收，会报 `tasker not found` 且在无 custom 的长窗口误自杀。入口 `exit_watchdog.arm(AgentServer)`，在 `main.py` import 区 |
+| 退出看门狗 | `agent/exit_watchdog.py`：关闭宿主（MFA/VSCode）时 `AgentServer.join()` 不返回，python.exe 残留。基础路径=**祖先进程监控**（toolhelp32 快照记录父+祖父的 PID 与 exe 名，1.5s 轮询，消失或 PID 被复用即判宿主已关 → 2s 后 `os._exit`）。**VSCode 扩展宿主（祖先含 Code.exe）额外武装停止即退出**，双保险：① `Tasker.Task` 终态事件 sink（客户端是否转发没保证）；② 长动作循环里的协作检查 `_stopped()`（custom_select_plant）观测到停止即 `on_task_stopped()`——**action 运行期间是唯一可靠观测点**（句柄有效；action 外即被回收）。扩展每次 startTask 会 agent start race 重拉死进程 → 停=自杀=下次跑新代码（dev 循环刚需；扩展复用进程导致旧代码驻留，容易误判"改动没生效"）。**桌面端 MFAAvalonia 绝不停止即退**：它停任务后不重拉只复用，自杀后第二次任务 custom 全废（2026-10-04 打包版实测）。轮询 `tasker.running` 路线废弃（句柄 action 结束即回收，报 `tasker not found`/误自杀）。⚠️ `_stopped` 必须查 `stopping` 而不只 `running`——停止期间 running 要等当前 action 返回才变 False（鸡生蛋），SelectPlants 曾因此停任务后还多滑 20s |
 
 ---
 

@@ -17,8 +17,10 @@ sys.path.insert(0, str(project_root_dir / "select_plant"))
 from maa.agent.agent_server import AgentServer
 from maa.toolkit import Toolkit
 
-# ★ 退出看门狗：任务停止/结束、或 MFA 进程关闭时 python 进程随之退出。
-#   两条路径：Tasker.Task 终态事件（快）+ 祖先进程监控（MFA 整体退出）。
+# ★ 退出看门狗：宿主（MFA/VSCode）死了 agent 随之退出。
+#   VSCode 扩展宿主下额外武装「停任务即退出」——扩展每次 startTask 会重拉
+#   死掉的 agent，等于改代码->停->重跑即生效；桌面端 MFAAvalonia 复用进程，
+#   绝不能停任务即退（否则第二次任务 custom 全废，2026-10-04 打包版实测）。
 import exit_watchdog
 exit_watchdog.arm(AgentServer)
 
