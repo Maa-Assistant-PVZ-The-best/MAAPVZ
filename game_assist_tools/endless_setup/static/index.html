@@ -215,6 +215,35 @@
     </div>
 </div>
 
+<!-- ============ 「更多」动作 -> 自定义动作弹窗（坐标表调配） ============ -->
+<div id="customPicker">
+    <div class="cp-panel">
+        <div class="cp-head">
+            <span class="cp-dot"></span>
+            <span class="cp-title">自定义动作</span>
+            <button class="cp-close" id="cpClose" title="关闭">✕</button>
+        </div>
+        <div class="cp-body">
+            <div class="mp-label">动作类型</div>
+            <div class="cp-types" id="cpTypes"><!-- JS 渲染 4 个类型按钮 --></div>
+            <div class="cp-fields" id="cpFields"><!-- JS 按类型渲染键名挑选/参数 --></div>
+            <div class="mp-label" style="margin-top:10px;">插入到哪条链？</div>
+            <div class="mp-target" id="cpTargetRow">
+                <span class="mp-arrow" id="cpPrev" title="上一条链">◀</span>
+                <span class="mp-chain" id="cpChain">1️⃣ 单次链（先执行一遍）</span>
+                <span class="mp-arrow" id="cpNext" title="下一条链">▶</span>
+            </div>
+            <div class="mp-hint">点击 / 右键可切换目标链（收尾链仅普通关有）</div>
+            <div class="mp-inserted" id="cpInserted"></div>
+        </div>
+        <div class="mp-foot">
+            <button class="mp-back" id="cpBack">← 返回</button>
+            <button class="mp-cancel" id="cpCancel">取消</button>
+            <button class="mp-ok" id="cpOk">确认插入</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 补给选取弹窗（堆叠卡片 + 图库，都在这里） ============ -->
 <div id="supplyPicker">
     <div class="sp-panel">
@@ -579,4 +608,5 @@
 <script src="/static/js/30-jobset-generic.js"></script>
 <script src="/static/js/31-jobset-adv.js"></script>
 <script src="/static/js/32-jobset-outer.js"></script>
+<script src="/static/js/33-jobset-custom.js"></script>
 </body></html>

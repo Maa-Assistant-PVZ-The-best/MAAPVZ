@@ -177,6 +177,8 @@ function jobGetChainOrder(t, which, board, forceBoss) {
                 //      段变成没有 slot 的 form，运行时判越界直接不执行。
                 if (e.slot !== undefined && Number.isFinite(Number(e.slot))) o2.slot = Number(e.slot);
                 if (e.times !== undefined && Number.isFinite(Number(e.times))) o2.times = Number(e.times);
+                // ★ 自定义动作的 act/from/to/pairs —— 不保留就被静默丢成空段
+                if (o2.ga === 'custom') jobCopyCustomFields(e, o2);
                 return o2;
             }
             const o = {

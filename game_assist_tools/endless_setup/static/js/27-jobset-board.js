@@ -246,10 +246,19 @@ function jobSegsToSteps(board, segs, which) {
         // 通用动作 / 等待
         if (jobIsGenericKey(seg.key)) {
             const st = { kind: 'generic', key: seg.key };
-            if (seg.ms !== undefined && seg.ms !== null) { st.kind = 'wait'; st.ms = Number(seg.ms); }
+            const _ga = jobGenericActionOfKey(seg.key);
+            const _gaId = _ga ? _ga.id : '';
+            if (seg.ms !== undefined && seg.ms !== null) {
+                // ★ 只有「等待」的 ms 才升级成 wait 步骤；
+                //   自定义动作的 ms 是动作参数（滑动/长按时长），不能变成等待。
+                if (_gaId === 'wait') { st.kind = 'wait'; st.ms = Number(seg.ms); }
+                else st.ms = Number(seg.ms);
+            }
             // ★ 切换形态的参数（槽位 + 次数）—— 不带上就会在渲染/存盘时被丢掉
             if (seg.slot !== undefined && seg.slot !== null) st.slot = Number(seg.slot);
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
+            // ★ 自定义动作的 act/from/to/pairs —— 白名单拷贝，不带上就静默丢
+            if (_gaId === 'custom') jobCopyCustomFields(seg, st);
             out.push(st);
             return;
         }
@@ -273,6 +282,9 @@ function jobStepsToSegs(steps) {
             // ★ 切换形态的参数（槽位 + 次数）—— 必须写回，否则重载后参数丢失
             if (st.slot !== undefined && st.slot !== null) o.slot = Number(st.slot);
             if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
+            // ★ 自定义动作的 act/from/to/pairs —— 必须写回，否则重载后参数丢失
+            const _ga = jobGenericActionOfKey(st.key);
+            if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, o);
             segs.push(o);
             return;
         }
@@ -298,11 +310,14 @@ function jobStepsToSegs(steps) {
 // 段身份指纹（含 ms，用于区分两个同内容的「等待」）
 function jobSegFingerprint(s) {
     if (!s) return '';
-    return s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
+    let fp = s.key + '|' + (s.from | 0) + '|' + (s.to === null || s.to === undefined ? '*' : s.to)
          + '|' + (Array.isArray(s.picked) ? s.picked.join(',') : '')
          + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms)
          + '|' + (s.slot === undefined || s.slot === null ? '' : s.slot)
          + '|' + (s.times === undefined || s.times === null ? '' : s.times);
+    // ★ 自定义动作：参数不同就是不同动作，指纹必须带上（否则两个不同的自定义段撞成同一个）
+    if (String(s.key || '') === JOB_GA_PREFIX + 'custom') fp += '|' + jobCustomIdentity(s);
+    return fp;
 }
 function jobSameSeg(a, b) {
     return a === b || (!!a && !!b && jobSegFingerprint(a) === jobSegFingerprint(b));
@@ -406,10 +421,12 @@ function jobCarryUids(newSteps, oldSteps) {
         const m = {};
         list.forEach(function (s) {
             if (!s || (s.kind !== 'generic' && s.kind !== 'wait')) return;
-            const gk = s.key
+            let gk = s.key
                 + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms)
                 + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
                 + 'x' + (s.times === undefined || s.times === null ? '' : s.times);
+            // ★ 自定义动作：参数不同 = 不同动作，组键必须带上（否则配对串位）
+            if (String(s.key || '') === JOB_GA_PREFIX + 'custom') gk += '|' + jobCustomIdentity(s);
             (m[gk] = m[gk] || []).push(s);
         });
         return m;
@@ -1369,6 +1386,16 @@ function jobBuildGenericBlock(t, board, st, which, pos) {
     hl.textContent = ga.name;
     head.appendChild(hl);
 
+    // ★ 自定义动作：名字后面跟一段只读摘要（类型 + 键名 + 时长），
+    //   不进 params 内联编辑系统（它是专属弹窗配置的复合参数）。
+    if (ga.id === 'custom') {
+        const sum = document.createElement('span');
+        sum.className = 'seq-custom-summary';
+        sum.textContent = jobCustomSummary(st);
+        sum.title = sum.textContent;
+        head.appendChild(sum);
+    }
+
     // ★ 等待的毫秒数就地可改（这是「等待」这个动作唯一的参数）
     if (isWait) {
         const inp = document.createElement('input');
@@ -2262,7 +2289,8 @@ function jobInstallSlotHotkeys() {
         try {
             const open = document.querySelector('#plantPicker.job-open')
                 || document.querySelector('#supplyPicker.sp-open')
-                || document.querySelector('#genPicker.gp-open');
+                || document.querySelector('#genPicker.gp-open')
+                || document.querySelector('#customPicker.cp-open');
             if (open) return;
         } catch (err) { }
 
@@ -2270,6 +2298,9 @@ function jobInstallSlotHotkeys() {
         if (k === 'w') { e.preventDefault(); jobCycleSlot(-1); }
         else if (k === 's') { e.preventDefault(); jobCycleSlot(1); }
         else if (k === 'f') { e.preventDefault(); jobCycleSlotOrChain(); }
+        // Q/E 循环切换阵容表（上面的守卫已挡掉输入框/弹层场景）
+        else if (k === 'q') { e.preventDefault(); jobCycleTable(-1); }
+        else if (k === 'e') { e.preventDefault(); jobCycleTable(1); }
     });
 }
 
@@ -2693,6 +2724,12 @@ function jobBuildChain(t, board, which, forceBoss) {
                 const v = jobParamValue(seg, p);
                 if (v !== undefined && v !== null) item[p.key] = v;
             });
+            // ★ 自定义动作：不走 params 声明，act/from/to/pairs/ms 整袋带上
+            //   （agent 端 generic_dsl 的 'custom' 分支按 act 编译）。
+            if (ga.id === 'custom') {
+                jobCopyCustomFields(seg, item);
+                if (seg.ms !== undefined && seg.ms !== null) item.ms = Number(seg.ms);
+            }
             out.push(item);
             return;
         }

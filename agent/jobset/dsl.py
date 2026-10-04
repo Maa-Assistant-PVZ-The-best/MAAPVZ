@@ -341,6 +341,56 @@ def generic_dsl(
         else:
             parts.append(f"click:{key}")
 
+    elif aid == "custom":
+        # ★ 自定义动作（网页端「更多 -> 自定义动作」）：段上带 act/from/to/ms/pairs
+        #   act=click  点击坐标 from
+        #   act=swipe  从 from 滑到 to，时长 ms
+        #   act=hold   长按：from 滑到自身，时长 ms（= 长按时间）
+        #   act=multi  多指：pairs=[[from,to],...]（2~5 组），同时按下/移动/抬起
+        #   键名必须是坐标表里的**原名**（用户从坐标表挑的），不做前缀猜测。
+        act = str(merged.get("act") or "").strip()
+        ms_v = _clamp_int(merged.get("ms"), 50, 600000, 600)
+
+        def _need(name: str) -> Optional[str]:
+            k = str(merged.get(name) or "").strip()
+            if not _coord_ok(coords, k):
+                missing.append(f"自定义动作：坐标表缺少「{k or name}」")
+                return None
+            return k
+
+        if act == "click":
+            k = _need("from")
+            if k:
+                parts.append(f"click:{k}")
+        elif act == "swipe":
+            a, b = _need("from"), _need("to")
+            if a and b:
+                parts.append(f"swipe:{a},{b},{ms_v}")
+        elif act == "hold":
+            k = _need("from")
+            if k:
+                parts.append(f"swipe:{k},{k},{ms_v}")
+        elif act == "multi":
+            raw_pairs = merged.get("pairs")
+            if not isinstance(raw_pairs, list):
+                raw_pairs = []
+            lines = []
+            for pr in raw_pairs[:5]:
+                if not isinstance(pr, (list, tuple)) or len(pr) < 2:
+                    continue
+                pa = str(pr[0] or "").strip()
+                pb = str(pr[1] or "").strip()
+                if not _coord_ok(coords, pa) or not _coord_ok(coords, pb):
+                    missing.append(f"自定义多指：坐标表缺少「{pa or '?'} / {pb or '?'}」")
+                    continue
+                lines.append(f"{pa},{pb},{ms_v}")
+            if len(lines) >= 2:
+                parts.append("multi:(" + ";".join(lines) + ")")
+            elif not missing:
+                missing.append("自定义多指：至少需要 2 组有效坐标对")
+        else:
+            missing.append(f"未知自定义动作类型：{act!r}")
+
     elif aid == "wait":
         # ★ 等待：不需要坐标，直接翻成 sleep:秒（BatchSwipe 原生支持小数秒）
         #   网页端填的是毫秒（默认 1000），这里换算成秒 —— 1ms 精度会保留。

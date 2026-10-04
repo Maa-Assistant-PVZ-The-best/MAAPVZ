@@ -82,12 +82,71 @@ const JOB_FORM_ACTION = {
     ]
 };
 
+// ★ 「自定义动作」：从坐标表（agent/assets/resource/coords.json，经 /coords 接口）
+//   挑键名，自由组合 点击 / 滑动 / 多指(2~5) / 长按。
+//   ★ 它有专属弹窗（33-jobset-custom.js 的 #customPicker），不走 params 声明系统
+//     （参数系统是 int 型的，表达不了「键名下拉 + 动态手指数」），所以 params = []。
+//
+//   段形状：
+//     { key:'ga:custom', ga:'custom', act:'click',                from:'键名' }
+//     { key:'ga:custom', ga:'custom', act:'swipe', from:'键名', to:'键名', ms:600 }
+//     { key:'ga:custom', ga:'custom', act:'hold',                 from:'键名', ms:800 }
+//     { key:'ga:custom', ga:'custom', act:'multi', pairs:[['f1','t1'],['f2','t2']], ms:100 }
+//
+//   ★ 段字段的白名单维护点（新增字段时四处都要加，否则会被静默丢掉）：
+//     23-jobset-end.js  jobGetChainOrder 的 ga 重建分支
+//     27-jobset-board.js jobSegsToSteps / jobStepsToSegs / jobSegFingerprint
+//     （uid 配对组键 jobCarryUids.grp 也要带上）
+const JOB_CUSTOM_ACTION = {
+    id: 'custom', name: '自定义动作', icon: '🎯', img: '',
+    desc: '从坐标表挑键名，自由组合 点击 / 滑动 / 多指 / 长按',
+    params: []
+};
+
+// 自定义动作的可读摘要（chip / 状态栏用）
+const JOB_CUSTOM_ACT_NAME = { click: '点击', swipe: '滑动', hold: '长按', multi: '多指' };
+function jobCustomSummary(seg) {
+    if (!seg) return '';
+    const act = JOB_CUSTOM_ACT_NAME[seg.act] || seg.act || '?';
+    if (seg.act === 'click') return act + '·' + (seg.from || '?');
+    if (seg.act === 'hold') return act + '·' + (seg.from || '?') + '·' + (seg.ms || 0) + 'ms';
+    if (seg.act === 'swipe') return act + '·' + (seg.from || '?') + '→' + (seg.to || '?') + '·' + (seg.ms || 0) + 'ms';
+    if (seg.act === 'multi') {
+        const n = Array.isArray(seg.pairs) ? seg.pairs.length : 0;
+        return act + '×' + n + '·' + (seg.ms || 0) + 'ms';
+    }
+    return act;
+}
+
+// 自定义动作段字段的白名单拷贝（src -> dst）；四处维护点统一走这里
+const JOB_CUSTOM_FIELDS = ['act', 'from', 'to', 'pairs'];   // ms 走公共 ms 通道
+function jobCopyCustomFields(src, dst) {
+    if (!src || !dst) return dst;
+    JOB_CUSTOM_FIELDS.forEach(function (k) {
+        if (src[k] === undefined || src[k] === null) return;
+        dst[k] = (k === 'pairs' && Array.isArray(src[k]))
+            ? src[k].map(function (p) { return Array.isArray(p) ? p.slice(0, 2) : p; })
+            : src[k];
+    });
+    return dst;
+}
+
+// 自定义动作的身份串（指纹 / uid 组键用）：参数不同 = 不同动作
+function jobCustomIdentity(s) {
+    if (!s) return '';
+    const pairs = Array.isArray(s.pairs) ? s.pairs.map(function (p) {
+        return Array.isArray(p) ? p.join('>') : String(p);
+    }).join(',') : '';
+    return [s.act || '', s.from || '', s.to || '', pairs].join('|');
+}
+
 // 可按 id 取到的全部通用动作（含不在按钮组里的「切换形态」）
-const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION]);
+const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION, JOB_CUSTOM_ACTION]);
 
 // ★ 「更多」列表里的动作 —— 即「不在按钮组、但可从更多进入」的动作。
 //   新增一个就从这里加，列表 UI 自动渲染（无需改 HTML/弹窗代码）。
-const JOB_MORE_ACTIONS = [JOB_FORM_ACTION];
+//   （自定义动作例外：进的是专属弹窗 #customPicker，见 30/33。）
+const JOB_MORE_ACTIONS = [JOB_FORM_ACTION, JOB_CUSTOM_ACTION];
 
 // ============================================================
 // ★ 「点击格子」—— 摆在棋盘上的落子动作（不是链上的通用动作）

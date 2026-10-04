@@ -176,6 +176,39 @@ function jobSetBoundary(v) {
     setStatus('🔀 阵容' + (currentTable + 1) + ' 结束关 = 阵容' + (currentTable + 2) + ' 起始关 = ' + n);
 }
 
+// ============================================================
+// 拖拽换序：把 阵容A 拖到 阵容B 上 -> **交换**两个阵容的内容。
+//   ★ 交换的是「内容」（槽位/棋盘/链/补给…），关卡区间（from/to_level）
+//     是**位置属性**（关键帧），不随内容走 —— 拖完区间不变，只是
+//     这个区间里跑的阵容换了。
+// ============================================================
+function jobSwapTables(i, j) {
+    if (i === j || !jobTables[i] || !jobTables[j]) return;
+    jobSaveCurrentBoard();                       // 防御：当前编辑先落回表对象
+    const iFrom = jobTables[i].from_level, iTo = jobTables[i].to_level;
+    const jFrom = jobTables[j].from_level, jTo = jobTables[j].to_level;
+    const tmp = jobTables[i];
+    jobTables[i] = jobTables[j];
+    jobTables[j] = tmp;
+    jobTables[i].from_level = iFrom; jobTables[i].to_level = iTo;
+    jobTables[j].from_level = jFrom; jobTables[j].to_level = jTo;
+    jobRenumberTables();                         // 保险：重接关卡链
+    jobLoadTable(currentTable, true);            // 当前位置内容变了，整页重载
+    jobSaveLocal();
+    if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+    setStatus('🔀 已交换 阵容' + (i + 1) + ' ↔ 阵容' + (j + 1) + ' 的内容（关卡区间不动）');
+}
+
+// Q/E 循环切换阵容（在 jobInstallSlotHotkeys 里挂了按键，那里已做输入框/弹层守卫）
+function jobCycleTable(dir) {
+    const n = jobTables.length;
+    if (n <= 1) return;
+    const nxt = ((currentTable + dir) % n + n) % n;    // 首尾循环
+    jobLoadTable(nxt);
+    jobSaveLocal();
+    setStatus('📑 阵容' + (nxt + 1));
+}
+
 function jobRenderTabs() {
     const box = document.getElementById('jobTableTabs');
     if (!box) return;
@@ -186,8 +219,31 @@ function jobRenderTabs() {
         el.style.cssText = 'padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;user-select:none;'
             + (i === currentTable ? 'background:#2d7aff;color:#fff;' : 'background:#e9ecf0;color:#333;');
         el.textContent = '阵容' + (i + 1) + '（' + r.from + '-' + r.to + '）';
-        el.title = '关卡 ' + r.from + ' ~ ' + r.to;
+        el.title = '关卡 ' + r.from + ' ~ ' + r.to + '\n拖到另一个阵容上 = 交换两者内容（关卡区间不动）\nQ/E = 切换阵容';
         el.addEventListener('click', function () { jobLoadTable(i); });
+        // ---- 拖拽交换 ----
+        el.draggable = true;
+        el.addEventListener('dragstart', function (ev) {
+            ev.dataTransfer.setData('text/plain', String(i));
+            ev.dataTransfer.effectAllowed = 'move';
+            el.style.opacity = '0.45';
+        });
+        el.addEventListener('dragend', function () {
+            el.style.opacity = '';
+            box.querySelectorAll('span').forEach(function (s) { s.style.outline = ''; });
+        });
+        el.addEventListener('dragover', function (ev) {
+            ev.preventDefault();                     // 不拦就 drop 不了
+            ev.dataTransfer.dropEffect = 'move';
+            el.style.outline = '2px dashed #2d7aff';
+        });
+        el.addEventListener('dragleave', function () { el.style.outline = ''; });
+        el.addEventListener('drop', function (ev) {
+            ev.preventDefault();
+            el.style.outline = '';
+            const from = parseInt(ev.dataTransfer.getData('text/plain'));
+            if (Number.isFinite(from)) jobSwapTables(from, i);
+        });
         box.appendChild(el);
     });
 }

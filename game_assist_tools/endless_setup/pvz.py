@@ -178,6 +178,26 @@ def list_plants():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 
+# coords.json 在 agent 自己的资源目录里（dev 和打包布局都是 <根>/agent/assets/resource/）
+COORDS_FILE = os.path.join(PROJECT_DIR, "agent", "assets", "resource", "coords.json")
+
+
+@app.route('/coords', methods=['GET'])
+def list_coords():
+    """返回坐标表（自定义动作弹窗用）：{ "coords": { "键名": [x, y], ... } }
+
+    每次请求都重读文件——用户可能刚改过坐标表，不能用启动时的缓存。
+    """
+    try:
+        with open(COORDS_FILE, encoding='utf-8') as f:
+            data = json.load(f)
+        if not isinstance(data, dict):
+            data = {}
+        return jsonify({'status': 'success', 'coords': data})
+    except Exception as e:
+        return jsonify({'status': 'error', 'msg': str(e), 'coords': {}}), 500
+
+
 @app.route('/list_jobs', methods=['GET'])
 def list_jobs():
     """列出本地作业集（含 current 标记）"""

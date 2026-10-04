@@ -377,6 +377,11 @@ function jobRenderMoreList() {
 
         btn.addEventListener('click', function () {
             jobCloseMoreList();
+            // ★ 自定义动作走专属弹窗（坐标表键名挑选，params 系统表达不了）
+            if (ga.id === 'custom' && typeof jobOpenCustomPicker === 'function') {
+                jobOpenCustomPicker();
+                return;
+            }
             jobOpenMorePicker(ga.id);
         });
         box.appendChild(btn);
