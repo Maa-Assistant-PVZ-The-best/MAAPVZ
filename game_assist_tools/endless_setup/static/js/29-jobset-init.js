@@ -188,7 +188,12 @@ function jobInit() {
         nt.from_level = b;
         nt.to_level = '';                               // 新阵容默认到最大关卡
         jobRenumberTables();
-        jobLoadTable(jobTables.length - 1);
+        // ★ 必须 skipSave=true：jobNewTable 已经把 currentTable 切到新表了，
+        //   不跳过的话 jobLoadTable 内部会先 jobSaveCurrentBoard()，
+        //   把**全局棋盘里还残留的旧表布阵**写进新表 —— 新表槽位是空的、
+        //   棋盘却是满的，正是「棋盘和槽位对不上」的 bug 来源。
+        //   （删除阵容那边就是这么做的，见 jobDelTable。）
+        jobLoadTable(jobTables.length - 1, true);
         jobRenderTabs();
         jobFillForm();
         jobSaveLocal();

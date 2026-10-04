@@ -61,26 +61,18 @@ function jobNewTable() {
     // 默认形态：循环
     jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'loop'; });
     if (last) {
-        // 新表默认复制上一张的 boss 棋盘（boardLate）
-        // ★ boardLate 统一用 rows×cols 的二维数组，避免 length 判断在
-        //   空数组（[]）和完整空棋盘之间反复横跳。
-        t.boardLate = JSON.parse(JSON.stringify(
-            jobBoardOrBlank(last.boardLate)));
-        // 沿用上一张表的普通关种植顺序与形态
-        if (Array.isArray(last.slotOrder)) t.slotOrder = last.slotOrder.slice();
-        if (Array.isArray(last.loopOrder)) t.loopOrder = last.loopOrder.slice();
-        if (Array.isArray(last.endOrder)) t.endOrder = last.endOrder.slice();
-        if (last.slotModes) t.slotModes = JSON.parse(JSON.stringify(last.slotModes));
-        // 收尾参数沿用上一张表（用户可能调过 post_delay / 超时后动作）
+        // ★★ 棋盘与槽位严格对应（用户要求）：新表槽位是全空的，
+        //   那么棋盘/链条/落点等待也必须全空 —— 不能只继承 boss 棋盘
+        //   而槽位是空的（棋盘上有植物、槽位列表没植物 = 数据对不上）。
+        //   所以这里**不继承** boardLate / slotOrder / loopOrder / endOrder /
+        //   bossSlotOrder / bossLoopOrder / bossSlotModes / waitAfter / bossWaitAfter。
+        //
+        //   只沿用**纯参数**（不引用任何槽位/落点）：收尾的延时与超时后动作，
+        //   用户调过的话新表接着用，免得每张表都重调一遍。
         if (typeof last.endPostDelay === 'number') t.endPostDelay = last.endPostDelay;
         if (typeof last.endLastPostDelay === 'number') t.endLastPostDelay = last.endLastPostDelay;
         if (last.endAfterAction === 'restart') t.endAfterAction = 'restart';
         if (last.endSubAction === 'once' || last.endSubAction === 'end') t.endSubAction = last.endSubAction;
-        // boss 关配置：上一张表配过才沿用（没配就保持 null -> boss 关只等结算）
-        if (Array.isArray(last.bossSlotOrder)) t.bossSlotOrder = last.bossSlotOrder.slice();
-        if (Array.isArray(last.bossLoopOrder)) t.bossLoopOrder = last.bossLoopOrder.slice();
-        if (last.bossSlotModes) t.bossSlotModes = JSON.parse(JSON.stringify(last.bossSlotModes));
-        if (last.bossWaitAfter) t.bossWaitAfter = JSON.parse(JSON.stringify(last.bossWaitAfter));
     }
     jobTables.push(t);
     // ★ 新表成为当前编辑对象 —— 否则后续 jobSaveCurrentBoard 会写错表
