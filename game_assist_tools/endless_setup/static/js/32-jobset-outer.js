@@ -21,7 +21,32 @@ let jobOuterPick = { plants: [], mode: 'auto' };   // 作业集级；存取链�
 let outerRarityFilter = '全部';
 let outerSortMode = 'default';                     // 显示排序：default | rare_desc | rare_asc | selected
 let outerReorder = { active: false, pool: [] };    // 调整排序模式：pool = 进入时的手动选择集合
-const OUTER_RARITY_TABS = ['全部', '橙', '紫', '蓝', '绿', '白'];
+const OUTER_RARITY_TABS = ['全部', '收藏', '橙', '紫', '蓝', '绿', '白'];
+
+// ---- 局外选卡专用收藏（与槽位选择器的局内收藏【分开算】，互不影响）----
+const OUTER_FAV_KEY = 'maapvz_plant_favs_outer_v1';
+let outerFavs = new Set();
+
+function jobOuterLoadFavs() {
+    try {
+        const raw = localStorage.getItem(OUTER_FAV_KEY);
+        if (raw) outerFavs = new Set(JSON.parse(raw));
+    } catch (e) { outerFavs = new Set(); }
+}
+function jobOuterSaveFavs() {
+    try { localStorage.setItem(OUTER_FAV_KEY, JSON.stringify(Array.from(outerFavs))); } catch (e) {}
+}
+// 主键规则与局内一致：英文名优先，无英文名退回中文名
+function jobOuterIsFav(p) { return outerFavs.has(jobFavKey(p)); }
+function jobOuterToggleFav(p) {
+    const k = jobFavKey(p);
+    const nowFav = !outerFavs.has(k);
+    if (nowFav) outerFavs.add(k);
+    else outerFavs.delete(k);
+    jobOuterSaveFavs();
+    setStatus(nowFav ? ('♥ 已收藏「' + p.name + '」（局外）') : ('已取消收藏「' + p.name + '」（局外）'));
+    return nowFav;
+}
 
 // 两个「局内执行方式」的确认弹窗文案（用户要求的原文）
 const OUTER_MODE_CONFIRM = {
@@ -90,7 +115,11 @@ function jobOuterApplyReorderUI() {
     jobOuterApplyModeUI();   // 控件禁用态跟着重排模式刷新
 }
 
-// ---- 补齐空选：自动把未选的植物补到 80 个（按当前排序，跳过无图；接在现有已选后面）----
+// ---- 补齐空选：自动把未选的植物补到 80 个（接在现有已选后面）----
+// ★ 规则（用户要求）：
+//   1. 跟随品质页签：当前在哪个品质页（如紫卡）就只补哪个品质的空选；
+//      「收藏」页只补收藏；「全部」页不限品质。
+//   2. 右键收藏优先：同排序下，收藏的植物先补。
 function jobOuterFill80() {
     if (jobOuterBlockedMode()) {
         setStatus('ℹ️ 当前执行方式不读取植物列表，无需补齐');
@@ -108,19 +137,36 @@ function jobOuterFill80() {
     let rest = (plantCache || []).filter(function (p) {
         return locked.indexOf(p.name) === -1 && jobOuterPick.plants.indexOf(p.name) === -1;
     });
+    // ① 跟随品质页签：紫卡页 -> 只补紫卡；收藏页 -> 只补收藏
+    let scopeTip = '';
+    if (outerRarityFilter === '收藏') {
+        rest = rest.filter(function (p) { return jobOuterIsFav(p); });
+        scopeTip = '（只补收藏）';
+    } else if (outerRarityFilter !== '全部') {
+        rest = rest.filter(function (p) { return p.rarity === outerRarityFilter; });
+        scopeTip = '（只补' + outerRarityFilter + '卡）';
+    }
     rest = jobOuterSortList(rest, eff);          // 按当前排序方式补
-    let added = 0;
+    // ② 右键收藏优先：稳定分区，收藏排最前（同组内保持排序结果）
+    const favs = [], unfavs = [];
+    rest.forEach(function (p) { (jobOuterIsFav(p) ? favs : unfavs).push(p); });
+    rest = favs.concat(unfavs);
+    let added = 0, favAdded = 0;
     for (let i = 0; i < rest.length && added < need; i++) {
         if (!jobOuterAvail(rest[i])) continue;   // 无图植物局内选不到，跳过
         jobOuterPick.plants.push(rest[i].name);
+        if (jobOuterIsFav(rest[i])) favAdded++;
         added++;
     }
     jobSaveLocal();
     jobOuterRenderGrid();
     jobOuterRefreshBadge();
     setStatus(added > 0
-        ? ('🧩 已补齐 ' + added + ' 个（现在共 ' + jobOuterEffective().length + '/80 个）')
-        : ('⚠️ 没有更多可补的植物了（还差 ' + need + ' 个，其余都没有局外图片资源）'));
+        ? ('🧩 已补齐 ' + added + ' 个' + scopeTip
+            + (favAdded ? '（含收藏 ' + favAdded + ' 个）' : '')
+            + '（现在共 ' + jobOuterEffective().length + '/80 个）')
+        : ('⚠️ 没有更多可补的植物了' + scopeTip + '（还差 ' + need
+            + ' 个，其余都没有局外图片资源）—— 切到「全部」页签可补其它品质'));
 }
 
 // ---- 显示排序（只影响显示；选取优先级永远是点击先后）----
@@ -258,7 +304,8 @@ function jobOuterRenderGrid() {
         rest = jobOuterSortList(rest, order);
     }
     const list = lockedObjs.concat(rest).filter(function (p) {
-        if (outerRarityFilter !== '全部' && p.rarity !== outerRarityFilter) return false;
+        if (outerRarityFilter === '收藏' && !jobOuterIsFav(p)) return false;
+        if (outerRarityFilter !== '全部' && outerRarityFilter !== '收藏' && p.rarity !== outerRarityFilter) return false;
         if (kw && !((p.name || '').toLowerCase().includes(kw))
                && !((p.en || '').toLowerCase().includes(kw))) return false;
         return true;
@@ -326,6 +373,13 @@ function jobOuterRenderGrid() {
             card.appendChild(ck);
         }
 
+        // ★ 右键收藏（局外专用收藏集，与局内分开；心形位置比局内略靠上）
+        if (jobOuterIsFav(p)) {
+            const heart = jobBuildHeart();
+            heart.classList.add('job-fav-heart-outer');
+            card.appendChild(heart);
+        }
+
         // 名字：卡片下方、文档流内（撑开 grid 行高的关键，勿改成绝对定位）
         const nm = document.createElement('div');
         nm.style.cssText = 'font-size:10px;line-height:1.25;text-align:center;color:#444;'
@@ -350,10 +404,17 @@ function jobOuterRenderGrid() {
         } else {
             lines.push('点击选择（选取顺序 = 点击先后）');
         }
+        lines.push('右键' + (jobOuterIsFav(p) ? '取消收藏' : '收藏') + '（局外收藏，与局内分开）');
         cell.setAttribute('data-tooltip', lines.join('\n'));
         cell.setAttribute('data-tooltip-delay', '1000');
 
         cell.addEventListener('click', function () { jobOuterToggle(p); });
+        // ★ 右键收藏 / 取消收藏（局外专用收藏集；整格重绘，滚动位置自动保持）
+        cell.addEventListener('contextmenu', function (e) {
+            e.preventDefault();
+            jobOuterToggleFav(p);
+            jobOuterRenderGrid();
+        });
         grid.appendChild(cell);
     });
 

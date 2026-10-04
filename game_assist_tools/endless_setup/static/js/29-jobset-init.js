@@ -127,6 +127,7 @@ function jobInit() {
     if (!restored) jobNewTable();
     jobLoadTable(currentTable, true);   // skipSave：避免用空棋盘覆盖已恢复的数据
     jobLoadFavs();                      // 恢复右键收藏（localStorage）
+    if (typeof jobOuterLoadFavs === 'function') jobOuterLoadFavs();   // 局外选卡收藏（与局内分开）
     jobBindEndParams();                 // 收尾参数面板的输入监听
     jobRenderEndParams();               // 初始显隐（按当前棋盘是否有收尾落子）
     jobRenderSlots();

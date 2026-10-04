@@ -554,6 +554,12 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     60%  { opacity:1; transform:translate(-50%,50%) scale(1.22); }
     100% { opacity:1; transform:translate(-50%,50%) scale(1); }
 }
+/* 局外版心形入场：末帧位置和 .job-fav-heart-outer 一致（-38%），否则 fill:both 会把它钉回 50% */
+@keyframes jobHeartOuter {
+    0%   { opacity:0; transform:translate(-50%,-38%) scale(.4); }
+    60%  { opacity:1; transform:translate(-50%,-38%) scale(1.22); }
+    100% { opacity:1; transform:translate(-50%,-38%) scale(1); }
+}
 @keyframes jobPanelUp {
     from { opacity:0; transform:translateY(14px) scale(.985); }
     to   { opacity:1; transform:translateY(0)    scale(1); }
@@ -578,6 +584,13 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     filter:drop-shadow(0 1px 1.5px rgba(15,23,42,.3));
     animation:jobHeart .3s cubic-bezier(.34,1.56,.64,1) both;
 }
+/* 局外选卡的心形：比局内偏上一点（局内压在下边框上，局外提到边框内侧） */
+.job-fav-heart-outer {
+    transform:translate(-50%, -38%);   /* 再上移半个心形的高度 */
+    width:22%;
+    animation:jobHeartOuter .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+
 /* 用 SVG mask 画心形 */
 .job-fav-heart::before {
     content:'';
