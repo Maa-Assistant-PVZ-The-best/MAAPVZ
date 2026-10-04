@@ -39,7 +39,7 @@ from maa.context import Context
 from maa.custom_action import CustomAction
 from maa.custom_recognition import CustomRecognition
 
-from .engine import JobSet, JobSetError, load_jobset
+from .engine import JobSet, JobSetError, load_jobset, RESOURCE_DIR
 from .level_tracker import LevelTracker, from_params
 from .level_tracker import BOSS_SNAP as _BOSS_SNAP
 # 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
@@ -105,16 +105,21 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> None:
     table = js.pick_table(lv)
     _log(f"预热：关卡={lv} -> 预计表{table.index + 1}（关卡 {table.from_level} 起）")
 
+    # ★ 首关若是 boss 关（5 的倍数，与局内判定的计数口径一致），
+    #   预热也要用 boss 阵容 —— 否则 boss 单独配卡时首关会错选普通关植物。
+    _pw_boss = (lv % _BOSS_SNAP == 0)
+
     # 选卡参数先用「预计表」注入，保证首帧进选卡界面时有植物可选
     try:
         context.override_pipeline({
             "无尽挑战_选取植物": {
                 "custom_action_param": json.dumps(
-                    {"植物列表": table.plants}, ensure_ascii=False
+                    {"植物列表": table.eff_plants(_pw_boss)}, ensure_ascii=False
                 )
             }
         })
-        _log(f"已注入选卡参数（预计）：{table.plants}")
+        _log(f"已注入选卡参数（预计，{'boss 关' if _pw_boss else '普通关'}）："
+             f"{table.eff_plants(_pw_boss)}")
     except Exception as e:
         # override 失败不该致命：日志留痕，继续走
         _log(f"注入选卡参数失败（{type(e).__name__}: {e}），下游可能拿到空参数")
@@ -122,7 +127,7 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> None:
     # ★ 编队切换：同样按「预计表」先注入一次。
     #   这样首帧进选卡界面时，「清空卡牌」的 next 就已经是对的
     #   （选卡 or 切换编队），不会先走错分支再纠正。
-    _inject_squad(context, table.squad)
+    _inject_squad(context, table.eff_squad(_pw_boss))
 
     _STATE["plan_table_index"] = table.index
 
@@ -224,8 +229,204 @@ NODE_CHOOSE_PLANTS = "无尽挑战_选取植物"
 NODE_SWITCH_SQUAD = "无尽挑战_切换编队"
 NODE_SQUAD_INDEX = "无尽_切换编队序号"
 
+# ---- 无尽局外 80 选卡（作业集级 outer_pick 的注入目标）----
+# pipe 文件：06_Endless_80plant_choose/0601~0603
+NODE_OUTER_GATE = "无尽挑战_检查是否需要选植物"              # 闸口：OCR「选择挑战植物」，next 由 runtime 按模式分流
+NODE_OUTER_PICK = "无尽80植物编辑方案1_准备选择80个植物"      # SelectPlants custom（无尽局外选卡）
+NODE_OUTER_AUTO_ENTRY = "无尽挑战_80植物界面_选项1_清空植物"  # auto：清空链入口
+NODE_OUTER_ONECLICK = "无尽选卡_80个植物_一键选择"            # oneclick：点一键选择（自带 next -> 确定）
+NODE_OUTER_CONFIRM = "无尽选卡_80个植物_确定"                 # 确定按钮（next -> 识别开始战斗）
+_OUTER_PICK_PIPE_PARTS = (
+    "pipeline", "Endless_ref.json", "06_Endless_80plant_choose", "0601_80plant_choose_1.json",
+)
+
+
+def _apply_outer_pick(context: Context, js) -> None:
+    """把作业集级 outer_pick（无尽局外 80 选卡）注入 pipeline。失败只记日志。
+
+    按 mode 覆盖「无尽挑战_检查是否需要选植物」的 next 分流：
+      - auto:     next -> 清空链入口（清空 -> 全部植物 -> SelectPlants 自动选 ->
+                  确定），并把 plants 合并进 pipe 节点**现有的**
+                  custom_action_param 注入（搜索roi/滑动/回顶/匹配阈值是用户
+                  在 pipe 里实测的，必须保留；custom_action_param 是整体替换，
+                  所以先读 pipe 再合并）；
+      - oneclick: next -> 「无尽选卡_80个植物_一键选择」（它自带 next -> 确定）；
+      - confirm:  next -> 「无尽选卡_80个植物_确定」—— 复用当前配置，直接确定。
+
+    auto 但 plants 为空（旧作业集/没配）-> 退化为复用当前配置 + 告警，
+    保证流程不会停在选卡界面没人点确定。
+    """
+    mode = getattr(js, "outer_pick_mode", "auto")
+    plants = getattr(js, "outer_pick_plants", []) or []
+
+    if mode == "oneclick":
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_ONECLICK]},
+            })
+            _log("局外选卡=一键选取：「选择挑战植物」-> 一键选择 -> 确定")
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+
+    if mode == "confirm":
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_CONFIRM]},
+            })
+            _log("局外选卡=复用当前配置：「选择挑战植物」-> 直接点确定")
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+
+    # auto：闸口 -> 清空链；plants 合并进 pipe 现有参数（坐标是用户实测的，不能丢）
+    if not plants:
+        _log("局外选卡=按列表自动选取，但作业集 outer_pick.plants 为空 —— "
+             "退化为「复用当前配置」直接点确定"
+             "（要自动选：去网页端「局外选卡」配置后重新保存作业集）")
+        try:
+            context.override_pipeline({
+                NODE_OUTER_GATE: {"next": [NODE_OUTER_CONFIRM]},
+            })
+        except Exception as e:
+            _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+        return
+    merged = {"无尽局外选卡": True, "植物列表": plants}
+    pipe_path = RESOURCE_DIR.joinpath(*_OUTER_PICK_PIPE_PARTS)
+    try:
+        with open(pipe_path, "r", encoding="utf-8") as f:
+            node = (json.load(f) or {}).get(NODE_OUTER_PICK) or {}
+        base = node.get("custom_action_param")
+        if isinstance(base, str):
+            base = json.loads(base)
+        if isinstance(base, dict):
+            merged = {**base, **merged}     # 植物列表/开关覆盖，坐标参数保留
+    except Exception as e:
+        _log(f"读取 80 选卡 pipe 参数失败，坐标将用 custom 缺省值"
+             f"（{type(e).__name__}: {e}）")
+    try:
+        context.override_pipeline({
+            NODE_OUTER_GATE: {"next": [NODE_OUTER_AUTO_ENTRY]},
+            NODE_OUTER_PICK: {
+                "custom_action_param": json.dumps(merged, ensure_ascii=False),
+            },
+        })
+        _log(f"局外选卡=按列表自动选取：「选择挑战植物」-> 清空 -> 自动选 "
+             f"{len(plants)} 个 -> 确定；已注入 {plants[:5]}"
+             f"{'...' if len(plants) > 5 else ''}")
+    except Exception as e:
+        _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
+
+
 # 选卡 / 编队两条分支各自的下一步
 NEXT_PICK_PLANTS = [NODE_CHOOSE_PLANTS]
+
+# 「开始战斗」节点（跳过选卡时「清空卡牌」直跳这里）
+NODE_BATTLE_START = "无尽挑战_选取植物_开始战斗"
+
+# 「清空卡牌」节点 pipe 原值照抄（02_Endless_plant_Choose_ref.json）——
+# 阵容不变时 runtime 把它改成 DirectHit+DoNothing 直跳开始战斗（跳过清空/选卡/编队），
+# 阵容变了要还原成这套原值。
+# ⚠️ 改了 pipe 里这个节点的 recognition/roi/action/next，这里必须同步。
+_CLEAR_CARDS_ORIG = {
+    "recognition": "OCR",
+    "expected": ["清空卡牌"],
+    "roi": [22, 660, 75, 27],
+    "action": "Click",
+    "next": [NODE_CHOOSE_PLANTS],
+}
+
+# ---------------------------------------------------------------------------
+# 用户可见 focus 播报（MFAAvalonia 日志面板上用户实际看到的消息）
+#   focus 是普通节点字段（override_pipeline 深合并，不碰 next），
+#   节点完成时由 MAA 弹出。三种播报：
+#     1. 加载作业集：「已加载作业集：xx」+ 当前使用块（JobSetLoad 写在本节点上）
+#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上，只有变化分支才跑）
+#     3. 每关：「当前关卡：N」（JobSetPlan 写在两个「开始战斗」节点上，
+#        替代 pipe 里静态的「boss关」focus）
+# ---------------------------------------------------------------------------
+NODE_LOAD = "无尽挑战_加载作业集代码"
+
+
+def _set_focus(context: Context, node: str, text: str) -> None:
+    """给节点写用户可见 focus 文本；失败只告警，不影响流程。"""
+    try:
+        context.override_pipeline({node: {"focus": text}})
+    except Exception as e:
+        _log(f"⚠️ 写 focus 失败（{node}）：{type(e).__name__}: {e}")
+
+
+def _focus_lineup_block(table, is_boss: bool) -> str:
+    """「当前使用」播报块：表N + 8 槽（没选满的槽位显示「补位」）+ 编队/神器。
+
+    boss 关且该表有 boss 专属配置时标题带「（boss 配置）」；
+    编队模式（无植物列表）显示编队号而不是 8 个槽位。
+    """
+    head = f"当前使用：表{table.index + 1}"
+    if is_boss and (table.boss_plants
+                    or table.boss_squad is not None
+                    or table.boss_artifact is not None):
+        head += "（boss 配置）"
+    lines = [head]
+    plants = table.eff_plants(is_boss)
+    if plants:
+        lines += [plants[i] if i < len(plants) else "补位" for i in range(8)]
+    else:
+        squad = table.eff_squad(is_boss)
+        lines.append(f"切换编队：{squad}" if squad is not None else "（本表无选卡）")
+    art = table.eff_artifact(is_boss)
+    if art:
+        lines.append(f"神器：{art}")
+    return "\n".join(lines)
+
+
+def _inject_lineup(context: Context, table, is_boss: bool) -> None:
+    """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
+
+    ★ 签名相同（boss 关配置与普通关一致 / 换表后阵容没变）->
+       「清空卡牌」改成 DirectHit + DoNothing 直跳「开始战斗」：
+       不清空卡牌、不重新选卡、不切编队（未来：不重选神器——签名已含神器占位），
+       只换种植链（compiled 注入在调用方，不受影响）。
+       首次进关（签名为 None）永远不跳 —— 局内还没有任何配置。
+    """
+    sig = table.lineup_sig(is_boss)
+    # ★ 训练模式永不跳：用户设定「训练 = 每一关都清空卡牌重选阵容」，
+    #   闸门（lineup_gate_adjust）挡不住这里 —— 它只翻 next 分支，
+    #   清空卡牌节点本身会不会被改成空跳是这里说了算。
+    if (not _STATE.get("training")
+            and _STATE.get("lineup_sig") is not None
+            and _STATE.get("lineup_sig") == sig):
+        try:
+            context.override_pipeline({
+                NODE_CLEAR_CARDS: {
+                    "recognition": "DirectHit",
+                    "action": "DoNothing",
+                    "next": [NODE_BATTLE_START],
+                },
+            })
+            _log(f"阵容未变 -> 跳过清空卡牌/选卡/编队，直接开始战斗"
+                 f"（{'boss 关' if is_boss else '普通关'}配置与当前生效阵容一致）")
+        except Exception as e:
+            _log(f"跳过选卡注入失败（{type(e).__name__}: {e}）")
+        return
+
+    # 阵容变了（或首次进关）：还原清空卡牌节点 + 正常注入选卡/编队
+    plants = table.eff_plants(is_boss)
+    squad = table.eff_squad(is_boss)
+    kind_cn = "boss 关" if is_boss else "普通关"
+    try:
+        context.override_pipeline({
+            NODE_CHOOSE_PLANTS: {
+                "custom_action_param": json.dumps(
+                    {"植物列表": plants}, ensure_ascii=False)
+            },
+            NODE_CLEAR_CARDS: dict(_CLEAR_CARDS_ORIG),
+        })
+        _log(f"已注入选卡植物（{kind_cn}）：{plants}")
+    except Exception as e:
+        _log(f"注入选卡失败（{type(e).__name__}: {e}）")
+    _inject_squad(context, squad)
+    _STATE["lineup_sig"] = sig
 
 # 「无尽_切换编队序号」的 Or 分支骨架（从 pipe 照抄，只留结构字段）。
 #   两项的 roi 不同 = 覆盖编队列表的不同显示区域；expected 由 squad 注入。
@@ -497,6 +698,34 @@ def plan_decision(training: bool, used: Optional[int], table_index: int) -> "Tup
     return False, f"沿用表{table_index + 1}"
 
 
+def lineup_gate_adjust(training: bool, need: bool, table: Any,
+                       upcoming_boss: bool, cur_sig) -> "Tuple[bool, Optional[str]]":
+    """阵容维度修正闸门判断（纯函数，便于离线自测）。
+
+    闸门原来只看「表变没变」（plan_decision）。一张表有普通/boss 两套阵容后：
+
+        · 表没变，但下一关形态的阵容 ≠ 当前生效阵容（boss 单独配卡/编队）
+          -> 按「变化」走：清空卡牌重选；
+        · 表变了，但阵容 == 当前生效阵容 -> 按「未变」走：
+          跳过清空/选卡/编队直接开打，只换种植链（compiled 照表切换）。
+
+    训练模式每关必重选（用户设定），不做任何修正。
+    cur_sig 为 None（首次进关/签名为未知）时不修正 —— 保守走原判断。
+
+    返回 (need, 修正原因 or None)。
+    """
+    if training or cur_sig is None:
+        return need, None
+    target_sig = table.lineup_sig(upcoming_boss)
+    if need and cur_sig == target_sig:
+        return False, "表切换但阵容相同 -> 跳过清空/选卡，直接开打"
+    if not need and cur_sig != target_sig:
+        return True, ("阵容与当前生效阵容不同（"
+                      + ("boss 关" if upcoming_boss else "普通关")
+                      + "配置）-> 重新选卡")
+    return need, None
+
+
 @AgentServer.custom_action("JobSetPlan")
 class JobSetPlan(CustomAction):
     """局外决定换不换阵容，并播报当前关卡/表。
@@ -544,6 +773,9 @@ class JobSetPlan(CustomAction):
         lv = tr.count
         table = js.pick_table(lv)
         training = bool(param.get("训练模式"))
+        # ★ 记下来给 _inject_lineup 用：训练模式永不跳过清空/选卡
+        #   （节点参数只有 JobSetPlan 有，Fight/Stage 的注入路径读不到）。
+        _STATE["training"] = training
 
         # ---- 播报（每关都报；两种模式都经过本节点）----
         # ★ 「本关是否 boss」此时还不知道（头像识别在局内才发生），
@@ -568,14 +800,55 @@ class JobSetPlan(CustomAction):
         used = _STATE.get("plan_table_index")
         need, reason = plan_decision(training, used, table.index)
 
+        # ---- ★ 阵容维度修正（boss 拆分 + 阵容相同跳过，纯函数在 lineup_gate_adjust）----
+        #   闸门原来只看「表变没变」。现在一张表有普通/boss 两套阵容：
+        #     · 表没变，但下一关形态的阵容 ≠ 当前生效阵容
+        #       （boss 单独配卡/编队）-> 按「变化」走：清空卡牌重选；
+        #     · 表变了，但阵容 == 当前生效阵容 -> 按「未变」走：
+        #       跳过清空/选卡/编队直接开打，只换种植链（compiled 照表切换）。
+        #   训练模式永远每关重选（用户设定），不做跳过。
+        #   boss 预判用计数器（lv % 5 == 0，与补给预告同口径）——
+        #   局外此刻还没有头像识别可用。
+        upcoming_boss = lv > 0 and lv % _BOSS_SNAP == 0
+        need2, adj = lineup_gate_adjust(
+            training, need, table, upcoming_boss, _STATE.get("lineup_sig"))
+        if adj:
+            _log(f"★ 阵容维度修正：{adj}")
+            reason = f"{reason}；{adj}"
+        if need and not need2:
+            # 表变但阵容同 -> 按「未变」走。表指针照样推进（种植链要换新表的）；
+            # _apply_table 内部走签名跳过路径，不会动清空卡牌节点的正常形态。
+            _STATE["table_index"] = table.index
+            _STATE["locked_level"] = lv
+            JobSetStage._apply_table(context, js, table, upcoming_boss)
+        need = need2
+
         # ---- 需要换：注入新表的选卡植物 + 编队 ----
         if need:
             _STATE["table_index"] = table.index
             _STATE["locked_level"] = lv
-            # _apply_table 内部会记录 plan_table_index
-            ok = JobSetStage._apply_table(context, js, table)
+            # _apply_table 内部会记录 plan_table_index；is_boss 传「下一关」的预判
+            ok = JobSetStage._apply_table(context, js, table, upcoming_boss)
             if not ok:
                 _log("⚠️ 换阵注入失败，仍会回「清空卡牌」重选，但选卡参数可能是旧的")
+
+        # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
+        #   关卡号挂在两个「开始战斗」节点上（未变/变化两分支必走其一），
+        #   覆盖掉 pipe 里静态的「boss关」focus；
+        #   「当前使用」块挂在「清空卡牌」上（只有变化分支才跑到）。
+        #   换表但阵容相同被跳过（未变分支，清空卡牌不跑）时，
+        #   把阵容块并到「开始战斗」的关卡号消息前面，保证换表一定有提示。
+        switched = used is None or used != table.index
+        if switched:
+            block = _focus_lineup_block(table, upcoming_boss)
+            _set_focus(context, NODE_CLEAR_CARDS, block)
+        else:
+            block = None
+        lv_msg = f"当前关卡：{lv}"
+        if block and not need:
+            lv_msg = block + "\n" + lv_msg
+        _set_focus(context, NODE_BATTLE_START, lv_msg)
+        _set_focus(context, NODE_START_FIGHT, lv_msg)
 
         # ---- 翻闸门（每次都写，避免残留上一次的判断）----
         #
@@ -642,6 +915,8 @@ class JobSetLoad(CustomAction):
             _STATE["jobset"] = None
             _STATE["tracker"] = None
             _STATE["table_index"] = None
+            _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
+            _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
             _log("已重置作业集状态（重新开始任务）")
 
         # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
@@ -694,12 +969,28 @@ class JobSetLoad(CustomAction):
         #   把 table_index 保持 None -> 首次进关一律按「第一次进表」处理，
         #   不会因为「预估表 ≠ 实际表」而误触发换阵容。
         _STATE["table_index"] = None
+        # ★ 阵容签名同理保持 None：新任务开局时局内卡牌状态未知，
+        #   首次锁定必须走完整的清空+选卡，不能跳过。
+        _STATE["lineup_sig"] = None
+        # 训练标记同理清空，等 JobSetPlan 首跑重写
+        _STATE["training"] = None
 
         # ★ 有了计数器，这里的「预估」不再是「猜」—— 起始关卡就是真实关卡。
         #   （若流程走了「无尽挑战_自动计数」，它识别出主界面关卡号后会
         #   再调一次预热，把这里可能不准的预热纠正过来。）
         lv = tr.count if tr.count > 0 else 1
         _prewarm_for_level(context, js, lv)
+
+        # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
+        _apply_outer_pick(context, js)
+
+        # ---- 用户可见 focus：已加载作业集 + 当前使用阵容 ----
+        #   写在本节点（无尽挑战_加载作业集代码）上，节点完成时弹出；
+        #   阵容块按预估表（与预热同口径）生成。
+        table0 = js.pick_table(lv)
+        _set_focus(context, NODE_LOAD,
+                   f"已加载作业集：{js.name}\n"
+                   + _focus_lineup_block(table0, lv > 0 and lv % _BOSS_SNAP == 0))
 
         return _ok()
 
@@ -894,41 +1185,18 @@ class JobSetFight(CustomAction):
                 f"首次锁定阵容：关卡{lv} -> 表{table.index + 1}"
                 f"（植物 {table.plants}），不重开"
             )
-            try:
-                context.override_pipeline({
-                    "无尽挑战_选取植物": {
-                        "custom_action_param": json.dumps(
-                            {"植物列表": table.plants}, ensure_ascii=False
-                        )
-                    }
-                })
-                _log(f"已注入选卡植物：{table.plants}")
-            except Exception as e:
-                _log(f"注入选卡失败（{type(e).__name__}: {e}）")
-            # ★ 编队：首次锁定时也注入，保证后续重开走对分支
-            _inject_squad(context, table.squad)
+            # ★ 阵容注入统一走 _inject_lineup：按普通/boss 取有效阵容，
+            #   签名相同会跳过清空/选卡直接开打（首次进关签名未知，必走完整选卡）
+            _inject_lineup(context, table, is_boss)
         elif prev_index != table.index:
             _log(
                 f"★ 阵容切换：表{prev_index + 1} -> 表{table.index + 1}"
                 f"（关卡 {table.from_level} 起，植物 {table.plants}）"
             )
             # 推进表指针 —— 换阵容流程里**唯一**推进它的地方。
-            # 同时重新注入选卡参数，保证新阵容真的被选上。
+            #   同时重新注入阵容（选卡/编队/跳过逻辑都在 _inject_lineup 里）。
             _STATE["table_index"] = table.index
-            try:
-                context.override_pipeline({
-                    "无尽挑战_选取植物": {
-                        "custom_action_param": json.dumps(
-                            {"植物列表": table.plants}, ensure_ascii=False
-                        )
-                    }
-                })
-                _log(f"已重新注入选卡植物：{table.plants}")
-            except Exception as e:
-                _log(f"重新注入选卡失败（{type(e).__name__}: {e}）")
-            # ★ 编队：换阵容时**必须**重新注入 —— 这正是「换阵用编队」的入口。
-            #   重开后跳回「清空卡牌」，那里会按这里注入的 next 决定走选卡还是切编队。
-            _inject_squad(context, table.squad)
+            _inject_lineup(context, table, is_boss)
 
         _log(
             f"关卡{lv} {kind_cn} -> 表{table.index + 1} "
@@ -1302,24 +1570,25 @@ class JobSetStage(CustomAction):
     # -- 内部 --------------------------------------------------------------
 
     @staticmethod
-    def _apply_table(context: Context, js: JobSet, table: Any) -> bool:
+    def _apply_table(context: Context, js: JobSet, table: Any,
+                     is_boss: Optional[bool] = None) -> bool:
         """把指定表的阵容与种植逻辑注入 pipeline。
 
         ★ 唯一职责是「注入」，并顺手记下**当前已注入的是哪张表**
           （`_STATE["plan_table_index"]`）—— 局外换阵节点靠它判断
           「表有没有变」。所有换阵路径都走这里，所以记录不会漏。
+
+        is_boss：目标关卡的 boss 形态。局外换阵（JobSetPlan）传「下一关」的
+          计数器预判；局内纠正路径（JobSetStage）不传 -> 用当前关的识别结果。
         """
+        if is_boss is None:
+            is_boss = bool(_STATE.get("is_boss"))
         try:
-            context.override_pipeline({
-                "无尽挑战_选取植物": {
-                    "custom_action_param": json.dumps(
-                        {"植物列表": table.plants}, ensure_ascii=False
-                    )
-                }
-            })
-            _log(f"已切换到表{table.index + 1}：选卡植物={table.plants}")
-            # ★ 编队：切表时一并注入（换阵用编队时的另一条入口）
-            _inject_squad(context, table.squad)
+            # ★ 阵容注入统一走 _inject_lineup：boss 关取 boss 阵容；
+            #   与当前生效阵容相同会跳过清空/选卡/编队直接开打
+            _inject_lineup(context, table, is_boss)
+            _log(f"已切换到表{table.index + 1}："
+                 f"选卡植物={table.eff_plants(is_boss)}（{'boss 关' if is_boss else '普通关'}）")
             # ★ 记录「当前已注入的表」——给 JobSetPlan 判断表有没有变
             _STATE["plan_table_index"] = table.index
             return True

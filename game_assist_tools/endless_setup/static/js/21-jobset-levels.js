@@ -88,6 +88,52 @@ function jobFillForm() {
     if (dn) dn.value = t.deckNo;
     const dbx = document.getElementById('tfDeckBox');
     if (dbx) dbx.style.display = t.lineupMode === 'deck' ? 'inline-flex' : 'none';
+    // boss 关阵容（沿用普通关 / 单独选卡 / 切换编队）—— 选项由槽位数据驱动
+    const bdn = document.getElementById('tfBossDeckNo');
+    if (bdn) bdn.value = t.bossDeckNo || 1;
+    jobRefreshBossLineupUI();
+}
+
+// ============================================================
+// ★「boss 关」阵容下拉：数据驱动重构（2026-10-03 第二轮）
+//   读当前表两个棋盘的槽位植物数据（jobBossSlotsDiffer）：
+//     · 一致   -> 只显示「沿用普通关」（mode 锁定 ''）；
+//                悬停提示「槽位的设置沿用普通关」。
+//     · 不一致 -> 自动出现切换阵容选项，且只提供「单独选卡 / 切换编队」
+//                （没有「沿用」——数据已经不一样了）；mode 自动落到 plants。
+//   ★ 例外：mode='deck'（boss 切编队）本身就算「不一致」——
+//     编队模式不需要槽位覆盖，若只按槽位判断会把已存的编队模式静默抹掉。
+//     编队想退回沿用：先切「单独选卡」，槽位一致时会自动落回「沿用普通关」。
+//   槽位每次增删覆盖都会经过 jobRenderSlots -> 这里，所以选项实时跟着变。
+// ============================================================
+function jobRefreshBossLineupUI() {
+    const t = jobTables[currentTable];
+    const sel = document.getElementById('tfBossLineupMode');
+    if (!sel || !t) return;
+    const differ = ((typeof jobBossSlotsDiffer === 'function') && jobBossSlotsDiffer(t))
+        || t.bossLineupMode === 'deck';
+    const state = differ ? 'differ' : 'same';
+    // 选项集合只在状态变化时重建（不打断用户正在下拉的操作）
+    if (sel.dataset.bossState !== state) {
+        sel.innerHTML = differ
+            ? '<option value="plants">单独选卡</option><option value="deck">切换编队</option>'
+            : '<option value="">沿用普通关</option>';
+        sel.dataset.bossState = state;
+    }
+    if (!differ) {
+        t.bossLineupMode = '';
+    } else if (t.bossLineupMode !== 'deck') {
+        t.bossLineupMode = 'plants';
+    }
+    sel.value = t.bossLineupMode;
+    const lab = sel.closest('label');
+    if (lab) {
+        lab.setAttribute('data-tooltip', differ
+            ? 'boss 关槽位与普通关不一致：单独选卡 = boss 关用自己的槽位重新选卡；切换编队 = boss 关切到指定编队（编队想退回沿用：先切「单独选卡」）'
+            : '槽位的设置沿用普通关（到 boss 棋盘给某个槽换植物或点 ✕ 删除后，这里会自动出现换卡/编队选项）');
+    }
+    const bdbx = document.getElementById('tfBossDeckBox');
+    if (bdbx) bdbx.style.display = (t.bossLineupMode === 'deck') ? 'inline-flex' : 'none';
 }
 
 function jobSyncForm() {
@@ -100,6 +146,12 @@ function jobSyncForm() {
     // ★ 编队号强制 1-6：pipe 那边的「切换编队序号」只认 1-6，
     //   越界的值会让 OCR 的 expected 永远匹配不上。
     if (dn) t.deckNo = Math.min(6, Math.max(1, parseInt(dn.value) || 1));
+    // boss 关阵容（'' = 沿用普通关；选项集合由 jobRefreshBossLineupUI 按槽位数据驱动）
+    const bm = document.getElementById('tfBossLineupMode');
+    if (bm) t.bossLineupMode = (bm.value === 'plants' || bm.value === 'deck') ? bm.value : '';
+    const bdn = document.getElementById('tfBossDeckNo');
+    if (bdn) t.bossDeckNo = Math.min(6, Math.max(1, parseInt(bdn.value) || 1));
+    jobRefreshBossLineupUI();   // 顺带校正 mode 合法性 + 编队号显隐
     jobRenderTabs();
 }
 
@@ -167,7 +219,11 @@ function placePlantOnBoard(board, slot, r, c) {
         return true;
     }
 
-    const name = t0 && t0.slots[slot];
+    // ★ 按目标棋盘语境取植物名：落在 boss 棋盘（boardLate）用 boss 有效槽位
+    //   （bossSlots 覆盖层，空槽沿用普通关），普通棋盘用普通关槽位。
+    const _bossCtx = (typeof boardLate !== 'undefined' && board === boardLate);
+    const name = t0 && ((typeof jobSlotNameCtx === 'function')
+        ? jobSlotNameCtx(t0, slot, _bossCtx) : t0.slots[slot]);
     if (!name) return false;
 
     const info = jobFindPlant(name) || {};
@@ -270,29 +326,33 @@ function jobSyncSlotPlantEverywhere(slot, name) {
 // 清空槽位时，把棋盘上该槽的落点一并删掉（两块棋盘都删）。
 // 返回删除的落点总数。
 // ============================================================
-function jobPurgeSlotFromBoard(slot) {
-    if (!slot || slot === 9 || slot === 10) return 0;
+
+// 只清**指定一块**棋盘上某槽的落点 —— boss 槽位「删除沿用」时用，
+// 不能动另一块棋盘（普通关该槽的植物还在）。
+function jobPurgeSlotOnBoard(board, slot) {
+    if (!board || !slot || slot === 9 || slot === 10) return 0;
     const scopeId = 'card' + slot;
     let removed = 0;
-
-    function purge(board) {
-        if (!board) return;
-        for (let r = 0; r < board.length; r++) {
-            const row = board[r];
-            if (!Array.isArray(row)) continue;
-            for (let c = 0; c < row.length; c++) {
-                const cell = row[c];
-                if (!Array.isArray(cell)) continue;
-                const keep = cell.filter(function (it) {
-                    if (it && it.id === scopeId) { removed++; return false; }
-                    return true;
-                });
-                if (keep.length !== cell.length) board[r][c] = keep;
-            }
+    for (let r = 0; r < board.length; r++) {
+        const row = board[r];
+        if (!Array.isArray(row)) continue;
+        for (let c = 0; c < row.length; c++) {
+            const cell = row[c];
+            if (!Array.isArray(cell)) continue;
+            const keep = cell.filter(function (it) {
+                if (it && it.id === scopeId) { removed++; return false; }
+                return true;
+            });
+            if (keep.length !== cell.length) board[r][c] = keep;
         }
     }
-    try { purge(typeof boardEarly !== 'undefined' ? boardEarly : null); } catch (e) { }
-    try { purge(typeof boardLate !== 'undefined' ? boardLate : null); } catch (e) { }
+    return removed;
+}
+
+function jobPurgeSlotFromBoard(slot) {
+    let removed = 0;
+    try { removed += jobPurgeSlotOnBoard(typeof boardEarly !== 'undefined' ? boardEarly : null, slot); } catch (e) { }
+    try { removed += jobPurgeSlotOnBoard(typeof boardLate !== 'undefined' ? boardLate : null, slot); } catch (e) { }
     return removed;
 }
 

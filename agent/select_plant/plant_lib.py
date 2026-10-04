@@ -30,7 +30,27 @@ import numpy as np
 # 默认路径（可通过环境变量覆盖，避免移植后硬编码）
 # ---------------------------------------------------------------------------
 
+def _pick_resource_dir() -> Path:
+    """定位资源根目录（两种布局自动判断，与 agent/jobset/engine.py 同规则）：
+
+      - 发行包：install.py 把 assets/resource 摊平拷到 <包根>/resource
+        -> <包根>/resource 存在就用它
+      - 开发仓库：没有 <根>/resource，资源在 <根>/assets/resource
+
+    ★ 打包后「选不了植物 / 无模板」的血案就是这里写死开发布局路径导致的
+      （2026-10-03 日志：超级机枪射手 无模板）。
+    """
+    root = Path(__file__).resolve().parent.parent.parent   # <根>/agent/select_plant/ -> <根>
+    packaged = root / "resource"
+    if packaged.is_dir():
+        return packaged
+    return root / "assets" / "resource"
+
+
+_RESOURCE_DIR = _pick_resource_dir()
+
 # 中英文对照表（中文名 -> 英文名/品质）
+# 注意：对照表在 agent/select_plant/ 下，install.py 整树拷贝 agent/ -> 包里同位
 DEFAULT_TABLE_MD = os.environ.get(
     "SELECT_PLANT_TABLE",
     str(Path(__file__).resolve().parent / "植物中英文对照表.md"),
@@ -38,11 +58,16 @@ DEFAULT_TABLE_MD = os.environ.get(
 
 # 卡槽模板根目录（选卡界面按品质分夹）
 # 相对定位: 本文件位于 <工程根>/agent/select_plant/ 下,
-#           模板在 <工程根>/assets/resource/image/General/plant/plant_ref_card
+#           模板在 <资源根>/image/General/plant/plant_ref_card
 DEFAULT_TEMPLATE_DIR = os.environ.get(
     "SELECT_PLANT_TEMPLATE_DIR",
-    str(Path(__file__).resolve().parent.parent.parent
-        / "assets" / "resource" / "image" / "General" / "plant" / "plant_ref_card"),
+    str(_RESOURCE_DIR / "image" / "General" / "plant" / "plant_ref_card"),
+)
+
+# 无尽局外 80 选卡模板根目录（与 plant_ref_card 同级；同样从 __file__ 推算，打包后可移植）
+ENDLESS_TEMPLATE_DIR = os.environ.get(
+    "SELECT_PLANT_ENDLESS_TEMPLATE_DIR",
+    str(_RESOURCE_DIR / "image" / "General" / "plant" / "plant_ref_endless"),
 )
 
 # 品质 -> 目录名（英文目录名，避免网页端/工具链的中文路径问题）

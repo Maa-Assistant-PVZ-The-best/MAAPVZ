@@ -63,6 +63,9 @@ def _pick_resource_dir() -> Path:
 
 _RESOURCE_DIR = _pick_resource_dir()
 
+# 公开别名（runtime 等需要定位 pipeline/图片等资源文件时用）
+RESOURCE_DIR = _RESOURCE_DIR
+
 DEFAULT_JOBS_DIR = _RESOURCE_DIR / "jobs"
 
 # 旧版布局的作业集位置：<根>/assets/resource/jobs。
@@ -184,6 +187,22 @@ class Table:
                 if isinstance(v, str) and v.strip():
                     self.slots[str(k)] = v.strip()
 
+        # ---- 神器（占位：暂无图片资源，网页端暂无 UI；参与导出与阵容签名）----
+        _art = lineup.get("artifact")
+        self.artifact: Optional[str] = str(_art).strip() if _art else None
+
+        # ---- boss 关阵容（boss_lineup：可与普通关不同；缺省 = 沿用普通关）----
+        #   网页端导出的是「有效值」（逐槽沿用普通关后的完整槽位），
+        #   所以这里不需要再做逐槽合并；boss_lineup 缺失（旧作业集）= 完全沿用。
+        bl = self.raw.get("boss_lineup")
+        bl = bl if isinstance(bl, dict) else {}
+        self.boss_plants: List[str] = _norm_plants(bl.get("plants"))
+        self.boss_squad: Optional[int] = _as_int(self.raw.get("boss_squad"), None)
+        if self.boss_squad is not None and not (1 <= self.boss_squad <= 6):
+            self.boss_squad = None
+        _bart = bl.get("artifact")
+        self.boss_artifact: Optional[str] = str(_bart).strip() if _bart else None
+
         # 动作后等待：{ "once|card2|2,1|2": 2, ... }（网页端 jobPlacementKey 的键）
         # ★ 普通关与 boss 关各自独立（bossWaitAfter 缺省 -> 空表）
         wa = self.raw.get("waitAfter")
@@ -253,18 +272,26 @@ class Table:
                 key_name = str(seg.get("key") or "").strip()
                 typ = str(seg.get("type") or "plant").strip().lower()
 
-                # ★ 通用动作段（点波/捡豆/加速/等待）：**没有 cells**，
+                # ★ 通用动作段（点波/捡豆/加速/等待/切换形态）：**没有 cells**，
                 #   不能像普通槽那样因为「没落点」被丢掉。
                 if typ == "action" or key_name.startswith("ga:"):
                     rec: Dict[str, Any] = {
                         "key": key_name,
-                        "slot": None,
+                        # ★ 通用动作的参数必须透传（切换形态的 slot/times 等）——
+                        #   曾经这里写死 slot=None，下游 generic_dsl 拿不到槽位
+                        #   -> 整段编译为空、局内永远不执行（"点不了切换形态"）。
+                        "slot": seg.get("slot"),
                         "type": "action",
                         "action": str(seg.get("action") or key_name).strip(),
                         "label": seg.get("label") or "",
                         "cells": [],
                         "waits": [],
                     }
+                    # ★ 参数袋透传：times 及未来 params 声明新增的字段原样带下去，
+                    #   新增带参动作免改这里（ms 除外，走下面的正数守卫）。
+                    for _k, _v in seg.items():
+                        if _k not in rec and _k != "ms":
+                            rec[_k] = _v
                     # ★ 等待动作的毫秒数（网页端「等待」块里的输入框）：
                     #   必须带下去，否则运行时只能当未知动作跳过。
                     ms_val = seg.get("ms")
@@ -366,6 +393,36 @@ class Table:
         """按是否 boss 关取种植规则。"""
         return self.boss if is_boss else self.non_boss
 
+    # -- 按关卡形态取有效阵容（boss 未单独配置 -> 沿用普通关）-----------------
+
+    def eff_plants(self, is_boss: bool) -> List[str]:
+        if is_boss and self.boss_plants:
+            return list(self.boss_plants)
+        return list(self.plants)
+
+    def eff_squad(self, is_boss: bool) -> Optional[int]:
+        # boss_squad 有值 -> boss 关走编队；boss_plants 有值 -> boss 关走选卡；
+        # 都没有 -> 沿用普通关的编队设置
+        if is_boss:
+            if self.boss_squad is not None:
+                return self.boss_squad
+            if self.boss_plants:
+                return None
+        return self.squad
+
+    def eff_artifact(self, is_boss: bool) -> Optional[str]:
+        if is_boss and self.boss_artifact is not None:
+            return self.boss_artifact
+        return self.artifact
+
+    def lineup_sig(self, is_boss: bool) -> tuple:
+        """阵容签名（含神器占位）：相同 = 局内卡牌/编队/神器完全一致，
+        运行时据此跳过清空卡牌与选卡/编队，直接开始战斗。"""
+        sq = self.eff_squad(is_boss)
+        if sq is not None:
+            return ("deck", sq, self.eff_artifact(is_boss))
+        return ("plants", tuple(self.eff_plants(is_boss)), self.eff_artifact(is_boss))
+
     def __repr__(self) -> str:
         rng = f"{self.from_level}~{self.to_level if self.to_level is not None else '-'}"
         return f"<Table#{self.index} {rng} plants={self.plants}>"
@@ -395,6 +452,19 @@ class JobSet:
         ] if isinstance(worlds, (list, tuple)) else []
 
         self.max_level: Optional[int] = _as_int(raw.get("max_level"), None)
+
+        # ---- 无尽局外 80 选卡（作业集级；网页端 32-jobset-outer.js 导出）----
+        #   mode:   auto     = 按 plants 列表自动选（runtime 注入到 80 选卡 custom 节点）
+        #           oneclick = 跳过自动选卡，直接点游戏内「一键选取」
+        #           confirm  = 复用当前配置（跳过整个 80 选卡流程）
+        #   plants: 有序中文名（阵容表锁定植物在前 + 手动点击顺序）；
+        #           mode ≠ auto 时网页端导出为空（局内不读列表）
+        op = raw.get("outer_pick")
+        op = op if isinstance(op, dict) else {}
+        _op_mode = str(op.get("mode") or "auto").strip()
+        self.outer_pick_mode: str = _op_mode if _op_mode in ("auto", "oneclick", "confirm") else "auto"
+        # 封顶 80：界面最多选 80 个，多出的从末尾砍（网页端已截，这里兜底）
+        self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))[:80]
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:
@@ -512,7 +582,19 @@ def load_jobset(
 
     d = Path(jobs_dir) if jobs_dir else DEFAULT_JOBS_DIR
     if not d.is_dir():
-        raise JobSetError(f"作业集目录不存在：{d}")
+        # ★ 打包/CI 发行包里 jobs 是用户数据目录（.gitignore 排除 + 空目录
+        #   进不了 zip），可能整个不存在 —— 本地 install.py 会建，CI 包不会。
+        #   这里自动补上，让后续报「没有作业集」的可操作错误，
+        #   而不是一句「目录不存在」把任务直接打死。
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            raise JobSetError(f"作业集目录不存在且无法创建：{d}")
+        raise JobSetError(
+            f"作业集目录是空的（已自动创建）：{d}\n"
+            "请先把开发仓库 assets/resource/jobs 里的作业集 JSON 拷到这个目录，"
+            "或在网页编辑器里保存一份作业集"
+        )
 
     code = (code or "").strip() or read_current_code(d)
     if not code:

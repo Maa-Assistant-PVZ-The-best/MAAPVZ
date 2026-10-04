@@ -807,7 +807,72 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
 
 ---
 
+## 10.5 ★ boss 关独立阵容 + 神器占位 + 阵容相同跳过选卡（2026-10-03）
+
+一张阵容表现在有**两套选卡阵容**：普通关（`lineup`）+ boss 关（`boss_lineup`），
+外加**神器占位字段**（`artifact`，暂无图片资源、网页端暂无 UI，pipe 端用户自己写）。
+
+### 网页端模型（20/24/27/28/29/32 + index.html）
+
+- 表新增字段：`bossLineupMode`（`''`=沿用普通关 | `'plants'` | `'deck'`）、
+  `bossDeckNo`、`bossSlots`（boss 槽位**三态覆盖层**：key 不存在 = 沿用普通关同槽；
+  `null` = 已删除（boss 关不用这个槽）；字符串 = 覆盖）、
+  `artifact` / `bossArtifact`（占位，null）。
+- **语境助手**（`24-jobset-fields.js`）：`jobBossSlotState(t, i)` 三态判定 /
+  `jobSlotNameCtx(t, i, bossCtx)`（blocked → ''）/ `jobSlotInherited` /
+  `jobEffSlots(t, bossCtx)` / **`jobBossSlotsDiffer(t)`**（有任何删除或值不同的
+  覆盖 = 不一致；覆盖成同名植物算一致）。
+  凡是「显示/编辑槽位植物名」的地方一律走这里，**不要再直接读 `t.slots[i]`**
+  （boss 语境下那是错的）。
+- **「boss 关」阵容下拉是数据驱动的**（`21` 的 `jobRefreshBossLineupUI`，
+  由 `jobRenderSlots` 在每次槽位增删后调用）：
+  槽位一致 → 只显示「沿用普通关」（mode 锁定 `''`，悬停提示沿用）；
+  不一致 → 只提供「单独选卡 / 切换编队」（没有沿用项），mode 自动落到 `plants`。
+  例外：`mode='deck'` 本身算「不一致」（编队不需要槽位覆盖，否则会被静默抹掉）；
+  编队退回沿用的路径 = 先切「单独选卡」。
+- boss 棋盘 tab（'late'）下槽位栏编辑的是 `bossSlots` 覆盖层，三态 UI：
+  沿用槽半透明（✕ = **删除沿用**，只清 boss 棋盘的该槽落点）；
+  覆盖槽正常色（✕ = 取消覆盖回沿用）；
+  已删除槽半透明 + 红色虚线框（↩ = 恢复沿用，点槽体 = 选植物变成覆盖）。
+  `placePlantOnBoard` 按目标棋盘取有效植物名，boss 覆盖改动只同步 `boardLate`。
+- 导出（`jobBuild`）：`lineup`/`boss_lineup` 都带 `artifact`；
+  `boss_lineup` 永远是**有效值**（逐槽沿用后的完整 8 槽 / 编队号），
+  `boss_squad` 是运行时读的权威字段；`bossSlots`/`bossLineupMode` 等编辑器
+  状态字段一并导出（读回用）。导入（28）有反向推导：
+  手写 JSON 只给 `boss_squad` → 反推 `bossLineupMode='deck'`。
+- 局外选卡锁定集合（32 `jobOuterLockedPlants`）= 普通槽位 ∪ boss 有效槽位。
+
+### agent 端（engine / runtime）
+
+- `engine.Table`：`boss_plants` / `boss_squad` / `boss_artifact` / `artifact`；
+  有效值访问器 `eff_plants(is_boss)` / `eff_squad(is_boss)` / `eff_artifact(is_boss)`；
+  **`lineup_sig(is_boss)`** = `("deck", squad, artifact)` 或 `("plants", tuple(plants), artifact)`。
+- **阵容相同跳过**：`_STATE["lineup_sig"]` 记录当前生效阵容。
+  `_inject_lineup(context, table, is_boss)` 统一所有注入点
+  （JobSetFight 首锁/换表、JobSetPlan 换阵）：
+  签名相同 → `无尽挑战_识别开始战斗_清空卡牌` 改 `DirectHit + DoNothing`
+  直跳 `无尽挑战_选取植物_开始战斗`（不清空、不选卡、不切编队）；
+  不同 → 还原清空卡牌节点 + 正常注入。首次进关（签名 None）必走完整选卡。
+- **⚠️ `_CLEAR_CARDS_ORIG`（runtime.py）是清空卡牌节点 pipe 原值的照抄快照
+  —— 改 pipe 里这个节点必须同步它**（selfcheck §13 有一致性断言）。
+- **闸门阵容维度修正**（`lineup_gate_adjust`，纯函数）：表没变但形态阵容不同
+  → 翻「变化」重选；表变了但阵容相同 → 翻「未变」跳过。训练模式不修正
+  （每关必重选是用户设定）。boss 预判用计数器 `lv % 5 == 0`（与补给预告同口径）。
+- **★ 训练模式双层豁免**（踩过的坑）：闸门修正挡训练只翻了 next 分支，
+  但 `_inject_lineup` 的签名跳过会把「清空卡牌」节点**本身**改成 DirectHit 空跳
+  —— 分支走对了、节点被废了。所以 `_inject_lineup` 里还有第二道：
+  `_STATE["training"]` 为真时永不跳过（`JobSetPlan` 每关写入该标记，
+  Fight/Stage 的节点参数里没有「训练模式」键，只能走状态；
+  `JobSetLoad` 重置/新开局时清空）。
+- 预热（`_prewarm_for_level`）：首关是 5 的倍数时用 boss 阵容预热；
+  预热**不写** `lineup_sig`（首关必须真选）。
+
+### 验证
+
+selfcheck §13 全覆盖（解析/签名/快照一致性/跳过行为/闸门修正），全部通过。
+
 ## 11. 最近验证结果（全绿基线）
+
 
 ```
 selfcheck.py                       →  全部通过
@@ -949,3 +1014,62 @@ static registries = {
 | 启动网页 | 双击 `pvz.bat`（自动挑带 flask 的解释器），端口 **5000** |
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
+| 退出看门狗 | `agent/exit_watchdog.py`：MFA 停任务只停 tasker 不断连，python.exe 会残留。**事件驱动**：注册 agent 侧 tasker sink（`AgentServer.add_tasker_sink`），收到 `Tasker.Task` 终态事件（停止/成功/失败）→ 宽限 3s `os._exit`。⚠️ 不要用轮询 `tasker.running` 的方案：context/tasker 句柄在 action 结束即被服务端回收，轮询会发空 id 反向请求（客户端报 `tasker not found`）且局内无 custom 的长窗口会误自杀。注册点在 `main.py` import 区 |
+
+---
+
+## 13. 归档：历史设计文档（2026-10-03 并入本节，原独立文件已删除）
+
+> 三份文档的**有效信息全部压在这里**，实施过程细节（阶段勾选清单等）去 git 历史里找。
+> 运行时会被代码读取的 md 只有 `agent/select_plant/植物中英文对照表.md`（数据表，不在此列）。
+
+### 13.1 作业集数据流重构定案（原 `REFACTOR_PLAN.md`，阶段 1–6 已于 2026-10-02 收官）
+
+- **总原则**：HTML 负责「算」，运行时负责「盖」。作业集 JSON 里**没有** pipe 字段；
+  `compiled` 预编译块（`format:2`）在编辑器保存时生成，运行时 `override_pipeline(compiled)` 零翻译。
+- **覆盖顺序钉死**：compiled 先盖，编队/补给/选卡后盖（后盖赢）；
+  永不覆盖 `无尽局内_继续挑战.next`（顶掉训练模式的血泪）。
+- **关卡判断三件套**：boss = 头像模板匹配；结束 = 结算按钮匹配；
+  关卡号 = 起始关卡 + 过关计数器（数字 OCR 不稳已砍，实测 81→21、87→89）。
+  计数器挂在「点继续挑战/继续训练」之后——重开不经过该点，天然不误加；
+  boss 关对齐 5 的倍数自愈。状态行刷新时机 = 识别到「开始战斗」。
+- **everyN 读作业集顶层**（历史上误读表级字段恒为 None → 恒为 10）。
+- **端口僵尸事故**：Werkzeug 的 SO_REUSEADDR 在 Windows 允许多进程绑同一端口
+  → 旧进程吃掉所有请求、日志被截断成只有启动行。`pvz.py` 启动前裸 bind 试占；
+  排查用 `netstat -ano`（`Get-NetTCPConnection` 会漏报监听 socket）。
+  **2026-10-04 起改为挤占接管**：端口被占时读共享 PID 文件
+  `~/.maapvz_pvz_editor.pid`（每个实例启动时登记自己；不用 %TEMP%——会被运行环境
+  重定向；不用 CIM/WMI——部分环境拒绝访问），记录在案的 PID 正在监听 →
+  是上一个编辑器实例 → taskkill 接管（同时调多个仓库实例时后启动的赢）；
+  对不上 → 别人的程序占端口，报错退出不抢。
+
+### 13.2 SelectPlants 局外 80 选卡 SPEC（原 `agent/select_plant/SPEC_endless_select.md`）
+
+- **背景**：局外 80 选卡界面卡片**没有文字** → OCR 核对不可用；漏选必须报错而非默默跳过。
+  模板在 `plant_ref_endless`（手动截图，目录结构同 `plant_ref_card`，`resolve_templates` 复用）。
+- **设计**：不新建 custom，`SelectPlants` 全部开关化，**缺省值 = 旧行为**：
+  `无尽局外选卡`（80 模式，隐含不做核对/槽位检查/占位填充）、`核对`、`占位填充`、
+  `槽位上限`（仅单目标）、`尺度`（局外缺省 `[1.0]`，手截图同尺度）、`局外点击间隔`、
+  `模板目录`（按模式自动选，`__file__` 相对推算，pipeline 不写绝对路径）。
+- **严格顺序 + 当前帧优先**（两种模式共有）：放完一个**不回顶**，下一个先看当前帧；
+  当前帧没有就**顺势往下滑**（2026-10-03 改，不再直接回顶），滑到底才反弹回顶；
+  **触底反弹不算失败次数**——选中/点到任何东西就清零，连续 `最多重试`（默认 6）次
+  触底都没进展才放弃。80 卡位顺序 = 优先级。
+  旧「一帧多目标」模式**已废弃**（点击顺序由界面布局决定 ≠ 列表顺序）。
+- **防呆**：按名除名——点过的植物移出待选集（重复点 = 取消选中）。
+- **性能**：`_TPL_CACHE` 模板磁盘缓存（84 模板×多尺度每帧太贵）。
+- **接线**：闸口节点 `无尽挑战_检查是否需要选植物` 的 `next` 留空，由 runtime
+  `_apply_outer_pick`（挂在 JobSetLoad）按作业集 `outer_pick.mode` 覆盖分流：
+  `auto` → 清空→自动选→确定；`oneclick` → 一键选择→确定；`confirm` → 直接确定。
+  注入前先读 pipe 节点现有参数合并（`custom_action_param` 整体替换）。
+  auto 但 plants 为空 → 退化为「复用当前配置」+ 告警，不卡界面。
+
+### 13.3 SelectPlants 动态回顶 SPEC（原 `agent/select_plant/SPEC_backtop.md`）
+
+- **回顶次数 = 本轮实际下滑次数 + 3**（每轮回顶后 `slide_count` 清零，+3 永远贴合列表真实长度）。
+- ❗ **回顶坐标固定** `(381,401) → (381,611)`（往下刷 = 列表往上翻），
+  **不能**复用滑动坐标的反向（实测有 bug）。
+- **解耦**：`最多滑动步数`=40（单轮下扫上限）与 `最多重试`=6（回顶重扫上限）是两个计数器
+  ——旧版混用导致最多只扫 6 屏，靠写死的 `repeat=30` 硬顶。
+- `回顶.duration` 缺省 600（旧的 80 是配 30 连刷用的）；显式传 `回顶.repeat` 仍走旧固定次数。
+- 验收 selfcheck：`agent\select_plant\selfcheck_backtop.py`。

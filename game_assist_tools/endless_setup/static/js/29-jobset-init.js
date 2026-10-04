@@ -206,6 +206,7 @@ function jobInit() {
         jobRenderTabs();
         jobFillForm();
         jobSaveLocal();
+        if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新
         setStatus('🗑 已删除阵容，剩余 ' + jobTables.length + ' 个');
     });
 
@@ -269,7 +270,7 @@ function jobInit() {
         bdEl.addEventListener('change', function () { jobSetBoundary(this.value); });
         bdEl.addEventListener('input', function () { /* 打字中不校验，避免打断输入 */ });
     }
-    ['tfLineupMode','tfDeckNo'].forEach(function (id) {
+    ['tfLineupMode','tfDeckNo','tfBossLineupMode','tfBossDeckNo'].forEach(function (id) {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', jobSyncForm);
@@ -277,6 +278,9 @@ function jobInit() {
     });
     document.getElementById('tfLineupMode').addEventListener('change', () => {
         document.getElementById('tfDeckBox').style.display = document.getElementById('tfLineupMode').value === 'deck' ? 'inline-flex' : 'none';
+    });
+    document.getElementById('tfBossLineupMode').addEventListener('change', () => {
+        document.getElementById('tfBossDeckBox').style.display = document.getElementById('tfBossLineupMode').value === 'deck' ? 'inline-flex' : 'none';
     });
     const _jp = document.getElementById('jobsetPanel');
     if (_jp) {
@@ -291,6 +295,11 @@ function jobInit() {
         _jp.addEventListener('change', _panelGuard);
     }
     document.getElementById('jobSaveBtn').addEventListener('click', jobSave);
+    // 棋盘下方的「🧹 清空棋盘」按钮（普通关 / boss 关各一个）
+    const _cbE = document.getElementById('clearBoardEarly');
+    if (_cbE) _cbE.addEventListener('click', function () { jobClearBoardUI(false); });
+    const _cbL = document.getElementById('clearBoardLate');
+    if (_cbL) _cbL.addEventListener('click', function () { jobClearBoardUI(true); });
     const _sel = document.getElementById('jobSelect');
     if (_sel) _sel.addEventListener('change', jobOnSelect);
     const _del = document.getElementById('jobDeleteBtn');
@@ -322,3 +331,4 @@ function jobInit() {
         else if (k === 'd' || e.key === 'ArrowRight') { e.preventDefault(); jobMovePick(5); }
     });
 }
+

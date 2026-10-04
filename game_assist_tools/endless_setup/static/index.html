@@ -312,6 +312,28 @@
                 </label>
                 <span style="font-size:11px;color:#94a3b8;">跳过选卡，直接切编队开打</span>
             </span>
+            <label style="font-size:12px;margin-left:8px;"
+                   data-tooltip="boss 关阵容：沿用普通关 = boss 关不重新选卡直接开打；单独选卡 = boss 关用自己的 8 槽重新选（到 boss 棋盘 tab 编辑，空槽沿用普通关）；切换编队 = boss 关切到指定编队"
+                   data-tooltip-delay="1000">boss 关
+                <select id="tfBossLineupMode" style="max-width:118px;">
+                    <option value="">沿用普通关</option>
+                    <option value="plants">单独选卡</option>
+                    <option value="deck">切换编队</option>
+                </select>
+            </label>
+            <span id="tfBossDeckBox" style="display:none;">
+                <label style="font-size:12px;">编队号
+                    <select id="tfBossDeckNo" style="width:auto;"
+                            title="boss 关切换到第几个编队（1-6）">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6">6</option>
+                    </select>
+                </label>
+            </span>
             <button class="btn" id="outerPickBtn"
                     data-tooltip="无尽局外 80 选卡（作用于整个作业集，与换阵无关）：阵容表里的植物自动锁定并优先选取，其余按点击顺序补选"
                     data-tooltip-delay="1000">🌐 局外选卡 <span id="outerPickCount" style="background:#2d7aff;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:2px;">0</span></button>
@@ -340,6 +362,9 @@
             <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
                 <b>局外选卡（无尽 · 选 80）</b>
                 <input type="text" id="outerSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
+                <button class="btn" id="outerFillBtn"
+                        data-tooltip="自动把未选的植物补到 80 个（按当前排序从头扫，跳过无图植物；新补的接在现有已选后面）"
+                        data-tooltip-delay="1000">补齐空选</button>
                 <button class="btn" id="outerClear"
                         data-tooltip="清空所有手动选择的植物（阵容表里的植物保留）"
                         data-tooltip-delay="1000">清空</button>
@@ -358,25 +383,20 @@
                         <option value="selected">已选优先</option>
                     </select>
                 </label>
+                <button class="btn" id="outerReorderBtn" style="padding:2px 10px;font-size:12px;"
+                        data-tooltip="重排已选植物的选取顺序：进入后只显示已选植物，序号清零，按你想要的优先级依次点击（先点的先选）；再点「完成排序」退出"
+                        data-tooltip-delay="1000">调整排序</button>
                 <span id="outerPickCountText" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
                 <span style="font-size:12px;color:#64748b;">局内执行方式：</span>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="默认：进入局外选卡页后，按上面的列表顺序自动选取（表内植物优先）"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="auto" checked> 按列表自动选取
-                </label>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="局内改用游戏自带的「一键选取」（选的是你游戏内收藏的植物），不再按列表自动选"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="oneclick"> 一键选取
-                </label>
-                <label style="font-size:12px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;"
-                       data-tooltip="局内不再选卡，直接点「确定」（你在游戏内已经配好 80 个）"
-                       data-tooltip-delay="1000">
-                    <input type="radio" name="outerPickMode" value="confirm"> 直接点击确定
-                </label>
+                <div style="position:relative;">
+                    <button class="btn" id="outerModeBtn" style="padding:3px 12px;font-size:12px;"
+                            data-tooltip="点击切换局内执行方式"
+                            data-tooltip-delay="1000">按列表自动选取 ▾</button>
+                    <div id="outerModeMenu" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:12001;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.18);min-width:240px;overflow:hidden;"></div>
+                </div>
+                <span id="outerModeDesc" style="font-size:11px;color:#94a3b8;"></span>
             </div>
             <div id="outerGrid" style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-content:start;"></div>
         </div>
@@ -386,7 +406,7 @@
         <div class="flex-col" style="flex:0 0 380px;max-width:380px;">
             <div class="panel" id="slotPlantPanel">
                 <div class="panel-title">🪴 槽位植物（点击选择；「喂豆」选中后在棋盘落子标记喂豆位置）</div>
-                <div id="jobSlots" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+                <div id="jobSlots" style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-start;"></div>
             </div>
 
             
@@ -422,6 +442,11 @@
                     </div><!-- /board-main -->
                     <div class="gen-actions" id="genActions"><!-- 由 JS 渲染 --></div>
                     </div><!-- /board-with-actions -->
+                    <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+                        <button class="btn btn-danger" id="clearBoardEarly"
+                                data-tooltip="清空普通关棋盘上的全部落子（槽位配置不受影响；可 Ctrl+Z 撤销）"
+                                data-tooltip-delay="1000">🧹 清空棋盘</button>
+                    </div>
                 <!-- 🚩 收尾参数：棋盘上有「收尾」落子时才显示（仅普通关，boss 关无收尾） -->
                 <div id="earlyEndParams" class="end-params" style="display:none;">
     <div class="end-params-title">🚩 收尾参数</div>
@@ -457,6 +482,11 @@
                     </div><!-- /board-main -->
                     <div class="gen-actions" id="genActionsBoss"><!-- 由 JS 渲染 --></div>
                     </div><!-- /board-with-actions -->
+                    <div style="margin-top:6px;display:flex;justify-content:flex-end;">
+                        <button class="btn btn-danger" id="clearBoardLate"
+                                data-tooltip="清空 boss 关棋盘上的全部落子（槽位配置不受影响；可 Ctrl+Z 撤销）"
+                                data-tooltip-delay="1000">🧹 清空棋盘</button>
+                    </div>
                 </div>
                 <!-- ⏱️ 喂豆间隔设置面板已整体移除（小关/Boss关/Boss关2 间隔都不再用） -->
                 <!-- ============ 补给选取（boss 关专属，每个阵容独立） ============

@@ -29,6 +29,13 @@ function jobNewTable() {
         //   见 27-jobset-board.js 的 jobBuild）
         waveEnabled: false,
         slots: {},
+        // ---- boss 关阵容（与普通关独立；bossLineupMode='' = 完全沿用普通关）----
+        bossLineupMode: '',       // '' = 沿用普通关 | 'plants' = 单独选卡 | 'deck' = 切换编队
+        bossDeckNo: 1,            // boss 关编队号（bossLineupMode='deck' 时生效）
+        bossSlots: {},            // boss 关槽位覆盖层，三态：key 不存在=沿用普通关同槽 / null=已删除（boss 不用这个槽）/ '植物名'=覆盖
+        // ---- 神器（占位：暂无图片资源，暂无 UI；参与导出与运行时阵容签名）----
+        artifact: null,           // 普通关神器
+        bossArtifact: null,       // boss 关神器（null = 沿用普通关）
         // ---- 普通关配置 ----
         slotOrder: null,          // 单次链的槽位顺序（拖动链条调整）
         loopOrder: null,          // 循环链的槽位顺序

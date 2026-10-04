@@ -470,6 +470,26 @@ function clearBoard(isLate) {
     for (let r=0; r<board.length; r++) for (let c=0; c<board[r].length; c++) board[r][c] = [];
     renderAllBoards(); updatePreview();
 }
+
+// 「🧹 清空棋盘」按钮（棋盘下方）：清掉当前这块棋盘的全部落子。
+//   只动棋盘落子 —— 槽位配置（普通关 slots / boss 覆盖层）不受影响。
+//   clearBoard 内部已 saveBoardState，Ctrl+Z 可撤销。
+function jobClearBoardUI(isLate) {
+    const board = isLate ? boardLate : boardEarly;
+    let n = 0;
+    (board || []).forEach(function (row) {
+        (row || []).forEach(function (cell) { n += (cell || []).length; });
+    });
+    const which = isLate ? 'boss 关' : '普通关';
+    if (!n) { setStatus(which + '棋盘本来就是空的'); return; }
+    if (!window.confirm('确定清空' + which + '棋盘的全部 ' + n + ' 个落子吗？\n'
+        + '（槽位配置不受影响；可 Ctrl+Z 撤销）')) return;
+    clearBoard(isLate);
+    // 链面板按棋盘落子渲染，清完要跟着刷；改动也要落本地缓存
+    try { if (typeof jobRenderSeqChains === 'function') jobRenderSeqChains(); } catch (e) { }
+    try { if (typeof jobSaveLocal === 'function') jobSaveLocal(); } catch (e) { }
+    setStatus('已清空' + which + '棋盘的 ' + n + ' 个落子（槽位配置保留，可 Ctrl+Z 撤销）');
+}
 function resizeBoards() {
     if (!document.getElementById('colN') || !document.getElementById('rowN')) return;   // 棋盘尺寸控件已移除
     saveBoardState();
@@ -530,6 +550,9 @@ function initTabs() {
             safe(clearSelected);
             safe(updateSelectedUI);
             safe(renderAllBoards);
+            // ★ 槽位栏/链标签随语境切换：boss tab 显示 boss 有效槽位（覆盖层 + 沿用）
+            safe(jobRenderSlots);
+            safe(jobRenderSeqChains);
             setTimeout(() => safe(resetKeyboardNavigation), 50);
         });
     });
