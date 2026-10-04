@@ -1014,7 +1014,7 @@ static registries = {
 | 启动网页 | 双击 `pvz.bat`（自动挑带 flask 的解释器），端口 **5000** |
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
-| 退出看门狗 | `agent/exit_watchdog.py`：MFA 停任务只停 tasker 不断连，python.exe 会残留。**事件驱动**：注册 agent 侧 tasker sink（`AgentServer.add_tasker_sink`），收到 `Tasker.Task` 终态事件（停止/成功/失败）→ 宽限 3s `os._exit`。⚠️ 不要用轮询 `tasker.running` 的方案：context/tasker 句柄在 action 结束即被服务端回收，轮询会发空 id 反向请求（客户端报 `tasker not found`）且局内无 custom 的长窗口会误自杀。注册点在 `main.py` import 区 |
+| 退出看门狗 | `agent/exit_watchdog.py`：MFA 停任务只停 tasker 不断连、关闭 MFA 时 `join()` 也不返回，python.exe 都会残留。两条互补路径：① agent 侧 tasker sink 收 `Tasker.Task` 终态事件（停止/成功/失败）→ 3s 后 `os._exit`；② 祖先进程监控（toolhelp32 快照记录父+祖父进程的 PID 与 exe 名，1.5s 轮询，消失或 PID 被复用即判宿主已关）→ 2s 后退出，覆盖 MFA 整体关闭。⚠️ 不要用轮询 `tasker.running` 的方案：句柄在 action 结束即被回收，会报 `tasker not found` 且在无 custom 的长窗口误自杀。入口 `exit_watchdog.arm(AgentServer)`，在 `main.py` import 区 |
 
 ---
 
@@ -1038,10 +1038,13 @@ static registries = {
   → 旧进程吃掉所有请求、日志被截断成只有启动行。`pvz.py` 启动前裸 bind 试占；
   排查用 `netstat -ano`（`Get-NetTCPConnection` 会漏报监听 socket）。
   **2026-10-04 起改为挤占接管**：端口被占时读共享 PID 文件
-  `~/.maapvz_pvz_editor.pid`（每个实例启动时登记自己；不用 %TEMP%——会被运行环境
-  重定向；不用 CIM/WMI——部分环境拒绝访问），记录在案的 PID 正在监听 →
-  是上一个编辑器实例 → taskkill 接管（同时调多个仓库实例时后启动的赢）；
-  对不上 → 别人的程序占端口，报错退出不抢。
+  `~/.maapvz_pvz_editor.pid`（格式 `pid|实例根目录`；不用 %TEMP%——会被运行环境
+  重定向；不用 CIM/WMI——部分环境拒绝访问，exe 名用 toolhelp32 快照查）。
+  规则：记录在案且**同根目录** + `--reuse`（OpenJobEditor 呼出）→ 复用退出；
+  其余（pvz.bat 手动重启 / 外来检出 / 未登记的 python 残留）→ taskkill 接管；
+  非 python 占用 → 报错退出不抢。⚠️ OpenJobEditor（agent/my_action.py）
+  必须总是 `Popen pvz.py --reuse` 而不是"端口通了就直接用"——
+  否则旧代码实例一直吃请求，接管逻辑永远不会执行（踩过）。
 
 ### 13.2 SelectPlants 局外 80 选卡 SPEC（原 `agent/select_plant/SPEC_endless_select.md`）
 

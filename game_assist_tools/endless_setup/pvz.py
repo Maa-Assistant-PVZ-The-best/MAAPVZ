@@ -336,46 +336,101 @@ def _listener_pids(port: int):
     return pids
 
 
-# ★ 跨仓库共享的 PID 标记文件：所有 pvz.py 实例（不管哪个仓库检出）启动时都写这里。
-#   端口被占时用它认亲——记录在案的 PID 正在监听 = 上一个编辑器实例，可杀。
+def _exe_names() -> dict:
+    """{pid: exe_name} 快照（toolhelp32，同用户无权限要求；
+    别用 CIM/WMI——Get-CimInstance 在部分环境「拒绝访问」）。"""
+    import ctypes
+    from ctypes import wintypes
+
+    class PE32(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_void_p),
+            ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG), ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * wintypes.MAX_PATH),
+        ]
+
+    k32 = ctypes.windll.kernel32
+    snap = k32.CreateToolhelp32Snapshot(0x2, 0)  # TH32CS_SNAPPROCESS
+    if not snap or snap == ctypes.c_void_p(-1).value:
+        return {}
+    m = {}
+    try:
+        e = PE32()
+        e.dwSize = ctypes.sizeof(PE32)
+        ok = k32.Process32FirstW(snap, ctypes.byref(e))
+        while ok:
+            m[e.th32ProcessID] = e.szExeFile
+            ok = k32.Process32NextW(snap, ctypes.byref(e))
+    finally:
+        k32.CloseHandle(snap)
+    return m
+
+
+# ★ 跨仓库共享的 PID 标记文件：所有 pvz.py 实例（不管哪个仓库检出）启动时都写这里，
+#   格式 "pid|实例根目录"。端口被占时用它认亲：
+#   记录在案的 PID 正在监听 = 上一个编辑器实例；根目录相同 -> 可复用，不同 -> 接管。
 #   不碰 CIM/WMI（Get-CimInstance 在部分环境「拒绝访问」，不可靠）；
 #   也不用 %TEMP%（部分运行环境会重定向 TEMP，实例间会读到不同目录）——用用户主目录。
 PID_FILE = os.path.join(os.path.expanduser("~"), ".maapvz_pvz_editor.pid")
+MY_ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 def _read_pid_file():
+    """-> (pid, root)；旧格式只有 pid 时 root=None。"""
     try:
         with open(PID_FILE, "r", encoding="utf-8") as f:
-            return int(f.read().strip())
+            parts = f.read().strip().split("|", 1)
+        pid = int(parts[0])
+        root = parts[1] if len(parts) > 1 else None
+        return pid, root
     except Exception:
-        return None
+        return None, None
 
 
 def _write_pid_file():
     try:
         with open(PID_FILE, "w", encoding="utf-8") as f:
-            f.write(str(os.getpid()))
+            f.write(f"{os.getpid()}|{MY_ROOT}")
     except Exception as e:
         # 写失败 = 下次启动无法认亲接管（端口冲突时只能手动杀），大声一点
         print(f"[pvz] ⚠️ PID 标记文件写入失败（{PID_FILE}）：{e}", flush=True)
 
 
-def _ensure_port_free(host: str, port: int) -> None:
-    """启动前确认端口空闲；被占且占用者是上一个 pvz.py -> 杀掉旧实例接管。
+def _kill_and_wait(pid: int, try_bind) -> bool:
+    """taskkill 指定 PID 并等端口释放（最多 6 秒）。成功释放返回 True。"""
+    import subprocess
+    import time as _time
+    subprocess.run(["taskkill", "/PID", str(pid), "/F"],
+                   capture_output=True, timeout=10)
+    for _ in range(30):
+        if try_bind():
+            return True
+        _time.sleep(0.2)
+    return False
+
+
+def _ensure_port_free(host: str, port: int, reuse: bool = False) -> None:
+    """启动前确认端口可用；被占时按「自己人」规则接管或复用。
 
     ★ 为什么需要：Werkzeug 开发服务器默认带 SO_REUSEADDR，而在 Windows 上
       这个标志允许**多个进程同时绑同一个端口**——后启动的实例显示
       "Running on http://127.0.0.1:5000"，其实收不到任何请求，
       请求全被最先绑定的旧进程吃掉（端口僵尸事故）。
 
-    ★ 2026-10-04 改（进程挤占接管，取代关页签自杀方案）：
-      端口被占时读共享 PID 文件：记录在案的 PID 正在监听 -> 是上一个编辑器实例，
-      taskkill 接管——同时调试多个仓库实例时，后启动的赢，不用手动清端口。
-      监听者对不上 PID 文件 -> 别人的程序占了端口，报错退出（不抢）。
+    ★ 2026-10-04 进程挤占接管（取代关页签自杀方案）：
+      - 记录在 PID 文件里的旧实例正在监听：
+        · --reuse 且根目录相同（同仓库的 OpenJobEditor 呼出）-> 直接退出复用；
+        · 其余情况（pvz.bat 手动重启 / 别的仓库检出呼出）-> 杀掉接管，
+          保证「我打开的编辑器就是我这个仓库的」。
+      - 没登记但监听者是 python 解释器 -> PID 文件制度前的残留旧实例，同样可杀。
+      - 监听者是非 python 程序 -> 别人的端口，报错退出（不抢）。
     """
     import socket
-    import subprocess
-    import time as _time
+    import sys as _sys
 
     def _try_bind() -> bool:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -391,24 +446,40 @@ def _ensure_port_free(host: str, port: int) -> None:
         return
 
     listeners = _listener_pids(port)
-    recorded = _read_pid_file()
+    recorded, recorded_root = _read_pid_file()
+
+    # 记录在案的旧实例
     if recorded is not None and recorded in listeners:
+        if reuse and recorded_root and os.path.normcase(recorded_root) == os.path.normcase(MY_ROOT):
+            print(f"[pvz] 服务已在运行（PID {recorded}），复用", flush=True)
+            _sys.exit(0)
         print(f"[pvz] 端口 {port} 被上一个编辑器实例占用（PID {recorded}），"
               f"关闭它以接管", flush=True)
-        subprocess.run(["taskkill", "/PID", str(recorded), "/F"],
-                       capture_output=True, timeout=10)
-        for _ in range(30):          # 最多等 6 秒让端口释放
-            if _try_bind():
-                return
-            _time.sleep(0.2)
+        if _kill_and_wait(recorded, _try_bind):
+            return
         print(f"[致命] 已关闭旧实例但端口 {port} 仍未释放，启动失败", flush=True)
-        sys.exit(2)
+        _sys.exit(2)
+
+    # 未登记但监听者是 python —— PID 文件制度前的残留 pvz.py，视为自己人
+    names = _exe_names()
+    legacy = [p for p in listeners
+              if names.get(p, "").lower().startswith("python")]
+    if legacy:
+        print(f"[pvz] 端口 {port} 被未登记的 python 进程占用（PID {legacy}），"
+              f"按旧版编辑器实例关闭并接管", flush=True)
+        ok = True
+        for pid in legacy:
+            ok = _kill_and_wait(pid, _try_bind) and ok
+        if ok:
+            return
+        print(f"[致命] 已关闭残留实例但端口 {port} 仍未释放，启动失败", flush=True)
+        _sys.exit(2)
 
     print(f"[致命] 端口 {port} 被未知进程占用（PID {sorted(listeners) or '?'}），"
-          f"不是记录在案的编辑器实例，不自动杀。", flush=True)
+          f"不是编辑器实例，不自动杀。", flush=True)
     print(f"       请手动处理：netstat -ano | findstr :{port} 查 PID 后 "
           f"taskkill /PID <pid> /F", flush=True)
-    sys.exit(2)
+    _sys.exit(2)
 
 
 if __name__ == '__main__':
@@ -422,6 +493,8 @@ if __name__ == '__main__':
         print(f"[jobset] 旧作业集迁移失败（不影响启动）: {_e}")
 
     # 保持成熟版端口 5000；关闭 reloader，便于被 bat / agent 以后台进程拉起后稳定存活
-    _ensure_port_free("127.0.0.1", 5000)
+    # --reuse：OpenJobEditor 呼出用——已有实例在跑就复用退出，不接管
+    # （pvz.bat 手动双击 = 要新代码 -> 默认接管杀旧实例）
+    _ensure_port_free("127.0.0.1", 5000, reuse=("--reuse" in sys.argv))
     _write_pid_file()   # 登记自己 -> 下一个实例启动时凭它认亲并接管端口
     app.run(host="127.0.0.1", port=5000, debug=False, use_reloader=False)

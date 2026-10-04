@@ -739,32 +739,28 @@ class OpenJobEditor(CustomAction):
 
     def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
         try:
-            # 1) 服务已在运行 → 直接开浏览器
-            if _is_port_open():
-                webbrowser.open(JOB_EDITOR_URL)
-                print(f"[OpenJobEditor] 服务已在运行，已打开 {JOB_EDITOR_URL}")
-                return CustomAction.RunResult(success=True)
-
-            # 2) 校验网页工具存在
+            # 1) 校验网页工具存在
             if not JOB_EDITOR_SERVER.exists():
                 print(f"[OpenJobEditor] 找不到网页工具: {JOB_EDITOR_SERVER}")
                 return CustomAction.RunResult(success=False)
 
-            # 3) 挑解释器（需要 flask）
+            # 2) 挑解释器（需要 flask）
             exe = _pick_flask_python()
             if not exe:
                 print("[OpenJobEditor] 未找到已安装 flask 的 Python，请先执行：")
                 print(r"    .venv\Scripts\python.exe -m pip install -r requirements.txt")
                 return CustomAction.RunResult(success=False)
 
-            # 4) 后台拉起服务
+            # 3) 后台拉起服务（--reuse：已在跑且是记录在案的实例就复用；
+            #    端口被旧实例/残留 python 占着则由 pvz.py 自己杀掉接管——
+            #    不能只靠"端口通了就直接用"，否则旧代码实例会一直吃请求）
             subprocess.Popen(
-                [exe, str(JOB_EDITOR_SERVER)],
+                [exe, str(JOB_EDITOR_SERVER), "--reuse"],
                 cwd=str(JOB_EDITOR_DIR),
                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
             )
 
-            # 5) 等待服务就绪（最多 12 秒）
+            # 4) 等待服务就绪（最多 12 秒）
             for _ in range(24):
                 if _is_port_open():
                     break
@@ -774,9 +770,9 @@ class OpenJobEditor(CustomAction):
                 print("[OpenJobEditor] 服务启动超时，请查看 game_assist_tools/endless_setup/flask.log")
                 return CustomAction.RunResult(success=False)
 
-            # 6) 打开浏览器
+            # 5) 打开浏览器
             webbrowser.open(JOB_EDITOR_URL)
-            print(f"[OpenJobEditor] 已启动并打开 {JOB_EDITOR_URL}（解释器: {exe}）")
+            print(f"[OpenJobEditor] 已打开 {JOB_EDITOR_URL}（解释器: {exe}）")
             return CustomAction.RunResult(success=True)
         except Exception as e:
             print(f"[OpenJobEditor] 异常: {e}")
