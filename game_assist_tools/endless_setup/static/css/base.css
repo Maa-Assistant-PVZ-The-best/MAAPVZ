@@ -1266,50 +1266,50 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 /* 高级设置：识别结算速率输入框右侧的说明文字（原「?」气泡改为直述） */
 .ja-help-text { font-size: 10px; color: #94a3b8; flex: 1; }
 
-/* ============ 作业集选择弹窗（替代原下拉栏） ============ */
-#jobPickModal {
+/* ============ 作业集选择弹窗（替代原下拉栏） / 复制阵容弹窗（同一套壳） ============ */
+#jobPickModal, #tableCopyModal {
     position: fixed; inset: 0; z-index: 10095;
     display: none; align-items: center; justify-content: center;
     background: rgba(15,23,42,.50);
 }
-#jobPickModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
-#jobPickModal .jp-panel {
+#jobPickModal.jp-open, #tableCopyModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobPickModal .jp-panel, #tableCopyModal .jp-panel {
     width: min(360px, 90vw); max-height: 78vh;
     background: #fff; border-radius: 14px; overflow: hidden;
     display: flex; flex-direction: column;
     box-shadow: 0 20px 60px rgba(15,23,42,.34);
     animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
 }
-#jobPickModal .jp-head {
+#jobPickModal .jp-head, #tableCopyModal .jp-head {
     display: flex; align-items: center; gap: 8px;
     padding: 13px 16px 10px; border-bottom: 1px solid #e2e8f0;
 }
-#jobPickModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
-#jobPickModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
-#jobPickModal .jp-close {
+#jobPickModal .jp-dot, #tableCopyModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+#jobPickModal .jp-title, #tableCopyModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#jobPickModal .jp-close, #tableCopyModal .jp-close {
     width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
     background: #f1f5f9; color: #475569; cursor: pointer; font-size: 13px; line-height: 1;
 }
-#jobPickModal .jp-close:hover { background: #e2e8f0; }
-#jobPickModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
-#jobPickModal .jp-item {
+#jobPickModal .jp-close:hover, #tableCopyModal .jp-close:hover { background: #e2e8f0; }
+#jobPickModal .jp-body, #tableCopyModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
+#jobPickModal .jp-item, #tableCopyModal .jp-item {
     display: flex; align-items: center; gap: 10px; width: 100%;
     padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;
     border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc;
     font-size: 12px; font-family: inherit; color: #334155;
 }
-#jobPickModal .jp-item:hover { border-color: #93c5fd; background: #eff6ff; }
-#jobPickModal .jp-item.jp-item-on { border-color: #2563eb; background: #dbeafe; }
-#jobPickModal .jp-item .jp-item-ico { font-size: 16px; }
-#jobPickModal .jp-item .jp-item-name { font-weight: 700; }
-#jobPickModal .jp-item .jp-item-code { font-size: 10px; color: #94a3b8; margin-top: 1px; }
-#jobPickModal .jp-item .jp-item-cur { margin-left: auto; font-size: 10px; color: #1d4ed8; font-weight: 700; }
+#jobPickModal .jp-item:hover, #tableCopyModal .jp-item:hover { border-color: #93c5fd; background: #eff6ff; }
+#jobPickModal .jp-item.jp-item-on, #tableCopyModal .jp-item.jp-item-on { border-color: #2563eb; background: #dbeafe; }
+#jobPickModal .jp-item .jp-item-ico, #tableCopyModal .jp-item .jp-item-ico { font-size: 16px; }
+#jobPickModal .jp-item .jp-item-name, #tableCopyModal .jp-item .jp-item-name { font-weight: 700; }
+#jobPickModal .jp-item .jp-item-code, #tableCopyModal .jp-item .jp-item-code { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+#jobPickModal .jp-item .jp-item-cur, #tableCopyModal .jp-item .jp-item-cur { margin-left: auto; font-size: 10px; color: #1d4ed8; font-weight: 700; }
 /* 空白模板：永远在最上面，虚线框 */
-#jobPickModal .jp-item.jp-blank {
+#jobPickModal .jp-item.jp-blank, #tableCopyModal .jp-item.jp-blank {
     border-style: dashed; border-color: #cbd5e1; background: #fff;
 }
-#jobPickModal .jp-item.jp-blank:hover { border-color: #2563eb; background: #eff6ff; }
-#jobPickModal .jp-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 10px 0 4px; }
+#jobPickModal .jp-item.jp-blank:hover, #tableCopyModal .jp-item.jp-blank:hover { border-color: #2563eb; background: #eff6ff; }
+#jobPickModal .jp-empty, #tableCopyModal .jp-empty { font-size: 11px; color: #94a3b8; text-align: center; padding: 10px 0 4px; }
 /* 底部固定：导出 / 导入 */
 #jobPickModal .jp-foot {
     padding: 10px 14px; border-top: 1px solid #e2e8f0;

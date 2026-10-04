@@ -464,3 +464,99 @@ function jobEnsureOrd(board) {
         }
     }
 }
+
+// ============================================================
+// 复制阵容：把另一张阵容表的**内容**深拷贝到当前表
+//   拷贝：槽位/boss槽位/棋盘(普通+boss)/三条链/形态/等待/收尾参数/补给顺序/神器…
+//   不拷：from_level / to_level —— 关卡区间是位置属性（由相邻表决定），不能跟着内容走
+// ============================================================
+
+// 阵容表摘要（弹窗列表里的一行小字）
+function jobTableCopySummary(i) {
+    const t = jobTables[i];
+    let slotN = 0;
+    for (let s = 1; s <= 8; s++) if (t && t.slots && t.slots[s]) slotN++;
+    const cnt = function (b) {
+        let n = 0;
+        (b || []).forEach(function (row) {
+            (row || []).forEach(function (cell) { if (Array.isArray(cell)) n += cell.length; });
+        });
+        return n;
+    };
+    const rg = jobRangeOfTable(i);
+    return rg.from + '~' + rg.to + ' 关 · 槽位 ' + slotN + '/8'
+        + ' · 普通 ' + cnt(t.boardEarly) + ' 株 · boss ' + cnt(t.boardLate) + ' 株';
+}
+
+function jobCopyTableFrom(srcIdx) {
+    const cur = jobTables[currentTable];
+    const src = jobTables[srcIdx];
+    if (!cur || !src || srcIdx === currentTable) return;
+    // 当前棋盘正在编辑，先存回它所属的表（马上就要被覆盖，只是保持数据惯例干净）
+    jobSaveCurrentBoard();
+    const keepFrom = cur.from_level, keepTo = cur.to_level;
+    const copy = JSON.parse(JSON.stringify(src));
+    copy.from_level = keepFrom;
+    copy.to_level = keepTo;
+    jobTables[currentTable] = copy;
+    jobLoadTable(currentTable, true);      // currentTable 没变但内容换了，skipSave 重载
+    jobRenderTabs();
+    jobFillForm();
+    if (typeof jobRenderSeqChains === 'function') jobRenderSeqChains();
+    if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
+    jobSaveLocal();
+    setStatus('📋 已把阵容' + (srcIdx + 1) + ' 的内容复制到阵容' + (currentTable + 1) + '（关卡区间不变）');
+}
+
+function jobOpenTableCopy() {
+    const modal = document.getElementById('tableCopyModal');
+    if (!modal) return;
+    jobRenderTableCopy();
+    modal.classList.add('jp-open');
+}
+function jobCloseTableCopy() {
+    const modal = document.getElementById('tableCopyModal');
+    if (modal) modal.classList.remove('jp-open');
+}
+function jobRenderTableCopy() {
+    const body = document.getElementById('tcBody');
+    if (!body) return;
+    body.innerHTML = '';
+    let n = 0;
+    (jobTables || []).forEach(function (t, i) {
+        if (i === currentTable) return;      // 自己拷自己没意义
+        n++;
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'jp-item';
+        item.innerHTML = '<span class="jp-item-ico">🌿</span><span>'
+            + '<div class="jp-item-name">阵容' + (i + 1) + '</div>'
+            + '<div class="jp-item-code">' + jobTableCopySummary(i) + '</div></span>';
+        item.addEventListener('click', function () {
+            jobCloseTableCopy();
+            jobCopyTableFrom(i);
+        });
+        body.appendChild(item);
+    });
+    if (!n) {
+        const empty = document.createElement('div');
+        empty.className = 'jp-empty';
+        empty.textContent = '（只有当前一张阵容表，没有可复制的来源）';
+        body.appendChild(empty);
+    }
+}
+
+function jobBindTableCopy() {
+    const modal = document.getElementById('tableCopyModal');
+    if (!modal) return;
+    const open = document.getElementById('jobCopyTable');
+    if (open) open.addEventListener('click', jobOpenTableCopy);
+    const close = document.getElementById('tcClose');
+    if (close) close.addEventListener('click', jobCloseTableCopy);
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) jobCloseTableCopy();
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && modal.classList.contains('jp-open')) jobCloseTableCopy();
+    });
+}

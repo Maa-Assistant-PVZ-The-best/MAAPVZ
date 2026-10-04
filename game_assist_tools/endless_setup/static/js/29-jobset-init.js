@@ -283,6 +283,9 @@ function jobInit() {
     // 作业集选择弹窗（📂 按钮 -> 空白模板 + 本地作业集列表）
     if (typeof jobBindJobPicker === 'function') jobBindJobPicker();
 
+    // 复制阵容弹窗（📋 按钮 -> 把其它阵容表的内容拷进当前表）
+    if (typeof jobBindTableCopy === 'function') jobBindTableCopy();
+
     // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
     const bdEl = document.getElementById('tfBoundary');
     if (bdEl) {

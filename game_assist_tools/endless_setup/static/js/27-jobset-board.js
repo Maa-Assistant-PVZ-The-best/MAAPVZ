@@ -2602,7 +2602,8 @@ function jobInstallSlotHotkeys() {
                 || document.querySelector('#genPicker.gp-open')
                 || document.querySelector('#customPicker.cp-open')
                 || document.querySelector('#stepCfgModal.sc-open')
-                || document.querySelector('#jobPickModal.jp-open');
+                || document.querySelector('#jobPickModal.jp-open')
+                || document.querySelector('#tableCopyModal.jp-open');
             if (open) return;
         } catch (err) { }
 

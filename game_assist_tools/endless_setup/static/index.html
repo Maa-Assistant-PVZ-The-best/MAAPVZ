@@ -139,6 +139,18 @@
     </div>
 </div>
 
+<!-- ============ 复制阵容弹窗（把其它阵容表的内容复制到当前表） ============ -->
+<div id="tableCopyModal">
+    <div class="jp-panel">
+        <div class="jp-head">
+            <span class="jp-dot"></span>
+            <span class="jp-title">复制阵容内容到当前表</span>
+            <button class="jp-close" id="tcClose" title="关闭">✕</button>
+        </div>
+        <div class="jp-body" id="tcBody"><!-- JS 渲染：其它阵容表列表 --></div>
+    </div>
+</div>
+
 <!-- ============ 步骤设置弹窗（顺序链里每一步的 ⚙） ============ -->
 <div id="stepCfgModal">
     <div class="sc-panel">
@@ -360,6 +372,7 @@
             <div id="jobTableTabs" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;"></div>
             <button class="btn" id="jobAddTable">＋ 新建阵容</button>
             <button class="btn btn-danger" id="jobDelTable">× 删除阵容</button>
+            <button class="btn" id="jobCopyTable" title="把其它阵容表的内容复制到当前阵容">📋 复制阵容</button>
         </div>
         <div id="jobTableForm" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
             <span style="font-size:12px;color:#64748b;">关卡区间：</span>
