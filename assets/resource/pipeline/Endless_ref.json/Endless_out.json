@@ -1,0 +1,83 @@
+{
+    "无尽挑战_失败": {
+        "recognition": {
+            "type": "Or",
+            "param": {
+                "any_of": [
+                    {
+                        "recognition": "TemplateMatch",
+                        "template": [
+                            "Endless/out.png"
+                        ],
+                        "roi": [
+                            456,
+                            167,
+                            372,
+                            184
+                        ]
+                    },
+                    {
+                        "recognition": "OCR",
+                        "expected": [
+                            "提示"
+                        ],
+                        "roi": [
+                            440,
+                            190,
+                            388,
+                            193
+                        ]
+                    }
+                ]
+            }
+        },
+        "next": [
+            "无尽挑战_提示_返回地图"
+        ]
+    },
+    "无尽挑战_提示_返回地图": {
+        "recognition": "OCR",
+        "expected": [
+            "返回地图"
+        ],
+        "roi": [
+            540,
+            577,
+            206,
+            86
+        ],
+        "action": "Click",
+        "focus": "恭喜你！无尽坠机了！",
+        "next": []
+    },
+    "无尽挑战_方案1_失败后重置": {
+        "recognition": "OCR",
+        "roi": [
+            869,
+            600,
+            209,
+            71
+        ],
+        "expected": [
+            "开始挑战"
+        ],
+        "next": [
+            "无尽挑战_结束或循环_返回"
+        ]
+    },
+    "无尽挑战_方案2_失败后继续": {
+        "recognition": "OCR",
+        "roi": [
+            869,
+            600,
+            209,
+            71
+        ],
+        "expected": [
+            "开始挑战"
+        ],
+        "next": [
+            "无尽挑战_点击内部的开始挑战"
+        ]
+    }
+}

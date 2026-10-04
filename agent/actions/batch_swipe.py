@@ -16,7 +16,7 @@ except Exception:
     _DIRECT_RECOGNITION = False
 
 # 加载标记：用于确认 MAA 代理实际加载的版本（重载插件后应看到本行）
-print("[BatchSwipe] batch_swipe.py 已加载 · 版本 v17（watch/ref/roi(键名)/every(N或block,块末识别)/fixed(N或block,含多指)/固定动作前先识别/权重@N/异步组{!…}/附属块attach/多指动作multi/连击tap(无间隔连点)/断点续做(动作级·顺序块级·只在本次任务内)）")
+print("[BatchSwipe] batch_swipe.py 已加载 · 版本 v18（watch/ref/roi(键名)/every(N或block,块末识别)/fixed(N或block,含多指)/固定动作前先识别/权重@N/异步组{!…}/附属块attach/多指动作multi/无间隔块「」/连击*n/断点续做(动作级·顺序块级·只在本次任务内)）")
 
 
 @AgentServer.custom_action("BatchSwipe")
@@ -38,7 +38,7 @@ class BatchSwipe(CustomAction):
                                就两个都写（every:3;every:block），识别点 = 两者的并集。
                                ⚠️ every:block 的识别点正好落在「固定动作之前」，所以和 fixed:block 一起用时
                                   命中会先停本批、不执行这次固定动作（这就是「出 next」最想看到的行为）。
-        fixed:N:动作         —— 可选，固定动作：每执行 N 个普通动作就额外执行一次「动作」（不占 N 的计数）。动作可为 swipe/click/tap/sleep/multi。
+        fixed:N:动作         —— 可选，固定动作：每执行 N 个普通动作就额外执行一次「动作」（不占 N 的计数）。动作可为 swipe/click/sleep/multi。
                             例：fixed:5:swipe:收取按钮,收取框,50（每 5 个动作后滑一次收取）；fixed:3:click:确认按钮（每 3 个动作点一次确认）。
                             多指也可当固定动作（走原生 MultiSwipe 真并发）：
                             例：fixed:4:multi:(1阳光起始点,1阳光终点,80;2阳光起始点,2阳光终点,80)
@@ -68,21 +68,32 @@ class BatchSwipe(CustomAction):
                               不会让 5 个滑动在设备上同时执行。去掉组内间隔会让设备背靠背收到手势，
                               若游戏需要「手势结算间隔」，请给组内加 @0.05~@0.1，否则会退回
                               「只有最后一个动作生效」的老问题。
+        「动作;动作;…」     —— **无间隔包裹块**：块内动作之间**不插动作间隔**（默认的 0.1s 和 @前缀都不插），
+                              背靠背逐个同步执行（每个动作仍 wait 完成再发下一个，比异步组安全）；
+                              块首之前、块末之后仍按正常间隔。
+                              例：swipe:a,b;「click:x;click:y」;swipe:c,d —— x、y 两下点击之间没有间隔。
+                              计数：块内每个动作仍各算 1 个动作（every:N / fixed:N / resume 粒度不变），
+                              但落在组中间的识别点和固定动作会**挪到组末补做**，不拆组。
+                              随机块 {…} 里也可用：「…」作为**整体**参与打乱（组内顺序固定）。
+                              ⚠️ 块内不支持嵌套 {} 随机块 / {!…} 异步组（会报错，不会静默错跑）。
+                              ⚠️ 次间零间隔是它的意义；游戏若需要「每次操作的结算间隔」，
+                                 块内靠后的动作可能不生效——那种情况请改用普通顺序动作。
+        动作*n              —— **连击后缀**：任何动作（swipe/click/sleep/multi）末尾加 *n（n≥2），
+                              该动作连续执行 n 次、次间**不插间隔**，整体算 1 个动作
+                              （占 every:N 计数的 1、断点续做的 1 步；间隔只在 n 次全做完后插一次）。
+                              例：click:确认按钮*3（连点 3 次）；swipe:起点,终点,80*2（同一滑动连做 2 次）。
+                              可与「」搭配：「click:a*2;click:b*3」—— 组内无间隔 + 组内动作各自连击。
+                              配置类 token（watch/ref/every/fixed…）不支持 *n，会告警并忽略；
+                              无间隔块整体也不支持（块内动作可以各自带 *n）。
+                              随机块里要和权重共存时，顺序是 动作*n@权重（如 click:a*3@2）。
+                              ⚠️ 连击内部没有间隔是它存在的意义；游戏若需要「每次点击的结算间隔」，
+                                 请改用 n 个普通动作（让默认间隔生效），不要用 *n。
         multi:(起点1,终点1,时长1;起点2,终点2,时长2;…)
                             —— **多指动作**：和 swipe/click/sleep 同级的一种动作，一个动作描述 N 根手指。
                               走原生 MultiSwipe（context.run_action），N 根手指**真正同时**按下/移动/抬起。
                               实测 5 指可在 1ms 内同时按下。时长可省略（默认 100ms）。
                               例：multi:(1阳光起始点,1阳光终点,80;2阳光起始点,2阳光终点,80)
                               环境不支持 run_action 时会自动退化为「逐根手指串行滑动」，不丢动作。
-        tap:目标[,次数]      —— **连击动作**：对同一点连续点击 N 次（次数缺省 3），次与次之间**不插任何间隔**：
-                              一口气把 N 次点击压进控制器队列（不逐个等待），队列串行执行 = 背靠背连点。
-                              它算 1 个动作：占 every:N 计数、可断点续做、可当固定动作（fixed:3:tap:按钮,2）、
-                              可进随机块/附属块/{!…} 异步组。
-                              例：tap:确认按钮,5（确认按钮处连点 5 次）；tap:收取按钮（连点 3 次）。
-                              同步路径下会等到 N 次全部点完再往下走（识别点截到的是点完后的画面）；
-                              在 {!…} 异步组里则提交后不等待，由排空点统一等。
-                              ⚠️ 连击内部没有间隔是它存在的意义；游戏若需要「每次点击的结算间隔」，
-                                 请改用 N 个 click + @间隔，不要用 tap。
         attach:动作         —— 附属块。**像顺序块一样摆在序列里的某个位置**：
         attach:(动作;动作;…)   主块走到这个位置时，它才和「紧跟在后面的动作」一起执行（默认一一对应）。
                               不占用主块的 every:N 计数、不触发 fixed、不计入 resume 进度，
@@ -196,6 +207,17 @@ class BatchSwipe(CustomAction):
         return s, 1
 
     @staticmethod
+    def _extract_combo(s):
+        """从动作串末尾提取 *N 连击后缀（click:a*3 → ('click:a', 3)；无 → (s, 1)）。
+        只在整串以 *整数 结尾时才识别；n<=1 视为没写。"""
+        s = (s or '').strip()
+        m = re.search(r'\*(\d+)\s*$', s)
+        if m:
+            n = int(m.group(1))
+            return s[:m.start()].rstrip(), (n if n > 1 else 1)
+        return s, 1
+
+    @staticmethod
     def _resolve_path(filepath: str):
         """解析文件路径：优先用传入路径；相对路径在当前工作目录找不到时，回退到本脚本所在目录。
         用于规避 Agent 启动后工作目录切到 agent 目录导致的相对路径失效。"""
@@ -286,6 +308,31 @@ class BatchSwipe(CustomAction):
             cmd, cmd_w = self._extract_weight(cmd)
             if not cmd:
                 continue
+            # 连击后缀：动作*n（n≥2）→ 同一动作连续执行 n 次、次间无间隔，整体算 1 个动作
+            cmd, combo_n = self._extract_combo(cmd)
+            if not cmd:
+                continue
+            # 「…」无间隔包裹块：块内动作背靠背执行、次间不插间隔（组号标记，执行循环里识别）。
+            # 块内不支持 {} 随机块 / {!…} 异步组（嵌套块语义冲突，直接报错不静默错跑）。
+            if cmd.startswith('「'):
+                if combo_n > 1:
+                    print(f"[BatchSwipe] ⚠️ 无间隔块整体不支持 *{combo_n} 连击（块内动作可以各自带 *n），已忽略: {cmd}")
+                if not cmd.endswith('」'):
+                    print(f"[BatchSwipe] 无间隔块缺少收尾的 」: {cmd}")
+                    return None
+                inner = cmd[1:-1].strip()
+                if not inner:
+                    print(f"[BatchSwipe] 无间隔块为空: {cmd}")
+                    return None
+                if '{' in inner or '}' in inner:
+                    print(f"[BatchSwipe] 无间隔块「…」内不支持 {{}} 随机块/异步组: {cmd}")
+                    return None
+                sub = self._parse_actions(inner)
+                if sub is None:
+                    return None
+                self._mark_noint(sub)
+                actions.extend(sub)
+                continue
             if ':' not in cmd:
                 low = cmd.strip().lower()
                 if low in ('resume', 'reset'):
@@ -296,6 +343,9 @@ class BatchSwipe(CustomAction):
             act_type, args_str = cmd.split(':', 1)
             act_type = act_type.strip().lower()
             args = args_str.split(',')
+            if combo_n > 1 and act_type not in ('swipe', 'click', 'sleep', 'multi'):
+                print(f"[BatchSwipe] ⚠️ 连击后缀 *{combo_n} 只对 swipe/click/sleep/multi 有效，已在「{cmd}」上忽略")
+                combo_n = 1
             if act_type == 'watch':
                 # 识别触发：watch:文本 或 watch:文本@@roi:盒|盒@@compare:<=900 或 watch:@@roi:盒@@compare:<=900（数值对比，无需文字）
                 segs = args_str.split('@@')
@@ -361,7 +411,7 @@ class BatchSwipe(CustomAction):
             elif act_type == 'fixed':
                 # fixed:N:动作     —— 每执行 N 个普通动作就额外执行一次该固定动作
                 # fixed:block:动作 —— 每个顺序块结束后执行一次该固定动作
-                # （动作可为 swipe/click/tap/sleep/multi）
+                # （动作可为 swipe/click/sleep/multi）
                 inner = args_str.split(':', 1)
                 if len(inner) < 2:
                     print(f"[BatchSwipe] fixed 需要 N 和动作（如 fixed:5:swipe:收,框,50）: {cmd}")
@@ -379,7 +429,7 @@ class BatchSwipe(CustomAction):
                     n = n if n > 0 else 1
                 sub = self._parse_actions(inner[1].strip())
                 if not sub or len(sub) != 1 or not isinstance(sub[0], dict):
-                    print(f"[BatchSwipe] fixed 需要单个动作（swipe/click/tap/sleep/multi）: {cmd}")
+                    print(f"[BatchSwipe] fixed 需要单个动作（swipe/click/sleep/multi）: {cmd}")
                     return None
                 actions.append({'type': 'fixed', 'mode': mode, 'every': n, 'action': sub[0]})
             elif act_type == 'resume':
@@ -404,9 +454,9 @@ class BatchSwipe(CustomAction):
                     return None
                 sub = [a for a in sub
                        if isinstance(a, dict)
-                       and str(a.get('type', '')).lower() in ('swipe', 'click', 'tap', 'sleep')]
+                       and str(a.get('type', '')).lower() in ('swipe', 'click', 'sleep')]
                 if not sub:
-                    print(f"[BatchSwipe] attach 里没有可执行动作（只支持 swipe/click/tap/sleep）: {cmd}")
+                    print(f"[BatchSwipe] attach 里没有可执行动作（只支持 swipe/click/sleep）: {cmd}")
                     return None
                 actions.append({'type': 'attach', 'actions': sub})
             elif act_type == 'attach_every':
@@ -457,7 +507,9 @@ class BatchSwipe(CustomAction):
                 if not fingers:
                     print(f"[BatchSwipe] multi 里没有手指：{cmd}")
                     return None
-                actions.append({'type': 'multi', 'fingers': fingers})
+                act = {'type': 'multi', 'fingers': fingers}
+                if combo_n > 1: act['_combo'] = combo_n
+                actions.append(act)
             elif act_type == 'swipe':
                 if len(args) < 2:
                     print(f"[BatchSwipe] swipe 参数不足: {cmd}")
@@ -466,6 +518,7 @@ class BatchSwipe(CustomAction):
                 if len(args) >= 3:
                     act['duration'] = int(args[2].strip())
                 if cmd_w != 1: act['_w'] = cmd_w
+                if combo_n > 1: act['_combo'] = combo_n
                 actions.append(act)
             elif act_type == 'click':
                 if len(args) < 1:
@@ -473,21 +526,7 @@ class BatchSwipe(CustomAction):
                     return None
                 act = {'type': 'click', 'target': args[0].strip()}
                 if cmd_w != 1: act['_w'] = cmd_w
-                actions.append(act)
-            elif act_type == 'tap':
-                # 连击：tap:目标[,次数] —— 同一点连续点 N 次（缺省 3 次），次与次之间不插任何间隔
-                if len(args) < 1 or not args[0].strip():
-                    print(f"[BatchSwipe] tap 参数不足: {cmd}")
-                    return None
-                act = {'type': 'tap', 'target': args[0].strip()}
-                if len(args) >= 2 and args[1].strip():
-                    try:
-                        cnt = int(float(args[1].strip()))
-                    except ValueError:
-                        print(f"[BatchSwipe] tap 的次数不是数字: {cmd}")
-                        return None
-                    act['count'] = max(1, cnt)
-                if cmd_w != 1: act['_w'] = cmd_w
+                if combo_n > 1: act['_combo'] = combo_n
                 actions.append(act)
             elif act_type == 'sleep':
                 if len(args) < 1:
@@ -495,21 +534,33 @@ class BatchSwipe(CustomAction):
                     return None
                 act = {'type': 'sleep', 'seconds': float(args[0].strip())}
                 if cmd_w != 1: act['_w'] = cmd_w
+                if combo_n > 1: act['_combo'] = combo_n
                 actions.append(act)
             else:
                 print(f"[BatchSwipe] 未知动作类型: {act_type}")
                 return None
         return actions
 
+    # 无间隔块「…」的组号种子（只需在一次运行的动作列表内唯一，自增即可）
+    _NOINT_SEQ = 0
+
+    def _mark_noint(self, acts):
+        """把一组动作标记为同一个「无间隔块」：执行循环里相邻同组动作之间不插间隔。"""
+        BatchSwipe._NOINT_SEQ += 1
+        gid = BatchSwipe._NOINT_SEQ
+        for a in acts:
+            if isinstance(a, dict) and str(a.get('type', '')).lower() in self.EXEC_TYPES:
+                a['_noint'] = gid
+
     def _split_top_level_semis(self, s: str):
-        """按顶层 ; 分割（不进入 {} () [] 内）。返回片段列表。"""
+        """按顶层 ; 分割（不进入 {} () [] 「」 内）。返回片段列表。"""
         parts = []
         cur = ''
         depth = 0
         for ch in (s or ''):
-            if ch in '({[':
+            if ch in '({[「':
                 depth += 1
-            elif ch in ')}]':
+            elif ch in ')}]」':
                 depth -= 1
             if ch == ';' and depth == 0:
                 parts.append(cur)
@@ -557,6 +608,24 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] 组合解析失败: {clean}")
                     return None
                 elements.append(('combo', group_actions, inner_random, weight))
+            elif clean[0] == '「':
+                # 无间隔块：作为**整体**参与外层打乱（组内顺序固定、次间无间隔）
+                if not clean.endswith('」'):
+                    print(f"[BatchSwipe] 无间隔块缺少收尾的 」: {clean}")
+                    return None
+                inner = clean[1:-1].strip()
+                if not inner:
+                    print(f"[BatchSwipe] 无间隔块为空: {clean}")
+                    return None
+                if '{' in inner or '}' in inner:
+                    print(f"[BatchSwipe] 无间隔块「…」内不支持 {{}} 随机块/异步组: {clean}")
+                    return None
+                group_actions = self._parse_actions(inner)
+                if group_actions is None:
+                    print(f"[BatchSwipe] 无间隔块解析失败: {clean}")
+                    return None
+                self._mark_noint(group_actions)
+                elements.append(('combo', group_actions, False, weight))
             else:
                 # 独立动作
                 act_list = self._parse_actions(clean)
@@ -791,10 +860,6 @@ class BatchSwipe(CustomAction):
                 key = act.get('target')
                 if key and self._get_coord(key) is None:
                     missing.append(f"点击「{key}」")
-            elif t == 'tap':
-                key = act.get('target')
-                if key and self._get_coord(key) is None:
-                    missing.append(f"连击「{key}」")
             elif t == 'multi':
                 for i, f in enumerate(act.get('fingers') or [], 1):
                     for field, tag in (('from', '起点'), ('to', '终点')):
@@ -829,7 +894,7 @@ class BatchSwipe(CustomAction):
         return (n if n > 0 else 0), block
 
     # 会真的发到设备上的动作类型（其余 token 是识别/节奏/固定动作之类的配置）
-    EXEC_TYPES = ('swipe', 'click', 'tap', 'sleep', 'multi')
+    EXEC_TYPES = ('swipe', 'click', 'sleep', 'multi')
 
     @classmethod
     def _mark_block_ends(cls, acts):
@@ -1285,49 +1350,6 @@ class BatchSwipe(CustomAction):
                 return False
         return True
 
-    def _run_tap(self, controller, act, pending_jobs=None, pos=""):
-        """连击动作：对同一点连续发 N 次点击，次与次之间**不插任何间隔**。
-
-        做法 = 一口气把 N 个 post_click 压进控制器队列（不逐个等待），队列串行执行 = 背靠背连点。
-          · 同步路径（pending_jobs=None）：最后再统一等到 N 次全部点完 ——
-            保证后续识别点截到的是点完后的画面，也保证和后面的同步动作不重叠；
-          · 异步路径（{!…} 里，pending_jobs 传外层列表）：提交后立刻返回，
-            job 交给外层的 pending_jobs，由排空点（识别前 / 同步动作前 / 返回前）统一等。
-        """
-        where = pos or '连击'
-        coord = self._get_coord(act.get('target'))
-        if coord is None:
-            print(f"[BatchSwipe] ⚠️ {where}中断：连击坐标键「{act.get('target')}」未定义，请确认坐标表已加载且包含该键")
-            return False
-        x, y = self._coord_point(coord)
-        try:
-            count = int(act.get('count', 3) or 3)
-        except (TypeError, ValueError):
-            count = 3
-        count = max(1, count)
-        jobs = []
-        for _ in range(count):
-            try:
-                jobs.append(controller.post_click(x, y))
-            except Exception as e:
-                print(f"[BatchSwipe] ⚠️ {where}中断：连击提交失败: {e}")
-                for j in jobs:      # 已提交的先等完，不留悬空的点击
-                    try:
-                        j.wait()
-                    except Exception:
-                        pass
-                return False
-        if pending_jobs is not None:
-            pending_jobs.extend(jobs)
-            return True
-        for j in jobs:
-            try:
-                j.wait()
-            except Exception as e:
-                print(f"[BatchSwipe] ⚠️ {where}：连击等待失败: {e}")
-                return False
-        return True
-
     def _post_action(self, controller, act, pos=None):
         """把单个 swipe/click 提交给控制器，**不等待**。返回 (ok, job)。
         sleep 不走这里（它是 Python 侧动作，没有 job）。"""
@@ -1443,7 +1465,7 @@ class BatchSwipe(CustomAction):
                         return False
                     group_acts = []
                     for a in self._expand_shuffled(elements):
-                        if isinstance(a, dict) and str(a.get('type', '')).lower() in ('swipe', 'click', 'tap'):
+                        if isinstance(a, dict) and str(a.get('type', '')).lower() in ('swipe', 'click'):
                             a['_async'] = True          # 提交后不等待
                             a['_interval'] = group_interval
                         group_acts.append(a)
@@ -1573,6 +1595,10 @@ class BatchSwipe(CustomAction):
         executed = start_index
         total = len(actions)
 
+        # 「」无间隔组：落在组中间的识别点 / 固定动作不拆组，挂起到组末补做
+        watch_pending = False
+        fixed_pending = False
+
         # 异步组支持：pending_jobs 收集「已提交但还没等」的动作 job。
         pending_jobs = []
 
@@ -1588,31 +1614,38 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] ⚠️ 异步动作等待失败: {e}")
 
         def _submit_or_run(act, pos):
-            """异步动作 -> 只提交不等待；连击 -> 无间隔连点；多指动作 -> 走原生 MultiSwipe；同步动作 -> 先排空再等它完成。"""
+            """异步动作 -> 只提交不等待；多指动作 -> 走原生 MultiSwipe；同步动作 -> 先排空再等它完成。
+            ★ 连击（*n 后缀）：同一动作连续执行 n 次、次间不插任何间隔，整体算 1 个动作
+              （同步路径每次 rep 都 wait 完再发下一次；异步路径 n 次全部压入 pending_jobs）。"""
             t = str(act.get('type', '')).lower()
-            if t == 'multi':
+            try:
+                combo = max(1, int(act.get('_combo', 1) or 1))
+            except (TypeError, ValueError):
+                combo = 1
+            for rep in range(combo):
+                rpos = pos if combo == 1 else f"{pos}·连击第 {rep + 1}/{combo} 次"
+                if t == 'multi':
+                    _drain()
+                    ok, handled = self._run_multi_step(context, act, pos=rpos)
+                    if handled:
+                        if not ok:
+                            return False
+                        continue
+                    if not self._run_multi_serial(controller, act, pos=rpos):
+                        return False
+                    continue
+                if act.get('_async') and t in ('swipe', 'click'):
+                    ok, job = self._post_action(controller, act, pos=rpos)
+                    if not ok:
+                        return False
+                    if job is not None:
+                        pending_jobs.append(job)
+                    continue
+                # 同步路径：先排空，保证「前面的异步动作」都做完，顺序与识别点都干净
                 _drain()
-                ok, handled = self._run_multi_step(context, act, pos=pos)
-                if handled:
-                    return ok
-                return self._run_multi_serial(controller, act, pos=pos)
-            if t == 'tap':
-                # 连击：一口气把 N 次点击压进队列（次间零间隔）。
-                # {!…} 异步组里提交后不等待（由排空点统一等）；同步路径先排空、再统一等到 N 次全点完。
-                if act.get('_async'):
-                    return self._run_tap(controller, act, pending_jobs=pending_jobs, pos=pos)
-                _drain()
-                return self._run_tap(controller, act, pos=pos)
-            if act.get('_async') and t in ('swipe', 'click'):
-                ok, job = self._post_action(controller, act, pos=pos)
-                if not ok:
+                if not self._do_action(controller, act, pos=rpos):
                     return False
-                if job is not None:
-                    pending_jobs.append(job)
-                return True
-            # 同步路径：先排空，保证「前面的异步动作」都做完，顺序与识别点都干净
-            _drain()
-            return self._do_action(controller, act, pos=pos)
+            return True
 
         # 若配置了识别触发，执行前先识别一次（屏幕当前已命中则直接停止，不做任何动作）
         if watch_triggers and self._watch_check(context, controller, watch_triggers, watch_rois):
@@ -1686,6 +1719,18 @@ class BatchSwipe(CustomAction):
                 (watch_every > 0 and executed % watch_every == 0)
                 or (watch_block_end and at_block_end)
             )
+            # ★ 「」无间隔组：当前动作后面还跟着同组动作 = 组中间。
+            #   组中间不截图识别（会拖慢背靠背节奏），挂起到组末补做。
+            nxt_act = actions[idx + 1] if idx + 1 < total else None
+            mid_group = (isinstance(act, dict) and isinstance(nxt_act, dict)
+                         and act.get('_noint') is not None
+                         and act.get('_noint') == nxt_act.get('_noint'))
+            if watch_due and mid_group:
+                watch_pending = True
+                watch_due = False
+            elif watch_pending and not mid_group:
+                watch_due = True
+                watch_pending = False
             if watch_due:
                 _drain()
                 if self._watch_check(context, controller, watch_triggers, watch_rois):
@@ -1705,6 +1750,14 @@ class BatchSwipe(CustomAction):
                 else:
                     fire_fixed = fixed_every > 0 and executed % fixed_every == 0
                     why = f'每 {fixed_every} 次一次'
+                # ★ 「」无间隔组：固定动作落在组中间时不插进去（会打断背靠背节奏），挂起到组末补做
+                if fire_fixed and mid_group:
+                    fixed_pending = True
+                    fire_fixed = False
+                elif fixed_pending and not mid_group:
+                    fire_fixed = True
+                    fixed_pending = False
+                    why = '无间隔组结束，补做'
                 if fire_fixed:
                     # ★ 固定动作也要先看识别：every:N>1 时识别点不一定落在这个动作上，
                     #   不然「屏幕早就该跳 next 了」却还在这里多做一个固定动作（会把主块节奏打乱）。
@@ -1722,11 +1775,12 @@ class BatchSwipe(CustomAction):
                     if not _submit_or_run(fixed_act['action'], pos="固定动作"):
                         _drain()
                         return False
-            # 间隔：异步组内的动作用组内间隔（默认 0），其余用全局 interval
+            # 间隔：异步组内的动作用组内间隔（默认 0），其余用全局 interval；
+            # ★ 「」无间隔组：组内相邻动作之间不插间隔（mid_group），块末之后恢复正常
             eff_interval = interval
             if isinstance(act, dict) and act.get('_async'):
                 eff_interval = act.get('_interval', interval)
-            if executed < total and eff_interval and eff_interval > 0:
+            if executed < total and eff_interval and eff_interval > 0 and not mid_group:
                 time.sleep(eff_interval)
 
         # 附属块剩余动作：主块做完全部补齐（不计入主块计数，也不触发识别点）

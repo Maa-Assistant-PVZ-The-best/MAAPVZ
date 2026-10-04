@@ -31,6 +31,7 @@ KIND_CN = {"once": "单次", "loop": "循环", "end": "收尾"}
 REF_SETTLE = "无尽局内_继续挑战"      # 结算画面（正赛）
 REF_LAST_WAVE = "无尽挑战_收尾"       # 最后一波（僵尸头像）-> 跳收尾链
 REF_TRAIN = "无尽训练_继续训练"       # 结算画面（训练模式）
+REF_FAILED = "无尽挑战_失败"          # 战斗失败画面（pipe 节点由用户自己接线）
 
 # 链首节点（JobSetStage 的 next 落点 / 收尾链回跳落点）
 NODE_ONCE_ENTRY = "无尽局内_单次种植"
@@ -163,6 +164,7 @@ def build_chain_nodes(
         # ★ 识别触发（放在动作之前，是「触发条件」不是动作）：
         #   ref:无尽局内_继续挑战  —— 结算画面出现 -> 停本批、跟随 next
         #   ref:无尽挑战_收尾      —— 检测到最后一波 -> 停本批，next 里会跳收尾链
+        #   ref:无尽挑战_失败      —— 战斗失败画面 -> 停本批，next 里跳失败处理
         #   ref:无尽训练_继续训练  —— 训练模式的结算按钮（正赛下识别不到，无害）
         #
         #   这几个 ref 复用 pipe 节点里已定义的识别配置，无需写 ROI。
@@ -170,6 +172,7 @@ def build_chain_nodes(
         refs: List[str] = [REF_SETTLE]
         if kind != "end" and has_end:
             refs.append(REF_LAST_WAVE)
+        refs.append(REF_FAILED)
         refs.append(REF_TRAIN)
         body = "ref:" + "|".join(refs) + ";" + body
 
@@ -287,18 +290,20 @@ def build_fight_override(
 
     # ---- 1) 三个组合动作节点 ----
     #
-    # next 结构：
+    # next 结构（顺序 = 优先级，命中第一个就走第一个）：
     #     ["无尽局内_继续挑战",   <- 结算出现了就点它（放第一位，命中即走）
     #      "无尽挑战_收尾",       <- 没结算但检测到最后一波 -> 跳收尾链
+    #      "无尽挑战_失败",       <- 战斗失败画面 -> 跳失败处理（pipe 用户自接）
     #      <跑完这条链之后去哪>]  <- 没结算也没到最后一波 -> 继续下一环
     #
     #   单次链 -> 无尽局内_循环种植
     #   循环链 -> 自己（自循环）
-    #   收尾链 -> 「收尾超时后动作」（sub/restart）
+    #   收尾链 -> 「收尾超时后动作」（sub/restart），没有收尾检测位
     if once_node:
         nxt = [REF_SETTLE]
         if has_end:
             nxt.append(NODE_END_DETECT)
+        nxt.append(REF_FAILED)
         nxt.append(NODE_LOOP_ENTRY)
         override[once_node["node"]] = {
             "action": "Custom",
@@ -313,6 +318,7 @@ def build_fight_override(
         nxt = [REF_SETTLE]
         if has_end:
             nxt.append(NODE_END_DETECT)
+        nxt.append(REF_FAILED)
         nxt.append(loop_node["node"])          # 自循环
         override[loop_node["node"]] = {
             "action": "Custom",
@@ -328,6 +334,7 @@ def build_fight_override(
         nxt = [REF_SETTLE]
         if has_end:
             nxt.append(NODE_END_DETECT)
+        nxt.append(REF_FAILED)
         nxt.append(NODE_LOOP_CHAIN)            # 自循环
         override[NODE_LOOP_CHAIN] = {
             "action": "Custom",
@@ -359,7 +366,7 @@ def build_fight_override(
             "custom_action_param": end_dsl,
             "pre_delay": 0,
             "post_delay": 0,
-            "next": [REF_SETTLE] + after,
+            "next": [REF_SETTLE, REF_FAILED] + after,
         }
 
     # ---- 2) 链首节点：各自指向自己的那条链 ----
