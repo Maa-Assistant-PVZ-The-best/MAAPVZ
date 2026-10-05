@@ -769,7 +769,9 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
         return s.kind + '|' + s.key
             + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms)
             + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
-            + 'x' + (s.times === undefined || s.times === null ? '' : s.times);
+            + 'x' + (s.times === undefined || s.times === null ? '' : s.times)
+            // ★ 自定义动作参数不同 = 不同动作，签名必须带上参数袋
+            + '|' + (typeof jobCustomIdentity === 'function' ? jobCustomIdentity(s) : '');
     };
 
     // ⓪ 预解析目标链，把落点锚翻译成「搬动后仍能找回」的形式：
@@ -809,6 +811,10 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             if (st.ms !== undefined && st.ms !== null) e.ms = st.ms;
             if (st.slot !== undefined && st.slot !== null) e.slot = st.slot;
             if (st.times !== undefined && st.times !== null) e.times = st.times;
+            // ★ 自定义动作的 act/from/to/pairs 必须跟着搬 —— 不搬就剥成空壳，
+            //   跨链一拖整个动作失效（参数袋全丢）。
+            const _ga = jobGenericActionOfKey(st.key);
+            if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, e);
             payload.push(e);
         }
     });
@@ -876,10 +882,15 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             const st = dstSteps.splice(at, 1)[0];
             inserts.push(st);
         } else {
-            const st = { kind: (e.ms !== undefined && e.ms !== null) ? 'wait' : 'generic', key: e.key };
+            // ★ wait 只认 ga:wait —— 自定义动作也带 ms（滑动/长按时长），
+            //   按 ms 判型会把自定义滑动错判成「等待」。
+            const _ga2 = jobGenericActionOfKey(e.key);
+            const st = { kind: (_ga2 && _ga2.id === 'wait') ? 'wait' : 'generic', key: e.key };
             if (e.ms !== undefined) st.ms = e.ms;
             if (e.slot !== undefined) st.slot = e.slot;
             if (e.times !== undefined) st.times = e.times;
+            // ★ 自定义动作的参数袋跟着搬（act/from/to/pairs）
+            if (_ga2 && _ga2.id === 'custom') jobCopyCustomFields(e, st);
             inserts.push(st);
         }
     });
@@ -989,7 +1000,7 @@ function jobStepCfgKind(st) {
     const ga = jobGenericActionOfKey(st.key);
     if (ga) {
         if (ga.id === 'form') return 'form';
-        if (ga.id === 'custom') return (st.act === 'click') ? 'clickish' : 'swipeable';
+        if (ga.id === 'custom') return 'custom';   // 自定义动作：专属参数编辑器（类型/坐标/时长）
         return 'clickish';    // 点波/捡豆/加速 都是单击
     }
     const act = (typeof jobBoardActionOfKey === 'function') ? jobBoardActionOfKey(st.key) : null;
@@ -998,7 +1009,9 @@ function jobStepCfgKind(st) {
 }
 
 // 把参数写回那一步（按身份定位，st 的引用可能已过期）
-function jobStepCfgSave(patch) {
+//   replaceKeys：先整袋删掉这些键再 assign —— 自定义动作换类型时
+//   旧的 from/to/pairs/ms 不能残留（点击换滑动后 pairs 还在就出鬼了）。
+function jobStepCfgSave(patch, replaceKeys) {
     const ctx = _stepCfgCtx;
     const t = jobTables[currentTable];
     if (!ctx || !t) return;
@@ -1007,6 +1020,10 @@ function jobStepCfgSave(patch) {
     let i = steps.indexOf(ctx.st);
     if (i === -1) i = jobFindStepByIdentity(steps, ctx.st);
     if (i === -1) return;
+    if (Array.isArray(replaceKeys)) {
+        replaceKeys.forEach(function (k) { delete steps[i][k]; });
+    }
+    Object.keys(patch).forEach(function (k) { if (patch[k] === undefined) delete patch[k]; });
     Object.assign(steps[i], patch);
     _stepCfgCtx.st = steps[i];          // 换成新引用，连续调参不失效
     jobStoreSteps(t, ctx.which, board, steps);
@@ -1055,7 +1072,23 @@ function jobRenderStepCfgParams() {
         });
     };
 
-    if (kind === 'form') {
+    if (kind === 'custom') {
+        // ★ 自定义动作：类型/坐标/时长/手指数 全部可改，改完即时覆盖写回这一步
+        const host = document.createElement('div');
+        box.appendChild(host);
+        if (typeof jobRenderCustomCfgInto === 'function') {
+            jobRenderCustomCfgInto(host, _stepCfgCtx.st, function (patch) {
+                jobStepCfgSave(patch, ['act', 'from', 'to', 'pairs', 'ms']);
+            });
+        }
+        // 连击（所有动作通用）
+        const st = _stepCfgCtx.st;
+        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 20,
+            Math.min(20, Math.max(1, Number(st.times) || 1)),
+            function (v) { jobStepCfgSave({ times: v }); },
+            function (v) { return '⚙ 连击次数 = ' + v; });
+        mkTip('类型/坐标/时长改完即时生效（直接覆盖这一步的参数）；连击 1~20，块上显示 ×N。');
+    } else if (kind === 'form') {
         const st = _stepCfgCtx.st;
         bindInt(mkRow('槽位', '1-8（点哪个槽的切换形态）'), 1, 8,
             Math.min(8, Math.max(1, Number(st.slot) || 1)),
