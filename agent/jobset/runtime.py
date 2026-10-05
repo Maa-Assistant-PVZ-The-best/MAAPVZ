@@ -1286,6 +1286,43 @@ class JobSetFight(CustomAction):
             _log(f"注入失败（{type(e).__name__}: {e}）")
             return _fail()
 
+        # ---- 3.5) 收尾类型=循环链重复次数：循环入口计数门 ----
+        #
+        # 结构（compile.build_fight_override 已铺好）：loops 模式下循环链的
+        # 自循环改指回本入口（无尽局内_循环种植 = 本节点），所以每一圈都会经过这里。
+        # 进门发生在该圈**之前**：第 k 次进门 -> 接下来跑第 k 圈。
+        # 所以数到 N+1 次进门（= 第 N 圈刚跑完）时，把本节点 next 从
+        # 「组合动作_循环」掰成「组合动作_收尾」，即实现「循环 N 次后直接进收尾」。
+        # 计数按 (表, 关卡) 键控：换关/换表自动清零；掰向收尾后清零，
+        # 这样「收尾超时后动作=子动作=循环动作」回来时会重新数。
+        # （detect 模式循环链直接自循环、不经过这里，零开销。）
+        if str(table.raw.get("endType") or "detect").strip() == "loops" and not is_boss \
+                and getattr(argv, "node_name", "") == "无尽局内_循环种植":
+            # ★ 只有「循环种植」入口才计数：单次种植入口也是 JobSetFight，
+            #   不区分的话开局那次进门会被误算成一圈。
+            end_node_name = CHAIN_NODE_TPL.format(kind=KIND_CN["end"])
+            if end_node_name in override:
+                try:
+                    n_max = int(table.raw.get("endLoopCount") or 3)
+                except (TypeError, ValueError):
+                    n_max = 3
+                n_max = max(1, n_max)
+                gate_key = f"{table.index}@{lv}"
+                if _STATE.get("loop_gate_key") != gate_key:
+                    _STATE["loop_gate_key"] = gate_key
+                    _STATE["loop_gate_cnt"] = 0
+                cnt = int(_STATE.get("loop_gate_cnt") or 0) + 1
+                _STATE["loop_gate_cnt"] = cnt
+                if cnt > n_max:
+                    try:
+                        context.override_pipeline(
+                            {"无尽局内_循环种植": {"next": [end_node_name]}}
+                        )
+                        _log(f"循环链已重复 {n_max} 次 -> 进收尾链（不识别收尾）")
+                    except Exception as e:
+                        _log(f"收尾计数门注入失败（{type(e).__name__}: {e}）")
+                    _STATE["loop_gate_cnt"] = 0   # 进收尾即清零，回循环时重新数
+
         # ---- 补给选取：一并覆盖（见 _apply_supply）----
         self._apply_supply(context, table)
 

@@ -547,19 +547,33 @@
                 <div id="earlyEndParams" class="end-params" style="display:none;">
     <div class="end-params-title">🚩 收尾参数</div>
     <div class="end-params-row">
+        <label>收尾类型：</label>
+        <select id="earlyEndType">
+            <option value="detect">识别僵尸头像</option>
+            <option value="loops">循环链重复次数</option>
+        </select>
+    </div>
+    <div class="end-params-row" id="earlyEndPostRow">
         <label>收尾前等待：</label>
         <input type="number" id="earlyEndPostDelay" min="0" step="500" value="15000">
     </div>
-    <div class="end-params-row">
-        <label>收尾超时时间：</label>
-        <input type="number" id="earlyEndLastPostDelay" min="0" step="100" value="6000">
+    <div class="end-params-row" id="earlyEndLoopsRow" style="display:none;">
+        <label>循环链重复：</label>
+        <input type="number" id="earlyEndLoopCount" min="1" step="1" value="3">
+        <span style="font-size:11px;color:#94a3b8;">次后直接进收尾链（期间不识别收尾）</span>
     </div>
     <div class="end-params-row">
         <label>收尾超时后动作：</label>
         <select id="earlyEndAfterAction">
             <option value="sub">执行子动作</option>
             <option value="restart">重开</option>
+            <option value="settle">等待结算</option>
         </select>
+    </div>
+    <div class="end-params-row" id="earlyEndSettleRow" style="display:none;">
+        <label>等待结算时长：</label>
+        <input type="number" id="earlyEndSettleMs" min="0" step="500" value="15000">
+        <span style="font-size:11px;color:#dc2626;">ms（超时识别不到结算会结束任务）</span>
     </div>
     <div class="end-params-row" id="earlyEndSubRow" style="display:none;">
         <label>子动作：</label>

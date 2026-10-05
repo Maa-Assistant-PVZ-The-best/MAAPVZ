@@ -3302,9 +3302,11 @@ function jobBuild() {
             endOrder: Array.isArray(t.endOrder) ? t.endOrder.slice() : null,
             waitAfter: Object.assign({}, t.waitAfter || {}),
             // 收尾参数（收尾链的可调项，网页端棋盘下侧可编辑；仅普通关有）
+            endType: (t.endType === 'loops' ? 'loops' : 'detect'),
             endPostDelay: (typeof t.endPostDelay === 'number' ? t.endPostDelay : 15000),
-            endLastPostDelay: (typeof t.endLastPostDelay === 'number' ? t.endLastPostDelay : 6000),
-            endAfterAction: (t.endAfterAction === 'restart' ? 'restart' : 'sub'),
+            endLoopCount: (typeof t.endLoopCount === 'number' && t.endLoopCount >= 1 ? t.endLoopCount : 3),
+            endAfterAction: ((t.endAfterAction === 'restart' || t.endAfterAction === 'settle') ? t.endAfterAction : 'sub'),
+            endSettleMs: (typeof t.endSettleMs === 'number' ? t.endSettleMs : 15000),
             endSubAction: (t.endSubAction === 'once' || t.endSubAction === 'end' ? t.endSubAction : 'loop'),
             // boss 关配置：null = 未配置 -> 运行时 boss 关不做种植，只等结算
             // ★ bossEndOrder 不再导出：boss 关永不执行收尾链（运行时会忽略）。

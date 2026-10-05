@@ -5,10 +5,13 @@
 //   · 只有当棋盘上放了「收尾」（end 形态）的落子时，该棋盘下侧才显示面板。
 //   · ⚠️ 收尾仅对普通关生效（boss 关不能有收尾），所以只在普通关棋盘下侧显示。
 //   · 可调项（都在普通关表 t 上）：
-//       endPostDelay     = 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms）
-//       endLastPostDelay = 「收尾超时时间」 = 收尾链最后一个动作节点的 post_delay（默认 6000ms）
-//       endAfterAction   = 「收尾超时后动作」= sub（执行子动作）/ restart（重开）
-//       endSubAction     = 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
+//       endType       = 「收尾类型」= detect（识别僵尸头像，默认）/ loops（循环链重复次数）
+//       endPostDelay  = 「收尾前等待」= 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms，仅 detect）
+//       endLoopCount  = 「循环链重复次数」（默认 3，仅 loops：循环 N 次后直接进收尾链，期间不识别收尾）
+//       endAfterAction= 「收尾超时后动作」= sub（执行子动作）/ restart（重开）/ settle（等待结算）
+//       endSettleMs   = 「等待结算时长」（默认 15000ms，仅 settle；超时识别不到结算会结束任务）
+//       endSubAction  = 「子动作」= once（单次动作）/ loop（循环动作）/ end（收尾动作）
+//   （endLastPostDelay 已删除：post_delay 做不到边等边识别，等待结算改用节点 timeout）
 // ============================================================
 
 // 棋盘上是否存在「收尾」形态的落子
@@ -29,13 +32,18 @@ function jobBoardHasEnd(board) {
 // 取收尾参数（缺省用默认值；只普通关有）
 function jobEndParams(t) {
     const post = +(t.endPostDelay);
-    const last = +(t.endLastPostDelay);
-    const after = (t.endAfterAction === 'restart') ? 'restart' : 'sub';
+    const loopN = parseInt(t.endLoopCount, 10);
+    const settleMs = +(t.endSettleMs);
+    const type = (t.endType === 'loops') ? 'loops' : 'detect';
+    const after = (t.endAfterAction === 'restart' || t.endAfterAction === 'settle')
+        ? t.endAfterAction : 'sub';
     const sub = (t.endSubAction === 'once' || t.endSubAction === 'end')
         ? t.endSubAction : 'loop';
     return {
+        type: type,
         post: Number.isFinite(post) ? post : 15000,
-        last: Number.isFinite(last) ? last : 6000,
+        loopN: (Number.isFinite(loopN) && loopN >= 1) ? loopN : 3,
+        settleMs: Number.isFinite(settleMs) ? settleMs : 15000,
         after: after,
         sub: sub
     };
@@ -59,44 +67,64 @@ function jobRenderEndParams() {
     if (!hasEnd || !t) return;
 
     const p = jobEndParams(t);
-    const postInput = document.getElementById('earlyEndPostDelay');
-    const lastInput = document.getElementById('earlyEndLastPostDelay');
-    const afterSel = document.getElementById('earlyEndAfterAction');
-    const subSel = document.getElementById('earlyEndSubAction');
-    const subRow = document.getElementById('earlyEndSubRow');
-    if (postInput) postInput.value = p.post;
-    if (lastInput) lastInput.value = p.last;
-    if (afterSel) afterSel.value = p.after;
-    if (subSel) subSel.value = p.sub;
-    // 「子动作」只在「执行子动作」时显示
-    if (subRow) subRow.style.display = (p.after === 'sub') ? 'flex' : 'none';
+    const setV = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
+    setV('earlyEndType', p.type);
+    setV('earlyEndPostDelay', p.post);
+    setV('earlyEndLoopCount', p.loopN);
+    setV('earlyEndAfterAction', p.after);
+    setV('earlyEndSettleMs', p.settleMs);
+    setV('earlyEndSubAction', p.sub);
+    jobEndParamsVisibility(p);
 }
 
-// 输入 panel（post/last 两个 number）时写回当前表并本地保存
+// 收尾面板的行显隐（类型/超时后动作 联动）
+function jobEndParamsVisibility(p) {
+    const show = function (id, on) { const el = document.getElementById(id); if (el) el.style.display = on ? 'flex' : 'none'; };
+    show('earlyEndPostRow', p.type === 'detect');     // 收尾前等待 = 僵尸头像检测节点 post_delay
+    show('earlyEndLoopsRow', p.type === 'loops');     // 循环次数
+    show('earlyEndSettleRow', p.after === 'settle');  // 等待结算时长
+    show('earlyEndSubRow', p.after === 'sub');        // 子动作
+}
+
+// 数字输入写回当前表并本地保存
 function jobOnEndParamInput(which) {
     const t = jobTables[currentTable];
     if (!t) return;
-    const f = { post: 'endPostDelay', last: 'endLastPostDelay' };
-    const input = document.getElementById(
-        (which === 'post' ? 'earlyEndPostDelay' : 'earlyEndLastPostDelay')
-    );
+    const map = {
+        post:   ['earlyEndPostDelay', 'endPostDelay', 15000, 0],
+        loops:  ['earlyEndLoopCount', 'endLoopCount', 3, 1],
+        settle: ['earlyEndSettleMs', 'endSettleMs', 15000, 0],
+    };
+    const m = map[which];
+    if (!m) return;
+    const input = document.getElementById(m[0]);
     if (!input) return;
     let v = Number(input.value);
-    if (!Number.isFinite(v)) v = (which === 'post' ? 15000 : 6000);
-    if (v < 0) v = 0;
-    t[f[which]] = v;
+    if (!Number.isFinite(v)) v = m[2];
+    if (v < m[3]) v = m[3];
+    t[m[1]] = v;
     jobSaveLocal();
 }
 
-// 下拉栏「收尾超时后动作」变化时写回，并刷新「子动作」的显示
+// 下拉栏「收尾类型」变化
+function jobOnEndTypeChange() {
+    const t = jobTables[currentTable];
+    if (!t) return;
+    const sel = document.getElementById('earlyEndType');
+    if (!sel) return;
+    t.endType = (sel.value === 'loops') ? 'loops' : 'detect';
+    jobEndParamsVisibility(jobEndParams(t));
+    jobSaveLocal();
+}
+
+// 下拉栏「收尾超时后动作」变化时写回，并刷新行显隐
 function jobOnEndAfterChange() {
     const t = jobTables[currentTable];
     if (!t) return;
     const sel = document.getElementById('earlyEndAfterAction');
     if (!sel) return;
-    t.endAfterAction = (sel.value === 'restart') ? 'restart' : 'sub';
-    const subRow = document.getElementById('earlyEndSubRow');
-    if (subRow) subRow.style.display = (sel.value === 'sub') ? 'flex' : 'none';
+    t.endAfterAction = (sel.value === 'restart' || sel.value === 'settle') ? sel.value : 'sub';
+    jobEndParamsVisibility(jobEndParams(t));
     jobSaveLocal();
 }
 
@@ -111,22 +139,27 @@ function jobOnEndSubChange() {
 }
 
 function jobBindEndParams() {
-    const pi = document.getElementById('earlyEndPostDelay');
-    const li = document.getElementById('earlyEndLastPostDelay');
+    const bindInput = function (id, which) {
+        const el = document.getElementById(id);
+        if (el && !el._endBound) {
+            el._endBound = true;
+            el.addEventListener('input', function () { jobOnEndParamInput(which); });
+        }
+    };
+    bindInput('earlyEndPostDelay', 'post');
+    bindInput('earlyEndLoopCount', 'loops');
+    bindInput('earlyEndSettleMs', 'settle');
+    const ts = document.getElementById('earlyEndType');
+    if (ts && !ts._endBound) {
+        ts._endBound = true;
+        ts.addEventListener('change', jobOnEndTypeChange);
+    }
     const as = document.getElementById('earlyEndAfterAction');
-    const ss = document.getElementById('earlyEndSubAction');
-    if (pi && !pi._endBound) {
-        pi._endBound = true;
-        pi.addEventListener('input', function () { jobOnEndParamInput('post'); });
-    }
-    if (li && !li._endBound) {
-        li._endBound = true;
-        li.addEventListener('input', function () { jobOnEndParamInput('last'); });
-    }
     if (as && !as._endBound) {
         as._endBound = true;
         as.addEventListener('change', jobOnEndAfterChange);
     }
+    const ss = document.getElementById('earlyEndSubAction');
     if (ss && !ss._endBound) {
         ss._endBound = true;
         ss.addEventListener('change', jobOnEndSubChange);

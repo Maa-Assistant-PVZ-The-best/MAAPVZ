@@ -72,10 +72,12 @@ function jobLoadLocal() {
             if (!Array.isArray(t.bossSlotOrder)) t.bossSlotOrder = null;
             if (!Array.isArray(t.bossLoopOrder)) t.bossLoopOrder = null;
             if (!t.bossWaitAfter || typeof t.bossWaitAfter !== 'object') t.bossWaitAfter = {};
-            // 收尾参数（缺省默认 15000 / 6000；仅普通关）
+            // 收尾参数（仅普通关；endLastPostDelay 已删除，等待结算改用节点 timeout）
+            if (t.endType !== 'loops') t.endType = 'detect';
             if (typeof t.endPostDelay !== 'number') t.endPostDelay = 15000;
-            if (typeof t.endLastPostDelay !== 'number') t.endLastPostDelay = 6000;
-            if (t.endAfterAction !== 'restart') t.endAfterAction = 'sub';
+            if (!(typeof t.endLoopCount === 'number' && t.endLoopCount >= 1)) t.endLoopCount = 3;
+            if (t.endAfterAction !== 'restart' && t.endAfterAction !== 'settle') t.endAfterAction = 'sub';
+            if (typeof t.endSettleMs !== 'number') t.endSettleMs = 15000;
             if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
             if (!Array.isArray(t.endOrder)) t.endOrder = null;
             // （innerWaits 已移除：从未有过消费者，纯遗留字段）

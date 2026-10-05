@@ -300,16 +300,26 @@ def build_fight_override(
         end_node = None
 
     # ★ 收尾链的可调参数（网页端「棋盘下侧」编辑，作业集导出）：
-    #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms）
-    #   · 「收尾超时时间」 = **收尾链末尾追加的 sleep 秒数**（默认 6000ms -> 6s）
-    #   · 「收尾超时后动作」 = sub（执行子动作）/ restart（重开）
+    #   · 「收尾类型」     = detect（识别僵尸头像，默认）/ loops（循环链重复次数）
+    #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms，仅 detect）
+    #   · 「循环链重复次数」= 仅 loops：循环链跑满 N 次后直接进收尾链（期间不识别收尾）
+    #   · 「收尾超时后动作」= sub（执行子动作）/ restart（重开）/ settle（等待结算）
+    #   · 「等待结算时长」 = 仅 settle：结算识别节点的 timeout（超时识别不到 = 任务结束）
     #   · 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
+    #   （endLastPostDelay 已删除：post_delay 做不到边等边识别，等待结算改用 timeout）
+    end_type = str(table.raw.get("endType") or "detect").strip()
+    if end_type not in ("detect", "loops"):
+        end_type = "detect"
     end_post_delay = _num(table.raw.get("endPostDelay"), 15000)
-    end_last_post_delay = _num(table.raw.get("endLastPostDelay"), 6000)
+    end_loop_count = int(min(999, max(1, _num(table.raw.get("endLoopCount"), 3))))
     end_after_action = str(table.raw.get("endAfterAction") or "sub").strip()
+    end_settle_ms = _num(table.raw.get("endSettleMs"), 15000)
     end_sub_action = str(table.raw.get("endSubAction") or "loop").strip()
     if end_sub_action not in ("once", "loop", "end"):
         end_sub_action = "loop"
+    # ★ loops 模式：循环链自循环改走「循环种植入口」（JobSetFight 在里面数次数），
+    #   且不再挂收尾检测；detect 模式维持原样（自循环 + 挂收尾检测）。
+    loops_gate = (end_type == "loops") and bool(has_end) and not is_boss
 
     override: Dict[str, Any] = {}
 
@@ -326,7 +336,7 @@ def build_fight_override(
     #   收尾链 -> 「收尾超时后动作」（sub/restart），没有收尾检测位
     if once_node:
         nxt = [REF_SETTLE]
-        if has_end:
+        if has_end and not loops_gate:
             nxt.append(NODE_END_DETECT)
         nxt.append(REF_FAILED)
         nxt.append(NODE_LOOP_ENTRY)
@@ -341,10 +351,12 @@ def build_fight_override(
 
     if loop_node:
         nxt = [REF_SETTLE]
-        if has_end:
+        if has_end and not loops_gate:
             nxt.append(NODE_END_DETECT)
         nxt.append(REF_FAILED)
-        nxt.append(loop_node["node"])          # 自循环
+        # ★ loops 收尾：自循环改走循环入口（JobSetFight 数次数，数够 N 掰向收尾链）；
+        #   detect 收尾：直接自循环（省一道工序）。
+        nxt.append(NODE_LOOP_ENTRY if loops_gate else loop_node["node"])
         override[loop_node["node"]] = {
             "action": "Custom",
             "custom_action": "BatchSwipe",
@@ -357,10 +369,11 @@ def build_fight_override(
         # ★ 循环链为空：节点仍然存在，只是 DSL 是一个空动作（sleep:5）
         #   靠 next 自循环等待结算/收尾。
         nxt = [REF_SETTLE]
-        if has_end:
+        if has_end and not loops_gate:
             nxt.append(NODE_END_DETECT)
         nxt.append(REF_FAILED)
-        nxt.append(NODE_LOOP_CHAIN)            # 自循环
+        # loops 收尾同样改走循环入口（空循环也要数次数）
+        nxt.append(NODE_LOOP_ENTRY if loops_gate else NODE_LOOP_CHAIN)
         override[NODE_LOOP_CHAIN] = {
             "action": "Custom",
             "custom_action": "BatchSwipe",
@@ -371,7 +384,11 @@ def build_fight_override(
         }
 
     if end_node:
-        # 收尾链跑完：先看结算，没结算再走「收尾超时后动作」
+        # 收尾链跑完之后的去向：
+        #   · settle（等待结算）：next 只挂结算/失败两个识别，结算节点 timeout = 等待时长，
+        #     边等边识别；超时识别不到 -> 无 on_error -> 任务结束（网页端已告知用户）。
+        #   · 其余（sub/restart）：detect 模式挂结算识别 + 收尾超时后动作；
+        #     loops 模式按用户设定**不再识别**，直接走收尾超时后动作。
         if end_after_action == "restart":
             after = [NODE_END_RESTART]
         elif end_sub_action == "once":
@@ -380,18 +397,23 @@ def build_fight_override(
             after = [NODE_END_DETECT]
         else:
             after = [NODE_LOOP_ENTRY]
-        # ★「收尾超时时间」不再是 post_delay，而是末尾的 sleep 动作
-        end_dsl = end_node["dsl"]
-        if end_last_post_delay > 0:
-            end_dsl = f"{end_dsl};sleep:{end_last_post_delay / 1000.0:g}" if end_dsl \
-                else f"sleep:{end_last_post_delay / 1000.0:g}"
+        if end_after_action == "settle":
+            end_next = [REF_SETTLE, REF_FAILED]
+            # ★ 只覆写 timeout 一个字段（next 等沿用 pipe/任务选项，别整体替换 ——
+            #   训练模式的「继续训练」接线就是任务选项覆写的，顶掉就完了）。
+            override[REF_SETTLE] = {"timeout": int(end_settle_ms)}
+            override[REF_TRAIN] = {"timeout": int(end_settle_ms)}
+        elif loops_gate:
+            end_next = [REF_FAILED] + after
+        else:
+            end_next = [REF_SETTLE, REF_FAILED] + after
         override[end_node["node"]] = {
             "action": "Custom",
             "custom_action": "BatchSwipe",
-            "custom_action_param": end_dsl,
+            "custom_action_param": end_node["dsl"],
             "pre_delay": 0,
             "post_delay": 0,
-            "next": [REF_SETTLE, REF_FAILED] + after,
+            "next": end_next,
         }
 
     # ---- 2) 链首节点：各自指向自己的那条链 ----
@@ -429,13 +451,14 @@ def build_fight_override(
     # override_pipeline 是深合并：这里只改 enabled / next / post_delay，
     # 识别配置（recognition=TemplateMatch / template / roi / green_mask）
     # 沿用 pipeline 里 03-1-01 写死的值。
-    if has_end:
+    if has_end and not loops_gate:
         override[NODE_END_DETECT] = {
             "enabled": True,
             "post_delay": end_post_delay,
             "next": [end_node["node"]],
         }
     else:
+        # ★ loops 收尾：不识别僵尸头像（检测节点关停，改由循环计数门进收尾）
         override[NODE_END_DETECT] = {"enabled": False}
 
     # ---- 4) 收尾重开节点：**已 pipe 化，运行时只管 enabled** ----

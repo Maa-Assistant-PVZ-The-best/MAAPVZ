@@ -42,9 +42,11 @@ function jobNewTable() {
         endOrder: null,           // 收尾链的槽位顺序（最后一波执行一次；仅普通关）
         slotModes: {},            // 槽的放置形态：{ card1:'once'|'loop', feed:..., shovel:... }
         waitAfter: {},            // 动作后的等待秒数：{ 'once|card2|r,c|seq': 3, ... }
-        endPostDelay: 15000,      // 收尾前等待 = 收尾检测节点 post_delay（ms）
-        endLastPostDelay: 6000,   // 收尾超时时间 = 收尾链最后一个动作 post_delay（ms）
-        endAfterAction: 'sub',    // 收尾超时后动作：sub=执行子动作 / restart=重开
+        endType: 'detect',        // 收尾类型：detect=识别僵尸头像 / loops=循环链重复次数
+        endPostDelay: 15000,      // 收尾前等待 = 收尾检测节点 post_delay（ms，仅 detect）
+        endLoopCount: 3,          // 循环链重复次数（仅 loops：循环 N 次后直接进收尾链）
+        endAfterAction: 'sub',    // 收尾超时后动作：sub=执行子动作 / restart=重开 / settle=等待结算
+        endSettleMs: 15000,       // 等待结算时长（ms，仅 settle；超时识别不到结算会结束任务）
         endSubAction: 'loop',     // 子动作：once=单次动作 / loop=循环动作 / end=收尾动作
         // ---- boss 关配置（与普通关完全独立；null = 未配置 -> boss 关只等结算）----
         bossSlotOrder: null,      // boss 关单次链顺序
@@ -67,11 +69,13 @@ function jobNewTable() {
         //   所以这里**不继承** boardLate / slotOrder / loopOrder / endOrder /
         //   bossSlotOrder / bossLoopOrder / bossSlotModes / waitAfter / bossWaitAfter。
         //
-        //   只沿用**纯参数**（不引用任何槽位/落点）：收尾的延时与超时后动作，
+        //   只沿用**纯参数**（不引用任何槽位/落点）：收尾的类型/延时/超时后动作，
         //   用户调过的话新表接着用，免得每张表都重调一遍。
+        if (last.endType === 'loops') t.endType = 'loops';
         if (typeof last.endPostDelay === 'number') t.endPostDelay = last.endPostDelay;
-        if (typeof last.endLastPostDelay === 'number') t.endLastPostDelay = last.endLastPostDelay;
-        if (last.endAfterAction === 'restart') t.endAfterAction = 'restart';
+        if (typeof last.endLoopCount === 'number' && last.endLoopCount >= 1) t.endLoopCount = last.endLoopCount;
+        if (last.endAfterAction === 'restart' || last.endAfterAction === 'settle') t.endAfterAction = last.endAfterAction;
+        if (typeof last.endSettleMs === 'number') t.endSettleMs = last.endSettleMs;
         if (last.endSubAction === 'once' || last.endSubAction === 'end') t.endSubAction = last.endSubAction;
     }
     jobTables.push(t);
