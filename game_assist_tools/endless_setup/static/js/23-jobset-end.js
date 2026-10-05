@@ -177,6 +177,8 @@ function jobGetChainOrder(t, which, board, forceBoss) {
                 //      段变成没有 slot 的 form，运行时判越界直接不执行。
                 if (e.slot !== undefined && Number.isFinite(Number(e.slot))) o2.slot = Number(e.slot);
                 if (e.times !== undefined && Number.isFinite(Number(e.times))) o2.times = Number(e.times);
+                // ★ 连击间隔（ms，默认 0）
+                if (e.comboMs !== undefined && Number.isFinite(Number(e.comboMs))) o2.comboMs = Number(e.comboMs);
                 // ★ 自定义动作的 act/from/to/pairs —— 不保留就被静默丢成空段
                 if (o2.ga === 'custom') jobCopyCustomFields(e, o2);
                 // ★ 无间隔组「」标记
@@ -191,9 +193,10 @@ function jobGetChainOrder(t, which, board, forceBoss) {
             if (Array.isArray(e.picked) && e.picked.length) o.picked = e.picked.map(Number);
             // ★ 段内自定义顺序（拖动 chip 打乱块内先后时写入）
             if (Array.isArray(e.order) && e.order.length) o.order = e.order.map(Number);
-            // ★ 无间隔组「」标记 / 点击格子的连击次数
+            // ★ 无间隔组「」标记 / 点击格子的连击次数 / 连击间隔
             if (e.noint === true) o.noint = true;
             if (e.times !== undefined && Number.isFinite(Number(e.times))) o.times = Number(e.times);
+            if (e.comboMs !== undefined && Number.isFinite(Number(e.comboMs))) o.comboMs = Number(e.comboMs);
             return o;
         }
         return null;

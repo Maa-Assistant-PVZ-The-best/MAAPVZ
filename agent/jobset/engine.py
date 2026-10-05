@@ -318,6 +318,10 @@ class Table:
                 _tv = seg.get("times")
                 if isinstance(_tv, (int, float)) and _tv > 1:
                     rec["times"] = int(_tv)
+                # ★ 连击间隔 comboMs（>0 才带，默认 0 不落盘）
+                _gv = seg.get("comboMs")
+                if isinstance(_gv, (int, float)) and _gv > 0:
+                    rec["comboMs"] = int(_gv)
                 out.append(rec)
             return out
 

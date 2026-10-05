@@ -166,10 +166,13 @@ def build_chain_nodes(
                 # ★ 连击：所有动作通用（点击/滑动都 ×N = 连做 N 次）
                 n_rep = _num(seg.get("times"), 1)
                 n_rep = min(20, max(1, n_rep))
+                # ★ 连击间隔 comboMs（默认 0 = 紧挨着；>0 时相邻两次间插 sleep）
+                gap_rep = _num(seg.get("comboMs"), 0)
+                gap_rep = min(10000, max(0, gap_rep))
                 if src is None:
-                    seg_parts.extend([f"click:{dst}"] * n_rep)
+                    seg_parts.extend(_dsl.rep_parts(f"click:{dst}", n_rep, gap_rep))
                 else:
-                    seg_parts.extend([f"swipe:{src},{dst},{swipe_ms}"] * n_rep)
+                    seg_parts.extend(_dsl.rep_parts(f"swipe:{src},{dst},{swipe_ms}", n_rep, gap_rep))
                 # 等待：这个动作之后插入 sleep:N（BatchSwipe 支持 sleep:秒）
                 try:
                     sec = float(waits[i]) if i < len(waits) else 0.0

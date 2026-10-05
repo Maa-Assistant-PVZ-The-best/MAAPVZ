@@ -257,6 +257,8 @@ function jobSegsToSteps(board, segs, which) {
             // ★ 切换形态的参数（槽位 + 次数）—— 不带上就会在渲染/存盘时被丢掉
             if (seg.slot !== undefined && seg.slot !== null) st.slot = Number(seg.slot);
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
+            // ★ 连击间隔（ms，默认 0）
+            if (seg.comboMs !== undefined && seg.comboMs !== null) st.comboMs = Number(seg.comboMs);
             // ★ 自定义动作的 act/from/to/pairs —— 白名单拷贝，不带上就静默丢
             if (_gaId === 'custom') jobCopyCustomFields(seg, st);
             // ★ 无间隔组「」标记
@@ -270,6 +272,8 @@ function jobSegsToSteps(board, segs, which) {
             if (seg.noint === true) st.noint = true;
             // ★ 点击格子（tap）的连击次数 —— 不带上就静默丢
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
+            // ★ 连击间隔（ms，默认 0）
+            if (seg.comboMs !== undefined && seg.comboMs !== null) st.comboMs = Number(seg.comboMs);
             out.push(st);
         });
     });
@@ -288,6 +292,8 @@ function jobStepsToSegs(steps) {
             // ★ 切换形态的参数（槽位 + 次数）—— 必须写回，否则重载后参数丢失
             if (st.slot !== undefined && st.slot !== null) o.slot = Number(st.slot);
             if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
+            // ★ 连击间隔（ms，默认 0）—— 必须写回，否则重载后丢失
+            if (st.comboMs !== undefined && st.comboMs !== null) o.comboMs = Number(st.comboMs);
             // ★ 自定义动作的 act/from/to/pairs —— 必须写回，否则重载后参数丢失
             const _ga = jobGenericActionOfKey(st.key);
             if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, o);
@@ -302,6 +308,7 @@ function jobStepsToSegs(steps) {
         if (last && last.key === st.key && Array.isArray(last.picked)
             && !!last.noint === !!st.noint
             && (Number(last.times) || 0) === (Number(st.times) || 0)
+            && (Number(last.comboMs) || 0) === (Number(st.comboMs) || 0)
             && last.picked[last.picked.length - 1] === st.gidx - 1) {
             last.picked.push(st.gidx);          // 连续的继续接在后面
             return;
@@ -309,6 +316,7 @@ function jobStepsToSegs(steps) {
         const o = { key: st.key, from: -1, to: -1, picked: [st.gidx] };
         if (st.noint === true) o.noint = true;
         if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
+        if (st.comboMs !== undefined && st.comboMs !== null) o.comboMs = Number(st.comboMs);
         segs.push(o);
     });
     // picked 只有一项的还原成 from/to（更干净，也更接近旧数据的样子）
@@ -330,6 +338,7 @@ function jobSegFingerprint(s) {
          + '|' + (s.ms === undefined || s.ms === null ? '' : s.ms)
          + '|' + (s.slot === undefined || s.slot === null ? '' : s.slot)
          + '|' + (s.times === undefined || s.times === null ? '' : s.times)
+         + '|' + (s.comboMs === undefined || s.comboMs === null ? '' : s.comboMs)
          + '|' + (s.noint === true ? 'N' : '');
     // ★ 自定义动作：参数不同就是不同动作，指纹必须带上（否则两个不同的自定义段撞成同一个）
     if (String(s.key || '') === JOB_GA_PREFIX + 'custom') fp += '|' + jobCustomIdentity(s);
@@ -770,6 +779,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             + '#' + (s.ms === undefined || s.ms === null ? '' : s.ms)
             + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
             + 'x' + (s.times === undefined || s.times === null ? '' : s.times)
+            + 'g' + (s.comboMs === undefined || s.comboMs === null ? '' : s.comboMs)
             // ★ 自定义动作参数不同 = 不同动作，签名必须带上参数袋
             + '|' + (typeof jobCustomIdentity === 'function' ? jobCustomIdentity(s) : '');
     };
@@ -811,6 +821,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             if (st.ms !== undefined && st.ms !== null) e.ms = st.ms;
             if (st.slot !== undefined && st.slot !== null) e.slot = st.slot;
             if (st.times !== undefined && st.times !== null) e.times = st.times;
+            if (st.comboMs !== undefined && st.comboMs !== null) e.comboMs = st.comboMs;
             // ★ 自定义动作的 act/from/to/pairs 必须跟着搬 —— 不搬就剥成空壳，
             //   跨链一拖整个动作失效（参数袋全丢）。
             const _ga = jobGenericActionOfKey(st.key);
@@ -889,6 +900,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             if (e.ms !== undefined) st.ms = e.ms;
             if (e.slot !== undefined) st.slot = e.slot;
             if (e.times !== undefined) st.times = e.times;
+            if (e.comboMs !== undefined) st.comboMs = e.comboMs;
             // ★ 自定义动作的参数袋跟着搬（act/from/to/pairs）
             if (_ga2 && _ga2.id === 'custom') jobCopyCustomFields(e, st);
             inserts.push(st);
@@ -1087,6 +1099,10 @@ function jobRenderStepCfgParams() {
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 连击次数 = ' + v; });
+        bindInt(mkRow('连击间隔', 'ms（默认 0 = 紧挨着连做）'), 0, 10000,
+            Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
+            function (v) { jobStepCfgSave({ comboMs: v }); },
+            function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
         mkTip('类型/坐标/时长改完即时生效（直接覆盖这一步的参数）；连击 1~20，块上显示 ×N。');
     } else if (kind === 'form') {
         const st = _stepCfgCtx.st;
@@ -1098,6 +1114,10 @@ function jobRenderStepCfgParams() {
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 切换形态次数 = ' + v; });
+        bindInt(mkRow('连击间隔', 'ms（默认 0 = 紧挨着连点）'), 0, 10000,
+            Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
+            function (v) { jobStepCfgSave({ comboMs: v }); },
+            function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
         mkTip('只作用于这一步；块上会显示「槽N 丨 N次」。');
     } else if (kind === 'wait') {
         const st = _stepCfgCtx.st;
@@ -1113,6 +1133,10 @@ function jobRenderStepCfgParams() {
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 连击次数 = ' + v; });
+        bindInt(mkRow('连击间隔', 'ms（默认 0 = 紧挨着连做）'), 0, 10000,
+            Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
+            function (v) { jobStepCfgSave({ comboMs: v }); },
+            function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
         if (kind === 'swipeable') {
             bindInt(mkRow('滑动时长', 'ms（作业集级默认，所有滑动共用）'), 10, 5000, jobGetSwipeMs(),
                 function (v) { jobMeta.swipeMs = v; jobSaveLocal(); },
@@ -3088,6 +3112,8 @@ function jobBuildChain(t, board, which, forceBoss) {
             if (seg.noint === true) item.noint = true;
             // ★ 点击类动作的连击次数（点波/捡豆/加速/自定义点击；切换形态走 params 已带）
             if (item.times === undefined && Number(seg.times) > 1) item.times = Number(seg.times);
+            // ★ 连击间隔（ms，>0 才导出，默认 0）
+            if (Number(seg.comboMs) > 0) item.comboMs = Number(seg.comboMs);
             out.push(item);
             return;
         }
@@ -3134,8 +3160,9 @@ function jobBuildChain(t, board, which, forceBoss) {
         };
         // ★ 无间隔组「」标记：compile.py 把连续 noint 段合进一个「」块
         if (seg.noint === true) item.noint = true;
-        // ★ 点击格子的连击次数
+        // ★ 点击格子的连击次数 / 连击间隔
         if (Number(seg.times) > 1) item.times = Number(seg.times);
+        if (Number(seg.comboMs) > 0) item.comboMs = Number(seg.comboMs);
         out.push(item);
     });
 
