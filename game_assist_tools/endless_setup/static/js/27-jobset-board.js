@@ -1095,7 +1095,7 @@ function jobRenderStepCfgParams() {
         }
         // 连击（所有动作通用）
         const st = _stepCfgCtx.st;
-        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 20,
+        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 9999,
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 连击次数 = ' + v; });
@@ -1110,7 +1110,7 @@ function jobRenderStepCfgParams() {
             Math.min(8, Math.max(1, Number(st.slot) || 1)),
             function (v) { jobStepCfgSave({ slot: v }); },
             function (v) { return '⚙ 切换形态槽位 = ' + v; });
-        bindInt(mkRow('次数', '次（连点几下）'), 1, 20,
+        bindInt(mkRow('次数', '次（连点几下）'), 1, 9999,
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 切换形态次数 = ' + v; });
@@ -1129,7 +1129,7 @@ function jobRenderStepCfgParams() {
     } else {
         // ★ 连击是所有动作通用的（点击类/滑动类都有）：这个动作连做 N 次
         const st = _stepCfgCtx.st;
-        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 20,
+        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 9999,
             Math.min(20, Math.max(1, Number(st.times) || 1)),
             function (v) { jobStepCfgSave({ times: v }); },
             function (v) { return '⚙ 连击次数 = ' + v; });

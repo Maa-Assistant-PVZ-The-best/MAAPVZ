@@ -165,7 +165,7 @@ def build_chain_nodes(
                 seg_parts: List[str] = []
                 # ★ 连击：所有动作通用（点击/滑动都 ×N = 连做 N 次）
                 n_rep = _num(seg.get("times"), 1)
-                n_rep = min(20, max(1, n_rep))
+                n_rep = min(9999, max(1, n_rep))
                 # ★ 连击间隔 comboMs（默认 0 = 紧挨着；>0 时相邻两次间插 sleep）
                 gap_rep = _num(seg.get("comboMs"), 0)
                 gap_rep = min(10000, max(0, gap_rep))

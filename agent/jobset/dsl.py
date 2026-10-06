@@ -176,7 +176,7 @@ GENERIC_CLICK_KEY = {
 GENERIC_FORM_SLOT_MAX = 8
 
 # 切换次数上限 —— 防止用户误填 999 把整条链拖垮。
-GENERIC_FORM_TIMES_MAX = 20
+GENERIC_FORM_TIMES_MAX = 9999
 
 # ---------------------------------------------------------------------------
 # ★★ 可扩展的「按槽位点 N 次」通用动作表
