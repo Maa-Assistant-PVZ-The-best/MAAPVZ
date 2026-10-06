@@ -1,86 +1,18 @@
 
 // ============================================================
-// 关卡链：表1 从 1 开始；表N 从表N-1 的结束关开始（线性推进）
-// ============================================================
-// 阵容表：关卡区间由「相邻阵容之间的一个转阵容关」决定（像关键帧）
-//   阵容1 = 1 → B1，阵容2 = B1 → B2，……，最后一个阵容 = B(n-1) → MAX
-//   中间那个数字（B）同时是「上一阵容的结束关」和「下一阵容的起始关」，
-//   所以改一处，两边同步变。
+// 关卡覆盖：图层模型（详见 20-jobset-core.js）
+//   旧的「区间关键帧」模式（jobRangeOfTable / jobRenumberTables /
+//   jobSetBoundary）已撤掉 —— 覆盖关系改在「布局配置」弹窗里编辑
+//   （34-jobset-layout.js），本文件只保留表单/标签/复制逻辑。
 // ============================================================
 const JOB_MAX_LEVEL = 149;
-
-// 取某个阵容的区间 [from, to)
-function jobRangeOfTable(i) {
-    const n = jobTables.length;
-    let from = 1;
-    if (i > 0) {
-        const p = Number(jobTables[i - 1].to_level);
-        from = (p > 0) ? p : 1;
-    }
-    let to;
-    if (i < n - 1) {
-        const c = Number(jobTables[i].to_level);
-        to = (c > 0) ? c : JOB_MAX_LEVEL;
-    } else {
-        to = JOB_MAX_LEVEL;      // 最后一个阵容一直到最大关卡
-    }
-    return { from: from, to: to };
-}
-
-// 删表/新增/改数字后统一重算所有区间，保证首尾相接、不越界
-function jobRenumberTables() {
-    if (!jobTables.length) return;
-    for (let i = 0; i < jobTables.length; i++) {
-        if (i === 0) {
-            jobTables[i].from_level = 1;
-        } else {
-            const prevTo = Number(jobTables[i - 1].to_level);
-            jobTables[i].from_level = (prevTo > 0) ? prevTo : 1;
-        }
-        if (i === jobTables.length - 1) {
-            // 最后一个阵容没有「转阵容关」→ 一直到最后
-            jobTables[i].to_level = '';
-        } else {
-            let v = Number(jobTables[i].to_level);
-            const lo = Number(jobTables[i].from_level) + 1;          // 至少比起始关大 1
-            if (!(v > 0)) v = Math.min(JOB_MAX_LEVEL, lo);           // 没设就用最小合法值
-            if (v < lo) v = lo;
-            if (v > JOB_MAX_LEVEL) v = JOB_MAX_LEVEL;
-            jobTables[i].to_level = String(v);
-        }
-    }
-}
 
 function jobFillForm() {
     const t = jobTables[currentTable];
     if (!t) return;
-    const r = jobRangeOfTable(currentTable);
-    const isLast = (currentTable === jobTables.length - 1);
 
     // 补给选取是每个阵容独立的，切阵容时要重渲染
     try { jobRenderSupply(); } catch (e) {}
-
-    const elFrom = document.getElementById('tfRangeFrom');
-    const elTo = document.getElementById('tfRangeTo');
-    if (elFrom) elFrom.textContent = r.from;
-    if (elTo) elTo.textContent = isLast ? (r.to + '（到最后）') : r.to;
-
-    // 中间那个「转阵容关」：最后一个阵容没有
-    const bd = document.getElementById('tfBoundary');
-    const hint = document.getElementById('tfBoundaryHint');
-    if (bd) {
-        bd.style.display = isLast ? 'none' : '';
-        if (!isLast) {
-            bd.value = Number(t.to_level) || '';
-            bd.min = String(r.from + 1);
-            bd.max = String(JOB_MAX_LEVEL);
-        }
-    }
-    if (hint) {
-        hint.textContent = isLast
-            ? '（最后一个阵容，一直执行到最大关卡）'
-            : ('改这个数字 → 阵容' + (currentTable + 1) + ' 的起始关同步变成它');
-    }
 
     const lm = document.getElementById('tfLineupMode');
     if (lm) lm.value = t.lineupMode;
@@ -139,7 +71,6 @@ function jobRefreshBossLineupUI() {
 function jobSyncForm() {
     const t = jobTables[currentTable];
     if (!t) return;
-    // 关卡不在表单里直接改（由 jobRenumberTables + 转阵容关输入框负责）
     const lm = document.getElementById('tfLineupMode');
     if (lm) t.lineupMode = lm.value;
     const dn = document.getElementById('tfDeckNo');
@@ -155,48 +86,20 @@ function jobSyncForm() {
     jobRenderTabs();
 }
 
-// 改「转阵容关」：像关键帧一样，只改这一个数，两边同时生效
-function jobSetBoundary(v) {
-    const t = jobTables[currentTable];
-    if (!t) return;
-    if (currentTable >= jobTables.length - 1) return;   // 最后一个阵容没有转阵容关
-
-    const r = jobRangeOfTable(currentTable);
-    let n = parseInt(v);
-    const lo = r.from + 1;
-    if (!(n > 0)) { jobFillForm(); return; }             // 空值 → 还原显示，不写入
-    if (n < lo) n = lo;
-    if (n > JOB_MAX_LEVEL) n = JOB_MAX_LEVEL;
-
-    t.to_level = String(n);
-    jobRenumberTables();          // 重算全部区间（本阵容结束关 = 下一阵容起始关）
-    jobRenderTabs();
-    jobFillForm();
-    jobSaveLocal();
-    setStatus('🔀 阵容' + (currentTable + 1) + ' 结束关 = 阵容' + (currentTable + 2) + ' 起始关 = ' + n);
-}
-
 // ============================================================
-// 拖拽换序：把 阵容A 拖到 阵容B 上 -> **交换**两个阵容的内容。
-//   ★ 交换的是「内容」（槽位/棋盘/链/补给…），关卡区间（from/to_level）
-//     是**位置属性**（关键帧），不随内容走 —— 拖完区间不变，只是
-//     这个区间里跑的阵容换了。
+// ★ 图层模型下的「交换」= 两张表连同覆盖关系整体互换位置（层序对调）。
+//   层序 = 优先级，覆盖是表自身的属性，随表走。
 // ============================================================
 function jobSwapTables(i, j) {
     if (i === j || !jobTables[i] || !jobTables[j]) return;
     jobSaveCurrentBoard();                       // 防御：当前编辑先落回表对象
-    const iFrom = jobTables[i].from_level, iTo = jobTables[i].to_level;
-    const jFrom = jobTables[j].from_level, jTo = jobTables[j].to_level;
     const tmp = jobTables[i];
     jobTables[i] = jobTables[j];
     jobTables[j] = tmp;
-    jobTables[i].from_level = iFrom; jobTables[i].to_level = iTo;
-    jobTables[j].from_level = jFrom; jobTables[j].to_level = jTo;
-    jobRenumberTables();                         // 保险：重接关卡链
     jobLoadTable(currentTable, true);            // 当前位置内容变了，整页重载
     jobSaveLocal();
     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
-    setStatus('🔀 已交换 阵容' + (i + 1) + ' ↔ 阵容' + (j + 1) + ' 的内容（关卡区间不动）');
+    setStatus('🔀 已交换 ' + jobTableName(i) + ' ↔ ' + jobTableName(j) + '（含覆盖关系）');
 }
 
 // Q/E 循环切换阵容（在 jobInstallSlotHotkeys 里挂了按键，那里已做输入框/弹层守卫）
@@ -206,46 +109,15 @@ function jobCycleTable(dir) {
     const nxt = ((currentTable + dir) % n + n) % n;    // 首尾循环
     jobLoadTable(nxt);
     jobSaveLocal();
-    setStatus('📑 阵容' + (nxt + 1));
+    setStatus('📑 ' + jobTableName(nxt));
 }
 
+// ★ 原来的 tab 条已撤掉，改成「当前表」文字标签（布局配置弹窗里切表）
 function jobRenderTabs() {
-    const box = document.getElementById('jobTableTabs');
+    const box = document.getElementById('jobTableLabel');
     if (!box) return;
-    box.innerHTML = '';
-    jobTables.forEach(function (t, i) {
-        const r = jobRangeOfTable(i);
-        const el = document.createElement('span');
-        el.style.cssText = 'padding:3px 12px;border-radius:6px;font-size:12px;cursor:pointer;user-select:none;'
-            + (i === currentTable ? 'background:#2d7aff;color:#fff;' : 'background:#e9ecf0;color:#333;');
-        el.textContent = '阵容' + (i + 1) + '（' + r.from + '-' + r.to + '）';
-        el.title = '关卡 ' + r.from + ' ~ ' + r.to + '\n拖到另一个阵容上 = 交换两者内容（关卡区间不动）\nQ/E = 切换阵容';
-        el.addEventListener('click', function () { jobLoadTable(i); });
-        // ---- 拖拽交换 ----
-        el.draggable = true;
-        el.addEventListener('dragstart', function (ev) {
-            ev.dataTransfer.setData('text/plain', String(i));
-            ev.dataTransfer.effectAllowed = 'move';
-            el.style.opacity = '0.45';
-        });
-        el.addEventListener('dragend', function () {
-            el.style.opacity = '';
-            box.querySelectorAll('span').forEach(function (s) { s.style.outline = ''; });
-        });
-        el.addEventListener('dragover', function (ev) {
-            ev.preventDefault();                     // 不拦就 drop 不了
-            ev.dataTransfer.dropEffect = 'move';
-            el.style.outline = '2px dashed #2d7aff';
-        });
-        el.addEventListener('dragleave', function () { el.style.outline = ''; });
-        el.addEventListener('drop', function (ev) {
-            ev.preventDefault();
-            el.style.outline = '';
-            const from = parseInt(ev.dataTransfer.getData('text/plain'));
-            if (Number.isFinite(from)) jobSwapTables(from, i);
-        });
-        box.appendChild(el);
-    });
+    const t = jobTables[currentTable];
+    box.textContent = t ? (jobTableName(currentTable) + ' · ' + jobCoverText(t)) : '';
 }
 
 function jobFindPlant(name) {
@@ -468,7 +340,7 @@ function jobEnsureOrd(board) {
 // ============================================================
 // 复制阵容：把另一张阵容表的**内容**深拷贝到当前表
 //   拷贝：槽位/boss槽位/棋盘(普通+boss)/三条链/形态/等待/收尾参数/补给顺序/神器…
-//   不拷：from_level / to_level —— 关卡区间是位置属性（由相邻表决定），不能跟着内容走
+//   不拷：覆盖关系（cover/levels）与表名 —— 它们是「这张表自己的身份」
 // ============================================================
 
 // 阵容表摘要（弹窗列表里的一行小字）
@@ -483,8 +355,7 @@ function jobTableCopySummary(i) {
         });
         return n;
     };
-    const rg = jobRangeOfTable(i);
-    return rg.from + '~' + rg.to + ' 关 · 槽位 ' + slotN + '/8'
+    return jobCoverText(t) + ' · 槽位 ' + slotN + '/8'
         + ' · 普通 ' + cnt(t.boardEarly) + ' 株 · boss ' + cnt(t.boardLate) + ' 株';
 }
 
@@ -494,10 +365,11 @@ function jobCopyTableFrom(srcIdx) {
     if (!cur || !src || srcIdx === currentTable) return;
     // 当前棋盘正在编辑，先存回它所属的表（马上就要被覆盖，只是保持数据惯例干净）
     jobSaveCurrentBoard();
-    const keepFrom = cur.from_level, keepTo = cur.to_level;
+    const keepLabel = cur.label, keepCover = cur.cover, keepLevels = cur.levels;
     const copy = JSON.parse(JSON.stringify(src));
-    copy.from_level = keepFrom;
-    copy.to_level = keepTo;
+    copy.label = keepLabel;
+    copy.cover = keepCover;
+    copy.levels = keepLevels;
     jobTables[currentTable] = copy;
     jobLoadTable(currentTable, true);      // currentTable 没变但内容换了，skipSave 重载
     jobRenderTabs();
@@ -505,7 +377,7 @@ function jobCopyTableFrom(srcIdx) {
     if (typeof jobRenderSeqChains === 'function') jobRenderSeqChains();
     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
     jobSaveLocal();
-    setStatus('📋 已把阵容' + (srcIdx + 1) + ' 的内容复制到阵容' + (currentTable + 1) + '（关卡区间不变）');
+    setStatus('📋 已把 ' + jobTableName(srcIdx) + ' 的内容复制到当前表（覆盖关系与表名不变）');
 }
 
 function jobOpenTableCopy() {
@@ -530,7 +402,7 @@ function jobRenderTableCopy() {
         item.type = 'button';
         item.className = 'jp-item';
         item.innerHTML = '<span class="jp-item-ico">🌿</span><span>'
-            + '<div class="jp-item-name">阵容' + (i + 1) + '</div>'
+            + '<div class="jp-item-name">' + jobTableName(i) + '</div>'
             + '<div class="jp-item-code">' + jobTableCopySummary(i) + '</div></span>';
         item.addEventListener('click', function () {
             jobCloseTableCopy();

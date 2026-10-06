@@ -80,6 +80,19 @@ function jobLoadLocal() {
             if (typeof t.endSettleMs !== 'number') t.endSettleMs = 15000;
             if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
             if (!Array.isArray(t.endOrder)) t.endOrder = null;
+            // 关卡覆盖迁移：有 levels 直接当 picks；否则从 from/to 物化
+            if (typeof t.label !== 'string') t.label = '';
+            if (Array.isArray(t.levels)) {
+                t.cover = { picks: t.levels.slice() };
+            } else {
+                const a = Math.max(1, Math.min(149, Number(t.from_level) || 1));
+                const b = (t.to_level === '' || t.to_level === null || t.to_level === undefined)
+                    ? 149
+                    : Math.max(a, Math.min(149, Number(t.to_level) - 1));
+                t.cover = { picks: [] };
+                for (let i = a; i <= b; i++) t.cover.picks.push(i);
+            }
+            jobNormalizeCover(t);
             // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         });
         const m = data.meta || {};
@@ -153,81 +166,8 @@ function jobInit() {
     jobLoadList(jobMeta.code || '');    // 下拉栏与「恢复出来的配置」保持一致（不传 current，避免弹回旧作业集）
     if (restored) setStatus('已恢复上次编辑的配置（本地缓存）');
 
-    // 事件绑定：新建阵容 → 先问「转阵容关卡」，再建
-    document.getElementById('jobAddTable').addEventListener('click', function () {
-        const last = jobTables[jobTables.length - 1];
-        if (last) jobSaveCurrentBoard();
-        // 提示输入「转阵容关」——这就是新阵容的起点 = 上一阵容的终点
-        const curTo = Number(last && last.to_level) || JOB_MAX_LEVEL;
-        const tip = (jobTables.length + 1) + '：请输入转阵容关卡\n'
-                  + '（关卡 1~? 用阵容1，?~149 用阵容' + (jobTables.length + 1) + '）';
-        const ans = window.prompt(tip, String(Math.min(JOB_MAX_LEVEL, curTo)));
-        if (ans === null) return;                       // 取消 → 不新建
-        let b = parseInt(ans);
-        // ★ 新区间的起点必须**严格大于**上一阵容的起始关，
-        //   否则会输入一个落在前面阵容区间里的数，导致区间重叠/冲突。
-        //   lo = 上一阵容的起始关 + 1（不是「上一阵容结束关 + 1」，
-        //   因为「上一阵容结束关」正是这次要设置的那个数）。
-        const prevRange = jobRangeOfTable(jobTables.length - 1);
-        const lo = prevRange.from + 1;
-        if (!(b > 0)) {
-            alert('请输入合法关卡数字');
-            return;
-        }
-        if (b < lo) {
-            alert('转阵容关必须大于 ' + prevRange.from + '（阵容' + jobTables.length
-                + ' 占用了 ' + prevRange.from + ' ~ ' + prevRange.to + '）。\n'
-                + '请输入 ' + lo + ' ~ ' + JOB_MAX_LEVEL + ' 之间的数。');
-            return;
-        }
-        if (b > JOB_MAX_LEVEL) {
-            alert('转阵容关不能超过最大关卡 ' + JOB_MAX_LEVEL);
-            return;
-        }
-
-        // 上一阵容的结束关 = 新阵容的起始关 = b
-        if (last) last.to_level = String(b);
-        // ★ 关键：新建之前必须先把「当前正在编辑的棋盘」存回它所属的表。
-        //   否则 jobLoadTable 会用新表的空棋盘覆盖全局 boardEarly，
-        //   上一个阵容的布阵数据就永久丢了（踩过的坑）。
-        jobSaveCurrentBoard();
-        const nt = jobNewTable();
-        nt.from_level = b;
-        nt.to_level = '';                               // 新阵容默认到最大关卡
-        jobRenumberTables();
-        // ★ 必须 skipSave=true：jobNewTable 已经把 currentTable 切到新表了，
-        //   不跳过的话 jobLoadTable 内部会先 jobSaveCurrentBoard()，
-        //   把**全局棋盘里还残留的旧表布阵**写进新表 —— 新表槽位是空的、
-        //   棋盘却是满的，正是「棋盘和槽位对不上」的 bug 来源。
-        //   （删除阵容那边就是这么做的，见 jobDelTable。）
-        jobLoadTable(jobTables.length - 1, true);
-        jobRenderTabs();
-        jobFillForm();
-        jobSaveLocal();
-        setStatus('✅ 已新建阵容' + jobTables.length + '：' + b + ' ~ 149');
-    });
-
-    document.getElementById('jobDelTable').addEventListener('click', () => {
-        if (jobTables.length <= 1) { alert('至少保留一个阵容'); return; }
-        if (!confirm('删除当前阵容？')) return;
-
-        // ★ 关键：删之前必须先把「当前正在编辑的棋盘」存回它所属的表。
-        //   否则 splice 之后 currentTable 变了，jobLoadTable 内部的
-        //   jobSaveCurrentBoard() 会把旧棋盘写进**另一张表**，
-        //   把那边的布阵覆盖掉（踩过的坑：删阵容1 毁掉阵容2）。
-        jobSaveCurrentBoard();
-
-        jobTables.splice(currentTable, 1);
-        currentTable = Math.min(currentTable, jobTables.length - 1);
-        jobRenumberTables();          // ★ 删表后重接关卡链条
-        // currentTable 已指向正确的表，且棋盘刚刚存过，用 skipSave 避免再存一次
-        jobLoadTable(currentTable, true);
-        jobRenderTabs();
-        jobFillForm();
-        jobSaveLocal();
-        if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新
-        setStatus('🗑 已删除阵容，剩余 ' + jobTables.length + ' 个');
-    });
+    // 事件绑定：阵容表的 新建/删除/排序/改名 已全部搬进「布局配置」弹窗
+    // （34-jobset-layout.js 的 jobBindLayout，下面 init 末尾绑定）。
 
     // ============ 补给选取（boss 关专属）============
     const spToggle = document.getElementById('supplyToggle');
@@ -292,12 +232,9 @@ function jobInit() {
     // 复制阵容弹窗（📋 按钮 -> 把其它阵容表的内容拷进当前表）
     if (typeof jobBindTableCopy === 'function') jobBindTableCopy();
 
-    // 「转阵容关」输入框：改一个数，两边同步（像关键帧）
-    const bdEl = document.getElementById('tfBoundary');
-    if (bdEl) {
-        bdEl.addEventListener('change', function () { jobSetBoundary(this.value); });
-        bdEl.addEventListener('input', function () { /* 打字中不校验，避免打断输入 */ });
-    }
+    // 布局配置弹窗（🗺 按钮 -> 1-149 关图层覆盖）
+    if (typeof jobBindLayout === 'function') jobBindLayout();
+
     ['tfLineupMode','tfDeckNo','tfBossLineupMode','tfBossDeckNo'].forEach(function (id) {
         const el = document.getElementById(id);
         if (!el) return;

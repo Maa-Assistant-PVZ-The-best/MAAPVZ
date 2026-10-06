@@ -151,6 +151,87 @@
     </div>
 </div>
 
+<!-- ============ 布局配置弹窗（1-149 关图层覆盖） ============ -->
+<div id="layoutModal">
+    <div class="lz-panel">
+        <div class="lz-head">
+            <span class="lz-title">🗺 布局配置</span>
+            <span class="lz-stat" id="lzStat"></span>
+            <button class="jp-close" id="lzClose" title="关闭">✕</button>
+        </div>
+        <div class="lz-main">
+            <div class="lz-side">
+                <button class="btn" id="lzAddTable" type="button">＋ 新建表格</button>
+                <div class="lz-list" id="lzList"><!-- JS 渲染：表图层列表（上=优先） --></div>
+                <div class="lz-side-hint">上面的表优先盖住下面的表；点表名选中，✏️/双击改名；盖到别人的关会直接抢过来</div>
+            </div>
+            <div class="lz-body">
+                <div class="lz-multi-row">
+                    <button class="lz-multi" id="lzFormulaBtn" type="button" title="用快捷项或数学表达式批量圈关">🎯 指定覆盖</button>
+                    <button class="lz-multi" id="lzErase" type="button">🧽 橡皮擦：关</button>
+                    <button class="lz-multi" id="lzMulti" type="button">🔢 多选模式：关</button>
+                </div>
+                <div class="lz-grid" id="lzGrid"><!-- JS 渲染：1-149 关 --></div>
+                <div class="lz-legend">
+                    左栏点表 = 拿笔；点/拖动 = 反选格子（有→去掉，没有→加上）；多选模式下拖动 = 整段反选；Shift+点 = 连选反选；Ctrl+Z = 撤回；
+                    <span class="lz-lg lz-lg-boss"></span>BOSS 关（5 的倍数，走该表 boss 配置）
+                </div>
+            </div>
+        </div>
+        <div class="lz-foot">
+            <span id="lzWarn" class="lz-warn"></span>
+            <button class="btn" id="lzClearCur" type="button" title="把当前表的覆盖全部清掉（Ctrl+Z 可撤回）">🧽 清空当前覆盖</button>
+            <button class="btn" id="lzFillRest" type="button" title="把所有没人覆盖的关一次性补给当前表">🧹 未覆盖的全给当前表</button>
+            <button class="btn" id="lzDone" type="button">完成</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 指定覆盖（公式选关）弹窗 ============ -->
+<div id="lzFormulaModal">
+    <div class="lz-fx-panel">
+        <div class="lz-fx-head">
+            <span class="lz-fx-title">🎯 指定覆盖</span>
+            <button class="jp-close" id="lzFxClose" title="关闭">✕</button>
+        </div>
+        <!-- 一级：选模式 -->
+        <div id="lzFxChoices" class="lz-fx-choices">
+            <button class="lz-fx-choice" id="lzFxPickBaby" type="button">
+                <span class="lz-fx-choice-emoji">👶</span>
+                <span class="lz-fx-choice-name">宝宝模式</span>
+                <span class="lz-fx-choice-desc">BOSS 关 / 前一关 / 后一关，点一下就完事</span>
+            </button>
+            <button class="lz-fx-choice" id="lzFxPickPro" type="button">
+                <span class="lz-fx-choice-emoji">🧮</span>
+                <span class="lz-fx-choice-name">大佬模式</span>
+                <span class="lz-fx-choice-desc">自己写表达式圈关（5x+1、x^2……）</span>
+            </button>
+        </div>
+        <!-- 二级：宝宝模式 -->
+        <div id="lzFxBaby" style="display:none">
+            <div class="lz-fx-baby">
+                <button class="btn" id="lzFxBoss" type="button" title="公式 5x：所有 5 的倍数关">覆盖 BOSS 关</button>
+                <button class="btn" id="lzFxBossPre" type="button" title="公式 5x-1">覆盖 BOSS 前一关</button>
+                <button class="btn" id="lzFxBossPost" type="button" title="公式 5x+1">覆盖 BOSS 后一关</button>
+            </div>
+            <div class="lz-fx-hint">点一下直接应用到当前表（抢别人的），Ctrl+Z 可撤回；可以连着点好几项。</div>
+            <button class="btn lz-fx-back" data-fxback type="button">← 返回选模式</button>
+        </div>
+        <!-- 二级：大佬模式 -->
+        <div id="lzFxPro" style="display:none">
+            <div class="lz-fx-input-row">
+                <input type="text" id="lzFxInput" placeholder="例如 5x+1 / 2x / x^2 / x" spellcheck="false">
+                <button class="btn" id="lzFxApply" type="button">应用</button>
+            </div>
+            <div class="lz-fx-preview" id="lzFxPreview">输入表达式，例如 5x+1</div>
+            <div class="lz-fx-hint">
+                x 取 1,2,3…，f(x)=第 L 关就覆盖 L。支持 + - * / ^ ( ) 和隐式乘法（5x、2(x+1)）。例：<code>x</code>=全部，<code>2x</code>=2 的倍数，<code>5x+1</code>=BOSS 后一关，<code>x^2</code>=平方关。
+            </div>
+            <button class="btn lz-fx-back" data-fxback type="button">← 返回选模式</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 步骤设置弹窗（顺序链里每一步的 ⚙） ============ -->
 <div id="stepCfgModal">
     <div class="sc-panel">
@@ -369,24 +450,11 @@
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;border-top:1px solid #e2e8f0;padding-top:8px;">
             <b style="font-size:13px;">阵容表：</b>
-            <div id="jobTableTabs" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;"></div>
-            <button class="btn" id="jobAddTable">＋ 新建阵容</button>
-            <button class="btn btn-danger" id="jobDelTable">× 删除阵容</button>
+            <span id="jobTableLabel" style="font-size:12px;color:#334155;"></span>
+            <button class="btn" id="jobLayoutBtn" title="配置每张表覆盖哪些关（1-149 图层模式）">🗺 布局配置</button>
             <button class="btn" id="jobCopyTable" title="把其它阵容表的内容复制到当前阵容">📋 复制阵容</button>
         </div>
         <div id="jobTableForm" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
-            <span style="font-size:12px;color:#64748b;">关卡区间：</span>
-            <span id="tfRangeFrom" class="tf-range-edge" title="起始关（由上一段决定，不可直接改）">1</span>
-            <span style="font-size:12px;color:#94a3b8;">–</span>
-            <span id="tfRangeTo" class="tf-range-edge" title="结束关（由下一段决定，不可直接改）">149</span>
-            <span style="font-size:11px;color:#94a3b8;">（只改中间的数字，两边同时跟着变）</span>
-
-            <label style="font-size:12px;margin-left:8px;">转阵容关
-                <input type="number" id="tfBoundary" min="2" max="149" style="width:62px;"
-                       title="本阵容的结束关 = 下一阵容的起始关；像关键帧一样改一处两边同步">
-            </label>
-            <span id="tfBoundaryHint" style="font-size:11px;color:#94a3b8;"></span>
-
             <label style="font-size:12px;margin-left:8px;">换阵
                 <select id="tfLineupMode" style="max-width:110px;"
                         title="选卡 = 走原来的选卡流程；编队 = 直接切编队，跳过选卡">
@@ -690,4 +758,5 @@
 <script src="/static/js/31-jobset-adv.js"></script>
 <script src="/static/js/32-jobset-outer.js"></script>
 <script src="/static/js/33-jobset-custom.js"></script>
+<script src="/static/js/34-jobset-layout.js"></script>
 </body></html>

@@ -243,8 +243,7 @@ function jobResetEditor(quiet) {
     currentTable = 0;
 
     jobTables = [];
-    jobNewTable();                     // 建一张干净的空白表
-    jobRenumberTables();
+    jobNewTable();                     // 建一张干净的空白表（默认覆盖 1-149）
 
     // 局外选卡（作业集级）一并清空
     if (typeof jobOuterPick !== 'undefined') {
@@ -255,11 +254,9 @@ function jobResetEditor(quiet) {
 
     // 世界复选框全不勾
     document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = false; });
-    // 阵容表表单恢复默认（关卡区间由 jobRenumberTables 统一算，不在表单里）
+    // 阵容表表单恢复默认
     const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
     set('tfLineupMode', 'plants'); set('tfDeckNo', '1');
-    const bd0 = document.getElementById('tfBoundary');
-    if (bd0) bd0.value = '';
 
     boardEarly = jobBoardOrBlank([]);
     boardLate = jobBoardOrBlank([]);
@@ -383,9 +380,25 @@ function jobApplyLoaded(job, code) {
                 });
             });
         });
+
+        // ---- ★ 关卡覆盖迁移 ----
+        //   有 levels（物化结果）-> 直接当 picks 用（相位/区间/排除都已被它吸收）；
+        //   旧作业集（无 levels）：把 from_level/to_level 区间（旧语义：上半开区间）
+        //   折成 [from, to-1] 物化成 picks，行为与旧版逐关等价。
+        if (typeof t.label !== 'string') t.label = '';
+        if (Array.isArray(t.levels)) {
+            t.cover = { picks: t.levels.slice() };
+        } else {
+            const a = Math.max(1, Math.min(149, Number(t.from_level) || 1));
+            const b = (t.to_level === '' || t.to_level === null || t.to_level === undefined)
+                ? 149
+                : Math.max(a, Math.min(149, Number(t.to_level) - 1));
+            t.cover = { picks: [] };
+            for (let i = a; i <= b; i++) t.cover.picks.push(i);
+        }
+        jobNormalizeCover(t);
     });
     if (!jobTables.length) jobNewTable();
-    jobRenumberTables();          // 载入后重算关卡区间，保证首尾相接
     currentTable = 0;
     const worlds = Array.isArray(job.worlds) ? job.worlds : [];
     document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = worlds.includes(cb.value); });

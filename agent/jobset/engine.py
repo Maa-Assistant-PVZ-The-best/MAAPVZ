@@ -158,6 +158,21 @@ class Table:
         # to_level 允许 null（= 一直沿用到下一张表的 from_level）
         self.to_level: Optional[int] = _as_int(self.raw.get("to_level"), None)
 
+        # ---- ★ 关卡覆盖（图层模型，2026-10 重构）----
+        #   levels 是网页端「布局配置」物化好的覆盖关卡列表（排序去重）。
+        #   · 有 levels -> 图层模式：覆盖由 levels 决定，from/to_level 只是派生参考值
+        #   · 没有     -> 旧版区间模式：from_level/to_level 区间（向后兼容）
+        self.label: str = str(self.raw.get("label") or "").strip()
+        self.levels: Optional[frozenset] = None
+        _lv = self.raw.get("levels")
+        if isinstance(_lv, (list, tuple)):
+            _s = set()
+            for _x in _lv:
+                _i = _as_int(_x, None)
+                if _i is not None and _i >= 1:
+                    _s.add(_i)
+            self.levels = frozenset(_s)
+
         lineup = self.raw.get("lineup")
         lineup = lineup if isinstance(lineup, dict) else {}
         self.plants: List[str] = _norm_plants(lineup.get("plants"))
@@ -384,18 +399,18 @@ class Table:
     # -- 查询 --------------------------------------------------------------
 
     def covers(self, level: Optional[int]) -> bool:
-        """第 level 关是否落在本表区间内。
+        """第 level 关是否被本表覆盖。
 
-        ★ 区间的上半是**开区间**：to_level 表示「下一张表的起始关」。
-          表1 [from=1, to=50] -> 1~49 关用表1，**50 关开始用表2**。
-          这与网页端「上一张的结束关 = 下一张的起始关」的联动一致，
-          也符合「打到 50 关就换表2」的直觉。
-
-          to_level 为 None 表示无上限（一直沿用到下一张表的 from_level）。
+        ★ 图层模式（levels 存在）：覆盖 = levels 集合成员。
+        ★ 旧版区间模式（无 levels）：区间的上半是**开区间**：to_level 表示
+          「下一张表的起始关」。表1 [from=1, to=50] -> 1~49 关用表1，
+          **50 关开始用表2**。to_level 为 None 表示无上限。
         """
         lv = _as_int(level, None)
         if lv is None:
             return False
+        if self.levels is not None:
+            return lv in self.levels
         if lv < self.from_level:
             return False
         if self.to_level is not None and lv >= self.to_level:
@@ -486,27 +501,49 @@ class JobSet:
         self.tables: List[Table] = [
             Table(t, i) for i, t in enumerate(raw_tables)
         ]
-        # 按 from_level 升序 —— 网页端本就保证有序，这里做一次兜底
-        self.tables.sort(key=lambda t: (t.from_level, t.index))
+        # ★ 图层模式：任一表带 levels（网页端「布局配置」导出）-> 列表顺序即
+        #   图层优先级（上面的先盖先赢），**不按 from_level 排序**；
+        #   且 1..max_level 必须被铺满，缺关直接报错。
+        #   旧版作业集（无 levels）维持原样：按 from_level 升序切片。
+        self.layered: bool = any(t.levels is not None for t in self.tables)
+        if self.layered:
+            max_lv = self.max_level if self.max_level else 149
+            missing = [lv for lv in range(1, max_lv + 1)
+                       if not any(t.covers(lv) for t in self.tables)]
+            if missing:
+                head = "、".join(str(x) for x in missing[:20])
+                raise JobSetError(
+                    f"作业集「{self.name}」的关卡没有铺满：第 {head}"
+                    + (" …" if len(missing) > 20 else "")
+                    + f" 关（共 {len(missing)} 关）没有任何阵容表覆盖。"
+                    f"请到编辑器的「布局配置」里补齐后重新保存。"
+                )
+        else:
+            # 按 from_level 升序 —— 网页端本就保证有序，这里做一次兜底
+            self.tables.sort(key=lambda t: (t.from_level, t.index))
 
     # -- 选表 --------------------------------------------------------------
 
     def pick_table(self, level: int) -> Table:
         """按当前关卡选表。
 
-        规则：取最后一张 from_level <= level 的表（区间上限是开区间）。
-            L=1,  表1[1,50), 表2[50,-)  -> 表1
-            L=49, 表1[1,50), 表2[50,-)  -> 表1
-            L=50, 表1[1,50), 表2[50,-)  -> 表2   ★ 到 50 就换表2
-            L=99, 表1[1,50), 表2[50,-)  -> 表2
+        ★ 图层模式（任一表带 levels）：列表顺序 = 图层优先级，
+          从上往下找第一张覆盖这一关的表（先盖先赢）。
+          没有表覆盖 -> 报错（载入时已校验铺满，这里只是兜底）。
 
-        之所以按 from_level 取「最后一张 <= lv」，而不是按 to_level 找区间：
-        作者可能只填 from_level（to_level 为 null），此时 to_level 不参与判定，
-        而下一张表的 from_level 天然就是本表的上界。
+        旧版区间模式：取最后一张 from_level <= level 的表（区间上限是开区间）。
+            L=1,  表1[1,50), 表2[50,-)  -> 表1
+            L=50, 表1[1,50), 表2[50,-)  -> 表2   ★ 到 50 就换表2
         """
         lv = _as_int(level, None)
         if lv is None:
             return self.tables[0]
+
+        if self.layered:
+            for t in self.tables:
+                if t.covers(lv):
+                    return t
+            raise JobSetError(f"第 {lv} 关没有被任何阵容表覆盖（作业集「{self.name}」）")
 
         chosen = self.tables[0]
         for t in self.tables:
@@ -540,8 +577,27 @@ class JobSet:
         return self.pick_table(level).rules(is_boss)
 
     def transition_levels(self) -> List[int]:
-        """所有换阵容锚点（第 2 张表起的 from_level），升序。"""
-        return [t.from_level for t in self.tables[1:]]
+        """换阵容锚点列表（日志/自检用）。
+
+        旧版：第 2 张表起的 from_level 升序。
+        图层模式：所有「归属发生变化的关卡」（owner(lv) != owner(lv-1)）。
+        """
+        if not self.layered:
+            return [t.from_level for t in self.tables[1:]]
+        out: List[int] = []
+        prev: Optional[int] = None
+        max_lv = self.max_level if self.max_level else 149
+        for lv in range(1, max_lv + 1):
+            owner: Optional[int] = None
+            for t in self.tables:
+                if t.covers(lv):
+                    owner = t.index
+                    break
+            if prev is not None and owner is not None and owner != prev:
+                out.append(lv)
+            if owner is not None:
+                prev = owner
+        return out
 
     def __repr__(self) -> str:
         return f"<JobSet {self.code!r} name={self.name!r} tables={len(self.tables)}>"

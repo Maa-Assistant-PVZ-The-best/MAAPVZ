@@ -19,8 +19,13 @@ function jobNewTable() {
 
     const last = jobTables.length > 0 ? jobTables[jobTables.length - 1] : null;
     const t = {
-        from_level: last ? (Number(last.to_level) || 0) + 1 : 1,
+        from_level: 1,
         to_level: '',
+        label: '',                // 表名（布局配置里可改；空 = 显示「表N」）
+        colorIdx: null,           // ★ 固定色块序号（随表走，删除/调层不变色；新建复用最小空位）
+        // ★ 关卡覆盖：picks = 单点关卡列表（相位模式曾下架调整，将来回归再议）
+        cover: { picks: [] },
+        levels: null,             // 物化缓存（null = 待算；由 jobNormalizeCover 维护）
         lineupMode: 'plants',
         deckNo: 1,
         loopPlant: false,
@@ -81,7 +86,77 @@ function jobNewTable() {
     jobTables.push(t);
     // ★ 新表成为当前编辑对象 —— 否则后续 jobSaveCurrentBoard 会写错表
     currentTable = jobTables.length - 1;
+    // ★ 第一张表默认铺满 1-149（兼容空白模板语义；后续新表默认不覆盖任何关，
+    //   在布局配置弹窗里圈关）
+    if (!last) {
+        for (let i = 1; i <= JOB_MAX_LV; i++) t.cover.picks.push(i);
+    }
+    jobNormalizeCover(t);           // 物化 levels
     return t;
+}
+
+// ============================================================
+// ★★ 关卡覆盖（独占模型）
+//   · 覆盖 = cover.picks 单点列表（排序去重后物化成 levels）。
+//   · 一关只能属于一张表：弹窗里盖到别人的关 = 直接抢过来。
+//   · 某关没人覆盖 = 不合法（保存时拦截，运行时加载报错）。
+// ============================================================
+const JOB_MAX_LV = 149;
+
+// 找最小的空闲色块序号（新建表复用被删表的颜色）
+function jobNextFreeColorIdx() {
+    const used = {};
+    jobTables.forEach(function (t) {
+        if (t && Number.isInteger(t.colorIdx)) used[t.colorIdx] = 1;
+    });
+    let k = 0;
+    while (used[k]) k++;
+    return k;
+}
+
+// 保证 cover 结构合法，并把覆盖物化成 levels（排序去重）
+function jobNormalizeCover(t) {
+    if (!t) return;
+    if (!Number.isInteger(t.colorIdx)) t.colorIdx = jobNextFreeColorIdx();
+    if (!t.cover || typeof t.cover !== 'object' || !Array.isArray(t.cover.picks)) {
+        t.cover = { picks: [] };
+    }
+    const set = {};
+    t.cover.picks = t.cover.picks
+        .map(function (v) { return v | 0; })
+        .filter(function (v) { return v >= 1 && v <= JOB_MAX_LV; });
+    t.cover.picks.forEach(function (v) { set[v] = 1; });
+    t.cover.picks = Object.keys(set).map(Number);
+    t.levels = t.cover.picks.slice().sort(function (a, b) { return a - b; });
+}
+
+// 图层序（数组序）第一个覆盖 lv 的表索引；-1 = 没人覆盖
+function jobLevelOwner(lv) {
+    for (let i = 0; i < jobTables.length; i++) {
+        const t = jobTables[i];
+        if (t && Array.isArray(t.levels) && t.levels.indexOf(lv) !== -1) return i;
+    }
+    return -1;
+}
+
+// 1..149 里没人覆盖的关卡
+function jobUncoveredLevels() {
+    const out = [];
+    for (let i = 1; i <= JOB_MAX_LV; i++) if (jobLevelOwner(i) === -1) out.push(i);
+    return out;
+}
+
+// 覆盖摘要（表列表/弹窗里的一行小字）：只显示关数，区间/相位/散点细节不显示
+function jobCoverText(t) {
+    if (!t) return '';
+    jobNormalizeCover(t);
+    return t.levels.length + ' 关';
+}
+
+function jobTableName(i) {
+    const t = jobTables[i];
+    const lb = t && String(t.label || '').trim();
+    return '表' + (i + 1) + (lb ? '（' + lb + '）' : '');
 }
 
 function jobSaveCurrentBoard() {

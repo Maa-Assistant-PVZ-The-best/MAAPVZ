@@ -1814,3 +1814,176 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
     border-color: #fde68a;
     border-left: 3px solid #f59e0b;
 }
+
+/* ============ 布局配置弹窗（34-jobset-layout.js） ============ */
+#layoutModal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9600;
+    background: rgba(15, 23, 42, .45);
+    align-items: center; justify-content: center;
+}
+#layoutModal.lz-open { display: flex; animation: lzFade .18s ease-out; }
+#layoutModal .lz-panel {
+    width: min(980px, 96vw); max-height: 92vh;
+    background: #fff; border-radius: 14px;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px -18px rgba(0,0,0,.5);
+    overflow: hidden;
+}
+#layoutModal.lz-open .lz-panel { animation: lzPop .22s cubic-bezier(.34,1.4,.64,1); }
+@keyframes lzFade { from { opacity: 0; } }
+@keyframes lzPop { from { opacity: 0; transform: scale(.94) translateY(10px); } }
+#layoutModal .lz-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-bottom: 1px solid #e2e8f0;
+}
+#layoutModal .lz-title { font-size: 15px; font-weight: 700; }
+#layoutModal .lz-stat { flex: 1; font-size: 12px; color: #64748b; }
+#layoutModal .lz-stat-ok { color: #16a34a; }
+#layoutModal .lz-stat-bad { color: #dc2626; font-weight: 700; }
+#layoutModal .lz-main { display: flex; min-height: 0; flex: 1; }
+#layoutModal .lz-side {
+    width: 240px; flex: none; border-right: 1px solid #e2e8f0;
+    padding: 12px; display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto;
+}
+#layoutModal .lz-side-hint { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+#layoutModal .lz-list { display: flex; flex-direction: column; gap: 6px; }
+#layoutModal .lz-row {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 7px 9px; border: 1px solid #e2e8f0; border-radius: 8px;
+    cursor: pointer; position: relative; background: #f8fafc;
+    transition: border-color .15s, background .15s, box-shadow .15s, transform .15s;
+}
+#layoutModal .lz-row:hover { border-color: #93c5fd; transform: translateX(2px); }
+#layoutModal .lz-row-active { border-color: #2d7aff; background: #eff6ff; box-shadow: 0 0 0 1px #2d7aff inset; }
+#layoutModal .lz-row-name { font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; }
+#layoutModal .lz-chip {
+    display: inline-block; width: 12px; height: 12px; border-radius: 4px; flex: none;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+}
+#layoutModal .lz-rename-input {
+    flex: 1; min-width: 0; font-size: 13px; font-weight: 700;
+    border: 1px solid #2d7aff; border-radius: 5px; padding: 1px 6px;
+    outline: none; font-family: inherit;
+}
+#layoutModal .lz-row-sub { font-size: 11px; color: #64748b; }
+#layoutModal .lz-row-ops { position: absolute; top: 5px; right: 5px; display: flex; gap: 2px; }
+#layoutModal .lz-op {
+    border: 1px solid #e2e8f0; background: #fff; border-radius: 5px;
+    font-size: 11px; line-height: 1; padding: 3px 5px; cursor: pointer; color: #64748b;
+}
+#layoutModal .lz-op:hover { border-color: #93c5fd; color: #1d4ed8; }
+#layoutModal .lz-op-danger:hover { border-color: #fca5a5; color: #dc2626; }
+#layoutModal .lz-body {
+    flex: 1; min-width: 0; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px; overflow: hidden;
+}
+#layoutModal .lz-multi-row { display: flex; align-items: center; gap: 8px; }
+#layoutModal .lz-multi {
+    border: 1px solid #cbd5e1; background: #fff; color: #475569;
+    border-radius: 8px; padding: 4px 14px; font-size: 12px; cursor: pointer;
+    transition: background .18s, border-color .18s, color .18s;
+}
+#layoutModal .lz-multi:hover { border-color: #93c5fd; }
+#layoutModal .lz-multi.lz-multi-on { background: #2d7aff; border-color: #2d7aff; color: #fff; }
+#layoutModal .lz-multi.lz-erase-on { background: #dc2626; border-color: #dc2626; color: #fff; }
+#layoutModal .lz-grid.lz-erase-mode { cursor: not-allowed; }
+#layoutModal .lz-grid.lz-erase-mode .lz-cell { cursor: not-allowed; }
+
+/* ---- 指定覆盖（公式选关）弹窗 ---- */
+#lzFormulaModal {
+    display: none;
+    position: fixed; inset: 0; z-index: 9650;
+    background: rgba(15, 23, 42, .35);
+    align-items: center; justify-content: center;
+}
+#lzFormulaModal.lz-open { display: flex; animation: lzFade .18s ease-out; }
+#lzFormulaModal .lz-fx-panel {
+    width: min(460px, 92vw);
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 20px 50px -16px rgba(0,0,0,.45);
+    padding: 14px 16px;
+}
+#lzFormulaModal.lz-open .lz-fx-panel { animation: lzPop .2s cubic-bezier(.34,1.4,.64,1); }
+#lzFormulaModal .lz-fx-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+#lzFormulaModal .lz-fx-title { font-size: 14px; font-weight: 700; color: #1e293b; }
+#lzFormulaModal .lz-fx-sec { margin-top: 10px; }
+#lzFormulaModal .lz-fx-sec-title { font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px; }
+/* 一级：模式选择大卡 */
+#lzFormulaModal .lz-fx-choices { display: flex; gap: 10px; padding: 6px 0 4px; }
+#lzFormulaModal .lz-fx-choice {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    border: 1.5px solid #e2e8f0; border-radius: 12px; background: #f8fafc;
+    padding: 16px 10px; cursor: pointer; font-family: inherit;
+    transition: border-color .15s, background .15s, transform .1s;
+}
+#lzFormulaModal .lz-fx-choice:hover { border-color: #2d7aff; background: #eff6ff; }
+#lzFormulaModal .lz-fx-choice:active { transform: scale(.97); }
+#lzFormulaModal .lz-fx-choice-emoji { font-size: 26px; }
+#lzFormulaModal .lz-fx-choice-name { font-size: 14px; font-weight: 700; color: #1e293b; }
+#lzFormulaModal .lz-fx-choice-desc { font-size: 11px; color: #94a3b8; }
+#lzFormulaModal .lz-fx-back { margin-top: 10px; font-size: 12px; }
+#lzFormulaModal .lz-fx-baby { display: flex; gap: 8px; flex-wrap: wrap; }
+#lzFormulaModal .lz-fx-input-row { display: flex; gap: 8px; }
+#lzFormulaModal .lz-fx-input-row input {
+    flex: 1; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px 10px;
+    font-size: 14px; font-family: Consolas, monospace; outline: none;
+}
+#lzFormulaModal .lz-fx-input-row input:focus { border-color: #2d7aff; box-shadow: 0 0 0 2px rgba(45,122,255,.15); }
+#lzFormulaModal .lz-fx-preview { margin-top: 6px; font-size: 12px; color: #94a3b8; }
+#lzFormulaModal .lz-fx-preview.lz-fx-ok { color: #16a34a; }
+#lzFormulaModal .lz-fx-preview.lz-fx-bad { color: #dc2626; }
+#lzFormulaModal .lz-fx-hint { margin-top: 8px; font-size: 11px; color: #94a3b8; line-height: 1.6; }
+#lzFormulaModal .lz-fx-hint code { background: #f1f5f9; border-radius: 4px; padding: 0 4px; color: #334155; }
+#layoutModal .lz-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr));
+    gap: 5px; overflow-y: auto; flex: 1;
+    padding: 10px 8px 4px 8px;   /* 顶/右留出血：角标和皇冠探出格子不被裁 */
+    user-select: none; cursor: crosshair;
+}
+#layoutModal .lz-cell {
+    position: relative;
+    aspect-ratio: 1/1; border: 1px solid #e2e8f0; border-radius: 7px;
+    background: #fff; font-size: 11px; font-weight: 600; color: #64748b;
+    cursor: crosshair; font-family: inherit; padding: 0;
+    font-variant-numeric: tabular-nums;
+    transition: background .16s, border-color .16s, color .16s, transform .1s, box-shadow .16s;
+}
+#layoutModal .lz-cell:hover { border-color: #93c5fd; transform: scale(1.08); z-index: 2; }
+#layoutModal .lz-cell:active { transform: scale(.92); }
+/* ★ BOSS 关：简洁金框（2px 实线 + 金色关卡号），不搞发光/内线的花哨 */
+#layoutModal .lz-cell-boss {
+    border: 2px solid #d9a400;
+    color: #b8860b;
+    font-weight: 800;
+    z-index: 1;
+}
+/* 被覆盖的 BOSS 格：底色是表色、白字，金框保留 */
+#layoutModal .lz-cell-boss.lz-cell-cur,
+#layoutModal .lz-cell-boss.lz-cell-other { color: #fff; }
+/* ★ 表号角标：右上角，颜色与所属表一致 */
+#layoutModal .lz-badge {
+    position: absolute; top: -6px; right: -6px;
+    min-width: 15px; height: 15px; line-height: 15px; padding: 0 3px;
+    border-radius: 8px; border: 1.5px solid #fff;
+    font-size: 9px; font-weight: 800; color: #fff; text-align: center;
+    pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+#layoutModal .lz-cell-free { border-color: #fca5a5; background: #fef2f2; color: #b91c1c; }
+/* 当前表（手里的笔）的格子：亮边发光，一眼认出 */
+#layoutModal .lz-cell-cur { box-shadow: 0 0 0 2px #fff, 0 0 10px rgba(45,122,255,.9); }
+#layoutModal .lz-cell-other { opacity: .92; }
+/* 拖动涂抹中的即时反馈（绿=反选后覆盖，红=反选后去掉；松手后统一重绘成正式色） */
+#layoutModal .lz-cell.lz-paint-on { outline: 2px dashed #16a34a; outline-offset: -2px; }
+#layoutModal .lz-cell.lz-paint-off { outline: 2px dashed #dc2626; outline-offset: -2px; }
+/* 多选模式拖段中的预览框（这段将被整段反选） */
+#layoutModal .lz-cell.lz-span { outline: 2px solid #0ea5e9; outline-offset: -2px; transform: scale(1.05); }
+#layoutModal .lz-legend { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 6px; }
+#layoutModal .lz-lg { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+#layoutModal .lz-lg-boss { background: #fffdf2; border: 1px solid #e8d48a; }
+#layoutModal .lz-foot {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; border-top: 1px solid #e2e8f0;
+}
+#layoutModal .lz-warn { flex: 1; font-size: 12px; color: #dc2626; }

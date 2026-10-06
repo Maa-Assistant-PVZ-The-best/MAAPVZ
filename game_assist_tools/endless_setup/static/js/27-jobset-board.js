@@ -2660,7 +2660,9 @@ function jobInstallSlotHotkeys() {
                 || document.querySelector('#customPicker.cp-open')
                 || document.querySelector('#stepCfgModal.sc-open')
                 || document.querySelector('#jobPickModal.jp-open')
-                || document.querySelector('#tableCopyModal.jp-open');
+                || document.querySelector('#tableCopyModal.jp-open')
+                || document.querySelector('#layoutModal.lz-open')
+                || document.querySelector('#lzFormulaModal.lz-open');
             if (open) return;
         } catch (err) { }
 
@@ -3266,9 +3268,18 @@ function jobBuild() {
                 : { plants: plants.slice(), deck: null, artifact: _bArt };
             bossSquad = (t.lineupMode === 'deck' && t.deckNo) ? Number(t.deckNo) : null;
         }
+        jobNormalizeCover(t);
+        // from_level/to_level 退化为「仅供参考」的派生值（最小关/最大关+1）：
+        //   运行时的权威覆盖字段是 levels（图层模型，见 20/34）。
+        const _lv0 = t.levels.length ? t.levels[0] : 1;
+        const _lv1 = t.levels.length ? (t.levels[t.levels.length - 1] + 1) : null;
         return {
-            from_level: t.from_level,
-            to_level: t.to_level === '' ? null : Number(t.to_level),
+            from_level: _lv0,
+            to_level: _lv1,
+            label: String(t.label || ''),
+            // ★ 关卡覆盖（图层模型）：levels 是权威字段；cover 是编辑器状态（读回用）
+            levels: t.levels.slice(),
+            cover: JSON.parse(JSON.stringify(t.cover)),
             lineup: t.lineupMode === 'deck'
                 ? { plants: [], deck: String(t.deckNo), artifact: (t.artifact || null) }
                 : { plants, deck: null, artifact: (t.artifact || null) },
@@ -3400,6 +3411,21 @@ function jobCurrentCode() {
 
 async function jobSave() {
     const msg = document.getElementById('jobStatus');
+    // ★ 关卡覆盖校验（图层模型）：1-149 必须被铺满，没铺满不让保存
+    {
+        (jobTables || []).forEach(function (t) { jobNormalizeCover(t); });
+        const uncovered = jobUncoveredLevels();
+        if (uncovered.length) {
+            window.alert(
+                '⚠️ 关卡没有铺满：\n\n第 '
+                + uncovered.slice(0, 30).join('、')
+                + (uncovered.length > 30 ? ' …' : '')
+                + ' 关（共 ' + uncovered.length + ' 关）没有任何阵容表覆盖。\n\n'
+                + '请到「🗺 布局配置」里补齐后再保存。');
+            jobOpenLayout();
+            return;
+        }
+    }
     // 无尽局外选卡校验：「按列表自动选取」必须选够 80 个；
     // 不够就提示改用「一键选取」/「复用当前配置」（确认后仍可强制保存）
     if (typeof jobOuterPick !== 'undefined' && jobOuterPick.mode === 'auto') {
