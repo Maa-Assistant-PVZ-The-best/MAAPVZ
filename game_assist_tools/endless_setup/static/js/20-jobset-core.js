@@ -23,6 +23,8 @@ function jobNewTable() {
         to_level: '',
         label: '',                // 表名（布局配置里可改；空 = 显示「表N」）
         colorIdx: null,           // ★ 固定色块序号（随表走，删除/调层不变色；新建复用最小空位）
+        iconPlant: '',            // 表格头像：指定的植物名（空 = 跟随槽1）
+        iconMode: 'auto',         // auto=槽1植物(无植物退回色块) / plant=指定植物 / color=强制色块
         // ★ 关卡覆盖：picks = 单点关卡列表（相位模式曾下架调整，将来回归再议）
         cover: { picks: [] },
         levels: null,             // 物化缓存（null = 待算；由 jobNormalizeCover 维护）

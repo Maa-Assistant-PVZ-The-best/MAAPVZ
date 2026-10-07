@@ -366,10 +366,17 @@ function jobCopyTableFrom(srcIdx) {
     // 当前棋盘正在编辑，先存回它所属的表（马上就要被覆盖，只是保持数据惯例干净）
     jobSaveCurrentBoard();
     const keepLabel = cur.label, keepCover = cur.cover, keepLevels = cur.levels;
+    const keepColor = cur.colorIdx;          // ★ 颜色是表的身份，复制内容不复制色
+    const keepColorHex = cur.color;          //   自定义调色盘颜色同理
+    const keepIconP = cur.iconPlant, keepIconM = cur.iconMode;  // 头像同理
     const copy = JSON.parse(JSON.stringify(src));
     copy.label = keepLabel;
     copy.cover = keepCover;
     copy.levels = keepLevels;
+    copy.colorIdx = keepColor;
+    copy.color = keepColorHex;
+    copy.iconPlant = keepIconP;
+    copy.iconMode = keepIconM;
     jobTables[currentTable] = copy;
     jobLoadTable(currentTable, true);      // currentTable 没变但内容换了，skipSave 重载
     jobRenderTabs();

@@ -590,6 +590,8 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     width:22%;
     animation:jobHeartOuter .3s cubic-bezier(.34,1.56,.64,1) both;
 }
+/* 重绘产生的心形不播入场动画：动画只留给「收藏那一下」的外科插入 */
+.job-heart-static { animation: none !important; }
 
 /* 用 SVG mask 画心形 */
 .job-fav-heart::before {
@@ -1260,7 +1262,59 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     border: 1px solid #cbd5e1; color: #64748b;
     font-size: 11px; cursor: pointer; flex: none; user-select: none;
 }
+#layoutModal .lz-chip-click { cursor: pointer; }
+#layoutModal .lz-chip-click:hover { outline: 2px solid #fff; box-shadow: 0 0 0 2px #64748b; }
+#layoutModal .lz-avatar {
+    width: 22px; height: 22px; border-radius: 50%; flex: none;
+    border: 2px solid #94a3b8; background: #fff;
+    object-fit: cover; cursor: pointer;
+}
+#layoutModal .lz-avatar:hover { transform: scale(1.12); }
+.lz-plant-pop {
+    position: fixed; z-index: 12000; background: #fff; width: 268px;
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px;
+    box-shadow: 0 6px 24px rgba(15, 23, 42, .18);
+    display: flex; flex-direction: column; gap: 6px;
+}
+.lz-plant-bar { display: flex; gap: 6px; }
+.lz-plant-barbtn {
+    flex: 1; font-size: 11px; padding: 4px 6px; border-radius: 6px;
+    border: 1px solid #e2e8f0; background: #f8fafc; cursor: pointer;
+}
+.lz-plant-barbtn:hover { border-color: #2d7aff; color: #2d7aff; }
+.lz-plant-search {
+    font-size: 12px; padding: 4px 8px; border-radius: 6px;
+    border: 1px solid #cbd5e1; outline: none;
+}
+.lz-plant-search:focus { border-color: #2d7aff; }
+.lz-plant-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
+    max-height: 220px; overflow-y: auto;
+}
+.lz-plant-cell {
+    padding: 2px; border-radius: 6px; cursor: pointer;
+    border: 2px solid transparent; background: none;
+}
+.lz-plant-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+.lz-plant-cell:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.lz-plant-cell.lz-plant-cur { border-color: #2d7aff; background: #eff6ff; }
 #stepCfgModal .sc-help:hover { border-color: #2d7aff; color: #2d7aff; }
+.lz-color-head { font-size: 11px; color: #64748b; margin-top: 2px; }
+.lz-color-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.lz-color-sw {
+    width: 22px; height: 22px; border-radius: 5px; padding: 0;
+    border: 2px solid transparent; cursor: pointer;
+}
+.lz-color-sw:hover { transform: scale(1.15); }
+.lz-color-sw.lz-color-cur { border-color: #0f172a; }
+.lz-color-sw.lz-color-taken { opacity: .25; cursor: not-allowed; }
+.lz-color-sw.lz-color-taken:hover { transform: none; }
+.lz-color-custom { display: flex; align-items: center; gap: 8px; }
+.lz-color-custom input[type="color"] {
+    width: 34px; height: 24px; padding: 0; border: 1px solid #cbd5e1;
+    border-radius: 5px; background: #fff; cursor: pointer;
+}
+.lz-color-tip { font-size: 11px; color: #94a3b8; }
 #stepCfgModal .sc-foot {
     padding: 10px 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;
 }

@@ -61,6 +61,7 @@ function jobOpenLayout() {
 function jobCloseLayout() {
     const m = jobLayoutModal();
     if (m) m.classList.remove('lz-open');
+    jobCloseColorPicker();
     jobRenderTabs();            // 主界面的「当前表」标签跟着刷新
 }
 
@@ -77,9 +78,32 @@ function jobRenderLayoutList() {
 
         const name = document.createElement('span');
         name.className = 'lz-row-name';
-        // 色块（与宫格同色）+ 画笔标记（当前表 = 手里的笔）
-        name.innerHTML = '<span class="lz-chip" style="background:' + jobTableColor(i) + '"></span>'
-            + (i === currentTable ? '🖌 ' : '') + jobTableName(i);
+        // 色块 + 植物头像 双标识：都点开同一个「样式弹层」（头像 + 颜色一起改）
+        const chip = document.createElement('span');
+        chip.className = 'lz-chip lz-chip-click';
+        chip.style.background = jobTableColor(i);
+        chip.title = '点击更换头像 / 颜色';
+        chip.addEventListener('click', function (e) {
+            e.stopPropagation();
+            jobOpenStylePicker(i, chip);
+        });
+        name.appendChild(chip);
+        const icon = jobTableIcon(i);
+        if (icon) {
+            const av = document.createElement('img');
+            av.className = 'lz-avatar';
+            av.src = icon.img;
+            av.alt = icon.zh;
+            av.title = icon.zh + '（点击更换头像 / 颜色）';
+            av.addEventListener('error', function () { av.remove(); });  // 图没了就摘掉
+            av.addEventListener('click', function (e) {
+                e.stopPropagation();
+                jobOpenStylePicker(i, av);
+            });
+            name.appendChild(av);
+        }
+        name.appendChild(document.createTextNode(
+            (i === currentTable ? '🖌 ' : '') + jobTableName(i)));
         name.title = '点击拿起这支笔（主界面跟着切过去）；双击改名';
         row.appendChild(name);
 
@@ -428,13 +452,197 @@ function jobBindFormula() {
 
 
 
-// 每表一个固定色（colorIdx 随表走：删表不复位、调层不变色、新建复用最小空位）
+// 每表一个固定色（colorIdx 随表走：删表不复位、调层不变色、新建复用最小空位；
+//   t.color = 用户用调色盘自选的 hex，优先级高于 colorIdx）
 const LZ_PALETTE = ['#2d7aff', '#16a34a', '#ea580c', '#9333ea', '#0891b2',
                     '#dc2626', '#ca8a04', '#db2777', '#4f46e5', '#65a30d'];
-function jobTableColor(i) {
+function jobEffColorIdx(i) {
     const t = jobTables[i];
-    const idx = (t && Number.isInteger(t.colorIdx)) ? t.colorIdx : i;
-    return LZ_PALETTE[idx % LZ_PALETTE.length];
+    return (t && Number.isInteger(t.colorIdx)) ? t.colorIdx : i;
+}
+function jobEffColor(i) {
+    const t = jobTables[i] || {};
+    if (typeof t.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(t.color)) {
+        return t.color.toLowerCase();
+    }
+    return LZ_PALETTE[jobEffColorIdx(i) % LZ_PALETTE.length];
+}
+function jobTableColor(i) { return jobEffColor(i); }
+// ★ 颜色严格查重：返回占用该有效色的其它表下标，没有 = -1
+function jobColorOwner(hex, exceptIdx) {
+    hex = String(hex || '').toLowerCase();
+    let owner = -1;
+    jobTables.forEach(function (x, xi) {
+        if (xi !== exceptIdx && owner === -1 && jobEffColor(xi) === hex) owner = xi;
+    });
+    return owner;
+}
+
+// ---------------- 表格样式弹层（头像 + 色块一体） ----------------
+let _lzStylePop = null;
+function jobCloseColorPicker() {
+    if (_lzStylePop) { _lzStylePop.remove(); _lzStylePop = null; }
+}
+
+// ★ 表格头像：默认 = 槽1 植物；用户可指定任意植物（t.iconPlant）；
+//   t.iconMode='color' = 不要头像（只剩色块）。返回 {zh, img} 或 null。
+function jobTableIcon(i) {
+    const t = jobTables[i] || {};
+    if (t.iconMode === 'color') return null;
+    let zh = (typeof t.iconPlant === 'string' && t.iconPlant) ? t.iconPlant : '';
+    if (!zh && t.slots && t.slots[1]) zh = String(t.slots[1]);
+    if (!zh) return null;
+    const p = (plantCache || []).find(function (x) { return x && x.name === zh; });
+    if (!p || !p.img) return null;
+    return { zh: zh, img: p.img };
+}
+
+// 统一样式弹层：上 = 头像（跟随槽1 / 不要头像 / 植物网格），下 = 色块（预设 + 调色盘）
+function jobOpenStylePicker(i, anchor) {
+    const t = jobTables[i];
+    if (!t) return;
+    if (_lzStylePop && _lzStylePop._for === i) { jobCloseColorPicker(); return; }  // 再点收起
+    jobCloseColorPicker();
+    const pop = document.createElement('div');
+    pop.className = 'lz-plant-pop';
+    pop._for = i;
+    const rerender = function () { jobSaveLocal(); jobRenderLayout(); };
+    const curColor = jobEffColor(i);
+
+    // ---- 头像区 ----
+    const bar = document.createElement('div');
+    bar.className = 'lz-plant-bar';
+    const mkBar = function (txt, title, fn) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'lz-plant-barbtn';
+        b.textContent = txt;
+        b.title = title;
+        b.addEventListener('click', function (e) { e.stopPropagation(); fn(); });
+        bar.appendChild(b);
+    };
+    mkBar('🌱 跟随槽1', '头像跟着槽位 1 的植物走（默认）', function () {
+        jobLayoutSnap();
+        t.iconPlant = '';
+        t.iconMode = 'auto';
+        rerender(); jobCloseColorPicker();
+        setStatus('🌱 ' + jobTableName(i) + ' 头像恢复为跟随槽1（Ctrl+Z 可撤回）');
+    });
+    mkBar('🚫 不要头像', '不显示植物头像，只留色块', function () {
+        jobLayoutSnap();
+        t.iconMode = 'color';
+        rerender(); jobCloseColorPicker();
+        setStatus('🚫 ' + jobTableName(i) + ' 已隐藏头像（Ctrl+Z 可撤回）');
+    });
+    pop.appendChild(bar);
+
+    const search = document.createElement('input');
+    search.type = 'text';
+    search.className = 'lz-plant-search';
+    search.placeholder = '搜索植物头像…';
+    pop.appendChild(search);
+
+    const grid = document.createElement('div');
+    grid.className = 'lz-plant-grid';
+    pop.appendChild(grid);
+
+    const renderGrid = function (kw) {
+        grid.innerHTML = '';
+        (plantCache || []).forEach(function (p) {
+            if (!p || !p.img) return;
+            if (kw && String(p.name || '').indexOf(kw) === -1) return;
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'lz-plant-cell'
+                + ((t.iconMode !== 'color' && t.iconPlant === p.name) ? ' lz-plant-cur' : '');
+            cell.title = p.name;
+            const im = document.createElement('img');
+            im.src = p.img;
+            im.alt = p.name;
+            cell.appendChild(im);
+            cell.addEventListener('click', function (e) {
+                e.stopPropagation();
+                jobLayoutSnap();
+                t.iconPlant = p.name;
+                t.iconMode = 'plant';
+                rerender(); jobCloseColorPicker();
+                setStatus('🌱 ' + jobTableName(i) + ' 头像换成「' + p.name + '」（Ctrl+Z 可撤回）');
+            });
+            grid.appendChild(cell);
+        });
+    };
+    renderGrid('');
+    search.addEventListener('input', function () { renderGrid(search.value.trim()); });
+    search.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    // ---- 色块区：预设快选（被占用 = 禁用）+ 内置调色盘（自由取色，严格查重）----
+    const cHead = document.createElement('div');
+    cHead.className = 'lz-color-head';
+    cHead.textContent = '色块（颜色全表唯一，被占用的选不了）';
+    pop.appendChild(cHead);
+
+    const cGrid = document.createElement('div');
+    cGrid.className = 'lz-color-row';
+    LZ_PALETTE.forEach(function (c) {
+        const owner = jobColorOwner(c, i);
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'lz-color-sw'
+            + (c === curColor ? ' lz-color-cur' : '')
+            + (owner !== -1 ? ' lz-color-taken' : '');
+        sw.style.background = c;
+        sw.title = c === curColor ? '当前颜色'
+            : (owner === -1 ? '换成这个颜色' : '已被 ' + jobTableName(owner) + ' 占用');
+        sw.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (c === curColor) { jobCloseColorPicker(); return; }
+            if (owner !== -1) {
+                setStatus('⚠️ 这个颜色已被 ' + jobTableName(owner) + ' 占用，换一个');
+                return;
+            }
+            jobLayoutSnap();
+            delete t.color;                 // 回到预设 = 清掉自定义色
+            t.colorIdx = LZ_PALETTE.indexOf(c);
+            rerender(); jobCloseColorPicker();
+            setStatus('🎨 ' + jobTableName(i) + ' 颜色已更换（Ctrl+Z 可撤回）');
+        });
+        cGrid.appendChild(sw);
+    });
+    pop.appendChild(cGrid);
+
+    const cRow = document.createElement('div');
+    cRow.className = 'lz-color-custom';
+    const cInp = document.createElement('input');
+    cInp.type = 'color';
+    cInp.value = curColor;
+    cInp.title = '调色盘：自由取色';
+    const cTip = document.createElement('span');
+    cTip.className = 'lz-color-tip';
+    cTip.textContent = '调色盘自由取色';
+    cInp.addEventListener('click', function (e) { e.stopPropagation(); });
+    cInp.addEventListener('change', function (e) {
+        e.stopPropagation();
+        const hex = String(cInp.value || '').toLowerCase();
+        const owner = jobColorOwner(hex, i);
+        if (owner !== -1) {
+            cInp.value = curColor;
+            setStatus('⚠️ ' + hex + ' 已被 ' + jobTableName(owner) + ' 占用，换一个');
+            return;
+        }
+        jobLayoutSnap();
+        t.color = hex;
+        rerender(); jobCloseColorPicker();
+        setStatus('🎨 ' + jobTableName(i) + ' 颜色已更换为 ' + hex + '（Ctrl+Z 可撤回）');
+    });
+    cRow.appendChild(cInp);
+    cRow.appendChild(cTip);
+    pop.appendChild(cRow);
+
+    document.body.appendChild(pop);
+    const r = anchor.getBoundingClientRect();
+    pop.style.left = Math.min(r.left, window.innerWidth - 285) + 'px';
+    pop.style.top = (r.bottom + 4) + 'px';
+    _lzStylePop = pop;
 }
 
 let _lzLastClick = 0;      // shift 连选的锚点（上次点击的关卡）
@@ -648,6 +856,7 @@ function jobRenderLayoutStat() {
 // ---------------- 总渲染 / 变更 ----------------
 
 function jobRenderLayout() {
+    jobCloseColorPicker();           // 重绘会重建左侧列表，弹层锚点失效
     jobRenderLayoutList();
     jobRenderLayoutMulti();
     jobRenderLayoutErase();
@@ -717,6 +926,16 @@ function jobBindLayout() {
 
     // 涂抹：松手收尾（在弹窗任何位置/弹窗外松手都算）
     document.addEventListener('mouseup', jobLayoutPaintEnd);
+    // 点弹层外面 = 收起样式弹层
+    document.addEventListener('mousedown', function (e) {
+        if (!_lzStylePop) return;
+        const el = e.target;
+        const inPop = _lzStylePop.contains(el);
+        const isTrigger = el && el.classList
+            && (el.classList.contains('lz-chip-click')
+                || el.classList.contains('lz-avatar'));
+        if (!inPop && !isTrigger) jobCloseColorPicker();
+    });
 
     // 一键补齐 / 清空当前
     const fill = document.getElementById('lzFillRest');

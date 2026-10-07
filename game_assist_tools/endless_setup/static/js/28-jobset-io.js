@@ -248,6 +248,7 @@ function jobResetEditor(quiet) {
     // 局外选卡（作业集级）一并清空
     if (typeof jobOuterPick !== 'undefined') {
         jobOuterPick.plants = [];
+        jobOuterPick.order = [];
         jobOuterPick.mode = 'auto';
         if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
     }
@@ -409,6 +410,8 @@ function jobApplyLoaded(job, code) {
     jobOuterPick.mode = _opm;
     jobOuterPick.plants = (_opm === 'auto' && Array.isArray(_op.plants))
         ? _op.plants.filter(function (x) { return typeof x === 'string' && x; }) : [];
+    jobOuterPick.order = (_opm === 'auto' && Array.isArray(_op.order))
+        ? _op.order.filter(function (x) { return typeof x === 'string' && x; }) : [];
     jobOuterRefreshBadge();
     jobLoadTable(0, true);
     jobRenderTabs();

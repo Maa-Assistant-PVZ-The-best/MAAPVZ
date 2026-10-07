@@ -3425,11 +3425,12 @@ function jobBuild() {
         //   plants = 有效选取顺序（阵容表锁定植物实时派生排前 + 手动点击顺序）；
         //   mode = auto/oneclick/confirm；一键选取/直接点确定 时局内不读列表 -> 导出空 plants
         outer_pick: (function () {
-            if (typeof jobOuterPick === 'undefined') return { plants: [], mode: 'auto' };
+            if (typeof jobOuterPick === 'undefined') return { plants: [], mode: 'auto', order: [] };
             const m = jobOuterPick.mode || 'auto';
             const ps = (m === 'auto' && typeof jobOuterEffective === 'function')
                 ? jobOuterEffective() : [];
-            return { plants: ps, mode: m };
+            // order = 用户排过的完整序列（锁定/手动混排），重载后据此恢复位置
+            return { plants: ps, mode: m, order: (m === 'auto') ? (jobOuterPick.order || []).slice() : [] };
         })(),
         tables
     };

@@ -746,6 +746,9 @@ class SelectPlants(CustomAction):
         # 避免同一张电能豌豆被反复当成鸭梨选中。
         rejected = []
 
+        # ★ 核验失败时读到过的 OCR 文本（放弃时汇总打出，方便加别名）
+        ocr_seen = []
+
         if watch_targets is None:
             watch_targets = []
 
@@ -843,6 +846,8 @@ class SelectPlants(CustomAction):
                 if found is not None:
                     rejected.append([found["x"], found["y"],
                                      found["w"], found["h"]])
+                if ocr_text.strip() and ocr_text not in ocr_seen:
+                    ocr_seen.append(ocr_text)
                 print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 核对失败，"
                       f"否定卡位 {rejected[-1] if rejected else None}，"
                       f"取消(点槽位 #{slot_index+1})后继续滑动识别",
@@ -906,6 +911,11 @@ class SelectPlants(CustomAction):
         print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 放弃："
               f"核验失败 {retry}/{max_retry} 次 / 连续触底反弹 {bounce_run}/{max_retry} 次",
               file=sys.stderr, flush=True)
+        if ocr_seen:
+            # ★ 汇总这株植物核验时 OCR 读到过的所有文本 —— 加别名就照这个抄
+            print(f"[SelectPlants]   期间 OCR 读到过：{ocr_seen[:8]}"
+                  f"（若真身在里面，把读错的写法加进 PLANT_NAME_ALIASES）",
+                  file=sys.stderr, flush=True)
         return False, slide_count
 
     # ---- 无尽局外选卡：严格按列表顺序，当前帧优先找下一个，触底回顶重扫 ----

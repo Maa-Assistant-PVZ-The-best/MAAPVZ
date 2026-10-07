@@ -28,8 +28,8 @@ function jobSaveLocal() {
                 rarityFilter: plantRarityFilter,
                 // 局外选卡（作业集级；32-jobset-outer.js）
                 outerPick: (typeof jobOuterPick !== 'undefined')
-                    ? { plants: (jobOuterPick.plants || []).slice(), mode: jobOuterPick.mode || 'auto' }
-                    : { plants: [], mode: 'auto' }
+                    ? { plants: (jobOuterPick.plants || []).slice(), mode: jobOuterPick.mode || 'auto', order: (jobOuterPick.order || []).slice() }
+                    : { plants: [], mode: 'auto', order: [] }
             };
             localStorage.setItem(JOBSET_LS_KEY, JSON.stringify(data));
         } catch (e) { console.warn('[jobset] 本地保存失败', e); }
@@ -114,6 +114,7 @@ function jobLoadLocal() {
             const _op = (data.outerPick && typeof data.outerPick === 'object') ? data.outerPick : {};
             jobOuterPick.plants = Array.isArray(_op.plants) ? _op.plants.filter(function (x) { return typeof x === 'string' && x; }) : [];
             jobOuterPick.mode = (['auto', 'oneclick', 'confirm'].indexOf(_op.mode) !== -1) ? _op.mode : 'auto';
+            jobOuterPick.order = Array.isArray(_op.order) ? _op.order.filter(function (x) { return typeof x === 'string' && x; }) : [];
             if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
         }
         currentTable = Math.min(Math.max(0, parseInt(data.currentTable) || 0), jobTables.length - 1);

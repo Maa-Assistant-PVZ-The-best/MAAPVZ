@@ -17,10 +17,10 @@
 //   往 plants.json 加一条 + 往 plant_ref_endless 丢截图即可，本面板零改动。
 // ============================================================
 
-let jobOuterPick = { plants: [], mode: 'auto' };   // 作业集级；存取链路见 27/28/29
+let jobOuterPick = { plants: [], mode: 'auto', order: [] };   // 作业集级；存取链路见 27/28/29
 let outerRarityFilter = '全部';
 let outerSortMode = 'default';                     // 显示排序：default | rare_desc | rare_asc | selected
-let outerReorder = { active: false, pool: [] };    // 调整排序模式：pool = 进入时的手动选择集合
+let outerReorder = { active: false, pool: [], seq: [] };  // 调整排序模式：pool = 进入时的完整顺序（含锁定）；seq = 重排中已点的顺序
 const OUTER_RARITY_TABS = ['全部', '收藏', '橙', '紫', '蓝', '绿', '白'];
 
 // ---- 局外选卡专用收藏（与槽位选择器的局内收藏【分开算】，互不影响）----
@@ -75,28 +75,33 @@ function jobOuterApplyModeUI() {
     });
 }
 
-// ---- 调整排序模式：只显示已选植物，序号清零，重新点一遍定优先级 ----
-// 进入：手动选择集合暂存进 pool（不丢），plants 清空 -> 已选植物全部显示但无序号；
-// 点击 = 追加进 plants 拿新序号（再点取消，序号顺移）；
-// 退出（完成排序 / 关面板）：没重新点的按原顺序接在最后，不丢任何选择。
+// ---- 调整排序模式：全部已选（含黄框锁定）混在一起，重新点一遍定优先级 ----
+// 进入：当前完整顺序（锁定+手动）暂存进 pool，seq 清空 -> 所有已选植物显示但无序号；
+// 点击 = 追加进 seq 拿新序号（再点取消，序号顺移）；黄框锁定植物也能点、能插队。
+// 退出（完成排序 / 关面板）：没重新点的按原顺序接在最后，不丢任何选择；
+//   最终顺序写进 order（完整序列），plants 只保留其中的手动部分。
 function jobOuterToggleReorder() {
     if (jobOuterBlockedMode()) {
         setStatus('ℹ️ 当前执行方式不读取植物列表，无需排序');
         return;
     }
     if (!outerReorder.active) {
-        outerReorder.pool = (jobOuterPick.plants || []).slice();
-        jobOuterPick.plants = [];
+        outerReorder.pool = jobOuterEffective();      // 完整顺序（锁定 + 手动，含用户已排的）
+        outerReorder.seq = [];
         outerReorder.active = true;
         jobOuterApplyReorderUI();
         jobOuterRenderGrid();
         jobOuterRefreshBadge();
-        setStatus('🔢 调整排序中：依次点击植物确定优先级（先点的先选），点「完成排序」退出');
+        setStatus('🔢 调整排序中：依次点击植物确定优先级（先点的先选，黄框锁定植物也能排），点「完成排序」退出');
     } else {
-        const rest = outerReorder.pool.filter(function (n) { return jobOuterPick.plants.indexOf(n) === -1; });
-        jobOuterPick.plants = jobOuterPick.plants.concat(rest);
+        const rest = outerReorder.pool.filter(function (n) { return outerReorder.seq.indexOf(n) === -1; });
+        const full = outerReorder.seq.concat(rest);
+        const locked = jobOuterLockedPlants();
+        jobOuterPick.order = full.slice();
+        jobOuterPick.plants = full.filter(function (n) { return locked.indexOf(n) === -1; });
         outerReorder.active = false;
         outerReorder.pool = [];
+        outerReorder.seq = [];
         jobOuterApplyReorderUI();
         jobSaveLocal();
         jobOuterRenderGrid();
@@ -208,15 +213,22 @@ function jobOuterLockedPlants() {
     return out;
 }
 
-// 有效选取顺序 = 阵容表锁定植物（表顺序，实时派生） + 手动选择（点击顺序）。
-// ★ 锁定植物【不写入】jobOuterPick.plants：它们只从阵容表派生。否则从表里
-//   移除后会残留成"手动已选"、且若无图还点不掉 —— 表现为"取消不掉的黑框"。
-//   这样局外选卡就严格对应遍历的阵容表：表里有就有，移除即消失。
+// 有效选取顺序 = order（用户排过的完整序列，锁定/手动混排）过滤后 + 新面孔接最后。
+// ★ order 里只保留「仍是锁定 或 仍是手动已选」的名字，去重；
+//   没进过 order 的（新锁定的表植物、新手动选的）按「锁定（表顺序）+ 手动（点击顺序）」
+//   接在最后 —— 新面孔不会顶掉用户排好的位置。
+// ★ 锁定植物【不写入】jobOuterPick.plants：它们只从阵容表派生（但顺序可以进 order）。
 // ★ 封顶 80：80 选卡界面最多选 80 个，多出的从末尾砍（优先级最低的牺牲）。
 function jobOuterEffective() {
     const locked = jobOuterLockedPlants();
-    return locked.concat((jobOuterPick.plants || []).filter(function (n) { return locked.indexOf(n) === -1; }))
-        .slice(0, 80);
+    const manual = (jobOuterPick.plants || []).filter(function (n) { return locked.indexOf(n) === -1; });
+    const allowed = locked.concat(manual);
+    const out = [];
+    (jobOuterPick.order || []).forEach(function (n) {
+        if (allowed.indexOf(n) !== -1 && out.indexOf(n) === -1) out.push(n);
+    });
+    allowed.forEach(function (n) { if (out.indexOf(n) === -1) out.push(n); });
+    return out.slice(0, 80);
 }
 
 // 打开面板时清理持久列表：只保留「名单里有、有局外图、且未被阵容表锁定」的手动选择。
@@ -233,6 +245,13 @@ function jobOuterNormalize() {
         if (rest.indexOf(n) === -1) rest.push(n);        // 去重
     });
     jobOuterPick.plants = rest;
+    // order（完整序列）同步清：只留「仍锁定 或 仍是手动已选」的名字，去重
+    const keep = locked.concat(rest);
+    const ord = [];
+    (jobOuterPick.order || []).forEach(function (n) {
+        if (keep.indexOf(n) !== -1 && ord.indexOf(n) === -1) ord.push(n);
+    });
+    jobOuterPick.order = ord;
 }
 
 // ---- 面板开关 ----
@@ -292,18 +311,20 @@ function jobOuterRenderGrid() {
     const kwEl = document.getElementById('outerSearch');
     const kw = (kwEl ? kwEl.value : '').trim().toLowerCase();
     const locked = jobOuterLockedPlants();
-    const order = jobOuterEffective();   // 有效选取顺序 = 锁定（表顺序）+ 手动（点击顺序）
-    // 显示顺序：黄框锁定植物永远最顶上（按阵容表顺序），其余按排序方式；
-    // 调整排序模式下只显示已选集合（锁定 + 手动池），便于专注重排
-    const lockedObjs = locked.map(function (n) { return jobFindPlant(n); }).filter(Boolean);
-    let rest;
+    const order = jobOuterEffective();   // 有效选取顺序 = order 过滤 + 新面孔接最后
+    // 显示顺序：普通模式 = 黄框锁定植物永远最顶上（按有效顺序），其余按排序方式；
+    // ★ 调整排序模式 = 已选集合（锁定+手动）混排在一起，不按颜色/锁定分组，
+    //   专心重排（序号 = 本轮点击先后）
+    let listSrc;
     if (outerReorder.active) {
-        rest = outerReorder.pool.map(function (n) { return jobFindPlant(n); }).filter(Boolean);
+        listSrc = outerReorder.pool.map(function (n) { return jobFindPlant(n); }).filter(Boolean);
     } else {
-        rest = (plantCache || []).filter(function (p) { return locked.indexOf(p.name) === -1; });
+        const lockedObjs = locked.map(function (n) { return jobFindPlant(n); }).filter(Boolean);
+        let rest = (plantCache || []).filter(function (p) { return locked.indexOf(p.name) === -1; });
         rest = jobOuterSortList(rest, order);
+        listSrc = lockedObjs.concat(rest);
     }
-    const list = lockedObjs.concat(rest).filter(function (p) {
+    const list = listSrc.filter(function (p) {
         if (outerRarityFilter === '收藏' && !jobOuterIsFav(p)) return false;
         if (outerRarityFilter !== '全部' && outerRarityFilter !== '收藏' && p.rarity !== outerRarityFilter) return false;
         if (kw && !((p.name || '').toLowerCase().includes(kw))
@@ -314,8 +335,10 @@ function jobOuterRenderGrid() {
     list.forEach(function (p) {
         const hasImg = jobOuterAvail(p);
         const isLocked = locked.indexOf(p.name) !== -1;
-        const selIdx = order.indexOf(p.name);
-        const selected = isLocked || selIdx !== -1;
+        // 重排模式下序号/选中态看 seq（本轮点击），不看旧 order
+        const selIdx = outerReorder.active
+            ? outerReorder.seq.indexOf(p.name) : order.indexOf(p.name);
+        const selected = outerReorder.active ? (selIdx !== -1) : (isLocked || selIdx !== -1);
         if (!hasImg) noImgCnt++;
 
         // 单元格（文档流占位：卡片 + 名字）——三层结构，与槽位选择器
@@ -374,9 +397,12 @@ function jobOuterRenderGrid() {
         }
 
         // ★ 右键收藏（局外专用收藏集，与局内分开；心形位置比局内略靠上）
+        //   重绘出来的心形一律不播入场动画（job-heart-static）——
+        //   动画只留给「收藏那一下」的外科插入，否则重排/筛选一重绘就全体乱蹦。
         if (jobOuterIsFav(p)) {
             const heart = jobBuildHeart();
             heart.classList.add('job-fav-heart-outer');
+            heart.classList.add('job-heart-static');
             card.appendChild(heart);
         }
 
@@ -391,7 +417,12 @@ function jobOuterRenderGrid() {
 
         // 悬停提示（1 秒，多行；由 02-tooltip.js 的 MutationObserver 自动接管）
         const lines = [p.name + '（' + (p.rarity || '?') + '卡）'];
-        if (!hasImg && isLocked) {
+        if (outerReorder.active) {
+            lines.push(selIdx !== -1
+                ? ('🔢 本轮第 ' + (selIdx + 1) + ' 个点的，再点取消')
+                : '点击拿序号（先点的先选）');
+            if (isLocked) lines.push('🔒 阵容表植物：只参与排序，不会被取消');
+        } else if (!hasImg && isLocked) {
             lines.push('⚠️ 在阵容表中，但没有无尽局外的图片资源');
             lines.push('局内选不到它：请从阵容表移除，或去 plant_ref_endless 补截图');
         } else if (!hasImg) {
@@ -409,11 +440,25 @@ function jobOuterRenderGrid() {
         cell.setAttribute('data-tooltip-delay', '1000');
 
         cell.addEventListener('click', function () { jobOuterToggle(p); });
-        // ★ 右键收藏 / 取消收藏（局外专用收藏集；整格重绘，滚动位置自动保持）
+        // ★ 右键收藏 / 取消收藏（局外专用收藏集）：
+        //   只动这张卡的心形，【不整页重绘】——否则所有已收藏卡片的
+        //   心形入场动画会跟着重播（"别的爱心也跳出来"的 bug）。
+        //   例外：当前在「收藏」页签时取消收藏，卡片应当场消失 -> 才整页重绘。
         cell.addEventListener('contextmenu', function (e) {
             e.preventDefault();
-            jobOuterToggleFav(p);
-            jobOuterRenderGrid();
+            const nowFav = jobOuterToggleFav(p);
+            if (outerRarityFilter === '收藏') { jobOuterRenderGrid(); return; }
+            const old = card.querySelector('.job-fav-heart');
+            if (nowFav && !old) {
+                const heart = jobBuildHeart();
+                heart.classList.add('job-fav-heart-outer');
+                card.appendChild(heart);
+            } else if (!nowFav && old) {
+                old.remove();
+            }
+            const tip = cell.getAttribute('data-tooltip') || '';
+            cell.setAttribute('data-tooltip',
+                tip.replace(/右键(取消收藏|收藏)/, nowFav ? '右键取消收藏' : '右键收藏'));
         });
         grid.appendChild(cell);
     });
@@ -429,8 +474,8 @@ function jobOuterRenderGrid() {
             cnt.textContent = '当前执行方式不读取植物列表，无需选择';
             cnt.style.color = '#b45309';
         } else if (outerReorder.active) {
-            cnt.textContent = '调整排序中：已重排 ' + order.length
-                + ' / ' + (locked.length + outerReorder.pool.length) + ' 个（依次点击定优先级）';
+            cnt.textContent = '调整排序中：已重排 ' + outerReorder.seq.length
+                + ' / ' + outerReorder.pool.length + ' 个（依次点击定优先级，锁定植物混排可点）';
             cnt.style.color = '#b45309';
         } else {
             const n = order.length;
@@ -444,17 +489,29 @@ function jobOuterRenderGrid() {
     grid.scrollTop = st;            // 恢复滚动位置
 }
 
-// ---- 点击卡片：复选切换 ----
+// ---- 点击卡片：复选切换；调整排序模式下 = 追加/移出重排序列（锁定植物也能点）----
 function jobOuterToggle(p) {
     if (jobOuterBlockedMode()) {
         setStatus('ℹ️ 当前执行方式不读取植物列表，无需选择（切回「按列表自动选取」才能改）');
         return;
     }
+    if (outerReorder.active) {
+        if (!jobOuterAvail(p)) {
+            setStatus('⛔「' + p.name + '」没有无尽局外的图片资源，无法参与排序');
+            return;
+        }
+        const si = outerReorder.seq.indexOf(p.name);
+        if (si === -1) outerReorder.seq.push(p.name);
+        else outerReorder.seq.splice(si, 1);
+        jobOuterRenderGrid();
+        jobOuterRefreshBadge();
+        return;
+    }
     const isLocked = jobOuterLockedPlants().indexOf(p.name) !== -1;
     if (isLocked) {
-        // 锁定植物不可点：有图 -> 提示不能取消；无图 -> 警告局内选不到
+        // 锁定植物不可取消（但可以在「调整排序」模式里重排位置）
         if (!jobOuterAvail(p)) setStatus('⚠️「' + p.name + '」在阵容表中，但没有局外图片资源，局内选不到它（请改阵容表槽位）');
-        else setStatus('🔒「' + p.name + '」在阵容表中，不能取消（要改请改阵容表的槽位）');
+        else setStatus('🔒「' + p.name + '」在阵容表中，不能取消（要改请改阵容表的槽位）；想调整它的选取顺序请点「调整排序」');
         return;
     }
     if (!jobOuterAvail(p)) {
@@ -552,10 +609,10 @@ function jobOuterRefreshBadge() {
     const el = document.getElementById('outerPickCount');
     if (!el) return;
     // 封锁模式不读列表，角标显示 — 避免误导；
-    // 排序模式中 plants 被清零重排，集合还在 pool 里 -> 角标保持显示完整集合数
+    // 排序模式中集合在 pool 里（含锁定）-> 角标保持显示完整集合数
     if (jobOuterBlockedMode()) { el.textContent = '—'; return; }
     const n = outerReorder.active
-        ? jobOuterLockedPlants().length + outerReorder.pool.length
+        ? outerReorder.pool.length
         : jobOuterEffective().length;
     el.textContent = String(n);
 }
