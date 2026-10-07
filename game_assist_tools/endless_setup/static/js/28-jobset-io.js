@@ -367,6 +367,7 @@ function jobApplyLoaded(job, code) {
         if (t.artifact === undefined) t.artifact = null;
         if (t.bossArtifact === undefined) t.bossArtifact = null;
         if (t.artifactBody === undefined) t.artifactBody = null;   // 特殊类体型（葫芦 small/mid/big）
+        if (t.bossArtifactBody === undefined) t.bossArtifactBody = null;   // boss 空 = 沿用普通关
         // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         // 三条链的顺序（缺了会让链条顺序错乱 / 收尾链看起来是空的）
         if (!Array.isArray(t.slotOrder)) t.slotOrder = null;

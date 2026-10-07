@@ -3401,6 +3401,7 @@ function jobBuild() {
                 const _a = jobArtifactOf(_ba);
                 return _a ? (_a.en || null) : null;
             })(),
+            boss_artifact_body: (t.bossArtifactBody || null),
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢

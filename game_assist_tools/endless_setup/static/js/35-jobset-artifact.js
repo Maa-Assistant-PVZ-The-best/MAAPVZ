@@ -1,18 +1,20 @@
 
 // ============================================================
-// 35. 神器选择（每张阵容表一件；局内动作类型后续接入，不碰 pipe）
+// 35. 神器选择（每张阵容表一件；boss 棋盘可另配，空 = 沿用普通关；不碰 pipe）
 // ------------------------------------------------------------
-// 数据：t.artifact = 神器中文名（null = 不携带）；t.bossArtifact 预留给
-//   boss 关独立神器（null = 沿用普通关），UI 暂只做普通关这一件。
-// 列表来源：static/artifacts.json（name/en/desc/type/img/has_img）。
+// 数据：
+//   t.artifact / t.bossArtifact  = 神器中文名（bossArtifact null = 沿用普通关）
+//   t.artifactBody / t.bossArtifactBody = 特殊类体型（葫芦 small/mid/big；boss 空 = 沿用普通关）
+// 列表来源：/artifacts（pvz.py 扫 god_vessel 实况注入 has_img / bodytypes）。
 //   type: click=点图标 / swipe=滑到格子 / hold=长按 / special=点图标+点第二位置
-//   has_img: 运行时识别图（god_vessel）暂空，一律 false —— 和植物一样
-//   「没有图片资源」的神器将来局内选不了，现在只做选择与展示。
-// 入口：通用动作行最右边的「神器」卡片（jobRenderGenActionsInto 尾部调用）。
+//   has_img=false -> 弹窗打叉禁选（和植物同一套「没有图片资源」表现）。
+// 入口：普通/boss 棋盘的通用动作块右边各一个「神器」板块（同名同样式）；
+//   特殊类神器的体型图标 = 「使用神器·体型」的链条插入入口（弹选链窗）。
 // ============================================================
 
 let artifactCache = null;        // /artifacts 缓存
 let jobArtifactInsertBody = null; // 体型按钮 -> gen 弹窗的体型传递（30 读取快照进段）
+let jobArtifactPickTarget = 'normal'; // 弹窗目标：'normal' | 'boss'
 
 function jobArtifactOf(name) {
     if (!name) return null;
@@ -46,12 +48,37 @@ function jobLoadArtifacts() {
 
 const ART_TYPE_CN = { click: '点击类', swipe: '滑动类', hold: '长按类', special: '特殊类' };
 const ART_BODY_CN = { small: '小体型', mid: '中体型', big: '大体型' };
-
-// ---- 独立「神器」板块（通用动作块的右边）：标题 + 一张神器卡片 ----
 const ART_EMPTY_ICON = '/static/artifact/_empty.webp';
 
+// ---- 字段访问（target = 'normal' | 'boss'；boss 空 = 沿用普通关）----
+function jobArtifactField(t, target) {
+    return target === 'boss' ? (t.bossArtifact || null) : (t.artifact || null);
+}
+function jobArtifactEffName(t, target) {
+    if (target === 'boss') return t.bossArtifact || t.artifact || null;
+    return t.artifact || null;
+}
+function jobArtifactBodyField(t, target) {
+    return target === 'boss' ? 'bossArtifactBody' : 'artifactBody';
+}
+function jobArtifactEffBody(t, target, bts) {
+    const f = jobArtifactBodyField(t, target);
+    let v = t[f];
+    if (target === 'boss' && !v) v = t.artifactBody;   // boss 体型空 = 沿用普通关
+    if (!v || (Array.isArray(bts) && bts.indexOf(v) === -1)) {
+        v = (Array.isArray(bts) && bts.indexOf('mid') !== -1) ? 'mid' : (bts || [])[0] || 'mid';
+    }
+    return v;
+}
+
+// ---- 神器板块（普通/boss 各一个，同名「神器」）：卡片 + （特殊类）体型图标 ----
 function jobRenderArtifactBlock() {
-    const box = document.getElementById('artifactBlock');
+    _renderArtBlockInto('artifactBlock', 'normal');
+    _renderArtBlockInto('artifactBlockBoss', 'boss');
+}
+
+function _renderArtBlockInto(boxId, target) {
+    const box = document.getElementById(boxId);
     if (!box) return;
     box.innerHTML = '';
     const t = jobTables[currentTable];
@@ -62,14 +89,17 @@ function jobRenderArtifactBlock() {
     title.textContent = '神器';
     box.appendChild(title);
 
+    const isBoss = target === 'boss';
+    const inherit = isBoss && !t.bossArtifact;          // boss 未单配 -> 沿用普通关
+    const effName = jobArtifactEffName(t, target);
+    const cur = jobArtifactOf(effName);
+
     const btn = document.createElement('button');
     btn.className = 'gen-act gen-act-artifact';
     btn.type = 'button';
 
     const ico = document.createElement('span');
     ico.className = 'ga-ico';
-    const cur = jobArtifactOf(t.artifact);
-    // 已选但无局内识别资源（god_vessel 暂空 -> 全是）-> 卡片警告态 + 叉叉
     const curNoImg = !!(cur && !cur.has_img);
     if (curNoImg) btn.classList.add('artp-btn-noimg');
     const im = document.createElement('img');
@@ -82,30 +112,32 @@ function jobRenderArtifactBlock() {
 
     const nm = document.createElement('span');
     nm.className = 'ga-name';
-    nm.textContent = cur ? cur.name : '神器';
+    nm.textContent = cur ? (cur.name + (inherit ? '·沿用' : '')) : '神器';
     btn.appendChild(nm);
 
     btn.title = cur
-        ? (cur.name + (curNoImg ? '（⚠️ 无局内识别图，局内切不了）' : '（' + (ART_TYPE_CN[cur.type] || cur.type || '类型待定') + '）') + '\n'
-            + (cur.desc || '') + '\n点击更换')
-        : '选择这张表携带的神器（每表一件；识别图配好前均不可选）';
-    btn.addEventListener('click', jobOpenArtifactPicker);
+        ? (cur.name + (curNoImg ? '（⚠️ 无局内识别图，局内切不了）' : '（' + (ART_TYPE_CN[cur.type] || cur.type || '类型待定') + '）')
+            + (inherit ? '\nboss 关沿用普通关神器' : '')
+            + '\n' + (cur.desc || '') + '\n点击更换')
+        : (isBoss
+            ? 'boss 关神器（默认沿用普通关；点击单独配置）'
+            : '选择这张表携带的神器（每表一件；识别图配好前均不可选）');
+    btn.addEventListener('click', function () { jobOpenArtifactPicker(target); });
     box.appendChild(btn);
 
-    // ★ 特殊类神器的体型子图标（如葫芦神器：小/中/大体型），展示在神器卡片下方；
-    //   点击 = 把「使用神器·该体型」插入链条（弹选链窗：单次/循环/收尾）。
-    //   图 = static/artifact/<en>/bodytype/<k>.webp
+    // ★ 特殊类神器的体型子图标（如葫芦神器：小/中/大体型）：
+    //   点击 = 把「使用神器·该体型」插入当前棋盘的链条（弹选链窗）。
     const bts = (cur && Array.isArray(cur.bodytypes)) ? cur.bodytypes : [];
     if (cur && bts.length) {
-        if (!t.artifactBody || bts.indexOf(t.artifactBody) === -1) {
-            t.artifactBody = (bts.indexOf('mid') !== -1) ? 'mid' : bts[0];
-        }
+        const bodyField = jobArtifactBodyField(t, target);
+        const selBody = jobArtifactEffBody(t, target, bts);
+        if (!isBoss && t[bodyField] !== selBody) t[bodyField] = selBody;
         const sub = document.createElement('div');
         sub.className = 'art-subtypes';
         bts.forEach(function (k) {
             const b = document.createElement('button');
             b.type = 'button';
-            b.className = 'gen-act art-subtype' + (t.artifactBody === k ? ' art-subtype-cur' : '');
+            b.className = 'gen-act art-subtype' + (selBody === k ? ' art-subtype-cur' : '');
             const i2 = document.createElement('span');
             i2.className = 'ga-ico';
             const im2 = document.createElement('img');
@@ -121,26 +153,30 @@ function jobRenderArtifactBlock() {
             b.title = (ART_BODY_CN[k] || k) + '：点击把「使用神器·' + (ART_BODY_CN[k] || k)
                 + '」插入链条（单次/循环/收尾任选）';
             b.addEventListener('click', function () {
-                t.artifactBody = k;
+                t[bodyField] = k;
                 jobSaveLocal();
                 jobRenderArtifactBlock();
-                // 带着这个体型去开「插入通用动作」弹窗（选链：单次/循环/收尾）
-                if (typeof jobArtifactInsertBody !== 'undefined') jobArtifactInsertBody = k;
-                else window.jobArtifactInsertBody = k;
+                jobArtifactInsertBody = k;
                 if (typeof jobOpenGenPicker === 'function') jobOpenGenPicker('artifact');
             });
             sub.appendChild(b);
         });
         box.appendChild(sub);
-    } else if (t && t.artifactBody) {
-        t.artifactBody = null;   // 换成非特殊类神器 -> 清掉体型选择
+    } else if (t && t[jobArtifactBodyField(t, target)]) {
+        t[jobArtifactBodyField(t, target)] = null;   // 换成非特殊类神器 -> 清掉体型选择
     }
 }
 
 // ---- 选择弹窗 ----
-function jobOpenArtifactPicker() {
+function jobOpenArtifactPicker(target) {
+    jobArtifactPickTarget = (target === 'boss') ? 'boss' : 'normal';
     const m = document.getElementById('artifactPicker');
     if (!m) return;
+    // 「清空」按钮文案随目标变：普通关 = 不带神器；boss = 沿用普通关
+    const clear = document.getElementById('artClear');
+    if (clear) clear.textContent = (jobArtifactPickTarget === 'boss') ? '↩ 沿用普通关' : '🚫 不携带神器';
+    const ttl = m.querySelector('.artp-title');
+    if (ttl) ttl.textContent = (jobArtifactPickTarget === 'boss') ? '选择神器（boss 棋盘）' : '选择神器';
     jobLoadArtifacts().then(function () {
         jobRenderArtifactGrid('');
         m.classList.add('artp-open');
@@ -166,16 +202,16 @@ function jobRenderArtifactGrid(kw) {
         grid.appendChild(empty);
         return;
     }
+    const curName = t ? jobArtifactField(t, jobArtifactPickTarget) : null;
     list.forEach(function (a) {
         if (!a) return;
         if (kw && String(a.name || '').indexOf(kw) === -1
             && String(a.en || '').toLowerCase().indexOf(kw.toLowerCase()) === -1) return;
-        // ★ 运行时识别图（god_vessel）暂空 -> has_img 全 false -> 全部封禁：
-        //   灰化 + 叉叉 + 禁选（和植物的「没有图片资源」同一套表现）
+        // ★ 运行时识别图（god_vessel）实况：has_img=false -> 灰化 + 叉叉 + 禁选
         const avail = !!a.has_img;
         const cell = document.createElement('button');
         cell.type = 'button';
-        const isCur = t && t.artifact === a.name;
+        const isCur = curName === a.name;
         cell.className = 'artp-cell' + (isCur ? ' artp-cur' : '') + (avail ? '' : ' artp-noimg');
         const imWrap = document.createElement('span');
         imWrap.className = 'artp-imgwrap';
@@ -203,11 +239,13 @@ function jobRenderArtifactGrid(kw) {
                 setStatus('⛔「' + a.name + '」还没有局内识别图片资源，暂不可选');
                 return;
             }
-            t.artifact = a.name;
+            if (jobArtifactPickTarget === 'boss') t.bossArtifact = a.name;
+            else t.artifact = a.name;
             jobSaveLocal();
             jobCloseArtifactPicker();
             jobRenderArtifactBlock();
-            setStatus('🏺 当前阵容携带神器：' + a.name + '（' + (ART_TYPE_CN[a.type] || '类型待定') + '）');
+            setStatus('🏺 ' + (jobArtifactPickTarget === 'boss' ? 'boss 关' : '当前阵容')
+                + '携带神器：' + a.name + '（' + (ART_TYPE_CN[a.type] || '类型待定') + '）');
         });
         grid.appendChild(cell);
     });
@@ -222,11 +260,19 @@ function jobRenderArtifactGrid(kw) {
         if (clear) clear.addEventListener('click', function () {
             const t = jobTables[currentTable];
             if (!t) return;
-            t.artifact = null;
+            if (jobArtifactPickTarget === 'boss') {
+                t.bossArtifact = null;                 // boss：清空 = 沿用普通关
+                t.bossArtifactBody = null;
+            } else {
+                t.artifact = null;
+                t.artifactBody = null;
+            }
             jobSaveLocal();
             jobCloseArtifactPicker();
             jobRenderArtifactBlock();
-            setStatus('🚫 当前阵容不再携带神器');
+            setStatus(jobArtifactPickTarget === 'boss'
+                ? '↩ boss 关改为沿用普通关神器'
+                : '🚫 当前阵容不再携带神器');
         });
         const search = document.getElementById('artSearch');
         if (search) search.addEventListener('input', function () {

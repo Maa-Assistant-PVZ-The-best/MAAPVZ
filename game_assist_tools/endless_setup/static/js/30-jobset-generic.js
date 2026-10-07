@@ -35,7 +35,7 @@ function jobOpenGenPicker(gaId) {
             return;
         }
         const bodyKey = ((typeof jobArtifactInsertBody !== 'undefined' && jobArtifactInsertBody)
-            || (t0 && t0.artifactBody) || 'mid');
+            || (isB0 && t0.bossArtifactBody) || (t0 && t0.artifactBody) || 'mid');
         const bodyCN = ({ small: '小体型', mid: '中体型', big: '大体型' })[bodyKey] || bodyKey;
         artShow = { obj: aObj0, name: aName0, bodyCN: bodyCN, isSpecial: (aObj0.type === 'special') };
     }
@@ -144,7 +144,7 @@ function jobConfirmGenPicker() {
         const segA = { key: JOB_GA_PREFIX + ga.id, ga: ga.id, artName: aName, artType: aObj.type || 'click' };
         if (segA.artType === 'special') {
             segA.artBody = (typeof jobArtifactInsertBody !== 'undefined' && jobArtifactInsertBody)
-                || t.artifactBody || 'mid';
+                || (isB && t.bossArtifactBody) || t.artifactBody || 'mid';
         }
         t[field].push(segA);
     } else {
