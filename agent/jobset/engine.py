@@ -202,9 +202,15 @@ class Table:
                 if isinstance(v, str) and v.strip():
                     self.slots[str(k)] = v.strip()
 
-        # ---- 神器（占位：暂无图片资源，网页端暂无 UI；参与导出与阵容签名）----
+        # ---- 神器：zh 名（签名/播报用）+ en 代号（运行时覆盖「无尽挑战_神器」template）----
+        #   artifact_en / boss_artifact_en 由网页端导出时从神器列表现查写入；
+        #   特殊类（葫芦）还有 artifact_body（small/mid/big 体型）。
         _art = lineup.get("artifact")
         self.artifact: Optional[str] = str(_art).strip() if _art else None
+        _arten = self.raw.get("artifact_en")
+        self.artifact_en: Optional[str] = str(_arten).strip() if _arten else None
+        _artbody = self.raw.get("artifact_body")
+        self.artifact_body: Optional[str] = str(_artbody).strip() if _artbody else None
 
         # ---- boss 关阵容（boss_lineup：可与普通关不同；缺省 = 沿用普通关）----
         #   网页端导出的是「有效值」（逐槽沿用普通关后的完整槽位），
@@ -217,6 +223,8 @@ class Table:
             self.boss_squad = None
         _bart = bl.get("artifact")
         self.boss_artifact: Optional[str] = str(_bart).strip() if _bart else None
+        _barten = self.raw.get("boss_artifact_en")
+        self.boss_artifact_en: Optional[str] = str(_barten).strip() if _barten else None
 
         # 动作后等待：{ "once|card2|2,1|2": 2, ... }（网页端 jobPlacementKey 的键）
         # ★ 普通关与 boss 关各自独立（bossWaitAfter 缺省 -> 空表）
@@ -445,6 +453,12 @@ class Table:
         if is_boss and self.boss_artifact is not None:
             return self.boss_artifact
         return self.artifact
+
+    def eff_artifact_en(self, is_boss: bool) -> Optional[str]:
+        """与 eff_artifact 同源的英文名（boss 专属缺省 = 沿用普通关的 en）。"""
+        if is_boss and self.boss_artifact is not None:
+            return self.boss_artifact_en
+        return self.artifact_en
 
     def lineup_sig(self, is_boss: bool) -> tuple:
         """阵容签名（含神器占位）：相同 = 局内卡牌/编队/神器完全一致，

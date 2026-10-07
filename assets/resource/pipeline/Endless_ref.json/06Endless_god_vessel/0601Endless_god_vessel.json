@@ -1,0 +1,128 @@
+{
+    "无尽挑战_选取神器": {
+        "recognition": "OCR",
+        "expected": [
+            "神器"
+        ],
+        "roi": [
+            815,
+            87,
+            79,
+            36
+        ],
+        "target_offset": [
+            12,
+            69,
+            -58,
+            -21
+        ],
+        "action": "Click",
+        "next": [
+            "无尽挑战_神器界面"
+        ]
+    },
+    "无尽挑战_神器界面": {
+        "recognition": "OCR",
+        "expected": [
+            "选择你的神器"
+        ],
+        "roi": [
+            519,
+            103,
+            236,
+            53
+        ],
+        "next": [
+            "无尽挑战_神器",
+            "无尽挑战_选择神器_滑动"
+        ]
+    },
+    "无尽挑战_选择神器_滑动": {
+        "recognition": "OCR",
+        "expected": [
+            "选择你的神器"
+        ],
+        "roi": [
+            519,
+            103,
+            236,
+            53
+        ],
+        "action": "Swipe",
+        "begin": [
+            743,
+            239
+        ],
+        "end": [
+            484,
+            239
+        ],
+        "end_hold": 300,
+        "next": [
+            "无尽挑战_神器",
+            "无尽挑战_选择神器_滑动"
+        ]
+    },
+    "无尽挑战_神器": {
+        "recognition": "TemplateMatch",
+        "template": [],
+        "roi": [
+            260,
+            148,
+            754,
+            180
+        ],
+        "action": "Click",
+        "next": [
+            "无尽挑战_装备神器",
+            "无尽挑战_已装备神器"
+        ]
+    },
+    "无尽挑战_装备神器": {
+        "recognition": "OCR",
+        "expected": [
+            "装备"
+        ],
+        "roi": [
+            508,
+            486,
+            261,
+            112
+        ],
+        "action": "Click",
+        "next": [
+            "无尽挑战_关闭神器界面"
+        ]
+    },
+    "无尽挑战_已装备神器": {
+        "recognition": "OCR",
+        "expected": [
+            "卸下"
+        ],
+        "roi": [
+            508,
+            486,
+            261,
+            112
+        ],
+        "action": "Click",
+        "post_wait_freezes": 500,
+        "next": [
+            "无尽挑战_关闭神器界面"
+        ]
+    },
+    "无尽挑战_关闭神器界面": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Start_game/叉叉.png"
+        ],
+        "action": "Click",
+        "roi": [
+            977,
+            68,
+            89,
+            80
+        ],
+        "next": []
+    }
+}

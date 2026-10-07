@@ -178,6 +178,43 @@ def list_plants():
         return jsonify({'status': 'error', 'msg': str(e)}), 500
 
 
+# ---- 神器识别图目录（/artifacts 据此标注「可选神器」+ 体型子图标）----
+# 目录规范：god_vessel/<artifact代号>/*.png = 该神器的识别模板（有即解禁）；
+#           god_vessel/<artifact代号>/bodytype/*.png = 特殊类体型子图标（小/中/大）。
+GOD_VESSEL_DIR = os.path.join(RESOURCE_DIR, "image", "General", "god_vessel")
+
+
+@app.route('/artifacts', methods=['GET'])
+def list_artifacts():
+    """返回神器列表（神器选择弹窗用），并扫描 god_vessel 实况注入：
+      - has_img：god_vessel/<en>/ 下有 png -> 可选；没有 -> 网页端打叉禁选
+      - bodytypes：god_vessel/<en>/bodytype/ 下的体型图标名列表（如 ['small','mid','big']）
+    每次请求现扫（用户会手动增删截图，不能缓存）。
+    """
+    try:
+        with open(os.path.join(STATIC_DIR, 'artifacts.json'), encoding='utf-8') as f:
+            arts = json.load(f)
+        for a in arts:
+            en = str(a.get("en") or "").strip()
+            adir = os.path.join(GOD_VESSEL_DIR, en)
+            has = False
+            if en and os.path.isdir(adir):
+                has = any(fn.lower().endswith(".png")
+                          and os.path.isfile(os.path.join(adir, fn))
+                          for fn in os.listdir(adir))
+            a["has_img"] = has
+            bdir = os.path.join(adir, "bodytype")
+            bts = []
+            if os.path.isdir(bdir):
+                bts = sorted(fn[:-4] for fn in os.listdir(bdir)
+                             if fn.lower().endswith(".png")
+                             and os.path.isfile(os.path.join(bdir, fn)))
+            a["bodytypes"] = bts
+        return jsonify({'status': 'success', 'artifacts': arts})
+    except Exception as e:
+        return jsonify({'status': 'error', 'msg': str(e)}), 500
+
+
 # coords.json 在 agent 自己的资源目录里（dev 和打包布局都是 <根>/agent/assets/resource/）
 COORDS_FILE = os.path.join(PROJECT_DIR, "agent", "assets", "resource", "coords.json")
 

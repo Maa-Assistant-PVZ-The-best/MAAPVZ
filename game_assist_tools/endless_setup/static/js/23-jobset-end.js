@@ -216,6 +216,10 @@ function jobGetChainOrder(t, which, board, forceBoss) {
                 if (e.comboWatch === false) o2.comboWatch = false;
                 // ★ 自定义动作的 act/from/to/pairs —— 不保留就被静默丢成空段
                 if (o2.ga === 'custom') jobCopyCustomFields(e, o2);
+                // ★ 使用神器快照（artName/artType/artBody）—— 同上
+                if (o2.ga === 'artifact' && typeof jobCopyArtifactFields === 'function') {
+                    jobCopyArtifactFields(e, o2);
+                }
                 // ★ 无间隔组「」标记
                 if (e.noint === true) o2.noint = true;
                 return o2;

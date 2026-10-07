@@ -267,6 +267,22 @@
     </div>
 </div>
 
+<!-- ============ 神器选择弹窗（每张阵容表选一件，可清空） ============ -->
+<div id="artifactPicker" class="artp">
+    <div class="artp-panel">
+        <div class="artp-head">
+            <span class="artp-title">选择神器</span>
+            <input type="text" id="artSearch" class="artp-search" placeholder="搜索神器名…">
+            <button class="jp-close" id="artClose" title="关闭">✕</button>
+        </div>
+        <div class="artp-body" id="artGrid"></div>
+        <div class="artp-foot">
+            <span class="artp-hint">每张阵容表最多携带一件神器；识别图（god_vessel）配好前全部不可选，仅作预览占位</span>
+            <button class="btn" id="artClear">🚫 不携带神器</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 通用动作 -> 选链弹窗 ============ -->
 <div id="genPicker">
     <div class="gp-panel">
@@ -605,6 +621,7 @@
 </div>
                     </div><!-- /board-main -->
                     <div class="gen-actions" id="genActions"><!-- 由 JS 渲染 --></div>
+                    <div class="artifact-block" id="artifactBlock"><!-- 神器：独立板块，35-jobset-artifact.js 渲染 --></div>
                     </div><!-- /board-with-actions -->
                     <div style="margin-top:6px;display:flex;justify-content:flex-end;">
                         <button class="btn btn-danger" id="clearBoardEarly"
@@ -759,4 +776,5 @@
 <script src="/static/js/32-jobset-outer.js"></script>
 <script src="/static/js/33-jobset-custom.js"></script>
 <script src="/static/js/34-jobset-layout.js"></script>
+<script src="/static/js/35-jobset-artifact.js"></script>
 </body></html>

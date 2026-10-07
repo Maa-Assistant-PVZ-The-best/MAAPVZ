@@ -263,6 +263,10 @@ function jobSegsToSteps(board, segs, which) {
             if (seg.comboWatch === false) st.comboWatch = false;
             // ★ 自定义动作的 act/from/to/pairs —— 白名单拷贝，不带上就静默丢
             if (_gaId === 'custom') jobCopyCustomFields(seg, st);
+            // ★ 使用神器快照（artName/artType/artBody）—— 同上
+            if (_gaId === 'artifact' && typeof jobCopyArtifactFields === 'function') {
+                jobCopyArtifactFields(seg, st);
+            }
             // ★ 无间隔组「」标记
             if (seg.noint === true) st.noint = true;
             out.push(st);
@@ -302,6 +306,10 @@ function jobStepsToSegs(steps) {
             // ★ 自定义动作的 act/from/to/pairs —— 必须写回，否则重载后参数丢失
             const _ga = jobGenericActionOfKey(st.key);
             if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, o);
+            // ★ 使用神器快照（artName/artType/artBody）—— 同上
+            if (_ga && _ga.id === 'artifact' && typeof jobCopyArtifactFields === 'function') {
+                jobCopyArtifactFields(st, o);
+            }
             // ★ 无间隔组「」标记
             if (st.noint === true) o.noint = true;
             segs.push(o);
@@ -350,6 +358,10 @@ function jobSegFingerprint(s) {
          + '|' + (s.noint === true ? 'N' : '');
     // ★ 自定义动作：参数不同就是不同动作，指纹必须带上（否则两个不同的自定义段撞成同一个）
     if (String(s.key || '') === JOB_GA_PREFIX + 'custom') fp += '|' + jobCustomIdentity(s);
+    // ★ 使用神器：快照的神器/体型不同 = 不同动作
+    if (String(s.key || '') === JOB_GA_PREFIX + 'artifact') {
+        fp += '|' + (s.artName || '') + '|' + (s.artType || '') + '|' + (s.artBody || '');
+    }
     return fp;
 }
 function jobSameSeg(a, b) {
@@ -1471,6 +1483,8 @@ function jobRenderSeqChains() {
     jobRenderChainFilter();
     // ★ 同步通用动作按钮上的次数角标（链条变了 -> 次数可能变）
     if (typeof jobRefreshGenCounts === 'function') jobRefreshGenCounts();
+    // ★ 同步神器板块（切表 -> 神器可能变）
+    if (typeof jobRenderArtifactBlock === 'function') jobRenderArtifactBlock();
 }
 
 // ★ 把勾选的连续步骤组成「无间隔动作组」（「」块）；已全部成组则解散。
@@ -1848,7 +1862,19 @@ function jobBuildGenericBlock(t, board, st, which, pos, steps) {
 
     const ico = document.createElement('span');
     ico.className = 'seq-ico';
-    jobAppendIconImg(ico, ga.img, { cls: 'seq-ico-img', size: 28, alt: ga.name, fallbackText: ga.icon || '⚡' });
+    // ★ 使用神器：图标用快照的体型图（特殊类）/ 神器图（其余），不用 emoji
+    let _gaImg = ga.img, _gaIco = ga.icon || '⚡', _gaAlt = ga.name;
+    if (ga.id === 'artifact' && typeof jobArtifactOf === 'function') {
+        const _a = jobArtifactOf(st.artName);
+        if (_a && _a.img) {
+            _gaImg = (st.artType === 'special' && st.artBody)
+                ? ('static/artifact/' + _a.en + '/bodytype/' + st.artBody + '.webp')
+                : _a.img;
+            _gaIco = '🏺';
+            _gaAlt = (st.artName || '') + (st.artBody || '');
+        }
+    }
+    jobAppendIconImg(ico, _gaImg, { cls: 'seq-ico-img', size: 28, alt: _gaAlt, fallbackText: _gaIco });
     head.appendChild(ico);
 
     const hl = document.createElement('span');
@@ -1862,6 +1888,14 @@ function jobBuildGenericBlock(t, board, st, which, pos, steps) {
         const sum = document.createElement('span');
         sum.className = 'seq-custom-summary';
         sum.textContent = jobCustomSummary(st);
+        sum.title = sum.textContent;
+        head.appendChild(sum);
+    }
+    // ★ 使用神器：名字后跟快照摘要（神器名·体型）
+    if (ga.id === 'artifact' && typeof jobArtifactSummary === 'function') {
+        const sum = document.createElement('span');
+        sum.className = 'seq-custom-summary';
+        sum.textContent = jobArtifactSummary(st);
         sum.title = sum.textContent;
         head.appendChild(sum);
     }
@@ -3350,9 +3384,23 @@ function jobBuild() {
             bossLineupMode: _bMode,
             bossDeckNo: (typeof t.bossDeckNo === 'number' ? t.bossDeckNo : 1),
             bossSlots: Object.assign({}, t.bossSlots || {}),
-            // 神器占位（暂无图片资源与 UI；运行时阵容签名已含此字段）
+            // 神器：zh 名 + 英文名（运行时据此覆盖「无尽挑战_神器」的 template）+
+            //   特殊类体型（葫芦：small/mid/big）。
+            //   en 在导出时从神器列表现查 —— 改名/加新神器不用动 agent。
             artifact: (t.artifact || null),
+            artifact_en: (function () {
+                if (!t.artifact || typeof jobArtifactOf !== 'function') return null;
+                const _a = jobArtifactOf(t.artifact);
+                return _a ? (_a.en || null) : null;
+            })(),
+            artifact_body: (t.artifactBody || null),
             bossArtifact: (t.bossArtifact !== undefined ? t.bossArtifact : null),
+            boss_artifact_en: (function () {
+                const _ba = (t.bossArtifact !== undefined ? t.bossArtifact : null);
+                if (!_ba || typeof jobArtifactOf !== 'function') return null;
+                const _a = jobArtifactOf(_ba);
+                return _a ? (_a.en || null) : null;
+            })(),
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢

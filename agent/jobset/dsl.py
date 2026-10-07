@@ -425,6 +425,44 @@ def generic_dsl(
         else:
             missing.append(f"未知自定义动作类型：{act!r}")
 
+    elif aid == "artifact":
+        # ★ 使用神器（独立链路）：插入时网页端把神器快照进段
+        #   （artName/artType/artBody），这里按快照翻坐标。
+        #   click   -> 点「神器_初始化_神器位置」
+        #   hold    -> 长按神器位置（swipe 到自身，1s）
+        #   special -> 葫芦：点神器位置 -> sleep 0.5（等体型弹窗）-> 点「神器_初始化_葫芦X体型」
+        #   swipe   -> 暂未支持（需要目标格子，等需求再定）
+        pos = _coord_any(coords, "神器_初始化_神器位置")
+        if pos is None:
+            missing.append("artifact：坐标表缺少「神器_初始化_神器位置」")
+        else:
+            atype = str(merged.get("artType") or "click").strip()
+            aname = str(merged.get("artName") or "神器")
+            n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
+            gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
+            watch = merged.get("comboWatch", True) is not False
+            if atype == "special":
+                body_cn = {"small": "小", "mid": "中", "big": "大"}.get(
+                    str(merged.get("artBody") or "mid"), "中")
+                bk = _coord_any(coords, f"神器_初始化_葫芦{body_cn}体型")
+                if bk is None:
+                    missing.append(
+                        f"artifact：坐标表缺少「神器_初始化_葫芦{body_cn}体型」")
+                else:
+                    # 一次使用 = 3 步（点神器 -> 等弹窗 -> 点体型）；
+                    # ★ 多段组合塞不进原生 `动作*n`，所以连击只能展开重复
+                    #   （watch=False 对 special 无效，仅记日志语义）。
+                    for i in range(n):
+                        if i and gap > 0:
+                            parts.append(f"sleep:{gap / 1000:g}")
+                        parts.extend([f"click:{pos}", "sleep:0.5", f"click:{bk}"])
+            elif atype == "hold":
+                parts.extend(rep_parts(f"swipe:{pos},{pos},1000", n, gap, watch))
+            elif atype == "swipe":
+                missing.append(f"artifact：滑动类神器「{aname}」暂未支持（需要目标格子）")
+            else:
+                parts.extend(rep_parts(f"click:{pos}", n, gap, watch))
+
     elif aid == "wait":
         # ★ 等待：不需要坐标，直接翻成 sleep:秒（BatchSwipe 原生支持小数秒）
         #   网页端填的是毫秒（默认 1000），这里换算成秒 —— 1ms 精度会保留。

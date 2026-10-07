@@ -23,6 +23,23 @@ function jobOpenGenPicker(gaId) {
     const ga = jobGenericActionById(gaId);
     if (!ga) return;
 
+    // ★ 使用神器：没有神器可快照就不开弹窗
+    let artShow = null;   // {obj, name, bodyCN} —— 弹窗按「具体神器:体型」展示
+    if (gaId === 'artifact') {
+        const t0 = jobTables[currentTable];
+        const isB0 = jobIsBossBoard();
+        const aName0 = t0 ? ((isB0 && t0.bossArtifact) ? t0.bossArtifact : t0.artifact) : null;
+        const aObj0 = (typeof jobArtifactOf === 'function') ? jobArtifactOf(aName0) : null;
+        if (!aName0 || !aObj0) {
+            setStatus('⚠️ 当前' + (isB0 ? 'boss ' : '') + '阵容没有配置神器——先在右侧「神器」板块选一个');
+            return;
+        }
+        const bodyKey = ((typeof jobArtifactInsertBody !== 'undefined' && jobArtifactInsertBody)
+            || (t0 && t0.artifactBody) || 'mid');
+        const bodyCN = ({ small: '小体型', mid: '中体型', big: '大体型' })[bodyKey] || bodyKey;
+        artShow = { obj: aObj0, name: aName0, bodyCN: bodyCN, isSpecial: (aObj0.type === 'special') };
+    }
+
     const modal = document.getElementById('genPicker');
     if (!modal) return;
 
@@ -31,9 +48,20 @@ function jobOpenGenPicker(gaId) {
     const ico = document.getElementById('gpIco');
     const nm = document.getElementById('gpName');
     const desc = document.getElementById('gpDesc');
-    if (ico) jobAppendIconImg(ico, ga.img, { cls: 'ga-ico-img', size: 56, alt: ga.name, fallbackText: ga.icon || '⚡' });
-    if (nm) nm.textContent = ga.name;
-    if (desc) desc.textContent = ga.desc || '';
+    if (artShow) {
+        // 使用神器：图标 = 神器本体图，标题 = 「神器名：体型」，描述 = 执行内容
+        if (ico) jobAppendIconImg(ico, artShow.obj.img,
+            { cls: 'ga-ico-img', size: 56, alt: artShow.name, fallbackText: '🏺' });
+        if (nm) nm.textContent = artShow.isSpecial
+            ? (artShow.name + '：' + artShow.bodyCN) : artShow.name;
+        if (desc) desc.textContent = artShow.isSpecial
+            ? ('点神器 -> 点' + artShow.bodyCN + '（插入时快照，改板块不影响老段）')
+            : '点神器（插入时快照，改板块不影响老段）';
+    } else {
+        if (ico) jobAppendIconImg(ico, ga.img, { cls: 'ga-ico-img', size: 56, alt: ga.name, fallbackText: ga.icon || '⚡' });
+        if (nm) nm.textContent = ga.name;
+        if (desc) desc.textContent = ga.desc || '';
+    }
 
     jobRenderGenTarget();
     modal.dataset.ga = gaId;
@@ -102,7 +130,26 @@ function jobConfirmGenPicker() {
     const field = jobChainField(which, board);
     if (!Array.isArray(t[field])) t[field] = [];
 
-    t[field].push({ key: JOB_GA_PREFIX + ga.id, ga: ga.id });
+    // ★ 使用神器：插入时【快照】当前阵容的有效神器（boss 棋盘取 boss 神器）。
+    //   体型取神器板块点进来的那个（jobArtifactInsertBody），兜底板块的选中值。
+    //   快照进段后不回流 —— 之后改神器板块不影响老段。
+    if (ga.id === 'artifact') {
+        const isB = jobIsBossBoard();
+        const aName = (isB && t.bossArtifact) ? t.bossArtifact : t.artifact;
+        const aObj = (typeof jobArtifactOf === 'function') ? jobArtifactOf(aName) : null;
+        if (!aName || !aObj) {
+            setStatus('⚠️ 当前' + (isB ? 'boss ' : '') + '阵容没有配置神器——先在右侧「神器」板块选一个');
+            return;
+        }
+        const segA = { key: JOB_GA_PREFIX + ga.id, ga: ga.id, artName: aName, artType: aObj.type || 'click' };
+        if (segA.artType === 'special') {
+            segA.artBody = (typeof jobArtifactInsertBody !== 'undefined' && jobArtifactInsertBody)
+                || t.artifactBody || 'mid';
+        }
+        t[field].push(segA);
+    } else {
+        t[field].push({ key: JOB_GA_PREFIX + ga.id, ga: ga.id });
+    }
 
     jobSaveLocal();
     // ★ 不关闭弹窗；刷新链条 + 按钮上的次数
@@ -111,7 +158,10 @@ function jobConfirmGenPicker() {
 
     const meta = JOB_CHAIN_META[which] || JOB_CHAIN_META.once;
     const used = jobGenUsageIn(t, which, board, ga.id);
-    setStatus('＋ 已把「' + ga.name + '」插入 ' + meta.short
+    const _seg4sum = t[field][t[field].length - 1];
+    const _sum = (ga.id === 'artifact' && typeof jobArtifactSummary === 'function')
+        ? ('·' + jobArtifactSummary(_seg4sum)) : '';
+    setStatus('＋ 已把「' + ga.name + _sum + '」插入 ' + meta.short
         + ' 末尾（该链已用 ' + used + ' 次）');
 
     // 弹窗里也回显一下「已插入 N 次」，给用户即时反馈

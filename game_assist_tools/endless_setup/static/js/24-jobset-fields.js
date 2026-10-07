@@ -67,6 +67,40 @@ const JOB_GENERIC_ACTIONS = [
     { id: 'speed', name: '加速', icon: '⏩', img: JOB_UI_IMG.speed, desc: '切换加速' }
 ];
 
+// ★ 「使用神器」：单独链路（不进按钮组/更多列表 —— 从神器板块的体型图标进，
+//   见 35-jobset-artifact.js；这里保留定义是为了 jobGenericActionOfKey /
+//   指纹 / chip 渲染认得 ga:artifact 段）。
+//   插入时【快照】当前阵容表的神器与体型：
+//     段形状 { key:'ga:artifact', ga:'artifact', artName:'葫芦神器',
+//              artType:'click|swipe|hold|special', artBody:'small|mid|big'(仅特殊类) }
+//   编译（dsl.py）按快照翻坐标：click/hold -> 点/长按「神器_初始化_神器位置」；
+//     special(葫芦) -> 点神器位置 + sleep0.5 + 点「神器_初始化_葫芦X体型」。
+const JOB_ARTIFACT_ACTION = {
+    id: 'artifact', name: '使用神器', icon: '🏺', img: '',
+    desc: '使用当前阵容配置的神器一次（按神器类型执行；插入时快照神器与体型）',
+    params: []
+};
+
+// 使用神器段的字段白名单（四处维护点统一走这里，与 JOB_CUSTOM_FIELDS 同款）
+const JOB_ARTIFACT_FIELDS = ['artName', 'artType', 'artBody'];
+function jobCopyArtifactFields(src, dst) {
+    if (!src || !dst) return dst;
+    JOB_ARTIFACT_FIELDS.forEach(function (k) {
+        if (src[k] === undefined || src[k] === null) return;
+        dst[k] = src[k];
+    });
+    return dst;
+}
+// 使用神器段的可读摘要（chip / 状态栏用）
+function jobArtifactSummary(seg) {
+    if (!seg) return '';
+    const nm = seg.artName || '?';
+    if (seg.artType === 'special') {
+        return nm + '·' + ({ small: '小体型', mid: '中体型', big: '大体型' }[seg.artBody] || seg.artBody || '');
+    }
+    return nm;
+}
+
 // ★ 「切换形态」：不在棋盘右侧按钮组里，而是从末端「更多」按钮的弹窗插入。
 //   它是一个**带参数**的通用动作（槽位 1-8 + 点击次数）。
 //   放在这里是为了让 jobGenericActionById / jobGenericActionOfKey 认它，
@@ -141,12 +175,13 @@ function jobCustomIdentity(s) {
     return [s.act || '', s.from || '', s.to || '', pairs].join('|');
 }
 
-// 可按 id 取到的全部通用动作（含不在按钮组里的「切换形态」）
-const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION, JOB_CUSTOM_ACTION]);
+// 可按 id 取到的全部通用动作（含不在按钮组里的「切换形态」「使用神器」）
+const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION, JOB_ARTIFACT_ACTION, JOB_CUSTOM_ACTION]);
 
 // ★ 「更多」列表里的动作 —— 即「不在按钮组、但可从更多进入」的动作。
 //   新增一个就从这里加，列表 UI 自动渲染（无需改 HTML/弹窗代码）。
 //   （自定义动作例外：进的是专属弹窗 #customPicker，见 30/33。）
+//   （使用神器例外：从神器板块的体型图标进，见 35。）
 const JOB_MORE_ACTIONS = [JOB_FORM_ACTION, JOB_CUSTOM_ACTION];
 
 // ============================================================

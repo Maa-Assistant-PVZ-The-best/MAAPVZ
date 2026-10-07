@@ -1298,6 +1298,66 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .lz-plant-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
 .lz-plant-cell:hover { border-color: #cbd5e1; background: #f1f5f9; }
 .lz-plant-cell.lz-plant-cur { border-color: #2d7aff; background: #eff6ff; }
+/* ===== 神器选择弹窗（35-jobset-artifact.js） ===== */
+.artp {
+    position: fixed; inset: 0; z-index: 10060; display: none;
+    background: rgba(15, 23, 42, .45);
+    align-items: center; justify-content: center;
+}
+.artp.artp-open { display: flex; }
+.artp-panel {
+    background: #fff; border-radius: 12px; width: 560px; max-width: 92vw;
+    max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, .3); overflow: hidden;
+}
+.artp-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 16px; border-bottom: 1px solid #e2e8f0;
+}
+.artp-title { font-size: 14px; font-weight: 600; color: #0f172a; flex: none; }
+.artp-search {
+    flex: 1; font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    border: 1px solid #cbd5e1; outline: none;
+}
+.artp-search:focus { border-color: #2d7aff; }
+.artp-body {
+    padding: 12px 16px; overflow-y: auto;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+}
+.artp-cell {
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 8px 4px; border-radius: 10px; cursor: pointer;
+    border: 2px solid transparent; background: #f8fafc;
+}
+.artp-cell:hover { border-color: #cbd5e1; background: #f1f5f9; }
+.artp-cell.artp-cur { border-color: #2d7aff; background: #eff6ff; }
+.artp-cell img { width: 44px; height: 44px; object-fit: contain; }
+.artp-imgwrap { position: relative; display: inline-block; line-height: 0; }
+/* 无局内识别资源：灰化 + 禁选（叉叉由 jobCardXMark 画） */
+.artp-cell.artp-noimg { opacity: .55; cursor: not-allowed; }
+.artp-cell.artp-noimg img { filter: grayscale(1); }
+.artp-cell.artp-noimg:hover { border-color: transparent; background: #f8fafc; }
+.gen-act-artifact.artp-btn-noimg { border-color: #fca5a5; }
+.gen-act-artifact.artp-btn-noimg img { filter: grayscale(.8); opacity: .8; }
+.artp-name { font-size: 12px; color: #0f172a; }
+.artp-type { font-size: 10px; color: #94a3b8; }
+.artp-empty { grid-column: 1 / -1; text-align: center; color: #94a3b8; font-size: 12px; padding: 30px 0; }
+.artp-foot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-top: 1px solid #e2e8f0;
+}
+.artp-hint { flex: 1; font-size: 11px; color: #94a3b8; line-height: 1.5; }
+.gen-act-artifact { border-style: dashed; }
+/* 神器独立板块：与 .gen-actions 同款容器，钉在它右边 */
+.artifact-block {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 6px; border-radius: 10px;
+    background: #faf5ff; border: 1px solid #e9d5ff;
+    flex: 0 0 auto;
+}
+.artifact-block .ga-ico { position: relative; line-height: 0; }
+.artifact-block .ga-ico img.ga-ico-img { width: 40px; height: 40px; object-fit: contain; }
+
 #stepCfgModal .sc-help:hover { border-color: #2d7aff; color: #2d7aff; }
 .lz-color-head { font-size: 11px; color: #64748b; margin-top: 2px; }
 .lz-color-row { display: flex; flex-wrap: wrap; gap: 6px; }

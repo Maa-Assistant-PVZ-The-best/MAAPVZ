@@ -1,0 +1,306 @@
+[
+  {
+    "name": "酸液神器",
+    "en": "artifact_acid",
+    "desc": "制造酸液坑，使路过僵尸沉没",
+    "type": "click",
+    "img": "static/artifact/artifact_acid.webp",
+    "has_img": false
+  },
+  {
+    "name": "街机神器",
+    "en": "artifact_arcade",
+    "desc": "通过连击屏幕召唤8比特豌豆射手。",
+    "type": "click",
+    "img": "static/artifact/artifact_arcade.webp",
+    "has_img": false
+  },
+  {
+    "name": "蜂巢神器",
+    "en": "artifact_beehive",
+    "desc": "召唤蜜蜂攻击敌人",
+    "type": "click",
+    "img": "static/artifact/artifact_beehive.webp",
+    "has_img": false
+  },
+  {
+    "name": "黑洞神器",
+    "en": "artifact_blackhole",
+    "desc": "召唤黑洞牵引僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_blackhole.webp",
+    "has_img": false
+  },
+  {
+    "name": "保龄球神器",
+    "en": "artifact_bowling",
+    "desc": "滚出保龄球击倒僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_bowling.webp",
+    "has_img": false
+  },
+  {
+    "name": "葫芦神器",
+    "en": "artifact_calabash",
+    "desc": "将全场指定体型僵尸吸入葫芦中秒杀",
+    "type": "special",
+    "img": "static/artifact/artifact_calabash.webp",
+    "has_img": false
+  },
+  {
+    "name": "相机神器",
+    "en": "artifact_camera",
+    "desc": "使用相机完成拍照，使用相片完成植物回溯",
+    "type": "click",
+    "img": "static/artifact/artifact_camera.webp",
+    "has_img": false
+  },
+  {
+    "name": "治愈神器",
+    "en": "artifact_cure",
+    "desc": "治愈全场植物并赋予它们无敌护盾",
+    "type": "click",
+    "img": "static/artifact/artifact_cure.webp",
+    "has_img": false
+  },
+  {
+    "name": "退化神器",
+    "en": "artifact_devolve",
+    "desc": "将僵尸退化为更弱的其他僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_devolve.webp",
+    "has_img": false
+  },
+  {
+    "name": "恐龙号角神器",
+    "en": "artifact_dinosaurhorn",
+    "desc": "发动龙潮突袭对全场僵尸造成大量伤害",
+    "type": "click",
+    "img": "static/artifact/artifact_dinosaurhorn.webp",
+    "has_img": false
+  },
+  {
+    "name": "龙灯神器",
+    "en": "artifact_dragon",
+    "desc": "召唤龙灯撞击穿透僵尸造成伤害",
+    "type": "click",
+    "img": "static/artifact/artifact_dragon.webp",
+    "has_img": false
+  },
+  {
+    "name": "进化神器",
+    "en": "artifact_evolution",
+    "desc": "进化我方植物",
+    "type": "click",
+    "img": "static/artifact/artifact_evolution.webp",
+    "has_img": false
+  },
+  {
+    "name": "扭蛋神器",
+    "en": "artifact_gashapon",
+    "desc": "转出三个扭蛋，根据扭蛋给予相应效果。",
+    "type": "click",
+    "img": "static/artifact/artifact_gashapon.webp",
+    "has_img": false
+  },
+  {
+    "name": "超重力神器",
+    "en": "artifact_gravity",
+    "desc": "释放超重力波，将僵尸压入地底",
+    "type": "click",
+    "img": "static/artifact/artifact_gravity.webp",
+    "has_img": false
+  },
+  {
+    "name": "摇滚神器",
+    "en": "artifact_guitar",
+    "desc": "看准时机点击乐符演奏乐曲，根据演奏评价释放强力音波",
+    "type": "click",
+    "img": "static/artifact/artifact_guitar.webp",
+    "has_img": false
+  },
+  {
+    "name": "全息神器",
+    "en": "artifact_holo",
+    "desc": "召唤场上植物的复制投影以共同抵御僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_holo.webp",
+    "has_img": false
+  },
+  {
+    "name": "液压神器",
+    "en": "artifact_hydraulic",
+    "desc": "将植物压缩成卡片，可重新种植",
+    "type": "click",
+    "img": "static/artifact/artifact_hydraulic.webp",
+    "has_img": false
+  },
+  {
+    "name": "闪电神器",
+    "en": "artifact_lightning",
+    "desc": "对全场僵尸附加随机电荷，电荷能造成眩晕，减速，百分比减血等效果。",
+    "type": "click",
+    "img": "static/artifact/artifact_lightning.webp",
+    "has_img": false
+  },
+  {
+    "name": "醒狮令神器",
+    "en": "artifact_liondance",
+    "desc": "召唤舞狮消灭敌人",
+    "type": "click",
+    "img": "static/artifact/artifact_liondance.webp",
+    "has_img": false
+  },
+  {
+    "name": "魔豆神器",
+    "en": "artifact_magicbeans",
+    "desc": "长出魔豆顶飞僵尸，掉落豆荚炸烂僵尸。",
+    "type": "click",
+    "img": "static/artifact/artifact_magicbeans.webp",
+    "has_img": false
+  },
+  {
+    "name": "魔法帽神器",
+    "en": "artifact_magichat",
+    "desc": "召唤魔法师僵尸攻击敌方僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_magichat.webp",
+    "has_img": false
+  },
+  {
+    "name": "陨石神器",
+    "en": "artifact_meteor",
+    "desc": "落下陨石轰击僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_meteor.webp",
+    "has_img": false
+  },
+  {
+    "name": "点金神器",
+    "en": "artifact_midastouch",
+    "desc": "暂时将僵尸点金，时间内击杀掉落金币",
+    "type": "click",
+    "img": "static/artifact/artifact_midastouch.webp",
+    "has_img": false
+  },
+  {
+    "name": "棱镜塔神器",
+    "en": "artifact_prismtower",
+    "desc": "发射激光持续对僵尸造成越来越高的伤害",
+    "type": "click",
+    "img": "static/artifact/artifact_prismtower.webp",
+    "has_img": false
+  },
+  {
+    "name": "护盾神器",
+    "en": "artifact_shield",
+    "desc": "召唤覆盖5行的护盾向前推动，将碰到的僵尸推开。",
+    "type": "click",
+    "img": "static/artifact/artifact_shield.webp",
+    "has_img": false
+  },
+  {
+    "name": "银之键神器",
+    "en": "artifact_silverkey",
+    "desc": "开启真理之门吸收敌人",
+    "type": "click",
+    "img": "static/artifact/artifact_silverkey.webp",
+    "has_img": false
+  },
+  {
+    "name": "滑板神器",
+    "en": "artifact_skateboard",
+    "desc": "植物乘坐滑板出场释放华丽大招",
+    "type": "click",
+    "img": "static/artifact/artifact_skateboard.webp",
+    "has_img": false
+  },
+  {
+    "name": "造雪神器",
+    "en": "artifact_snowdrift",
+    "desc": "冻结全场僵尸并将其变成雪人",
+    "type": "click",
+    "img": "static/artifact/artifact_snowdrift.webp",
+    "has_img": false
+  },
+  {
+    "name": "摄魂铃神器",
+    "en": "artifact_soulbell",
+    "desc": "摇动摄魂铃控制僵尸进行作战",
+    "type": "click",
+    "img": "static/artifact/artifact_soulbell.webp",
+    "has_img": false
+  },
+  {
+    "name": "章鱼神器",
+    "en": "artifact_squid",
+    "desc": "召唤章鱼缠住全场僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_squid.webp",
+    "has_img": false
+  },
+  {
+    "name": "一窝蜂神器",
+    "en": "artifact_swarm",
+    "desc": "某神秘一族的工匠赠与戴夫的武器，能够连续发射弹药",
+    "type": "click",
+    "img": "static/artifact/artifact_swarm.webp",
+    "has_img": false
+  },
+  {
+    "name": "时间神器",
+    "en": "artifact_time",
+    "desc": "将所有僵尸传送到起点",
+    "type": "click",
+    "img": "static/artifact/artifact_time.webp",
+    "has_img": false
+  },
+  {
+    "name": "海神三叉戟神器",
+    "en": "artifact_trident",
+    "desc": "使用海洋之力，召唤海之喷泉顶飞僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_trident.webp",
+    "has_img": false
+  },
+  {
+    "name": "飞碟神器",
+    "en": "artifact_ufo",
+    "desc": "召唤飞碟尝试带走全场僵尸",
+    "type": "click",
+    "img": "static/artifact/artifact_ufo.webp",
+    "has_img": false
+  },
+  {
+    "name": "投罐神器",
+    "en": "artifact_vase",
+    "desc": "全场随机扔下10个罐子，罐子里会随机掉出僵尸，植物卡片和阳光。",
+    "type": "click",
+    "img": "static/artifact/artifact_vase.webp",
+    "has_img": false
+  },
+  {
+    "name": "水枪神器",
+    "en": "artifact_watergun",
+    "desc": "发动水柱使全场僵尸后移，并伴随水滴效果",
+    "type": "click",
+    "img": "static/artifact/artifact_watergun.webp",
+    "has_img": false
+  },
+  {
+    "name": "窜天猴神器",
+    "en": "artifact_weathermonkey",
+    "desc": "发射能对僵尸造成伤害并击退的窜天猴爆竹。",
+    "type": "click",
+    "img": "static/artifact/artifact_weathermonkey.webp",
+    "has_img": false
+  },
+  {
+    "name": "神风神器",
+    "en": "artifact_wind",
+    "desc": "扇出神风击退全场僵尸，并创造出旋风将他们聚集到一个格子里。",
+    "type": "click",
+    "img": "static/artifact/artifact_wind.webp",
+    "has_img": false
+  }
+]

@@ -129,6 +129,10 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> None:
     #   （选卡 or 切换编队），不会先走错分支再纠正。
     _inject_squad(context, table.eff_squad(_pw_boss))
 
+    # ★ 神器同理：首关必走选神器流程（开局局内装备未知 -> force）。
+    #   预热可能被调两次（Load / AutoCount），走签名会被第二次还原，必须 force。
+    _inject_artifact(context, table, _pw_boss, lineup_changed=True, force=True)
+
     _STATE["plan_table_index"] = table.index
 
 
@@ -324,6 +328,38 @@ NEXT_PICK_PLANTS = [NODE_CHOOSE_PLANTS]
 # 「开始战斗」节点（跳过选卡时「清空卡牌」直跳这里）
 NODE_BATTLE_START = "无尽挑战_选取植物_开始战斗"
 
+# 选神器流程里的模板识别节点（pipe：06Endless_god_vessel）——
+#   template 由本 agent 按当前表神器动态覆盖（god_vessel/<en>/ + <en>_1.png）。
+NODE_ARTIFACT_TPL = "无尽挑战_神器"
+# 选神器入口/收尾节点（pipe：06Endless_god_vessel）。
+#   ★ pipe 里没有任何节点指向「选取神器」—— 进出都靠这里 runtime 覆盖：
+#     需要换神器：识别开始战斗.next=[选取神器]，关闭神器界面.next=跟随选卡逻辑；
+#     不需要：    识别开始战斗.next=[清空卡牌]（还原），选取神器 改 DirectHit 兜底。
+NODE_ARTIFACT_PICK = "无尽挑战_选取神器"
+NODE_ARTIFACT_CLOSE = "无尽挑战_关闭神器界面"
+NODE_START_OCR = "无尽挑战_识别开始战斗"
+# ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
+#   两个换阵闸门 + 首关入口 + 补给确定（补给关卡从补给屏回到选卡屏的落点）。
+#   ⚠️ 原值照抄 pipe（0300Endless_fight.json / 04_Endless_Supply.json），
+#      pipe 改了这里必须同步。
+NODE_JUMP_SAME = "无尽挑战_跳转_未变"
+NODE_JUMP_DIFF = "无尽挑战_跳转_变化"
+NODE_SUPPLY = "无尽局内_补给"
+NODE_SUPPLY_CONFIRM = "神器补给_确定"
+NODE_DONE = "无尽挑战_完成"
+NODE_149 = "无尽挑战_149点击开始挑战"
+_JUMP_SAME_ORIG = [NODE_SUPPLY, NODE_BATTLE_START, NODE_149, NODE_DONE]
+_JUMP_DIFF_ORIG = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_DONE]
+_SUPPLY_CONFIRM_ORIG = [NODE_BATTLE_START, NODE_SUPPLY_CONFIRM]
+_ARTIFACT_PICK_ORIG = {
+    "recognition": "OCR",
+    "expected": ["神器"],
+    "roi": [815, 87, 79, 36],
+    "target_offset": [12, 69, -58, -21],
+    "action": "Click",
+    "next": ["无尽挑战_神器界面"],
+}
+
 # 「清空卡牌」节点 pipe 原值照抄（02_Endless_plant_Choose_ref.json）——
 # 阵容不变时 runtime 把它改成 DirectHit+DoNothing 直跳开始战斗（跳过清空/选卡/编队），
 # 阵容变了要还原成这套原值。
@@ -390,6 +426,13 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
        首次进关（签名为 None）永远不跳 —— 局内还没有任何配置。
     """
     sig = table.lineup_sig(is_boss)
+    # ★ 神器闸门独立判定（不跟植物签名、不跟训练模式）——必须先跑：
+    #   下面「阵容未变」分支会 early-return，若不在这里调用，换表后的
+    #   同表关卡会留着「选取神器」原值，每关都白跑一次选神器流程。
+    _lineup_unchanged = (not _STATE.get("training")
+                         and _STATE.get("lineup_sig") is not None
+                         and _STATE.get("lineup_sig") == sig)
+    _inject_artifact(context, table, is_boss, lineup_changed=not _lineup_unchanged)
     # ★ 训练模式永不跳：用户设定「训练 = 每一关都清空卡牌重选阵容」，
     #   闸门（lineup_gate_adjust）挡不住这里 —— 它只翻 next 分支，
     #   清空卡牌节点本身会不会被改成空跳是这里说了算。
@@ -427,6 +470,72 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
         _log(f"注入选卡失败（{type(e).__name__}: {e}）")
     _inject_squad(context, squad)
     _STATE["lineup_sig"] = sig
+
+
+def _inject_artifact(context: Context, table, is_boss: bool,
+                     lineup_changed: bool, force: bool = False) -> None:
+    """按当前表神器覆盖选神器流程（进线/出线/模板三处）。
+
+    ★ 闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
+      不管正赛还是训练，只要「当前生效神器 == 上一关的神器」就跳过；
+      不同 / 首次 -> 走选取神器流程。与植物分离判定（植物看训练标记）。
+    本表不带神器 -> 也跳过（游戏内保留着上一局的装备，没什么可选的）。
+    ★ force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
+      （预热可能被 Load/AutoCount 调两次 —— 走签名的话第二次会误判
+      「相同」而把刚接好的线还原掉。）
+
+    需要换（need=True）：进线挂到**选卡界面的所有入口**——
+      两个换阵闸门（补给后插选取神器）、首关入口「识别开始战斗」、
+      补给关卡的「神器补给_确定」（补给完回到选卡屏，原本直跳开始战斗）；
+      关闭神器界面.next = 跟随选卡逻辑：阵容也变了 -> [清空卡牌]，
+      否则 -> [选取植物_开始战斗]（直接开打）。
+    不需要（need=False）：全部还原 pipe 原值（防上一关覆盖残留），
+      「选取神器」改 DirectHit 直跳清空卡牌兜底。
+    """
+    art = table.eff_artifact(is_boss)
+    en = table.eff_artifact_en(is_boss)
+    prev = _STATE.get("artifact_sig")          # 上一关生效的神器（zh 名，None=没记过）
+    need = bool(art) and bool(en) and (force or prev != art)
+    try:
+        if not need:
+            context.override_pipeline({
+                NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ORIG)},
+                NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
+                NODE_START_OCR: {"next": [NODE_CLEAR_CARDS]},
+                NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
+                NODE_ARTIFACT_PICK: {
+                    "recognition": "DirectHit",
+                    "action": "DoNothing",
+                    "next": [NODE_CLEAR_CARDS],
+                },
+            })
+            if art and not en:
+                _log(f"⚠️ 神器「{art}」没有英文名（artifact_en 缺失）——"
+                     f"选神器整段跳过！请在网页端重新保存作业集")
+            elif art and prev == art:
+                _log(f"神器相同（{art}）-> 跳过选取神器，直接走选卡")
+            _STATE["artifact_sig"] = art
+            return
+        # 关闭神器界面之后的去向 = 跟随选卡逻辑（和植物的判定同源）：
+        #   阵容也变了 -> 清空卡牌（走完整选卡）；没变 -> 直接开始战斗
+        close_next = [NODE_CLEAR_CARDS if lineup_changed else NODE_BATTLE_START]
+        context.override_pipeline({
+            NODE_JUMP_SAME: {"next": [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_149, NODE_DONE]},
+            NODE_JUMP_DIFF: {"next": [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_DONE]},
+            NODE_START_OCR: {"next": [NODE_ARTIFACT_PICK]},
+            NODE_SUPPLY_CONFIRM: {"next": [NODE_ARTIFACT_PICK, NODE_SUPPLY_CONFIRM]},
+            NODE_ARTIFACT_PICK: dict(_ARTIFACT_PICK_ORIG),
+            NODE_ARTIFACT_TPL: {
+                "template": [f"General/god_vessel/{en}/",
+                             f"General/god_vessel/{en}/{en}_1.png"],
+            },
+            NODE_ARTIFACT_CLOSE: {"next": close_next},
+        })
+        _log(f"已注入神器流程：{art}（{en}）-> 选卡入口全部指向 选取神器，"
+             f"关闭后 -> {close_next[0]}")
+        _STATE["artifact_sig"] = art
+    except Exception as e:
+        _log(f"注入神器流程失败（{type(e).__name__}: {e}）")
 
 # 「无尽_切换编队序号」的 Or 分支骨架（从 pipe 照抄，只留结构字段）。
 #   两项的 roi 不同 = 覆盖编队列表的不同显示区域；expected 由 squad 注入。
@@ -831,6 +940,10 @@ class JobSetPlan(CustomAction):
             ok = JobSetStage._apply_table(context, js, table, upcoming_boss)
             if not ok:
                 _log("⚠️ 换阵注入失败，仍会回「清空卡牌」重选，但选卡参数可能是旧的")
+        else:
+            # ★ 阵容不变不走 _apply_table，但神器闸门是独立判定 —— 每关都要评估：
+            #   预热 force 注入后、同表的第二关必须把进线还原，否则会每关白跑选神器。
+            _inject_artifact(context, table, upcoming_boss, lineup_changed=False)
 
         # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
         #   关卡号挂在两个「开始战斗」节点上（未变/变化两分支必走其一），
@@ -916,6 +1029,7 @@ class JobSetLoad(CustomAction):
             _STATE["tracker"] = None
             _STATE["table_index"] = None
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
+            _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
             _log("已重置作业集状态（重新开始任务）")
 
@@ -972,6 +1086,8 @@ class JobSetLoad(CustomAction):
         # ★ 阵容签名同理保持 None：新任务开局时局内卡牌状态未知，
         #   首次锁定必须走完整的清空+选卡，不能跳过。
         _STATE["lineup_sig"] = None
+        # 神器签名同理：新任务局内装备未知，首次必须走选神器流程
+        _STATE["artifact_sig"] = None
         # 训练标记同理清空，等 JobSetPlan 首跑重写
         _STATE["training"] = None
 
