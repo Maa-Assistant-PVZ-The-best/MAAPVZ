@@ -62,16 +62,34 @@ except Exception as e:
 # ---------------------------------------------------------------------------
 print("\n=== 2. 选表 pick_table（用真实作业集，表区间会随作者调整） ===")
 if js:
-    t0 = js.pick_table(1)
-    check("L=1 -> 第一张表", t0.index == 0, f"got=表{t0.index + 1}")
-    t99 = js.pick_table(99)
-    check("L=99 -> 最后一张表", t99.index == len(js.tables) - 1,
-          f"got=表{t99.index + 1}")
-    t999 = js.pick_table(200)
-    check("L=200 仍在有效表内", t999 is not None)
-    print(f"  表区间: " + ", ".join(
-        f"表{t.index + 1}[{t.from_level}~{t.to_level if t.to_level is not None else '末'}]"
-        for t in js.tables))
+    if getattr(js, "layered", False):
+        # ★ 图层模式：覆盖由 levels 决定，pick = 第一个覆盖该关的表。
+        #   断言「pick 结果确实覆盖该关」+「1..max 全铺满」，
+        #   不再假设「小编号表管前期」（布局配置里图层顺序是用户自己排的）。
+        t0 = js.pick_table(1)
+        check("L=1 -> 覆盖它的表", t0.covers(1), f"got=表{t0.index + 1}")
+        t99 = js.pick_table(99)
+        check("L=99 -> 覆盖它的表", t99.covers(99), f"got=表{t99.index + 1}")
+        max_lv = js.max_level or 149
+        missing = [lv for lv in range(1, max_lv + 1)
+                   if not any(t.covers(lv) for t in js.tables)]
+        check("图层模式 1..%d 全铺满" % max_lv, not missing,
+              ("缺 " + "、".join(map(str, missing[:10]))) if missing else "")
+        print("  覆盖: " + ", ".join(
+            "表%d(%s)%d关" % (t.index + 1, t.label or "-",
+                             len(t.levels) if t.levels else 0)
+            for t in js.tables))
+    else:
+        t0 = js.pick_table(1)
+        check("L=1 -> 第一张表", t0.index == 0, f"got=表{t0.index + 1}")
+        t99 = js.pick_table(99)
+        check("L=99 -> 最后一张表", t99.index == len(js.tables) - 1,
+              f"got=表{t99.index + 1}")
+        t999 = js.pick_table(200)
+        check("L=200 仍在有效表内", t999 is not None)
+        print(f"  表区间: " + ", ".join(
+            f"表{t.index + 1}[{t.from_level}~{t.to_level if t.to_level is not None else '末'}]"
+            for t in js.tables))
     print(f"  lineup@1   = {js.lineup_at(1)['plants']}")
     print(f"  rules@1    = non_boss seq={len(js.rules_at(1, False)['sequence'])}")
     print(f"  transition_levels = {js.transition_levels()}")

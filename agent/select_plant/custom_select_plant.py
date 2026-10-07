@@ -56,6 +56,32 @@ import plant_match as PM
 
 
 # ===========================================================================
+# ★ OCR 别名表（可扩展）
+# ---------------------------------------------------------------------------
+#   游戏内 OCR 偶尔会把某些植物名读短/读错（实锤：「瓷砖萝卜」常被读成
+#   「瓷砖萝」）。这里登记「正名 -> 可被接受的 OCR 变体」，命中别名 = 命中本体。
+#
+#   ⚠️ 只有登记在册的植物放宽，其余植物仍然严格相等匹配 —— 别名是逐个
+#   审核过的白名单，不是模糊匹配开关。新增植物也按这个格式往下加。
+#
+#   变体比较前会走和正名一样的规范化（去空格/标点、小写），且兼容
+#   「变体 + 等级数字」的尾巴（如「瓷砖萝3」也算命中）。
+# ===========================================================================
+PLANT_NAME_ALIASES = {
+    "瓷砖萝卜": ["瓷砖萝"],
+}
+
+
+def register_plant_alias(zh_name, *variants):
+    """给某个植物正名追加 OCR 别名（运行期可扩展接口）。"""
+    bucket = PLANT_NAME_ALIASES.setdefault(str(zh_name), [])
+    for v in variants:
+        v = str(v).strip()
+        if v and v not in bucket:
+            bucket.append(v)
+
+
+# ===========================================================================
 # 工具函数
 # ===========================================================================
 
@@ -170,14 +196,14 @@ class SelectPlants(CustomAction):
           "占位坐标":  [[x,y],...8个],               // 可选，不足8个时填充空槽用；缺省取槽位坐标
           "选卡界面槽位检查": true/1/"Yes",           // 可选，先查1..8槽是否已就绪
           "搜索roi":  [x,y,w,h],                     // 可选，植物列表滚动区
-          "匹配阈值": 0.70,                          // 可选
+          "匹配阈值": 0.90,                          // 可选（默认 0.90，0.70 太松会认错植物）
           "滑动":  {"begin":[x,y],"end":[x,y],"duration":600},
           "回顶":  {"begin":[x,y],"end":[x,y],"duration":600},   // 次数=本轮下滑次数+3
           "滑动后等待": 300,
           "点击后等待": 900,
           "截图相似阈值": 0.96,       // 单次滑动前后几乎一致才视为“没滚动”
           "保底连续帧": 2,           // 连续多少帧相似判定到达列表尽头
-          "最多重试": 6,             // 回顶重扫最多几轮
+          "最多重试": 30,            // 核验失败上限（失败即停任务，不再跳过该植物）
           "最多滑动步数": 40,         // ★ 单轮向下扫描最多滑几次（到列表尽头由保底机制判定）
 
           // ---- 可选开关（缺省 = 旧行为）----
@@ -316,7 +342,9 @@ class SelectPlants(CustomAction):
             check_slots_first = self._to_bool(param.get(
                 "选卡界面槽位检查", False))
             search_roi = param.get("搜索roi") or self.DEFAULT_SEARCH_ROI
-            threshold = float(param.get("匹配阈值", 0.70))
+            # ★ 匹配阈值默认 0.90（2026-10-07 改：0.70 太松，0.781 就把
+            #   原始坚果墙认成电能豌豆）。
+            threshold = float(param.get("匹配阈值", 0.90))
             swipe = dict(self.DEFAULT_SWIPE)
             swipe.update(param.get("滑动") or {})
             backtop = dict(self.DEFAULT_BACKTOP)
@@ -325,7 +353,7 @@ class SelectPlants(CustomAction):
             post_click_wait = int(param.get("点击后等待", 900))
             sim_threshold = float(param.get("截图相似阈值", 0.96))
             backoff_frames = int(param.get("保底连续帧", 2))
-            max_retry = int(param.get("最多重试", 6))
+            max_retry = int(param.get("最多重试", 30))     # 核验失败上限（6->30，2026-10-07）
             # ★ 单轮「向下扫描」最多滑几次：和重试轮数解耦。
             #   旧版把两者塞在同一个 retry 计数器里（默认 6），所以一个植物最多只下滑 6 屏，
             #   根本够不到列表深处 —— 那时候是靠 回顶.repeat=30 硬顶着。现在分开：
@@ -396,7 +424,10 @@ class SelectPlants(CustomAction):
             # ---- 主循环：逐个植物 ----
             # prev_slides = 上一个植物结束时列表下滑了几屏：本植物先看当前帧，
             # 够不着再按 prev_slides+3 回顶（顺序优化，见 _find_and_place）。
+            # seen_depth = 顺路踩点记录：找前面植物时瞄到本植物在第几屏
+            #   （屏数 < 当前屏数 -> 它在上方 -> 轮到它先回顶，不往下白滑）。
             prev_slides = 0
+            seen_depth = {}
             for i, tgt in enumerate(targets):
                 if i >= slot_limit:
                     break
@@ -408,6 +439,26 @@ class SelectPlants(CustomAction):
                           file=sys.stderr, flush=True)
                     continue
 
+                # ★ 踩点命中且在上方 -> 先回顶（它在上面，往下滑是纯浪费）
+                if i in seen_depth:
+                    d = seen_depth.pop(i)
+                    if d < prev_slides:
+                        print(f"[SelectPlants] #{i+1} **{tgt['zh']}** "
+                              f"之前在第 {d} 屏出现过（当前在第 {prev_slides} 屏）"
+                              f"-> 先回顶再找", file=sys.stderr, flush=True)
+                        self._do_swipe_backtop(ctl, backtop, prev_slides)
+                        prev_slides = 0
+                        time.sleep(post_swipe_wait / 1000.0)
+
+                # 顺路踩点对象：只盯「下一个要选的植物」（2026-10-07 用户要求：
+                #   全盯识别太慢；只盯下一个，每帧多一次模板匹配，开销可忽略）。
+                watch_targets = []
+                for j in range(i + 1, min(len(targets), slot_limit)):
+                    if not slot_done[j]:
+                        watch_targets = [{"idx": j, "zh": targets[j]["zh"],
+                                          "templates": targets[j]["templates"]}]
+                        break
+
                 placed, prev_slides = self._find_and_place(
                     context, ctl, tgt, i, search_roi, verify_roi,
                     slot_rois[i] if i < len(slot_rois) else None,
@@ -415,9 +466,16 @@ class SelectPlants(CustomAction):
                     backtop, swipe, threshold, post_swipe_wait,
                     post_click_wait, sim_threshold, backoff_frames,
                     max_retry, max_slides, verify, scales,
-                    start_slide_count=prev_slides)
+                    start_slide_count=prev_slides,
+                    watch_targets=watch_targets, watch_seen=seen_depth)
                 if placed:
                     slot_done[i] = True
+                else:
+                    # ★ 核验失败（放弃）= 直接停止任务（2026-10-07 改）：
+                    #   拿错植物硬打还不如立刻失败，让用户去查原因。
+                    print(f"[SelectPlants] #{i+1} **{tgt['zh']}** 核验失败放弃，"
+                          f"直接停止任务", file=sys.stderr, flush=True)
+                    return CustomAction.RunResult(success=False)
 
             # ---- 占位填充：滑回最顶后填剩余位置 ----
             # ---- 占位填充：滑回最顶后，依次快速点击填充位置 ----
@@ -654,7 +712,7 @@ class SelectPlants(CustomAction):
             slot_roi, slot_xy, backtop, swipe, threshold,
             post_swipe_wait, post_click_wait, sim_threshold,
             backoff_frames, max_retry, max_slides, verify=True, scales=None,
-            start_slide_count=0):
+            start_slide_count=0, watch_targets=None, watch_seen=None):
         """返回 (该槽是否已正确放入目标植物, 本植物结束时累计下滑屏数)。
 
         三个计数器分工（2026-10-03 改版）：
@@ -667,6 +725,11 @@ class SelectPlants(CustomAction):
         ★ 顺序优化（2026-10）：放完一个不回顶，下一个进场先看当前帧；
           当前帧没有也【不回顶】，顺势往下滑，触底才反弹（2026-10-03 改）。
           slide_count 沿上一棒的屏数继续累计，反弹时回顶次数才准确。
+
+        ★ 顺路踩点（2026-10-07 加）：找当前植物的每一帧，顺带识别后面还没选的
+          植物（watch_targets），识别到就记一笔「它在第几屏出现过」
+          （watch_seen[idx] = 屏数），不点它。轮到它时若记录屏数 < 当前屏数，
+          说明它在上方，先回顶再找，不再往下白滑。
 
         verify=False 时点击即视为成功（无文本界面，无法核对）。
         """
@@ -683,6 +746,9 @@ class SelectPlants(CustomAction):
         # 避免同一张电能豌豆被反复当成鸭梨选中。
         rejected = []
 
+        if watch_targets is None:
+            watch_targets = []
+
         while retry <= max_retry and bounce_run < max_retry:
             if self._stopped(context):
                 return False, slide_count
@@ -691,6 +757,20 @@ class SelectPlants(CustomAction):
             if img is None:
                 time.sleep(0.3)
                 continue
+
+            # ---- 顺路踩点：这帧里顺便看看后面没选的植物在不在（只记不点）----
+            if watch_targets and watch_seen is not None:
+                for wt in watch_targets:
+                    if wt["idx"] in watch_seen:
+                        continue     # 已踩过点，省一次匹配
+                    hit = PM.find_best(img, wt["templates"], roi=search_roi,
+                                       threshold=threshold, scales=scales)
+                    if hit is not None:
+                        watch_seen[wt["idx"]] = slide_count
+                        print(f"[SelectPlants] 踩点: #{wt['idx']+1} "
+                              f"**{wt['zh']}** 在第 {slide_count} 屏出现过"
+                              f"（先记下，轮到它时少滑几屏）",
+                              file=sys.stderr, flush=True)
 
             # ---- 在这帧里找目标植物：取多个候选，跳过已否定的卡位，避免反复选中同一张电能豌豆 ----
             found = None
@@ -947,11 +1027,13 @@ class SelectPlants(CustomAction):
 
     @staticmethod
     def _name_match(ocr_text, tgt):
-        """OCR 文本与目标中文/英文名是否对得上（严格对照）。
+        """OCR 文本与目标中文/英文名是否对得上（严格对照 + 白名单别名）。
 
         要求去掉空格/标点后与目标名【相等】才算命中，不再做"包含"模糊匹配，
         避免「毒液豌豆射手」被当成「豌豆射手」。
-        仅额外宽容"名字后粘等级/星级数字(如 豌豆射手3)"这一种前缀情况。
+        仅额外宽容两种情况：
+          1. "名字后粘等级/星级数字"（如 豌豆射手3）；
+          2. PLANT_NAME_ALIASES 里登记的 OCR 别名（如 瓷砖萝卜 -> 瓷砖萝）。
         """
         if not ocr_text:
             return False
@@ -965,15 +1047,14 @@ class SelectPlants(CustomAction):
         t = norm(ocr_text).lower()
         zh = norm(tgt["zh"]).lower()
         en = norm(tgt["en"]).lower()
+        # 别名（白名单，只有登记过的植物才有；规范化规则与正名一致）
+        aliases = [norm(v).lower() for v in PLANT_NAME_ALIASES.get(tgt.get("zh") or "", [])]
+        names = [n for n in [zh, en] + aliases if n]
 
-        if zh and t == zh:
+        if t in names:
             return True
-        if en and t == en:
-            return True
-        # 兼容「名字 + 等级数字」：豌豆射手3 / peashooter3（数字粘在名字后）
-        for name in (zh, en):
-            if not name:
-                continue
+        # 兼容「名字 + 等级数字」：豌豆射手3 / peashooter3 / 瓷砖萝3（数字粘在名字后）
+        for name in names:
             if t.startswith(name):
                 tail = t[len(name):]
                 if tail and re.fullmatch(r"\d+x?|级|阶", tail):

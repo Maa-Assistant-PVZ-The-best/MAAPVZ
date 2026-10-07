@@ -1254,6 +1254,13 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #stepCfgModal .sc-input:focus { outline: none; border-color: #6366f1; }
 #stepCfgModal .sc-unit { font-size: 10px; color: #94a3b8; flex: none; }
 #stepCfgModal .sc-tip { font-size: 10px; color: #94a3b8; line-height: 1.6; margin: 2px 0 8px; }
+#stepCfgModal .sc-help {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: 1px solid #cbd5e1; color: #64748b;
+    font-size: 11px; cursor: pointer; flex: none; user-select: none;
+}
+#stepCfgModal .sc-help:hover { border-color: #2d7aff; color: #2d7aff; }
 #stepCfgModal .sc-foot {
     padding: 10px 16px; border-top: 1px solid #e2e8f0; display: flex; gap: 10px;
 }

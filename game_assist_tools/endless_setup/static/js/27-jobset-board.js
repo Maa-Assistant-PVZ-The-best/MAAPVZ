@@ -259,6 +259,8 @@ function jobSegsToSteps(board, segs, which) {
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
             // ★ 连击间隔（ms，默认 0）
             if (seg.comboMs !== undefined && seg.comboMs !== null) st.comboMs = Number(seg.comboMs);
+            // ★ 连击参与识别（默认开；false = 原子连击，不被识别打断）
+            if (seg.comboWatch === false) st.comboWatch = false;
             // ★ 自定义动作的 act/from/to/pairs —— 白名单拷贝，不带上就静默丢
             if (_gaId === 'custom') jobCopyCustomFields(seg, st);
             // ★ 无间隔组「」标记
@@ -274,6 +276,7 @@ function jobSegsToSteps(board, segs, which) {
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
             // ★ 连击间隔（ms，默认 0）
             if (seg.comboMs !== undefined && seg.comboMs !== null) st.comboMs = Number(seg.comboMs);
+            if (seg.comboWatch === false) st.comboWatch = false;
             out.push(st);
         });
     });
@@ -294,6 +297,8 @@ function jobStepsToSegs(steps) {
             if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
             // ★ 连击间隔（ms，默认 0）—— 必须写回，否则重载后丢失
             if (st.comboMs !== undefined && st.comboMs !== null) o.comboMs = Number(st.comboMs);
+            // ★ 连击参与识别（默认开不落盘；false 必须写回，否则重载后丢失）
+            if (st.comboWatch === false) o.comboWatch = false;
             // ★ 自定义动作的 act/from/to/pairs —— 必须写回，否则重载后参数丢失
             const _ga = jobGenericActionOfKey(st.key);
             if (_ga && _ga.id === 'custom') jobCopyCustomFields(st, o);
@@ -309,6 +314,7 @@ function jobStepsToSegs(steps) {
             && !!last.noint === !!st.noint
             && (Number(last.times) || 0) === (Number(st.times) || 0)
             && (Number(last.comboMs) || 0) === (Number(st.comboMs) || 0)
+            && (last.comboWatch === false) === (st.comboWatch === false)
             && last.picked[last.picked.length - 1] === st.gidx - 1) {
             last.picked.push(st.gidx);          // 连续的继续接在后面
             return;
@@ -317,6 +323,7 @@ function jobStepsToSegs(steps) {
         if (st.noint === true) o.noint = true;
         if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
         if (st.comboMs !== undefined && st.comboMs !== null) o.comboMs = Number(st.comboMs);
+        if (st.comboWatch === false) o.comboWatch = false;
         segs.push(o);
     });
     // picked 只有一项的还原成 from/to（更干净，也更接近旧数据的样子）
@@ -339,6 +346,7 @@ function jobSegFingerprint(s) {
          + '|' + (s.slot === undefined || s.slot === null ? '' : s.slot)
          + '|' + (s.times === undefined || s.times === null ? '' : s.times)
          + '|' + (s.comboMs === undefined || s.comboMs === null ? '' : s.comboMs)
+         + '|' + (s.comboWatch === false ? 'W0' : '')
          + '|' + (s.noint === true ? 'N' : '');
     // ★ 自定义动作：参数不同就是不同动作，指纹必须带上（否则两个不同的自定义段撞成同一个）
     if (String(s.key || '') === JOB_GA_PREFIX + 'custom') fp += '|' + jobCustomIdentity(s);
@@ -780,6 +788,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             + '@' + (s.slot === undefined || s.slot === null ? '' : s.slot)
             + 'x' + (s.times === undefined || s.times === null ? '' : s.times)
             + 'g' + (s.comboMs === undefined || s.comboMs === null ? '' : s.comboMs)
+            + (s.comboWatch === false ? 'w0' : '')
             // ★ 自定义动作参数不同 = 不同动作，签名必须带上参数袋
             + '|' + (typeof jobCustomIdentity === 'function' ? jobCustomIdentity(s) : '');
     };
@@ -822,6 +831,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             if (st.slot !== undefined && st.slot !== null) e.slot = st.slot;
             if (st.times !== undefined && st.times !== null) e.times = st.times;
             if (st.comboMs !== undefined && st.comboMs !== null) e.comboMs = st.comboMs;
+            if (st.comboWatch === false) e.comboWatch = false;
             // ★ 自定义动作的 act/from/to/pairs 必须跟着搬 —— 不搬就剥成空壳，
             //   跨链一拖整个动作失效（参数袋全丢）。
             const _ga = jobGenericActionOfKey(st.key);
@@ -901,6 +911,7 @@ function jobMoveStepsToChain(t, board, drag, toWhich, targetStep, after) {
             if (e.slot !== undefined) st.slot = e.slot;
             if (e.times !== undefined) st.times = e.times;
             if (e.comboMs !== undefined) st.comboMs = e.comboMs;
+            if (e.comboWatch === false) st.comboWatch = false;
             // ★ 自定义动作的参数袋跟着搬（act/from/to/pairs）
             if (_ga2 && _ga2.id === 'custom') jobCopyCustomFields(e, st);
             inserts.push(st);
@@ -1083,6 +1094,39 @@ function jobRenderStepCfgParams() {
             if (msg) setStatus(msg(v));
         });
     };
+    // ★ 「连击参与识别」勾选项：默认勾（展开式连击，每个动作都计入识别节奏）；
+    //   取消勾 = 原子连击（DSL 原生 *n，整体 1 个动作，中途不被识别打断）。
+    //   行尾的 ? 点击展开说明。
+    const mkComboWatch = function (st) {
+        const row = document.createElement('div');
+        row.className = 'sc-row';
+        const lb = document.createElement('span');
+        lb.className = 'sc-row-label';
+        lb.textContent = '连击参与识别';
+        const inp = document.createElement('input');
+        inp.type = 'checkbox';
+        inp.checked = st.comboWatch !== false;
+        const q = document.createElement('span');
+        q.className = 'sc-help';
+        q.textContent = '？';
+        q.title = '点我看说明';
+        row.appendChild(lb); row.appendChild(inp); row.appendChild(q);
+        box.appendChild(row);
+        const tip = document.createElement('div');
+        tip.className = 'sc-tip';
+        tip.style.display = 'none';
+        tip.textContent = '启用该选项，连击默认参与识别，防止结算时一直卡住，但是执行动作速度会变慢';
+        box.appendChild(tip);
+        q.addEventListener('click', function () {
+            tip.style.display = (tip.style.display === 'none') ? '' : 'none';
+        });
+        inp.addEventListener('change', function () {
+            jobStepCfgSave({ comboWatch: this.checked ? undefined : false }, ['comboWatch']);
+            setStatus(this.checked
+                ? '⚙ 连击参与识别 = 开（可被结算/失败识别打断）'
+                : '⚙ 连击参与识别 = 关（原子连击，中途不识别）');
+        });
+    };
 
     if (kind === 'custom') {
         // ★ 自定义动作：类型/坐标/时长/手指数 全部可改，改完即时覆盖写回这一步
@@ -1103,7 +1147,8 @@ function jobRenderStepCfgParams() {
             Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
             function (v) { jobStepCfgSave({ comboMs: v }); },
             function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
-        mkTip('类型/坐标/时长改完即时生效（直接覆盖这一步的参数）；连击 1~20，块上显示 ×N。');
+        mkComboWatch(st);
+        mkTip('类型/坐标/时长改完即时生效（直接覆盖这一步的参数）；连击 1~9999，块上显示 ×N。');
     } else if (kind === 'form') {
         const st = _stepCfgCtx.st;
         bindInt(mkRow('槽位', '1-8（点哪个槽的切换形态）'), 1, 8,
@@ -1118,6 +1163,7 @@ function jobRenderStepCfgParams() {
             Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
             function (v) { jobStepCfgSave({ comboMs: v }); },
             function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
+        mkComboWatch(st);
         mkTip('只作用于这一步；块上会显示「槽N 丨 N次」。');
     } else if (kind === 'wait') {
         const st = _stepCfgCtx.st;
@@ -1137,6 +1183,7 @@ function jobRenderStepCfgParams() {
             Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
             function (v) { jobStepCfgSave({ comboMs: v }); },
             function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
+        mkComboWatch(st);
         if (kind === 'swipeable') {
             bindInt(mkRow('滑动时长', 'ms（作业集级默认，所有滑动共用）'), 10, 5000, jobGetSwipeMs(),
                 function (v) { jobMeta.swipeMs = v; jobSaveLocal(); },
@@ -3116,6 +3163,8 @@ function jobBuildChain(t, board, which, forceBoss) {
             if (item.times === undefined && Number(seg.times) > 1) item.times = Number(seg.times);
             // ★ 连击间隔（ms，>0 才导出，默认 0）
             if (Number(seg.comboMs) > 0) item.comboMs = Number(seg.comboMs);
+            // ★ 连击参与识别（默认开不导出；false = 原子连击）
+            if (seg.comboWatch === false) item.comboWatch = false;
             out.push(item);
             return;
         }
@@ -3162,9 +3211,10 @@ function jobBuildChain(t, board, which, forceBoss) {
         };
         // ★ 无间隔组「」标记：compile.py 把连续 noint 段合进一个「」块
         if (seg.noint === true) item.noint = true;
-        // ★ 点击格子的连击次数 / 连击间隔
+        // ★ 点击格子的连击次数 / 连击间隔 / 参与识别
         if (Number(seg.times) > 1) item.times = Number(seg.times);
         if (Number(seg.comboMs) > 0) item.comboMs = Number(seg.comboMs);
+        if (seg.comboWatch === false) item.comboWatch = false;
         out.push(item);
     });
 

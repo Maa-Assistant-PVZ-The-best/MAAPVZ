@@ -337,6 +337,9 @@ class Table:
                 _gv = seg.get("comboMs")
                 if isinstance(_gv, (int, float)) and _gv > 0:
                     rec["comboMs"] = int(_gv)
+                # ★ 连击参与识别（默认开不落盘；False = 原子连击 *n，中途不识别）
+                if seg.get("comboWatch") is False:
+                    rec["comboWatch"] = False
                 out.append(rec)
             return out
 

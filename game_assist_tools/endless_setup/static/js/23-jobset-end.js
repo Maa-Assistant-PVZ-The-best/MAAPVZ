@@ -212,6 +212,8 @@ function jobGetChainOrder(t, which, board, forceBoss) {
                 if (e.times !== undefined && Number.isFinite(Number(e.times))) o2.times = Number(e.times);
                 // ★ 连击间隔（ms，默认 0）
                 if (e.comboMs !== undefined && Number.isFinite(Number(e.comboMs))) o2.comboMs = Number(e.comboMs);
+                // ★ 连击参与识别（默认开不落盘；false 必须保留）
+                if (e.comboWatch === false) o2.comboWatch = false;
                 // ★ 自定义动作的 act/from/to/pairs —— 不保留就被静默丢成空段
                 if (o2.ga === 'custom') jobCopyCustomFields(e, o2);
                 // ★ 无间隔组「」标记
@@ -230,6 +232,7 @@ function jobGetChainOrder(t, which, board, forceBoss) {
             if (e.noint === true) o.noint = true;
             if (e.times !== undefined && Number.isFinite(Number(e.times))) o.times = Number(e.times);
             if (e.comboMs !== undefined && Number.isFinite(Number(e.comboMs))) o.comboMs = Number(e.comboMs);
+            if (e.comboWatch === false) o.comboWatch = false;
             return o;
         }
         return null;

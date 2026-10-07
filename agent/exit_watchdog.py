@@ -107,11 +107,14 @@ def _process_map() -> dict:
     return m
 
 
-def _ancestor_chain(levels: int = 2):
+def _ancestor_chain(levels: int = 6):
     """启动时记录祖先链 [(pid, exe_name), ...]：直接父进程起最多 levels 层。
 
     典型链路：MFA -> pwsh(终端宿主) -> python，即 [(pwsh), (MFA)]；
-    MFA 直拉时 [(MFA), (它的父进程)]。任一死亡即说明宿主已关。
+    MFA 直拉时 [(MFA), (它的父进程)]；VSCode 扩展可能是
+    Code.exe -> node(扩展宿主) -> python，甚至中间再垫壳进程 ——
+    所以层数放宽到 6（2026-10-07：2 层在新链路下够不到 Code.exe，
+    导致 dev 模式判定失效，"停任务即退"不再武装）。任一死亡即说明宿主已关。
     """
     m = _process_map()
     chain = []

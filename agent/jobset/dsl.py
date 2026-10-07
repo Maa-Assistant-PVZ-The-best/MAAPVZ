@@ -277,9 +277,16 @@ def _slot_click_point(
     return _coord_any(coords, spec["coord"].format(n=n))
 
 
-def rep_parts(part: str, n: int, gap_ms: Any = 0) -> List[str]:
-    """连击展开：part 重复 n 次；gap_ms>0 时相邻两次之间插 sleep:秒（连击间隔）。"""
+def rep_parts(part: str, n: int, gap_ms: Any = 0, watch: bool = True) -> List[str]:
+    """连击展开：part 重复 n 次；gap_ms>0 时相邻两次之间插 sleep:秒（连击间隔）。
+
+    ★ watch=False（网页端「连击参与识别」取消勾选）-> 用 BatchSwipe 原生
+    `动作*n` 后缀：整体只算 1 个动作，中途**不识别**（结算画面也掐不断它），
+    且原生连击次间无间隔 —— 此时 gap_ms 不适用（被忽略）。
+    """
     n = max(1, int(n or 1))
+    if not watch and n >= 2:
+        return [f"{part}*{n}"]
     try:
         gap = float(gap_ms or 0)
     except (TypeError, ValueError):
@@ -347,9 +354,10 @@ def generic_dsl(
                 spec.get("times_max", GENERIC_FORM_TIMES_MAX),
                 1,
             )
-            # ★ 连击间隔 comboMs（默认 0 = 紧挨着连做）
+            # ★ 连击间隔 comboMs（默认 0 = 紧挨着连做）；comboWatch=false = 原子连击（不识别）
             gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
-            parts.extend(rep_parts(f"click:{key}", n, gap))
+            watch = merged.get("comboWatch", True) is not False
+            parts.extend(rep_parts(f"click:{key}", n, gap, watch))
 
     elif aid in GENERIC_CLICK_KEY:
         key = _coord_any(coords, GENERIC_CLICK_KEY[aid])
@@ -359,7 +367,8 @@ def generic_dsl(
             # ★ 连击：网页端 ⚙ 弹窗调的 times（点一下 = 连点 N 次）
             n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
             gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
-            parts.extend(rep_parts(f"click:{key}", n, gap))
+            watch = merged.get("comboWatch", True) is not False
+            parts.extend(rep_parts(f"click:{key}", n, gap, watch))
 
     elif aid == "custom":
         # ★ 自定义动作（网页端「更多 -> 自定义动作」）：段上带 act/from/to/ms/pairs
@@ -374,6 +383,7 @@ def generic_dsl(
         n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
         # ★ 连击间隔 comboMs（默认 0 = 紧挨着连做；>0 时相邻两次间插 sleep）
         gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
+        watch = merged.get("comboWatch", True) is not False
 
         def _need(name: str) -> Optional[str]:
             k = str(merged.get(name) or "").strip()
@@ -385,15 +395,15 @@ def generic_dsl(
         if act == "click":
             k = _need("from")
             if k:
-                parts.extend(rep_parts(f"click:{k}", n, gap))
+                parts.extend(rep_parts(f"click:{k}", n, gap, watch))
         elif act == "swipe":
             a, b = _need("from"), _need("to")
             if a and b:
-                parts.extend(rep_parts(f"swipe:{a},{b},{ms_v}", n, gap))
+                parts.extend(rep_parts(f"swipe:{a},{b},{ms_v}", n, gap, watch))
         elif act == "hold":
             k = _need("from")
             if k:
-                parts.extend(rep_parts(f"swipe:{k},{k},{ms_v}", n, gap))
+                parts.extend(rep_parts(f"swipe:{k},{k},{ms_v}", n, gap, watch))
         elif act == "multi":
             raw_pairs = merged.get("pairs")
             if not isinstance(raw_pairs, list):
@@ -409,7 +419,7 @@ def generic_dsl(
                     continue
                 lines.append(f"{pa},{pb},{ms_v}")
             if len(lines) >= 2:
-                parts.extend(rep_parts("multi:(" + ";".join(lines) + ")", n, gap))
+                parts.extend(rep_parts("multi:(" + ";".join(lines) + ")", n, gap, watch))
             elif not missing:
                 missing.append("自定义多指：至少需要 2 组有效坐标对")
         else:

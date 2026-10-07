@@ -169,10 +169,12 @@ def build_chain_nodes(
                 # ★ 连击间隔 comboMs（默认 0 = 紧挨着；>0 时相邻两次间插 sleep）
                 gap_rep = _num(seg.get("comboMs"), 0)
                 gap_rep = min(10000, max(0, gap_rep))
+                # ★ 连击参与识别（默认开）：关掉 -> 原子连击 *n，中途不被识别打断
+                watch_rep = seg.get("comboWatch", True) is not False
                 if src is None:
-                    seg_parts.extend(_dsl.rep_parts(f"click:{dst}", n_rep, gap_rep))
+                    seg_parts.extend(_dsl.rep_parts(f"click:{dst}", n_rep, gap_rep, watch_rep))
                 else:
-                    seg_parts.extend(_dsl.rep_parts(f"swipe:{src},{dst},{swipe_ms}", n_rep, gap_rep))
+                    seg_parts.extend(_dsl.rep_parts(f"swipe:{src},{dst},{swipe_ms}", n_rep, gap_rep, watch_rep))
                 # 等待：这个动作之后插入 sleep:N（BatchSwipe 支持 sleep:秒）
                 try:
                     sec = float(waits[i]) if i < len(waits) else 0.0
@@ -248,8 +250,11 @@ def build_fight_override(
     rules = table.rules(is_boss)
 
     # ★ boss 关未配置（作业集里没有 bossSlotOrder/bossLoopOrder）时：
-    #   不做任何种植，直接**等结算** —— 只保留「继续挑战」的识别与点击。
-    #   这符合用户要求：「如果没有 Boss 字段的话，就直接等待结算」。
+    #   不做任何种植，**和普通关「空循环」一样等待结算** ——
+    #   单次种植 -> 循环种植 -> 组合动作_循环（sleep:5 自循环，
+    #   next 挂「继续挑战 / 失败 / 自己」），识别到结算/失败才走。
+    #   ⚠️ 不能再像以前那样直接 next=[继续挑战]：那个节点识别 ~20 次
+    #   失败就 PipelineNode.Failed -> 整个任务暴毙（2026-10-07 日志实锤）。
     if is_boss:
         has_boss_cfg = bool(
             table.raw.get("bossSlotOrder")
@@ -258,27 +263,11 @@ def build_fight_override(
             or rules.get("loop_chain")
         )
         if not has_boss_cfg:
-            log("★ boss 关未配置种植链 -> 不种植，直接等结算（只保留继续挑战识别）")
-            return ({
-                NODE_ONCE_ENTRY: {
-                    "action": "Custom",
-                    "custom_action": "JobSetFight",
-                    "custom_action_param": {},
-                    "pre_delay": 0,
-                    "post_delay": 0,
-                    # 空 next 链 -> 交给管道去识别「继续挑战」等结算
-                    "next": [REF_SETTLE],
-                },
-                NODE_LOOP_ENTRY: {
-                    "action": "Custom",
-                    "custom_action": "JobSetFight",
-                    "custom_action_param": {},
-                    "pre_delay": 0,
-                    "post_delay": 0,
-                    "next": [REF_SETTLE],
-                },
-                NODE_END_DETECT: {"enabled": False},
-            }, None)
+            log("★ boss 关未配置种植链 -> 不种植，走「空循环等结算」"
+                "（与普通关空循环同款：sleep:5 自循环 + 结算/失败识别）")
+            # 不 return —— 空 rules 走正常路径产出的正好就是这个形态：
+            #   once_node=None -> 单次种植.next=[循环种植]
+            #   loop_node=None -> 组合动作_循环=EMPTY_LOOP_DSL 自循环
 
     if every_n < 1:
         every_n = 10
@@ -385,10 +374,13 @@ def build_fight_override(
 
     if end_node:
         # 收尾链跑完之后的去向：
-        #   · settle（等待结算）：next 只挂结算/失败两个识别，结算节点 timeout = 等待时长，
-        #     边等边识别；超时识别不到 -> 无 on_error -> 任务结束（网页端已告知用户）。
-        #   · 其余（sub/restart）：detect 模式挂结算识别 + 收尾超时后动作；
-        #     loops 模式按用户设定**不再识别**，直接走收尾超时后动作。
+        #   · next 永远带结算识别（继续挑战）+ 失败识别 —— 收尾动作点完的时候
+        #     结算画面往往已经弹出来了，不带就认不到「继续挑战」，卡死进不了
+        #     下一关（2026-10-07 日志实锤：loops 模式 next 只挂失败识别）。
+        #   · 「继续训练」不接 next：训练模式的任务选项已把
+        #     「无尽局内_继续挑战.next = [无尽训练_继续训练]」接好了，会自己续上。
+        #   · settle（等待结算）：结算节点 timeout = 等待时长，边等边识别；
+        #     超时识别不到 -> 无 on_error -> 任务结束（网页端已告知用户）。
         if end_after_action == "restart":
             after = [NODE_END_RESTART]
         elif end_sub_action == "once":
@@ -403,8 +395,6 @@ def build_fight_override(
             #   训练模式的「继续训练」接线就是任务选项覆写的，顶掉就完了）。
             override[REF_SETTLE] = {"timeout": int(end_settle_ms)}
             override[REF_TRAIN] = {"timeout": int(end_settle_ms)}
-        elif loops_gate:
-            end_next = [REF_FAILED] + after
         else:
             end_next = [REF_SETTLE, REF_FAILED] + after
         override[end_node["node"]] = {
