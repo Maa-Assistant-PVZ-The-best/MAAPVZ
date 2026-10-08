@@ -2,7 +2,9 @@
 // ============================================================
 // 收尾参数（棋盘下侧面板）
 //
-//   · 只有当棋盘上放了「收尾」（end 形态）的落子时，该棋盘下侧才显示面板。
+//   · 显示条件：收尾**链**里有任何段（棋盘落子的 end 形态，或直接插进
+//     endOrder 的通用动作段 —— 通用动作不落棋盘，只看棋盘会把
+//     「收尾链只放通用动作」的配置误判成没有收尾）。
 //   · ⚠️ 收尾仅对普通关生效（boss 关不能有收尾），所以只在普通关棋盘下侧显示。
 //   · 可调项（都在普通关表 t 上）：
 //       endType       = 「收尾类型」= detect（识别僵尸头像，默认）/ loops（循环链重复次数）
@@ -61,7 +63,10 @@ function jobRenderEndParams() {
     }
 
     const t = jobTables[currentTable];
-    const hasEnd = t && jobBoardHasEnd(boardEarly);
+    // ★ 严格对应「顺序链里有没有收尾段」：棋盘 end 落子 或 endOrder 链里有段
+    //   （通用动作段只进 endOrder 不进棋盘，单看棋盘会漏）。
+    const hasEnd = !!t && (jobBoardHasEnd(boardEarly)
+        || (Array.isArray(t.endOrder) && t.endOrder.length > 0));
 
     panel.style.display = hasEnd ? 'block' : 'none';
     if (!hasEnd || !t) return;
