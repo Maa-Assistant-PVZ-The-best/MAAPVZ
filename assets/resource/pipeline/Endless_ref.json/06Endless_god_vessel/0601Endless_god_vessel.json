@@ -105,7 +105,6 @@
             261,
             112
         ],
-        "action": "Click",
         "post_wait_freezes": 500,
         "next": [
             "无尽挑战_关闭神器界面"
