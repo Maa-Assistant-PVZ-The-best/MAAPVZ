@@ -111,6 +111,7 @@
         "pre_delay": 0,
         "post_delay": 0,
         "next": [
+            "ruinsnake_前期_结算",
             "ruinsnake_前期_开葫芦"
         ]
     },
@@ -121,6 +122,7 @@
             "断网检测": "ruinsnake_2-51关"
         },
         "next": [
+            "ruinsnake_前期_结算",
             "ruinsnake_前期_点波"
         ]
     },
@@ -142,6 +144,14 @@
         ]
     },
     "ruinsnake_前期_结算": {
+        "recognition": "OCR",
+        "roi": [
+            694,
+            528,
+            225,
+            167
+        ],
+        "expected": "继续挑战",
         "action": "DoNothing",
         "anchor": {
             "下一个动作": "ruinsnake_2-51关_过渡"
