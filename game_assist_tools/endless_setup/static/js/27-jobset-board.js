@@ -3401,7 +3401,10 @@ function jobBuild() {
             artifact_body: (t.artifactBody || null),
             bossArtifact: (t.bossArtifact !== undefined ? t.bossArtifact : null),
             boss_artifact_en: (function () {
-                const _ba = (t.bossArtifact !== undefined ? t.bossArtifact : null);
+                // ★ 与 boss_lineup.artifact 同源（有效值）：沿用普通关时
+                //   也要解析出普通关神器的 en，否则 engine 走 boss 分支拿到空 en
+                //   -> 报「没有英文名」选神器整段跳过。
+                const _ba = _bArt;
                 if (!_ba || typeof jobArtifactOf !== 'function') return null;
                 const _a = jobArtifactOf(_ba);
                 return _a ? (_a.en || null) : null;

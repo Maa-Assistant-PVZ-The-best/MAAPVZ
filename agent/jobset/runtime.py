@@ -133,6 +133,14 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> None:
     #   预热可能被调两次（Load / AutoCount），走签名会被第二次还原，必须 force。
     _inject_artifact(context, table, _pw_boss, lineup_changed=True, force=True)
 
+    # ★ 回写「当前关卡」focus：MFA 界面显示的关卡号来自这两个节点的 focus，
+    #   而 focus 平时只有 JobSetPlan（过关计数时）才写 —— 打完 149 开新一轮时
+    #   自动计数把计数器重置成 1，但 focus 不还就继续显示旧的 149
+    #   （issue #203：界面在第 1 关、计数器显示 149；阵容选择不受影响）。
+    _lv_msg = f"当前关卡：{lv}"
+    _set_focus(context, NODE_BATTLE_START, _lv_msg)
+    _set_focus(context, NODE_START_FIGHT, _lv_msg)
+
     _STATE["plan_table_index"] = table.index
 
 

@@ -455,9 +455,14 @@ class Table:
         return self.artifact
 
     def eff_artifact_en(self, is_boss: bool) -> Optional[str]:
-        """与 eff_artifact 同源的英文名（boss 专属缺省 = 沿用普通关的 en）。"""
+        """与 eff_artifact 同源的英文名（boss 专属缺省 = 沿用普通关的 en）。
+
+        ★ 兜底：boss_lineup.artifact 是「有效值物化」（沿用普通关也写具体神器名），
+          旧存档可能 boss_artifact_en 为空 —— 此时回退普通关的 en，
+          而不是返回 None 导致选神器整段被跳过。
+        """
         if is_boss and self.boss_artifact is not None:
-            return self.boss_artifact_en
+            return self.boss_artifact_en or self.artifact_en
         return self.artifact_en
 
     def lineup_sig(self, is_boss: bool) -> tuple:
