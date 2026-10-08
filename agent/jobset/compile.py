@@ -40,6 +40,13 @@ NODE_END_DETECT = "无尽挑战_收尾"
 NODE_END_RESTART = "无尽挑战_收尾重开"
 NODE_LOOP_CHAIN = CHAIN_NODE_TPL.format(kind=KIND_CN["loop"])
 
+# ★ 误触守卫声明（guard:）：三条链固定带上 —— 动作的触点/滑动路径碰到
+#   「继续挑战 / 返回入口」按钮区时，执行前先识别结算节点，已跳屏就停手跟随 next。
+#   （2026-10-08 实战：收尾链误触继续挑战后，在错误界面空点六千次。）
+#   区域为用户实测 ROI；按钮位置变了改这里。
+GUARD_TOKEN = ("guard:无尽局内_继续挑战|无尽训练_继续训练"
+               "@@roi:683,613,244,63|339,604,259,76")
+
 # ★ 循环链为空时注入的空动作：节点仍在，靠 next 自循环等结算。
 #   sleep 稍长避免空转时疯狂刷屏。
 EMPTY_LOOP_DSL = "sleep:5"
@@ -202,6 +209,10 @@ def build_chain_nodes(
         refs.append(REF_FAILED)
         refs.append(REF_TRAIN)
         body = "ref:" + "|".join(refs) + ";" + body
+
+        # ★ 误触守卫：三条链固定带 guard 声明（触点/路径进「继续挑战/返回入口」区
+        #   的动作，执行前先识别结算节点）
+        body = GUARD_TOKEN + ";" + body
 
         # ★ every:N —— 每 N 个动作识别一遍「有无结算」（识别结算速率）
         if every_n and every_n > 1:

@@ -2,6 +2,7 @@ import json
 import time
 import os
 import re
+import math
 import random
 from maa.custom_action import CustomAction
 from maa.context import Context
@@ -16,7 +17,7 @@ except Exception:
     _DIRECT_RECOGNITION = False
 
 # 加载标记：用于确认 MAA 代理实际加载的版本（重载插件后应看到本行）
-print("[BatchSwipe] batch_swipe.py 已加载 · 版本 v18（watch/ref/roi(键名)/every(N或block,块末识别)/fixed(N或block,含多指)/固定动作前先识别/权重@N/异步组{!…}/附属块attach/多指动作multi/无间隔块「」/连击*n/断点续做(动作级·顺序块级·只在本次任务内)）")
+print("[BatchSwipe] batch_swipe.py 已加载 · 版本 v19（watch/ref/gateref(定点守卫)/guard(触点或滑动路径进区域先识别节点)/roi(键名)/every(N或block,块末识别)/fixed(N或block,含多指)/固定动作前先识别/权重@N/异步组{!…}/附属块attach/多指动作multi/无间隔块「」/连击*n/断点续做(动作级·顺序块级·只在本次任务内)）")
 
 
 @AgentServer.custom_action("BatchSwipe")
@@ -30,6 +31,10 @@ class BatchSwipe(CustomAction):
         watch:@@roi:盒A|盒B@@compare:$1<$0 —— 多区域比较：分别 OCR 每个区域取数字，用 $i 引用第 i+1 个区域，比较成立才触发（如 $1<$0 表示 区域2数字 < 区域1数字）。
         ref:节点名A|节点名B  —— 引用触发：复用这几个 pipeline 节点里已定义的 recognition（OCR/ColorMatch/TemplateMatch…），任一命中即停止并跟随 next。
                               节点名后可加 @inv（如 ref:节点A@inv）：把该节点的命中结果再反转一次，用于 inverse:true 的节点（取“正向出现”语义）。
+gateref:节点名A|节点名B —— 定点守卫：走到这个位置就识别一次，任一命中即停止剩余动作并跟随 next
+ （与 ref 全局触发不同：只在它所在位置检查；不占动作计数/识别点/间隔。用途：误触跳屏防护）。
+guard:节点A|节点B@@roi:盒1|盒2 —— 区域守卫声明：click/swipe/multi 的触点或滑动路径（每 ~24px 采样）
+ 碰到这些区域时，执行该动作前先跑这些节点的识别，命中即停止剩余动作并跟随 next（可声明多个）。
         roi:盒1|盒2         —— 可选，全局识别范围（多个盒，每个盒可为 x,y,w,h 或坐标表键名），作用于所有未自带区域的 watch。缺省为全屏。
         every:N             —— 可选，每 N 个动作识别一次（默认 1 = 每个动作后都识别）。输入 3 表示每 3 个动作识别一次。
         every:block         —— 可选，**每个顺序块结束后**识别一次（块末 = 顺序块最后一个动作做完、固定动作之前）。
@@ -368,6 +373,36 @@ class BatchSwipe(CustomAction):
                     elif seg.startswith('compare:'):
                         act['compare'] = seg[8:].strip()
                 actions.append(act)
+            elif act_type == 'guard':
+                # ★ 守卫声明：guard:节点A|节点B@@roi:盒1|盒2
+                #   click/swipe/multi 的触点或滑动路径（路径每 ~24px 采样）碰到这些区域时，
+                #   执行前先跑这些节点的识别，任一命中即停止剩余动作、跟随 next。
+                #   可声明多个（各管各的区域）；节点名后可加 @inv（同 ref）。
+                #   用途：误触防护 —— 例 guard:无尽局内_继续挑战@@roi:683,613,244,63
+                segs = args_str.split('@@')
+                nodes = []
+                for seg in segs[0].split('|'):
+                    seg = self._strip_quotes(seg.strip())
+                    if not seg:
+                        continue
+                    invert = False
+                    if seg.endswith('@inv'):
+                        invert = True
+                        seg = seg[:-4].strip()
+                    if seg:
+                        nodes.append({'name': seg, 'invert': invert})
+                boxes = None
+                for seg in segs[1:]:
+                    seg = seg.strip()
+                    if seg.startswith('roi:'):
+                        boxes = self._parse_roi_list(seg[4:].strip())
+                if not nodes:
+                    print(f"[BatchSwipe] guard 需要至少一个节点名: {cmd}")
+                    return None
+                if not boxes:
+                    print(f"[BatchSwipe] guard 需要 @@roi:盒1|盒2（x,y,w,h 或坐标表键名）: {cmd}")
+                    return None
+                actions.append({'type': 'guard', 'nodes': nodes, 'boxes': boxes})
             elif act_type == 'ref':
                 # 引用识别：ref:节点A|节点B（复用节点识别，任一命中即触发），节点名后可加 @inv 反转命中（用于 inverse:true 的节点）
                 nodes = []
@@ -385,6 +420,29 @@ class BatchSwipe(CustomAction):
                     print(f"[BatchSwipe] ref 需要至少一个节点名: {cmd}")
                     return None
                 actions.append({'type': 'ref', 'nodes': nodes})
+            elif act_type == 'gateref':
+                # ★ 定点守卫：gateref:节点A|节点B —— 走到这个位置就识别一次，
+                #   任一命中即停止剩余动作、跟随当前节点 next 列表执行。
+                #   与 ref 的区别：ref 是「全局触发」（识别点 = every:N/块末等固定节奏），
+                #   gateref 是「位置触发」——只在它所在的这个位置检查一次。
+                #   不占动作计数、不触发识别点、不插间隔。节点名后可加 @inv（同 ref）。
+                #   用途：误触防护 —— 在「可能点到继续挑战/继续训练」的动作前插一个，
+                #   发现已经跳屏就立刻停手交还 next 链，而不是在错误界面继续盲点。
+                nodes = []
+                for seg in args_str.split('|'):
+                    seg = self._strip_quotes(seg.strip())
+                    if not seg:
+                        continue
+                    invert = False
+                    if seg.endswith('@inv'):
+                        invert = True
+                        seg = seg[:-4].strip()
+                    if seg:
+                        nodes.append({'name': seg, 'invert': invert})
+                if not nodes:
+                    print(f"[BatchSwipe] gateref 需要至少一个节点名: {cmd}")
+                    return None
+                actions.append({'type': 'gateref', 'nodes': nodes})
             elif act_type == 'roi':
                 # 识别范围：roi:盒1|盒2…（每个 x,y,w,h），作用于本批次所有未带自己区域的 watch
                 boxes = self._parse_roi_list(args_str)
@@ -895,6 +953,64 @@ class BatchSwipe(CustomAction):
 
     # 会真的发到设备上的动作类型（其余 token 是识别/节奏/固定动作之类的配置）
     EXEC_TYPES = ('swipe', 'click', 'sleep', 'multi')
+
+    # ★ guard 守卫：触点判定参数。盒子外扩余量（覆盖相邻点位，如按钮边缘的点击），
+    #   滑动路径按每 ~24px 采样一个点参与判定（「经过」也算碰到）。
+    GUARD_MARGIN = 50
+    GUARD_PATH_STEP = 24
+
+    def _act_touch_points(self, act) -> list:
+        """动作的触点集合：click=点；swipe/multi=滑动路径采样点（起终点必含）。"""
+        t = str(act.get('type', '')).lower()
+        pts = []
+
+        def _pt(key):
+            coord = self._get_coord(key)
+            return self._coord_point(coord) if coord is not None else None
+
+        def _path(k1, k2):
+            p1 = _pt(k1)
+            p2 = _pt(k2)
+            if p1 is None and p2 is None:
+                return
+            if p1 is None or p2 is None:
+                pts.append(p1 or p2)
+                return
+            dist = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+            if dist <= self.GUARD_PATH_STEP:
+                pts.append(p1)
+                pts.append(p2)
+                return
+            n = int(dist // self.GUARD_PATH_STEP)
+            for i in range(n + 1):
+                f = i * self.GUARD_PATH_STEP / dist
+                pts.append((p1[0] + (p2[0] - p1[0]) * f, p1[1] + (p2[1] - p1[1]) * f))
+            pts.append(p2)
+
+        if t == 'click':
+            p = _pt(act.get('target'))
+            if p:
+                pts.append(p)
+        elif t == 'swipe':
+            _path(act.get('from'), act.get('to'))
+        elif t == 'multi':
+            for fin in act.get('fingers') or []:
+                _path(fin.get('from'), fin.get('to'))
+        return pts
+
+    def _guard_match(self, act, guards):
+        """动作触点是否碰到某个守卫的区域；碰到返回该 guard，否则 None。"""
+        pts = self._act_touch_points(act)
+        if not pts:
+            return None
+        m = self.GUARD_MARGIN
+        for g in guards:
+            for box in g.get('boxes') or []:
+                bx, by, bw, bh = box
+                for (x, y) in pts:
+                    if bx - m <= x <= bx + bw + m and by - m <= y <= by + bh + m:
+                        return g
+        return None
 
     @classmethod
     def _mark_block_ends(cls, acts):
@@ -1521,6 +1637,9 @@ class BatchSwipe(CustomAction):
         watch_every, watch_block_end = self._collect_every(actions)
         fixed_act = self._collect_fixed(actions)
         attach_actions, attach_every, attach_mode, attach_start = self._collect_attach(actions)
+        # ★ guard 守卫声明（触点/滑动路径进区域 -> 动作前先识别节点）
+        guards = [a for a in actions
+                  if isinstance(a, dict) and str(a.get('type', '')).lower() == 'guard']
         # ★ 附属块的核心语义：它像顺序块一样「摆在序列里的某个位置」，
         #   主块走到那里时，它才和「紧跟在它后面的那些动作」一起执行。
         #   所以没显式写 attach_start 时，就用它在动作序列里的位置来自动推导：
@@ -1538,7 +1657,7 @@ class BatchSwipe(CustomAction):
             attach_start = (_seen + 1) if _seen > 0 else 1
         actions = [
             a for a in actions
-            if not (isinstance(a, dict) and str(a.get('type', '')).lower() in ('watch', 'ref', 'roi', 'every', 'resume', 'reset', 'fixed', 'attach', 'attach_every', 'attach_mode', 'attach_start'))
+            if not (isinstance(a, dict) and str(a.get('type', '')).lower() in ('watch', 'ref', 'roi', 'every', 'resume', 'reset', 'fixed', 'attach', 'attach_every', 'attach_mode', 'attach_start', 'guard'))
         ]
         fixed_every = int(fixed_act.get('every', 1)) if fixed_act else 0
         # 固定动作的两种触发方式：every = 每 N 个动作；block = 每个顺序块结束后
@@ -1671,7 +1790,38 @@ class BatchSwipe(CustomAction):
             if idx < start_index:
                 # 已做过的动作：跳过
                 continue
+
+            # ★ 定点守卫（gateref）：不占动作计数、不触发识别点、不插间隔 ——
+            #   走到这个位置就识别一次，命中即停止剩余动作、跟随 next（误触跳屏防护）。
+            if isinstance(act, dict) and str(act.get('type', '')).lower() == 'gateref':
+                _drain()
+                if self._watch_check(context, controller,
+                                     [{'kind': 'ref', 'nodes': act.get('nodes') or []}], None):
+                    if resume:
+                        # 断在守卫位置 → 下次从守卫后的动作续做
+                        self._set_cursor(argv.node_name, idx)
+                    print(f"[BatchSwipe] 🛡 定点守卫命中（第 {idx + 1}/{total} 个位置），"
+                          f"停止剩余动作，跟随当前节点 next 列表执行")
+                    return True
+                continue
+
             pos = f"执行到第 {idx+1}/{len(actions)} 个动作"
+
+            # ★ guard 误触守卫：click/swipe/multi 的触点或滑动路径碰到守卫区域时，
+            #   执行前先跑守卫节点的识别 —— 命中（已跳屏）就停手、跟随 next。
+            #   不占动作计数/识别点/间隔。
+            if guards:
+                g = self._guard_match(act, guards)
+                if g is not None:
+                    _drain()
+                    if self._watch_check(context, controller,
+                                         [{'kind': 'ref', 'nodes': g.get('nodes') or []}], None):
+                        if resume:
+                            self._set_cursor(argv.node_name, idx)
+                        names = "|".join(n.get('name', '') for n in (g.get('nodes') or []) if isinstance(n, dict))
+                        print(f"[BatchSwipe] 🛡 守卫命中：动作「{self._pos_name(act, idx)}」触点进守卫区，"
+                              f"识别到（{names}），停止剩余动作，跟随当前节点 next 列表执行")
+                        return True
             if resume:
                 # 先把进度挪到「正在做的这个动作」：万一这次被判死/崩溃（来不及写完成），
                 # 下次也是从这个动作重做，而不是悄悄跳过它

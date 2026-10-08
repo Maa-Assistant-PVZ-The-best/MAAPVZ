@@ -430,7 +430,7 @@ def generic_dsl(
         #   （artName/artType/artBody），这里按快照翻坐标。
         #   click   -> 点「神器_初始化_神器位置」
         #   hold    -> 长按神器位置（swipe 到自身，1s）
-        #   special -> 葫芦：点神器位置 -> sleep 0.5（等体型弹窗）-> 点「神器_初始化_葫芦X体型」
+        #   special -> 葫芦：点神器位置 -> 点「神器_初始化_葫芦X体型」（不等弹窗）
         #   swipe   -> 暂未支持（需要目标格子，等需求再定）
         pos = _coord_any(coords, "神器_初始化_神器位置")
         if pos is None:
@@ -449,13 +449,13 @@ def generic_dsl(
                     missing.append(
                         f"artifact：坐标表缺少「神器_初始化_葫芦{body_cn}体型」")
                 else:
-                    # 一次使用 = 3 步（点神器 -> 等弹窗 -> 点体型）；
+                    # 一次使用 = 2 步（点神器 -> 点体型，中间不等 —— 用户实测不需要等弹窗）；
                     # ★ 多段组合塞不进原生 `动作*n`，所以连击只能展开重复
                     #   （watch=False 对 special 无效，仅记日志语义）。
                     for i in range(n):
                         if i and gap > 0:
                             parts.append(f"sleep:{gap / 1000:g}")
-                        parts.extend([f"click:{pos}", "sleep:0.5", f"click:{bk}"])
+                        parts.extend([f"click:{pos}", f"click:{bk}"])
             elif atype == "hold":
                 parts.extend(rep_parts(f"swipe:{pos},{pos},1000", n, gap, watch))
             elif atype == "swipe":

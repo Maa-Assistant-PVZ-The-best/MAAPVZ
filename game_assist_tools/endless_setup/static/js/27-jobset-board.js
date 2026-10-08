@@ -3191,6 +3191,11 @@ function jobBuildChain(t, board, which, forceBoss) {
                 jobCopyCustomFields(seg, item);
                 if (seg.ms !== undefined && seg.ms !== null) item.ms = Number(seg.ms);
             }
+            // ★ 使用神器：快照字段（artName/artType/artBody）整袋带上 ——
+            //   丢了它们 agent 端会退化成纯 click:神器位置（不点体型）。
+            if (ga.id === 'artifact' && typeof jobCopyArtifactFields === 'function') {
+                jobCopyArtifactFields(seg, item);
+            }
             // ★ 无间隔组「」标记：compile.py 把连续 noint 段合进一个「」块
             if (seg.noint === true) item.noint = true;
             // ★ 点击类动作的连击次数（点波/捡豆/加速/自定义点击；切换形态走 params 已带）
