@@ -1290,10 +1290,20 @@ class JobSetFight(CustomAction):
         if prev_index is not None and 0 <= prev_index < len(js.tables):
             table = js.tables[prev_index]
             locked_lv = _STATE.get("locked_level")
-            _log(
-                f"沿用已锁定表{table.index + 1}"
-                f"（锁定时关卡={locked_lv}，本次关卡={lv}）"
-            )
+            # ★ 关卡跳出了锁定表的覆盖区间（典型：一轮打完自动计数重置
+            #   147/149 -> 1，同一次任务内表锁还在）-> 必须按关卡重新选表，
+            #   否则新一轮第 1 关会沿用上一轮的尾表（链条/动作全错）。
+            if not table.covers(lv):
+                table = js.pick_table(lv)
+                _log(
+                    f"关卡{lv} 超出锁定表{prev_index + 1} 的覆盖区间"
+                    f"（锁定时关卡={locked_lv}）-> 重新选表：表{table.index + 1}"
+                )
+            else:
+                _log(
+                    f"沿用已锁定表{table.index + 1}"
+                    f"（锁定时关卡={locked_lv}，本次关卡={lv}）"
+                )
         else:
             table = js.pick_table(lv)
 
