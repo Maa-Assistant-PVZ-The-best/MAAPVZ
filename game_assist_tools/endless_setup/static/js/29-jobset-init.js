@@ -51,19 +51,19 @@ function jobLoadLocal() {
             if (!Array.isArray(t.slotOrder)) t.slotOrder = null;   // 旧数据：用默认槽号顺序
             if (!Array.isArray(t.loopOrder)) t.loopOrder = null;
             if (!t.slotModes || typeof t.slotModes !== 'object') t.slotModes = {};
-            // 缺失的槽一律按默认「循环」
+            // 缺失的槽一律按默认「单次」（铺开局为主；要循环再右键/F 切）
             for (let s = 1; s <= 8; s++) {
                 const k = 'card' + s;
-                if (!t.slotModes[k]) t.slotModes[k] = 'loop';
+                if (!t.slotModes[k]) t.slotModes[k] = 'once';
             }
             // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）由注册表驱动补默认值
             if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
                 JOB_BOARD_ACTIONS.forEach(function (act) {
-                    if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'loop';
+                    if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'once';
                 });
             } else {
-                if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
-                if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+                if (!t.slotModes['feed']) t.slotModes['feed'] = 'once';
+                if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'once';
             }
             if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
             // boss 关独立配置（旧缓存没有 -> 保持 null，boss 关只等结算）
@@ -271,7 +271,7 @@ function jobInit() {
     const _del = document.getElementById('jobDeleteBtn');
     if (_del) _del.addEventListener('click', jobDelete);
     const _dl = document.getElementById('jobDownloadBtn');
-    if (_dl) _dl.addEventListener('click', jobDownloadRemote);
+    if (_dl) _dl.addEventListener('click', jobRemoteMenuOpen);
     const _rf = document.getElementById('jobRefreshBtn');
     if (_rf) _rf.addEventListener('click', function () { jobLoadList(); });
     jobLoadList();        // 载入本地作业集列表到下拉栏

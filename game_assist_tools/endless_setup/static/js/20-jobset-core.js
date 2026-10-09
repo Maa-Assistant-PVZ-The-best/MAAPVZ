@@ -67,8 +67,8 @@ function jobNewTable() {
         boardLate: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))
     };
     for (let i = 1; i <= 8; i++) t.slots[i] = '';
-    // 默认形态：循环
-    jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'loop'; });
+    // 默认形态：单次（铺开局为主；要循环再右键/F 切）
+    jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'once'; });
     if (last) {
         // ★★ 棋盘与槽位严格对应（用户要求）：新表槽位是全空的，
         //   那么棋盘/链条/落点等待也必须全空 —— 不能只继承 boss 棋盘

@@ -695,6 +695,11 @@ function jobBindMorePicker() {
         if (!box) { console.warn('[gen-actions] 容器不存在:', id); return; }
 
         const obs = new MutationObserver(function () {
+            // ★ 注册表没加载到（GA 未定义，如 07 被网络拦截）时别重画：
+            //   画出来的「（无通用动作定义）」提示里没有 .gen-act，
+            //   会再次命中下面的检查 -> 自触发死循环刷屏。
+            if (typeof JOB_GENERIC_ACTIONS === 'undefined'
+                || !Array.isArray(JOB_GENERIC_ACTIONS) || !JOB_GENERIC_ACTIONS.length) return;
             // 只关心"里面没有 .gen-act 按钮"的情况，避免自己重画时死循环
             if (!box.querySelector('.gen-act')) {
                 console.warn('[gen-actions] 检测到', id, '被清空，自动重绘');

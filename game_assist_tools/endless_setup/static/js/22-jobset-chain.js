@@ -113,14 +113,15 @@ function jobBoardActionCycleable(act) {
     return jobBoardActionHasPlacement(act);
 }
 
-// 该槽当前的放置形态：'once'（单次）| 'loop'（循环，默认）| 'end'（收尾）
+// 该槽当前的放置形态：'once'（单次，默认）| 'loop'（循环）| 'end'（收尾）
 // ★ 普通关与 boss 关各自独立的形态表（跟当前编辑的 tab 走）
 // ★ boss 关不能有收尾：boss 棋盘下 end 一律归一化回 loop。
 function jobSlotMode(t, key) {
     const f = jobModesField();
     const m = (t && t[f]) ? t[f][key] : null;
     const modes = jobIsBossBoard() ? ['once', 'loop'] : JOB_SLOT_MODES;
-    return modes.indexOf(m) === -1 ? 'loop' : m;
+    if (jobIsBossBoard() && m === 'end') return 'loop';   // boss 无收尾 -> 归循环
+    return modes.indexOf(m) === -1 ? 'once' : m;
 }
 // 三个形态是各自独立的摆放；形态决定棋盘标记颜色与所属链
 function jobInOnce(t, key) { return jobSlotMode(t, key) === 'once'; }

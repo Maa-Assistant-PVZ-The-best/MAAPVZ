@@ -77,6 +77,7 @@ def build_chain_nodes(
     every_n: int = 10,
     has_end: bool = False,
     log: LogFn = _noop,
+    loops_mode: bool = False,
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """三条链各生成**一个**节点（整条链拼成一条 DSL）。
 
@@ -203,8 +204,12 @@ def build_chain_nodes(
         #
         #   这几个 ref 复用 pipe 节点里已定义的识别配置，无需写 ROI。
         #   收尾链自己**不加**「收尾」触发（它已经在收尾链里了，避免自跳）。
+        #   ★ loops 模式（循环链重复 N 次进收尾）：链里**不能**带收尾触发——
+        #     收尾只由计数门决定。带着的话最后一波头像一亮，ref 每轮必中
+        #     -> 停批 -> 回循环入口 -> 再进链 -> 再中……10Hz 空转死循环
+        #     （2026-10-09 日志实锤：组合动作_循环 0.1s 一圈疯狂空转）。
         refs: List[str] = [REF_SETTLE]
-        if kind != "end" and has_end:
+        if kind != "end" and has_end and not loops_mode:
             refs.append(REF_LAST_WAVE)
         refs.append(REF_FAILED)
         refs.append(REF_TRAIN)
@@ -288,17 +293,6 @@ def build_fight_override(
     _end_chain = rules.get("end_chain") or []
     has_end = bool(_end_chain) and not is_boss
 
-    chain_nodes = build_chain_nodes(
-        rules, coords, swipe_ms, interval, every_n, has_end, log=log)
-
-    once_node = chain_nodes.get("once")
-    loop_node = chain_nodes.get("loop")
-    end_node = chain_nodes.get("end")
-
-    # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
-    if is_boss:
-        end_node = None
-
     # ★ 收尾链的可调参数（网页端「棋盘下侧」编辑，作业集导出）：
     #   · 「收尾类型」     = detect（识别僵尸头像，默认）/ loops（循环链重复次数）
     #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms，仅 detect）
@@ -307,6 +301,8 @@ def build_fight_override(
     #   · 「等待结算时长」 = 仅 settle：结算识别节点的 timeout（超时识别不到 = 任务结束）
     #   · 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
     #   （endLastPostDelay 已删除：post_delay 做不到边等边识别，等待结算改用 timeout）
+    # ★ 注意：必须先算 loops_gate 再调 build_chain_nodes ——
+    #   loops 模式下链内不带「收尾」ref 触发（见 build_chain_nodes 注释）。
     end_type = str(table.raw.get("endType") or "detect").strip()
     if end_type not in ("detect", "loops"):
         end_type = "detect"
@@ -320,6 +316,18 @@ def build_fight_override(
     # ★ loops 模式：循环链自循环改走「循环种植入口」（JobSetFight 在里面数次数），
     #   且不再挂收尾检测；detect 模式维持原样（自循环 + 挂收尾检测）。
     loops_gate = (end_type == "loops") and bool(has_end) and not is_boss
+
+    chain_nodes = build_chain_nodes(
+        rules, coords, swipe_ms, interval, every_n, has_end, log=log,
+        loops_mode=loops_gate)
+
+    once_node = chain_nodes.get("once")
+    loop_node = chain_nodes.get("loop")
+    end_node = chain_nodes.get("end")
+
+    # ★ boss 关不能有收尾：boss 关一律不跑收尾链（用户要求）。
+    if is_boss:
+        end_node = None
 
     override: Dict[str, Any] = {}
 

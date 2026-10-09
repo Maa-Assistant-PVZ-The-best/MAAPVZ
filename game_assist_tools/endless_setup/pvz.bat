@@ -5,6 +5,27 @@ color 0A
 
 cd /d "%~dp0"
 
+:: 显式重启（加载新 Python 代码用）：pvz.bat restart
+if /i "%~1"=="restart" (
+    echo 正在重启：关闭旧实例...
+    for /f "tokens=5" %%p in ('netstat -ano ^| findstr /c:":5000 " ^| findstr /c:"LISTENING"') do taskkill /PID %%p /F >nul 2>&1
+    timeout /t 2 /nobreak >nul
+)
+
+:: ---------------------------------------------------------------
+:: ★ 服务已在跑就只开浏览器，绝不重启（2026-10-09 "端口被杀"事故）：
+::   旧版无条件 start pvz.py，新实例按"接管"逻辑 taskkill /F 旧实例
+::   -> 正在用的页面请求全断（卡加载）。编辑器是长驻服务，
+::   重开 bat 的合理语义 = "再开一个页签"，不是"杀掉重来"。
+::   真要重启加载新 Python 代码：pvz.bat restart。
+:: ---------------------------------------------------------------
+for /f %%i in ('curl -s -o nul -w "%%{http_code}" http://127.0.0.1:5000 2^>nul') do set ALIVE=%%i
+if "%ALIVE%"=="200" (
+    echo 服务已在运行，直接打开页面（不重启）
+    start http://127.0.0.1:5000
+    exit /b
+)
+
 echo ========================================
 echo   正在启动 Flask 服务...
 echo ========================================

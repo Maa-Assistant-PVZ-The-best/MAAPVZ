@@ -287,15 +287,15 @@ function jobApplyLoaded(job, code) {
         if (!Array.isArray(t.boardEarly)) t.boardEarly = [];
         if (!Array.isArray(t.boardLate)) t.boardLate = [];
         if (!t.slotModes || typeof t.slotModes !== 'object') t.slotModes = {};
-        for (let s = 1; s <= 8; s++) { const k = 'card' + s; if (!t.slotModes[k]) t.slotModes[k] = 'loop'; }
+        for (let s = 1; s <= 8; s++) { const k = 'card' + s; if (!t.slotModes[k]) t.slotModes[k] = 'once'; }
         // ★ 落子动作（喂豆/铲子/点击格子/未来扩展）由注册表驱动补默认值
         if (typeof JOB_BOARD_ACTIONS !== 'undefined') {
             JOB_BOARD_ACTIONS.forEach(function (act) {
-                if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'loop';
+                if (act && act.id && !t.slotModes[act.id]) t.slotModes[act.id] = 'once';
             });
         } else {
-            if (!t.slotModes['feed']) t.slotModes['feed'] = 'loop';
-            if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'loop';
+            if (!t.slotModes['feed']) t.slotModes['feed'] = 'once';
+            if (!t.slotModes['shovel']) t.slotModes['shovel'] = 'once';
         }
         if (!t.waitAfter || typeof t.waitAfter !== 'object') t.waitAfter = {};
         // ---- boss 关独立配置 ----
@@ -466,7 +466,123 @@ async function jobDelete() {
     }
 }
 
+// ============================================================
+// 远程作业集入口：「🌐 远程作业集」按钮 -> 选择弹窗
+//   · ⬆ 上传本地作业集（走 GitHub Issue 提交，待接入）
+//   · ⬇ 下载远程作业集（跳转远程作业集网站，站点待建——地址填 JOB_REMOTE_SITE）
+// ============================================================
+
+// ★ 远程作业集网站地址（GitPages，建好后填这里，如 https://xxx.github.io/MAAPVZ-jobs/）
+const JOB_REMOTE_SITE = '';
+
+// 入口弹窗的样式（注入一次）
+(function _jobRemoteInjectStyle() {
+    if (document.getElementById('jobRemoteStyle')) return;
+    const st = document.createElement('style');
+    st.id = 'jobRemoteStyle';
+    st.textContent =
+        '@keyframes jobRemotePop { from { opacity:0; transform:scale(.94) translateY(6px); } to { opacity:1; transform:none; } }\n' +
+        '.job-remote-panel { animation: jobRemotePop .18s ease-out both; }\n' +
+        '.job-remote-opt { display:flex; flex-direction:column; align-items:center; gap:6px; flex:1;' +
+        ' padding:16px 10px; border:1px solid #e2e8f0; border-radius:10px; background:#fff;' +
+        ' cursor:pointer; text-align:center; transition:border-color .15s, background .15s, transform .12s; }\n' +
+        '.job-remote-opt:hover { border-color:#3b82f6; background:#eff6ff; transform:translateY(-2px); }\n' +
+        '.job-remote-opt .opt-ico { font-size:26px; }\n' +
+        '.job-remote-opt .opt-title { font-size:14px; font-weight:700; color:#1e293b; }\n' +
+        '.job-remote-opt .opt-desc { font-size:11px; color:#94a3b8; margin-top:2px; line-height:1.5; }\n';
+    document.head.appendChild(st);
+})();
+
+function _jobRemoteEnsureModal(id, title, bodyHtml) {
+    let modal = document.getElementById(id);
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = id;
+    modal.style.cssText =
+        'display:none; position:fixed; top:0; left:0; width:100%; height:100%;' +
+        'background:rgba(15,23,42,0.5); z-index:10100; justify-content:center; align-items:center;';
+    modal.innerHTML =
+        '<div class="job-remote-panel" style="background:#fff; padding:20px 24px; border-radius:14px;' +
+        ' max-width:420px; width:90%; box-shadow:0 8px 24px rgba(0,0,0,0.25); position:relative;">' +
+        '  <button class="job-remote-close" style="position:absolute; top:10px; right:12px;' +
+        '   border:none; background:none; font-size:16px; cursor:pointer; color:#94a3b8;">✕</button>' +
+        '  <div style="font-size:16px; font-weight:700; margin-bottom:12px;">' + title + '</div>' +
+        '  <div class="job-remote-body" style="font-size:13px; color:#334155;">' + bodyHtml + '</div>' +
+        '</div>';
+    document.body.appendChild(modal);
+    modal.querySelector('.job-remote-close').onclick = function () {
+        modal.style.display = 'none';
+    };
+    return modal;
+}
+
+function _jobRemoteShow(id, title, bodyHtml) {
+    const modal = _jobRemoteEnsureModal(id, title, bodyHtml);
+    modal.style.display = 'flex';
+}
+
+// 选择弹窗：上传 or 下载
+function jobRemoteMenuOpen() {
+    let modal = document.getElementById('jobRemoteMenu');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'jobRemoteMenu';
+        modal.style.cssText =
+            'display:none; position:fixed; top:0; left:0; width:100%; height:100%;' +
+            'background:rgba(15,23,42,0.5); z-index:10099; justify-content:center; align-items:center;';
+        modal.innerHTML =
+            '<div class="job-remote-panel" style="background:#fff; padding:22px 24px; border-radius:14px;' +
+            ' max-width:430px; width:90%; box-shadow:0 8px 24px rgba(0,0,0,0.25); position:relative;">' +
+            '  <button id="jobRemoteMenuClose" style="position:absolute; top:10px; right:12px;' +
+            '   border:none; background:none; font-size:16px; cursor:pointer; color:#94a3b8;">✕</button>' +
+            '  <div style="font-size:17px; font-weight:700; margin-bottom:4px;">🌐 远程作业集</div>' +
+            '  <div style="font-size:12px; color:#94a3b8; margin-bottom:14px;">分享你的打法，或抄别人的</div>' +
+            '  <div style="display:flex; gap:12px;">' +
+            '  <button class="job-remote-opt" id="jobRemoteUpload">' +
+            '    <span class="opt-ico">⬆️</span>' +
+            '    <span class="opt-title">上传本地作业集</span>' +
+            '    <div class="opt-desc">把当前作业集分享到远程仓库（走 Issue 提交）</div>' +
+            '  </button>' +
+            '  <button class="job-remote-opt" id="jobRemoteDownload">' +
+            '    <span class="opt-ico">⬇️</span>' +
+            '    <span class="opt-title">下载远程作业集</span>' +
+            '    <div class="opt-desc">打开远程作业集网站，挑一个抄回来</div>' +
+            '  </button>' +
+            '  </div>' +
+            '</div>';
+        document.body.appendChild(modal);
+        document.getElementById('jobRemoteMenuClose').onclick = function () {
+            modal.style.display = 'none';
+        };
+        document.getElementById('jobRemoteUpload').onclick = function () {
+            modal.style.display = 'none';
+            jobRemoteUploadOpen();
+        };
+        document.getElementById('jobRemoteDownload').onclick = function () {
+            modal.style.display = 'none';
+            jobRemoteDownloadOpen();
+        };
+    }
+    modal.style.display = 'flex';
+}
+
+// 上传弹窗（占位壳——接入时往 body 填表单）
+function jobRemoteUploadOpen() {
+    _jobRemoteShow('jobRemoteUploadModal', '⬆️ 上传本地作业集', '');
+}
+
+// 下载：跳转远程作业集网站（站点待建，地址填 JOB_REMOTE_SITE）
+function jobRemoteDownloadOpen() {
+    if (JOB_REMOTE_SITE) {
+        window.open(JOB_REMOTE_SITE, '_blank');
+        return;
+    }
+    _jobRemoteShow('jobRemoteDownloadModal', '⬇️ 下载远程作业集',
+        '<div style="color:#94a3b8; padding:18px 0; text-align:center;">远程作业集网站建设中，敬请期待～</div>');
+}
+
 // 下载远程作业集：提示输入代码 → 从 GitPages 取 → 载入棋盘
+// ★ 待接入：现在由「远程作业集 -> ⬇ 下载远程作业集」弹窗承载，此函数留作实现参考
 async function jobDownloadRemote() {
     const msg = document.getElementById('jobStatus');
     if (!JOB_REMOTE_BASE) {
