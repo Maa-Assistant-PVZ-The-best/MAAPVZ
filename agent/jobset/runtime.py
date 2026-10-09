@@ -10,12 +10,13 @@ JobSetStage       纯计数器阶段确认：取关卡 -> boss 对齐 -> 必要�
 JobSetFight       局内种植：把当前表的预编译 override（compiled 块）零翻译注入，
                   并覆盖补给链顺序。挂在「无尽局内_单次/循环种植」。
                   （链 -> DSL 的编译在作业集保存时由 compile.py 完成。）
-JobSetInfo        只读查询当前状态（调试用，不产生副作用）。
 
 ⚠️ 曾经还有 7 个动作，因三链重构 / pipe 化后不再需要而删除：
    JobSetLevel / JobSetSlot / JobSetReset / JobSetFightPlan / JobSetRollback
    / JobSetStageChanged —— 逻辑已并入上面几个。
    JobSetEndRestart —— 已 pipe 化（next + [Anchor]下一个动作），见 03-1-01。
+   2026-10-09 再删 3 个从未接线的：JobSetTick（计数已并入 JobSetPlan）、
+   JobSetStatus（状态行由 _set_focus 实现）、JobSetInfo（调试查询）。
 
    ★ 教训：**能用 pipe 表达的，不要写 custom**。
      run_task 是同步的，看着像必须用代码；但 pipe 的 next + [Anchor]
@@ -609,152 +610,17 @@ def _fail() -> CustomAction.RunResult:
     return CustomAction.RunResult(success=False)
 
 
-# ---------------------------------------------------------------------------
-# JobSetTick —— 过关计数器 +1（挂在「点继续挑战/继续训练」之后）
-#
-# ★★ 这是砍掉 OCR 之后，关卡号**唯一的推进点**。
-#
-#   用户给的语义（原话）：
-#     「看点击继续战斗/继续训练那一个地方，只要点了就必定是下一关了，
-#       所以可以在后面加计数器，刚好重开也不会去点这个地方」
-#
-#   为什么这个挂载点是可靠的：
-#     · 「点继续挑战」= 这一局已经结束 → 点完必定进入下一关，**不需要判断**
-#     · **重开不会走到这里**（重开走 `通用_重开_暂停`），所以天然不会误 +1
-#       —— 这正是旧版需要 `rollback_one()` 手动退格的原因，现在不需要了
-#
-#   pipeline 里的接线：
-#     无尽局内_继续挑战  (OCR 识别「继续挑战」-> Click)
-#         next: [无尽局内_补给, 无尽挑战_选取植物_开始战斗]
-#                                              ↑ 插到这两个之前
-#     无尽训练_继续训练  (OCR 识别「继续训练」-> Click)
-#         next: [无尽挑战_识别开始战斗_清空卡牌, 无尽挑战_训练完成]
-#
-#   ★ 必须插在 Click 之后、下一局动作之前，且在**所有**后继之前，
-#     这样无论后面走哪条分支（补给/直接开战/回清空卡牌），计数都已经推进了。
-# ---------------------------------------------------------------------------
-
-# 计数器节点名（pipeline 里由本动作覆盖填充）
-NODE_TICK = "无尽局内_过关计数"
-
-# 需要计数的两个「结算按钮」节点 -> 它们点完之后要先去计数节点
-TICK_SOURCES = ("无尽局内_继续挑战", "无尽训练_继续训练")
-
-
-@AgentServer.custom_action("JobSetTick")
-class JobSetTick(CustomAction):
-    """过关一次：计数器 +1。
-
-    ★ 不做任何判断 —— 走到这里就意味着「继续挑战/继续训练」已经被点过了，
-      而点过就必定是下一关（用户明确的游戏语义）。
-
-    参数（全部可选）：
-        {"关卡": 55}    # 显式指定要设置的关卡；缺省则 = 当前 + 1
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        tr = _ensure_tracker(param)
-
-        before = tr.count
-
-        # 显式指定关卡（调试/纠错用）：直接设定，不走 +1
-        raw = param.get("关卡")
-        if raw not in (None, ""):
-            try:
-                lv = int(raw)
-            except (TypeError, ValueError):
-                lv = None
-            if lv is not None:
-                tr.reset(lv)
-                _log(f"过关计数：由参数直接设定关卡 {before} -> {lv}")
-                return _ok()
-
-        lv = tr.tick()
-        _log(f"过关计数：{before} -> {lv}（已点继续挑战/继续训练）")
-
-        # ★ 把新关卡同步给下游的种植节点，保证 JobSetFight 用的是最新关卡。
-        #   只在参数显式要求时同步？—— 不，这里每次都同步：
-        #   因为下游 JobSetFight 会读 _STATE 里的 tracker，不读这个 param；
-        #   这个 override 主要是给「日志/排查」与旧调用点看的。
-        try:
-            context.override_pipeline({
-                "无尽局内_单次种植": {"custom_action_param": {"关卡": lv}},
-                "无尽局内_循环种植": {"custom_action_param": {"关卡": lv}},
-            })
-        except Exception as e:
-            _log(f"同步关卡失败（{type(e).__name__}: {e}）")
-        return _ok()
-
-
-def _tick_param() -> Dict[str, Any]:
-    """计数器节点的 pipeline 定义（供 pipeline / 运行时共用）。"""
-    return {
-        "action": "Custom",
-        "custom_action": "JobSetTick",
-        "custom_action_param": {},
-        "pre_delay": 0,
-        "post_delay": 0,
-        "next": [],
-    }
-
-
-# ---------------------------------------------------------------------------
-# JobSetStatus —— 在「识别到开始战斗」时刷新用户可见的状态行
-#
-# ★ 用户要求（原话）：
-#     「在选卡界面点击开始的时候刷新」
-#     「顺便让日志显示计数器在日志弹窗，方便用户检查」
-#
-#   挂在「无尽挑战_识别开始战斗」（OCR 识别到「开始战斗」那一步）——
-#   挂在**识别到**而不是**点击后**，因为点击可能带重试/延迟，时机不稳。
-#
-#   为什么选这个时机（而不是每次 +1 就刷）：
-#     点「开始战斗」= 这一局即将开打，此刻的关卡/表/阵容**全都定下来了**，
-#     这正是用户需要看到的信息。
-#     而「+1 的那一刻」还在上一局的结算画面，接下来还要换卡，
-#     刷出来的信息马上就会变 —— 等用户看到时已经过期。
-#
-#   ★ 额外好处：它天然覆盖了「换卡」这件事 ——
-#     如果局外换卡换错了，用户在进局内**之前**就能在日志里发现。
-#     这正好补上砍掉 OCR 之后失去的那部分自检能力。
-# ---------------------------------------------------------------------------
-
+# 「识别开始战斗」节点名 —— 状态行刷新（_set_focus）的挂载点
 NODE_START_FIGHT = "无尽挑战_识别开始战斗"
-
-
-@AgentServer.custom_action("JobSetStatus")
-class JobSetStatus(CustomAction):
-    """刷新用户可见的状态行（关卡 / 当前表 / boss 或普通关）。
-
-    参数（全部可选）：
-        {"是boss关": false}   # 用来显示「本关: boss关/普通关」
-    """
-
-    def run(self, context: Context, argv) -> Any:
-        param = _parse_param(getattr(argv, "custom_action_param", None))
-        js: Optional[JobSet] = _STATE.get("jobset")
-        tr = _ensure_tracker(param)
-
-        is_boss = bool(param.get("是boss关"))
-
-        # 表：优先用已锁定的（那才是本局真正在用的），否则按计数器算
-        table = None
-        if js is not None:
-            idx = _STATE.get("table_index")
-            if isinstance(idx, int) and 0 <= idx < len(js.tables):
-                table = js.tables[idx]
-            else:
-                table = js.pick_table(tr.count)
-
-        line = tr.status_line(table, is_boss)
-        # 前缀让它在日志流里醒目、易搜
-        _log(f"📋 {line}")
-        return _ok()
 
 
 # ---------------------------------------------------------------------------
 # JobSetPlan —— 局外（选卡界面）判断「要不要换阵容」+ 播报状态
+#
+# ★ 计数说明（2026-10-09 清理）：过关计数已并入 JobSetPlan（计数=true 参数），
+#   原 JobSetTick 节点 / _tick_param() / JobSetStatus 包装类均已删除 ——
+#   状态行刷新由 _set_focus(NODE_START_FIGHT) 直接实现，日志播报由 JobSetPlan 内
+#   tr.status_line() 直接输出，都不再需要独立节点。
 #
 # ★ 这是把「换阵容」从局内搬到局外的**主路径**。
 #
@@ -1158,28 +1024,6 @@ class JobSetAutoCount(CustomAction):
             _prewarm_for_level(context, js, tr.count)
         else:
             _log("⚠️ 作业集未载入（JobSetLoad 未执行？）-> 只设了计数器，没做预热")
-        return _ok()
-
-
-
-# ---------------------------------------------------------------------------
-# 辅助动作
-# ---------------------------------------------------------------------------
-
-@AgentServer.custom_action("JobSetInfo")
-class JobSetInfo(CustomAction):
-    """只读查询当前状态（调试用）。"""
-
-    def run(self, context: Context, argv) -> Any:
-        js: Optional[JobSet] = _STATE.get("jobset")
-        tr: Optional[LevelTracker] = _STATE.get("tracker")
-        if js is None:
-            _log(f"作业集：未载入（{_STATE.get('error') or '无错误信息'}）")
-        else:
-            _log(f"作业集：「{js.name}」 code={js.code} 表数={len(js.tables)}")
-        if tr is not None:
-            _log(f"计数器：{tr.describe()}")
-            _log(f"快照：{json.dumps(tr.snapshot(), ensure_ascii=False)}")
         return _ok()
 
 

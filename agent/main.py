@@ -24,7 +24,6 @@ from maa.toolkit import Toolkit
 import exit_watchdog
 exit_watchdog.arm(AgentServer)
 
-from actions.single_action import SingleAction
 from actions.batch_swipe import BatchSwipe
 
 import my_action
@@ -39,7 +38,6 @@ import create_yard_id  # noqa: F401
 import jobset.runtime  # noqa: F401
 
 
-SingleAction.load_coords('./assets/resource/coords.json')
 BatchSwipe.load_coords('./assets/resource/coords.json')
 
 

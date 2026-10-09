@@ -617,67 +617,6 @@ class PasteClipboard(CustomAction):
             print(f"[PasteClipboard] 发送成功，文本长度: {len(text)}")
             return CustomAction.RunResult(success=True)
 
-import json
-from maa.agent.agent_server import AgentServer
-from maa.custom_action import CustomAction
-from maa.context import Context
-
-@AgentServer.custom_action("SetRepeat")
-class SetRepeat(CustomAction):
-    """
-    通用 Action：根据用户输入的秒数动态设置指定节点的 repeat 值。
-    
-    custom_action_param 格式：
-    {
-        "seconds": "4.5",          // 用户输入的秒数（字符串或数字）
-        "nodes": [                 // 要修改的节点名称列表
-            "frame_wj_划飞弹",
-            "frame_wj_划飞弹2",
-            ...
-        ],
-        "multiplier": 6.25         // 可选，换算系数，默认 6.25
-    }
-    """
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
-        # 1. 解析参数
-        param = {}
-        if argv.custom_action_param:
-            try:
-                param = json.loads(argv.custom_action_param)
-            except Exception as e:
-                print(f"[SetRepeat] 参数解析失败: {e}")
-                return CustomAction.RunResult(success=False)
-
-        seconds_str = param.get("seconds", "4")
-        nodes = param.get("nodes", [])
-        multiplier = param.get("multiplier", 6.25)
-
-        if not nodes:
-            print("[SetRepeat] 未指定 nodes，跳过")
-            return CustomAction.RunResult(success=True)
-
-        # 2. 换算 repeat 次数
-        try:
-            seconds = float(seconds_str)
-        except ValueError:
-            print(f"[SetRepeat] 无效的秒数: {seconds_str}，使用默认 4 秒")
-            seconds = 4.0
-
-        repeat = int(round(seconds * multiplier))
-        if repeat < 1:
-            repeat = 1
-
-        # 3. 构建 pipeline 覆盖
-        override = {}
-        for node in nodes:
-            override[node] = {"repeat": repeat}
-
-        # 4. 应用覆盖
-        context.override_pipeline(override)
-
-        print(f"[SetRepeat] 已将 {nodes} 的 repeat 设置为 {repeat} (基于 {seconds} 秒，系数 {multiplier})")
-        return CustomAction.RunResult(success=True)
-
 
 # ============================================================
 # 作业集（JobSet）：打开本地编辑网页

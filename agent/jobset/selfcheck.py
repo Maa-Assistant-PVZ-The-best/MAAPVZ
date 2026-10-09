@@ -289,7 +289,7 @@ print("\n=== 7d. 局外换阵判断（JobSetPlan 的决策表） ===")
 #   正赛：表没变 -> 直接开打；表变了 -> 回清空卡牌重选
 #   训练：无论何时都重选一次
 from agent.jobset.runtime import (  # noqa: E402
-    plan_decision, GATE_UNCHANGED, GATE_CHANGED, NODE_TICK,
+    plan_decision, GATE_UNCHANGED, GATE_CHANGED,
 )
 
 # ---- 正赛 ----
@@ -317,7 +317,7 @@ check("正赛·无记录 提示保守", "保守" in _r, _r)
 # ---- 闸门节点名（pipeline 要按这个接）----
 check("未变闸门名", GATE_UNCHANGED == "无尽挑战_跳转_未变", GATE_UNCHANGED)
 check("变化闸门名", GATE_CHANGED == "无尽挑战_跳转_变化", GATE_CHANGED)
-check("计数节点名", NODE_TICK == "无尽局内_过关计数", NODE_TICK)
+# （2026-10-09：独立计数节点 JobSetTick/NODE_TICK 已删，计数并入 JobSetPlan）
 
 
 # ---------------------------------------------------------------------------

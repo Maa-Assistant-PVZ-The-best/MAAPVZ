@@ -49,24 +49,8 @@
         "./resource/task/mini_tools.json",
         "./resource/task/test.json",
         "./resource/task/video_card.json",
-        // Endless 子目录
-        "./resource/task/Endless/Endless.json", // 顶层入口
-        "./resource/task/Endless/Endless_plant.json", // 预设选择器
-        "./resource/task/Endless/Endless_auto_loop.json", // 全自动循环
-        // Endless framework 通用模块
-        "./resource/task/Endless/framework/custom/frame_custom.json", // 自定义布阵
-        "./resource/task/Endless/framework/frame/Recognition.json", // 识别
-        "./resource/task/Endless/framework/frame/Flower.json", // 抛花
-        "./resource/task/Endless/framework/frame/Patch_Plants.json", // 补植物
-        "./resource/task/Endless/framework/frame/Magic_Gan.json", // 魔甘收尾
-        "./resource/task/Endless/framework/frame/option.json", // 其他通用选项
-        //Endless ref 的文件
-        "./resource/task/Endless_ref/Endless_ref.json", //重构后的无尽入口
-        // preset 预设
-        "./resource/task/Endless/preset/yuan_big/preset_yuan_big.json", // 原大桑葚
-        "./resource/task/Endless/preset/heart_tower/preset_heart_tower.json", // 心叶兰塔黄
-        "./resource/task/Endless/preset/banana_tower/preset_banana_tower.json", // 塔黄香蕉
-        "./resource/task/Endless/preset/huin_snake/preset_huin_snake.json" //毁灭菇蛇果
+        // Endless 重构版入口（旧 Endless/* 13 个文件已随重构删除，2026-10-09 清理引用）
+        "./resource/task/Endless_ref/Endless_ref.json" //重构后的无尽入口
     ],
     "task": [
         {

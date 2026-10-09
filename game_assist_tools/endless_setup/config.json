@@ -2,12 +2,12 @@
   "CurrentControllerName": "安卓端",
   "Resource": "",
   "CurrentTasks": [
-    "无尽挑战（测试）<|||>无尽挑战_前置检查"
+    "无尽挑战（重构）<|||>无尽挑战_前置检查_ref"
   ],
   "TaskItems": [
     {
-      "name": "无尽挑战（测试）",
-      "entry": "无尽挑战_前置检查",
+      "name": "无尽挑战（重构）",
+      "entry": "无尽挑战_前置检查_ref",
       "default_check": true,
       "option": [
         {

@@ -536,14 +536,15 @@ currentValues['自定义布阵'] = shouldEnableCustom ? { index: 1 } : { index: 
     };
     const instanceName = _val('configName', "无尽_前后期");
     const controller = _val('controllerName', "安卓端");
-    const entry = _val('taskEntry', "无尽挑战_前置检查");
+    // ★ 默认入口指向重构版任务（旧「无尽挑战（测试）/无尽挑战_前置检查」已随重构删除）
+    const entry = _val('taskEntry', "无尽挑战_前置检查_ref");
 
     return {
         "CurrentControllerName": controller,
         "Resource": "",
-        "CurrentTasks": [`无尽挑战（测试）<|||>${entry}`],
+        "CurrentTasks": [`无尽挑战（重构）<|||>${entry}`],
         "TaskItems": [{
-            "name": "无尽挑战（测试）",
+            "name": "无尽挑战（重构）",
             "entry": entry,
             "default_check": true,
             "option": [optionTree]
