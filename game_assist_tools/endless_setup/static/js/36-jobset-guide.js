@@ -14,6 +14,19 @@
 
 const JOB_GUIDE_KEY = 'maapvz_guide_choice';
 
+// ---- 引导动画样式（注入一次）：弹窗弹出 / 聚光灯滑动过渡 ------------------
+(function jobGuideInjectStyle() {
+    if (document.getElementById('jobGuideStyle')) return;
+    const st = document.createElement('style');
+    st.id = 'jobGuideStyle';
+    st.textContent =
+        '@keyframes guidePop { from { opacity:0; transform:scale(.94) translateY(6px); } to { opacity:1; transform:none; } }\n' +
+        '.guide-pop { animation: guidePop .18s ease-out both; }\n' +
+        '.guide-spot-el { transition: left .28s ease, top .28s ease, width .28s ease,' +
+        ' height .28s ease, opacity .16s ease; }\n';
+    document.head.appendChild(st);
+})();
+
 // ---- 教学课题（「你需要了解的……」系列，小登按需点选）----------------------
 //   普通课题：{title, html} 静态图文；
 //   交互课题：{title, interactive:{stages:[...]}} 在真实界面上按阶段指：
@@ -88,7 +101,10 @@ const JOB_GUIDE_STEPS = [
                     html:
                         '左边是<b>阵容表图层</b>：点表名选中 = 拿笔；上面的表优先盖住下面的表。<br>' +
                         '「＋ 新建表格」加表，✏️/双击改名。',
-                    next: 'button'
+                    next: 'button',
+                    missingHtml:
+                        '布局面板没有打开——「布局配置」得先有作业集：<br>' +
+                        '先回主界面 <b>📂 选择作业集</b> 载入一个，再来这里圈关卡。'
                 },
                 {
                     targetSel: '#layoutModal .lz-body',
@@ -96,7 +112,10 @@ const JOB_GUIDE_STEPS = [
                         '右边是 1~149 关的格子：<b>点/拖动 = 把圈到的关划给当前表</b>。<br>' +
                         '玩到某关就自动切到对应的表，换阵容、换链条全自动；' +
                         '没圈的关沿用上一张表，不用担心漏配。',
-                    next: 'done'
+                    next: 'done',
+                    missingHtml:
+                        '布局面板没有打开——「布局配置」得先有作业集：<br>' +
+                        '先回主界面 <b>📂 选择作业集</b> 载入一个，再来这里圈关卡。'
                 },
             ]
         }
@@ -154,6 +173,8 @@ function jobGuideChoose(choice) {
 function jobGuideOpen() {
     const modal = jobGuideEnsureModal();
     modal.style.display = 'flex';
+    const panel = modal.firstElementChild;
+    if (panel) { panel.classList.remove('guide-pop'); void panel.offsetWidth; panel.classList.add('guide-pop'); }
 }
 
 // ============================================================
@@ -214,7 +235,10 @@ function jobGuideEnsureMenuModal() {
 }
 
 function jobGuideMenuOpen() {
-    jobGuideEnsureMenuModal().style.display = 'flex';
+    const modal = jobGuideEnsureMenuModal();
+    modal.style.display = 'flex';
+    const panel = modal.firstElementChild;
+    if (panel) { panel.classList.remove('guide-pop'); void panel.offsetWidth; panel.classList.add('guide-pop'); }
 }
 
 // ---- 单课题弹窗 ----
@@ -259,6 +283,8 @@ function jobGuideStepOpen(i) {
     document.getElementById('jobGuideStepTitle').innerHTML = s.title;
     document.getElementById('jobGuideStepBody').innerHTML = s.html;
     modal.style.display = 'flex';
+    const panel = modal.firstElementChild;
+    if (panel) { panel.classList.remove('guide-pop'); void panel.offsetWidth; panel.classList.add('guide-pop'); }
 }
 
 // 首次打开自动弹（没选过才弹）
@@ -280,16 +306,44 @@ window.addEventListener('load', function () {
 
 let _spot = null;   // {ring, bubble, target, onScroll, onTarget}
 
+function _spotEnsureEls() {
+    if (_spot) return;
+    const ring = document.createElement('div');
+    ring.className = 'guide-spot-el';
+    ring.style.cssText =
+        'position:fixed; z-index:10110; pointer-events:none; border-radius:8px;' +
+        'box-shadow:0 0 0 3px #3b82f6, 0 0 18px 4px rgba(59,130,246,0.55); opacity:0;';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'guide-spot-el';
+    bubble.style.cssText =
+        'position:fixed; z-index:10111; max-width:320px; background:#fff; border-radius:10px;' +
+        'padding:12px 14px; font-size:13px; color:#334155; line-height:1.7;' +
+        'box-shadow:0 6px 20px rgba(0,0,0,0.35); opacity:0;';
+    document.body.appendChild(ring);
+    document.body.appendChild(bubble);
+
+    _spot = { ring: ring, bubble: bubble, target: null, onTarget: null, onScroll: null };
+    // 首帧淡入
+    requestAnimationFrame(function () {
+        ring.style.opacity = '1';
+        bubble.style.opacity = '1';
+    });
+}
+
 function jobGuideSpotStop(backToMenu) {
     if (_spot) {
-        if (_spot.ring) _spot.ring.remove();
-        if (_spot.bubble) _spot.bubble.remove();
-        if (_spot.target && _spot.onTarget) {
-            _spot.target.removeEventListener('click', _spot.onTarget);
-        }
-        window.removeEventListener('resize', _spot.onScroll);
-        window.removeEventListener('scroll', _spot.onScroll, true);
+        const s = _spot;
         _spot = null;
+        if (s.target && s.onTarget) s.target.removeEventListener('click', s.onTarget);
+        if (s.onScroll) {
+            window.removeEventListener('resize', s.onScroll);
+            window.removeEventListener('scroll', s.onScroll, true);
+        }
+        // 淡出再移除
+        s.ring.style.opacity = '0';
+        s.bubble.style.opacity = '0';
+        setTimeout(function () { s.ring.remove(); s.bubble.remove(); }, 180);
     }
     if (backToMenu) jobGuideMenuOpen();
 }
@@ -321,48 +375,66 @@ function _spotLayout(elem, bubble, ring) {
     }
 }
 
-function _spotShow(targetSel, bodyHtml, footerHtml, onTargetClick) {
-    jobGuideSpotStop(false);
-    const target = document.querySelector(targetSel);
-    if (!target) {                       // 目标不在（界面状态变了）-> 回菜单
-        jobGuideMenuOpen();
+function _spotShow(targetSel, bodyHtml, footerHtml, onTargetClick, missingHtml) {
+    _spotEnsureEls();
+    const target = targetSel ? document.querySelector(targetSel) : null;
+    const visible = target && target.getBoundingClientRect().width > 1;
+
+    // 目标找不到/没显示（比如面板没打开）-> 居中气泡给提示
+    if (!visible) {
+        if (!missingHtml) { jobGuideSpotStop(true); return; }
+        _spotTargetless(missingHtml);
         return;
     }
 
-    const ring = document.createElement('div');
-    ring.style.cssText =
-        'position:fixed; z-index:10110; pointer-events:none; border-radius:8px;' +
-        'box-shadow:0 0 0 3px #3b82f6, 0 0 18px 4px rgba(59,130,246,0.55);';
-
-    const bubble = document.createElement('div');
-    bubble.style.cssText =
-        'position:fixed; z-index:10111; max-width:320px; background:#fff; border-radius:10px;' +
-        'padding:12px 14px; font-size:13px; color:#334155; line-height:1.7;' +
-        'box-shadow:0 6px 20px rgba(0,0,0,0.35);';
+    const ring = _spot.ring, bubble = _spot.bubble;
+    ring.style.display = '';
     bubble.innerHTML =
         '<div class="guide-spot-arrow" style="position:absolute; width:12px; height:12px;' +
         ' background:#fff; transform:rotate(45deg);"></div>' +
         '<div>' + bodyHtml + '</div>' +
         '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">' +
         (footerHtml || '') + '</div>';
-    document.body.appendChild(ring);
-    document.body.appendChild(bubble);
 
-    _spot = { ring: ring, bubble: bubble, target: target, onTarget: null, onScroll: null };
-    const layout = function () { _spotLayout(target, bubble, ring); };
-    _spot.onScroll = layout;
-    window.addEventListener('resize', layout);
-    window.addEventListener('scroll', layout, true);
-    layout();
-
+    if (_spot.target && _spot.onTarget) {
+        _spot.target.removeEventListener('click', _spot.onTarget);
+        _spot.onTarget = null;
+    }
+    _spot.target = target;
     if (onTargetClick) {
         const h = function () { setTimeout(onTargetClick, 350); };   // 等目标动作（弹窗）出来
         _spot.onTarget = h;
         target.addEventListener('click', h);
     }
+
+    if (!_spot.onScroll) {
+        const layout = function () {
+            if (_spot && _spot.target) _spotLayout(_spot.target, _spot.bubble, _spot.ring);
+        };
+        _spot.onScroll = layout;
+        window.addEventListener('resize', layout);
+        window.addEventListener('scroll', layout, true);
+    }
+    _spotLayout(target, bubble, ring);   // CSS transition 负责平滑滑过去
+}
+
+// 目标缺失时的居中小气泡（无高亮环）
+function _spotTargetless(missingHtml) {
+    const bubble = _spot.bubble;
+    _spot.ring.style.display = 'none';
+    bubble.innerHTML =
+        '<div>' + missingHtml + '</div>' +
+        '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">' +
+        '<button class="btn" id="guideSpotBack">返回列表</button></div>';
+    // 居中
+    bubble.style.left = Math.max(8, (window.innerWidth - bubble.offsetWidth) / 2) + 'px';
+    bubble.style.top = Math.max(8, window.innerHeight * 0.35) + 'px';
+    const back = document.getElementById('guideSpotBack');
+    if (back) back.onclick = function () { jobGuideSpotStop(true); };
 }
 
 function jobGuideSpotStart(cfg) {
+    jobGuideSpotStop(false);             // 清掉可能残留的上一个指引
     const stages = cfg.stages || [];
     let idx = 0;
 
@@ -376,7 +448,8 @@ function jobGuideSpotStart(cfg) {
         if (s.next === 'done' || isLast) footer += '<button class="btn btn-primary" id="guideSpotDone">完成</button>';
 
         _spotShow(s.targetSel, s.html, footer,
-            (s.next === 'click') ? function () { idx++; showStage(); } : null);
+            (s.next === 'click') ? function () { idx++; showStage(); } : null,
+            s.missingHtml);
 
         const back = document.getElementById('guideSpotBack');
         if (back) back.onclick = function () { jobGuideSpotStop(true); };
