@@ -1,4 +1,4 @@
-# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
+﻿# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
 
 > 工作区：`D:\maapvz\MAAPVZ`
 > 网页端（作业集编辑器）：`game_assist_tools\endless_setup\static\`
@@ -174,7 +174,7 @@ static/
 ### 目标 pipeline 节点
 
 ```
-assets\resource\pipeline\Endless_ref.json\03_Endless_fight\03-1Endless_fight_end\03-1-01Endless_fight.json
+assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1-01Endless_fight.json
 ```
 
 包含两个**空壳节点**（`enabled: false`，由运行时按作业集注入）：
@@ -927,7 +927,7 @@ agent/jobset/runtime.py     _SQUAD_ANY_OF 骨架 + _squad_any_of()；
                             _squad_param 改走 any_of（顶层 expected 对 Or 无效）
                             typing 补 List
 agent/jobset/selfcheck.py   第 10 节 squad 14 条（含与真实 pipe 对照的漂移检测）
-assets/resource/pipeline/Endless_ref.json/02_Endless_plant_Choose_ref.json
+assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json
                             （用户改动：切换编队序号 1 个 any_of -> 2 个）
 ```
 
@@ -1033,7 +1033,7 @@ static registries = {
 - **覆盖顺序钉死**：compiled 先盖，编队/补给/选卡后盖（后盖赢）；
   永不覆盖 `无尽局内_继续挑战.next`（顶掉训练模式的血泪）。
   三链 next = `[继续挑战 → 收尾(有收尾链时) → 无尽挑战_失败 → 落点]`，顺序=优先级；
-  `无尽挑战_失败` 节点在 `Endless_ref.json/Endless_out.json`，失败后行为由
+  `无尽挑战_失败` 节点在 `Endless_ref/Endless_out.json`，失败后行为由
   interface 选项「无尽挑战_失败后选项」over（停止/重置/继续）。
 - **关卡判断三件套**：boss = 头像模板匹配；结束 = 结算按钮匹配；
   关卡号 = 起始关卡 + 过关计数器（数字 OCR 不稳已砍，实测 81→21、87→89）。

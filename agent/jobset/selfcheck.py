@@ -524,7 +524,7 @@ try:
     # --- ★ 与真实 pipe 对照：项数 / roi / recognition 必须一致 ---
     # ⚠️ pipe 文件是 **JSONC**（带 // 注释），标准 json 解析不了，先去掉注释。
     _pipe10 = Path(__file__).resolve().parent.parent.parent / (
-        "assets/resource/pipeline/Endless_ref.json/02_Endless_plant_Choose_ref.json"
+        "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
     )
     _raw10 = _pipe10.read_text(encoding="utf-8")
     _raw10 = "\n".join(
@@ -669,7 +669,7 @@ try:
 
     # --- _CLEAR_CARDS_ORIG 必须与 pipe 原值一致（改了 pipe 要同步 runtime）---
     _pipe13 = Path(__file__).resolve().parent.parent.parent / (
-        "assets/resource/pipeline/Endless_ref.json/02_Endless_plant_Choose_ref.json"
+        "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
     )
     _raw13 = "\n".join(
         ln for ln in _pipe13.read_text(encoding="utf-8").splitlines()

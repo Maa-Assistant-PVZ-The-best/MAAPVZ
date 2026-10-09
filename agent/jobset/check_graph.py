@@ -52,7 +52,7 @@ def refs(v):
 
 
 def main():
-    scope = PIPE / "Endless_ref.json"
+    scope = PIPE / "Endless_ref"
     local = load_all(scope)
     allnodes = load_all(PIPE)
 

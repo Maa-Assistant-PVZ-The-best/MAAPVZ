@@ -249,7 +249,7 @@ NODE_OUTER_AUTO_ENTRY = "无尽挑战_80植物界面_选项1_清空植物"  # au
 NODE_OUTER_ONECLICK = "无尽选卡_80个植物_一键选择"            # oneclick：点一键选择（自带 next -> 确定）
 NODE_OUTER_CONFIRM = "无尽选卡_80个植物_确定"                 # 确定按钮（next -> 识别开始战斗）
 _OUTER_PICK_PIPE_PARTS = (
-    "pipeline", "Endless_ref.json", "06_Endless_80plant_choose", "0601_80plant_choose_1.json",
+    "pipeline", "Endless_ref", "06_Endless_80plant_choose", "0601_80plant_choose_1.json",
 )
 
 
