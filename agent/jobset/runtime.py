@@ -740,6 +740,13 @@ class JobSetPlan(CustomAction):
             before = tr.count
             lv_new = tr.tick()
             _log(f"过关计数：{before} -> {lv_new}（已点继续挑战/继续训练）")
+            # ★ 撞上限（tick 被钳制，如 149 -> 149）：本轮无尽已结束，
+            #   后面走的是重置流程而不是下一关 —— 明确播报，别再打出
+            #   「沿用表X 直接开打」这种误导性计划（2026-10-10 卡点事故）。
+            if lv_new == before and js is not None and js.max_level \
+                    and before >= js.max_level:
+                _log(f"🏁 已达关卡上限 {js.max_level}：本轮无尽结束，"
+                     f"等待「重置」流程走完（重置完毕 -> 自动计数归位）")
 
         # ★ 每关开局把 boss 判定清零 —— 它是「只进不出」的粘滞状态：
         #   boss 关由头像路径（无尽局内_BOSS关种植，param 显式 true）置 True，
@@ -902,6 +909,9 @@ class JobSetLoad(CustomAction):
             _STATE["jobset"] = None
             _STATE["tracker"] = None
             _STATE["table_index"] = None
+            _STATE["locked_level"] = None     # 锁关卡号也是粘滞状态（2026-10-10：
+                                              #   曾残留 147 进新一轮，日志误诊断）
+            _STATE["plan_table_index"] = None  # 预热表指针同理
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
@@ -1016,8 +1026,22 @@ class JobSetAutoCount(CustomAction):
             return _ok()
 
         tr = _ensure_tracker({})
+        old = tr.count
         tr.reset(lv)
         _log(f"📟 自动计数：识别到「{text}」-> 起始关卡 = {tr.count}")
+
+        # ★ 关卡号回落 = 新一轮无尽开始（重置流程走到「重置完毕（第1关）」
+        #   会回本节点）。表锁/锁关卡号/阵容签名/神器签名全是上一轮的
+        #   粘滞状态，必须一起清 —— 否则新一轮第 1 关会沿用尾表，
+        #   或被「阵容相同」误判跳过选卡（2026-10-10 日志实锤：
+        #   关卡1 的锁里残留着上一轮 147 的 locked_level）。
+        if old and tr.count < old:
+            _STATE["table_index"] = None
+            _STATE["locked_level"] = None
+            _STATE["lineup_sig"] = None
+            _STATE["artifact_sig"] = None
+            _log(f"🏁 关卡回落 {old} -> {tr.count}：新一轮无尽 -> "
+                 f"已清表锁与阵容/神器签名（重新走完整选卡）")
 
         js: Optional[JobSet] = _STATE.get("jobset")
         if js is not None:
@@ -1159,6 +1183,7 @@ class JobSetFight(CustomAction):
             #   不算换阵容、不重开。JobSetLoad 故意把 table_index 留成 None
             #   就是为了区分「首次」与「真的换了表」。
             _STATE["table_index"] = table.index
+            _STATE["locked_level"] = lv
             _log(
                 f"首次锁定阵容：关卡{lv} -> 表{table.index + 1}"
                 f"（植物 {table.plants}），不重开"

@@ -469,11 +469,11 @@ async function jobDelete() {
 // ============================================================
 // 远程作业集入口：「🌐 远程作业集」按钮 -> 选择弹窗
 //   · ⬆ 上传本地作业集（走 GitHub Issue 提交，待接入）
-//   · ⬇ 下载远程作业集（跳转远程作业集网站，站点待建——地址填 JOB_REMOTE_SITE）
+//   · ⬇ 下载远程作业集（跳转远程作业集网站，地址在 JOB_REMOTE_SITE）
 // ============================================================
 
-// ★ 远程作业集网站地址（GitPages，建好后填这里，如 https://xxx.github.io/MAAPVZ-jobs/）
-const JOB_REMOTE_SITE = '';
+// ★ 远程作业集网站地址（GitPages，2026-10-10 上线）
+const JOB_REMOTE_SITE = 'https://daoyanxiaoz.github.io/maapvz-remote-assignment-set-integration/index.html';
 
 // 入口弹窗的样式（注入一次）
 (function _jobRemoteInjectStyle() {
@@ -571,7 +571,7 @@ function jobRemoteUploadOpen() {
     _jobRemoteShow('jobRemoteUploadModal', '⬆️ 上传本地作业集', '');
 }
 
-// 下载：跳转远程作业集网站（站点待建，地址填 JOB_REMOTE_SITE）
+// 下载：跳转远程作业集网站（地址在 JOB_REMOTE_SITE）
 function jobRemoteDownloadOpen() {
     if (JOB_REMOTE_SITE) {
         window.open(JOB_REMOTE_SITE, '_blank');
