@@ -56,6 +56,17 @@ const JOB_BOARD_ACTIONS = [
         color: '#fdba74', armedNo: 11, dslType: 'tap',
         desc: '选中后在棋盘落子，执行时点一下那个格子',
         inMore: true
+    },
+
+    // ---- ★ 拖拽类神器落子（魔豆这类：从神器初始化位置拖到格子）----
+    //   不进「更多」弹窗：当前表（普通/boss 任一）选了 swipe 类神器时，
+    //   自动出现在左侧和植物一排（见 27 的渲染过滤 + 35 的 jobSwipeArtifactOf）；
+    //   图标/名字跟随当前选中的那件拖拽类神器（jobBoardActionImg 里特判）。
+    {
+        id: 'artifactswipe', name: '神器拖拽', icon: '🏺',
+        color: '#f9a8d4', armedNo: 12, dslType: 'artifactswipe',
+        desc: '拖拽类神器：选中后在棋盘落子，执行时从神器初始化位置拖到该格',
+        inMore: false, artifactSwipe: true
     }
 
     // ---- 未来需求的参考写法（照着抄即可，记得换唯一 armedNo）----
@@ -108,6 +119,11 @@ function jobIsBoardActionKey(key) {
 // 该动作的图标路径（未配置 -> 回退到铲子占位，再回退空串）
 function jobBoardActionImg(act) {
     if (!act) return '';
+    // ★ 拖拽类神器：图标跟随当前选中的那件 swipe 神器（35 提供查询）
+    if (act.artifactSwipe && typeof jobSwipeArtifactImg === 'function') {
+        const p = jobSwipeArtifactImg();
+        if (p) return p;
+    }
     if (act.img) return act.img;
     const imgs = (typeof JOB_UI_IMG !== 'undefined') ? JOB_UI_IMG : {};
     if (act.imgKey && imgs[act.imgKey]) return imgs[act.imgKey];

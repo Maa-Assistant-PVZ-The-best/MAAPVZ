@@ -497,3 +497,12 @@ def find_shovel_point(coords: Dict[str, Any]) -> Optional[str]:
             return c
     return None
 
+
+def find_artifact_point(coords: Dict[str, Any]) -> Optional[str]:
+    """神器图标位置（拖拽类神器滑动的起点，如魔豆神器）。
+    注意前缀是「神器_初始化_」不是 PREFIX_INIT（种植物_初始化_）。"""
+    for c in ("神器_初始化_神器位置", "神器位置"):
+        if _coord_ok(coords, c):
+            return c
+    return None
+

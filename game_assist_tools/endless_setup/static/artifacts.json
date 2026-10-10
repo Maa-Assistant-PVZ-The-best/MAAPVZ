@@ -155,7 +155,7 @@
     "name": "魔豆神器",
     "en": "artifact_magicbeans",
     "desc": "长出魔豆顶飞僵尸，掉落豆荚炸烂僵尸。",
-    "type": "click",
+    "type": "swipe",
     "img": "static/artifact/artifact_magicbeans.webp",
     "has_img": false
   },

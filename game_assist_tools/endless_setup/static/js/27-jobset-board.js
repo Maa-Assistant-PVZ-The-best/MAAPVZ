@@ -2409,7 +2409,12 @@ function jobRenderSlots() {
     _acts.forEach(function (act) {
         const isArmed = (jobArmedSlot === act.armedNo);
         // 非内置动作：没落在棋盘上就不占地方（左侧更干净）
-        if (!act.builtin && !isArmed && !jobBoardActionHasPlacement(act)) return;
+        // ★ 例外：拖拽类神器按钮（artifactSwipe）——当前表带了 swipe 类神器
+        //   就常驻（和植物一排），哪怕棋盘上还没有落子。
+        if (act.artifactSwipe) {
+            const hasSwipeArt = (typeof jobSwipeArtifactOf === 'function') && !!jobSwipeArtifactOf();
+            if (!hasSwipeArt && !isArmed && !jobBoardActionHasPlacement(act)) return;
+        } else if (!act.builtin && !isArmed && !jobBoardActionHasPlacement(act)) return;
 
         const el = document.createElement('div');
         el.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;'
@@ -2426,7 +2431,10 @@ function jobRenderSlots() {
 
         const lbl = document.createElement('span');
         lbl.style.cssText = 'font-size:12px;';
-        lbl.textContent = act.name;
+        // ★ 拖拽类神器按钮的名字跟随当前选中的神器（如「魔豆神器」），兜底注册表名
+        const _swArt = (act.artifactSwipe && typeof jobSwipeArtifactOf === 'function')
+            ? jobSwipeArtifactOf() : null;
+        lbl.textContent = (_swArt && _swArt.name) ? _swArt.name : act.name;
         el.appendChild(lbl);
 
         el.title = (act.desc || '') + '（右键切换单次/循环：'

@@ -168,11 +168,15 @@ def build_chain_nodes(
                 src = _dsl.find_feed_point(coords)
             elif typ == "shovel":
                 src = _dsl.find_shovel_point(coords)
+            elif typ == "artifactswipe":
+                # ★ 拖拽类神器（魔豆等）：起点 = 神器图标初始化位置，
+                #   编译成 swipe:神器位置,格子 —— 和植物"从卡片拖到格子"同构。
+                src = _dsl.find_artifact_point(coords)
             # ★ typ == "tap"（点击格子）：**故意不设起点** —— 落到下面的
             #   `src is None` 分支，编译成 click:格子N_M。这正是要的语义。
-            # ★ feed/shovel 本该有起点；缺起点会静默退化成「点击格子」
-            #   （点格子不拖豆子 = 什么都没做），必须告警。
-            if src is None and typ in ("feed", "shovel"):
+            # ★ feed/shovel/artifactswipe 本该有起点；缺起点会静默退化成
+            #   「点击格子」（点格子不拖豆子/不放神器 = 什么都没做），必须告警。
+            if src is None and typ in ("feed", "shovel", "artifactswipe"):
                 log(f"  ⚠️ {typ}:{seg.get('label') or key} 无起点坐标，退化为 click")
 
             # 该段每个落点的「动作后等待」秒数（与 cells 等长，来自 waitAfter）

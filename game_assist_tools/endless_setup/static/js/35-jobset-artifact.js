@@ -9,7 +9,8 @@
 //   type: click=点图标 / swipe=滑到格子 / hold=长按 / special=点图标+点第二位置
 //   has_img=false -> 弹窗打叉禁选（和植物同一套「没有图片资源」表现）。
 // 入口：普通/boss 棋盘的通用动作块右边各一个「神器」板块（同名同样式）；
-//   特殊类神器的体型图标 = 「使用神器·体型」的链条插入入口（弹选链窗）。
+//   特殊类神器的体型图标 = 「使用神器·体型」的链条插入入口（弹选链窗）；
+//   点击类神器的「点击神器」子按钮 = 「使用神器」的链条插入入口（点初始化位置）。
 // ============================================================
 
 let artifactCache = null;        // /artifacts 缓存
@@ -19,6 +20,22 @@ let jobArtifactPickTarget = 'normal'; // 弹窗目标：'normal' | 'boss'
 function jobArtifactOf(name) {
     if (!name) return null;
     return (artifactCache || []).find(function (a) { return a && a.name === name; }) || null;
+}
+
+// 当前表携带的拖拽类神器（普通关/boss 任一命中即算）——
+// 左侧「神器拖拽」落子按钮的显隐（27）与图标（15->jobBoardActionImg）都靠它。
+function jobSwipeArtifactOf() {
+    const t = (typeof jobTables !== 'undefined') ? jobTables[currentTable] : null;
+    if (!t) return null;
+    const a1 = jobArtifactOf(t.artifact);
+    if (a1 && a1.type === 'swipe') return a1;
+    const a2 = jobArtifactOf(t.bossArtifact);
+    if (a2 && a2.type === 'swipe') return a2;
+    return null;
+}
+function jobSwipeArtifactImg() {
+    const a = jobSwipeArtifactOf();
+    return (a && a.img) ? ('/' + a.img) : '';
 }
 
 // 加载神器列表：优先 /artifacts（后端扫 god_vessel 实况注入 has_img / bodytypes），
@@ -75,6 +92,8 @@ function jobArtifactEffBody(t, target, bts) {
 function jobRenderArtifactBlock() {
     _renderArtBlockInto('artifactBlock', 'normal');
     _renderArtBlockInto('artifactBlockBoss', 'boss');
+    // ★ 拖拽类神器决定左侧「神器拖拽」落子按钮的显隐 —— 选完神器联动刷左栏
+    if (typeof jobRenderSlots === 'function') jobRenderSlots();
 }
 
 function _renderArtBlockInto(boxId, target) {
@@ -164,6 +183,37 @@ function _renderArtBlockInto(boxId, target) {
         box.appendChild(sub);
     } else if (t && t[jobArtifactBodyField(t, target)]) {
         t[jobArtifactBodyField(t, target)] = null;   // 换成非特殊类神器 -> 清掉体型选择
+    }
+
+    // ★ 点击类神器的「点击神器」子按钮（如棱镜塔）：
+    //   点击 = 把「使用神器」插入当前棋盘的链条（弹选链窗）；
+    //   运行时 dsl 编译为点一次「神器_初始化_神器位置」。
+    if (cur && cur.type === 'click') {
+        const sub = document.createElement('div');
+        sub.className = 'art-subtypes';
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'gen-act art-subtype';
+        const i2 = document.createElement('span');
+        i2.className = 'ga-ico';
+        const im2 = document.createElement('img');
+        im2.src = '/' + cur.img;                // 用神器自己的展示图当按钮图标
+        im2.className = 'ga-ico-img';
+        im2.alt = '点击神器';
+        i2.appendChild(im2);
+        b.appendChild(i2);
+        const n2 = document.createElement('span');
+        n2.className = 'ga-name';
+        n2.textContent = '点击神器';
+        b.appendChild(n2);
+        b.title = '点击类神器：点击把「使用神器」插入链条（单次/循环/收尾任选）\n'
+            + '局内 = 点一次神器图标（初始化位置）';
+        b.addEventListener('click', function () {
+            jobArtifactInsertBody = null;       // 点击类无体型快照
+            if (typeof jobOpenGenPicker === 'function') jobOpenGenPicker('artifact');
+        });
+        sub.appendChild(b);
+        box.appendChild(sub);
     }
 }
 
