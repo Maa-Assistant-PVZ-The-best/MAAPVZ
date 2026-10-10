@@ -28,7 +28,12 @@ CHAIN_NODE_TPL = "无尽挑战_组合动作_{kind}"
 KIND_CN = {"once": "单次", "loop": "循环", "end": "收尾"}
 
 # 组合动作里的 ref 触发节点（识别命中即停本批、跟随 next）
-REF_SETTLE = "无尽局内_继续挑战"      # 结算画面（正赛）
+REF_SETTLE = "无尽局内_继续挑战"      # 结算画面（正赛）—— 正道点击节点（紧 ROI 停靠位）
+# ★ 2026-10-10 拆分：ref/guard 的**识别**改走大 ROI 守卫节点（滑入途中即可命中、
+#   提前拦停裸点链）；链的 next 仍落 REF_SETTLE（紧 ROI，只在停靠位命中 -> 点必中）。
+#   两者若共用主节点：大 ROI 让主节点在滑入动画中命中 -> pre_delay 后按旧框位点空，
+#   画面不动却计数+1 -> 跳转_未变超时（boss 关一天 7 次）。
+REF_SETTLE_GUARD = "无尽局内_继续挑战_守卫"  # 识别专用接口节点（大 ROI，无动作无 next）
 REF_LAST_WAVE = "无尽挑战_收尾"       # 最后一波（僵尸头像）-> 跳收尾链
 REF_TRAIN = "无尽训练_继续训练"       # 结算画面（训练模式）
 REF_FAILED = "无尽挑战_失败"          # 战斗失败画面（pipe 节点由用户自己接线）
@@ -51,7 +56,7 @@ NODE_LOOP_CHAIN = CHAIN_NODE_TPL.format(kind=KIND_CN["loop"])
 #     模板识别比 OCR 快，命中即短路，不再跑后面的 OCR（缩短识别->点击窗口）。
 #     该节点只是识别接口（不接 next、不进 next），守卫识别到后停批，
 #     由节点 next 轮询等「继续挑战」出现再走正道。
-GUARD_TOKEN = ("guard:无尽局内_恭喜过关|无尽局内_继续挑战|无尽训练_继续训练"
+GUARD_TOKEN = ("guard:无尽局内_恭喜过关|无尽局内_继续挑战_守卫|无尽训练_继续训练"
                "@@roi:642,580,312,135|312,583,312,135")
 
 # ★ 循环链为空时注入的空动作：节点仍在，靠 next 自循环等结算。
@@ -204,7 +209,9 @@ def build_chain_nodes(
         if not body:
             continue
         # ★ 识别触发（放在动作之前，是「触发条件」不是动作）：
-        #   ref:无尽局内_继续挑战  —— 结算画面出现 -> 停本批、跟随 next
+        #   ref:无尽局内_继续挑战_守卫 —— 结算画面出现 -> 停本批、跟随 next
+        #                              （大 ROI 识别专用节点，滑入途中即可命中；
+        #                              正道点击仍由 next 里的紧 ROI 主节点执行）
         #   ref:无尽挑战_收尾      —— 检测到最后一波 -> 停本批，next 里会跳收尾链
         #   ref:无尽挑战_失败      —— 战斗失败画面 -> 停本批，next 里跳失败处理
         #   ref:无尽训练_继续训练  —— 训练模式的结算按钮（正赛下识别不到，无害）
@@ -215,7 +222,7 @@ def build_chain_nodes(
         #     收尾只由计数门决定。带着的话最后一波头像一亮，ref 每轮必中
         #     -> 停批 -> 回循环入口 -> 再进链 -> 再中……10Hz 空转死循环
         #     （2026-10-09 日志实锤：组合动作_循环 0.1s 一圈疯狂空转）。
-        refs: List[str] = [REF_SETTLE]
+        refs: List[str] = [REF_SETTLE_GUARD]
         if kind != "end" and has_end and not loops_mode:
             refs.append(REF_LAST_WAVE)
         refs.append(REF_FAILED)
