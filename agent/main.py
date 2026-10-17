@@ -34,6 +34,8 @@ import actions
 import custom_select_plant
 # 创意庭院：关卡 ID 的 OCR 提取（CreateYardOCRLevelID）与 Shell 输入（CreateYardInputLevelID）
 import create_yard_id  # noqa: F401
+# 创意庭院「分享到抖音」：点开关卡卡片并发布（ShareClickLevelPublish）
+import share_publish  # noqa: F401
 # 无尽挑战重构：作业集运行时（JobSetLoad / JobSetLevel / JobSetSlot ...）
 import jobset.runtime  # noqa: F401
 
