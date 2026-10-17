@@ -359,6 +359,7 @@
         "post_delay": 2000,
         "next": [
             "创意庭院_分享_渠道_抖音",
+            "创意庭院_分享_渠道_QQ",
             "创意庭院_分享_面板_点分享"
         ]
     },
@@ -385,6 +386,34 @@
         // 不能加 post_wait_freezes：本节点是 Shell 动作、没有识别框，
         // wait_freezes 拿不到参照矩形会报 failed to get target rect。
         // 切回前台后的等待由后面的 回到预览层 桥接节点承担。
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_回到预览层"]
+    },
+
+    "创意庭院_分享_渠道_QQ": {
+        // 渠道条第二个图标下的文字（实测 1280×720：box 546,668,26,18，OCR 认得「QQ」）。
+        // 和 渠道_抖音 是并列候选，谁生效由 interface.json 的「分享渠道」option
+        // 把另一个 enabled 置 false 决定 —— 面板上六个图标同时都在，两个节点都能命中，
+        // 靠 next 顺序表达不了用户的选择。
+        "recognition": "OCR",
+        "expected": ["QQ"],
+        "roi": [531, 656, 62, 36],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 3000,
+        "next": ["创意庭院_分享_关闭QQ"]
+    },
+
+    "创意庭院_分享_关闭QQ": {
+        // 与 关闭抖音 同构。同样不能加 post_wait_freezes：
+        // Shell 动作没有识别框，wait_freezes 拿不到参照矩形会报错。
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "am force-stop com.tencent.mobileqq"
+            }
+        },
+        "pre_delay": 500,
         "post_delay": 1500,
         "next": ["创意庭院_分享_回到预览层"]
     },
