@@ -59,6 +59,20 @@
         "action": "Click",
         "post_delay": 2000,
         "next": [
+            "无尽_识别植物编队"
+        ]
+    },
+    "无尽_识别植物编队": {
+        "recognition": "OCR",
+        "expected": "植物编队",
+        "roi": [
+            128,
+            7,
+            627,
+            184
+        ],
+        "threshold": 0.8,
+        "next": [
             "无尽_过滤编队颜色"
         ]
     },
@@ -86,6 +100,39 @@
             }
         },
         "action": "DoNothing",
+        "next": [
+            "无尽_点击2队"
+        ]
+    },
+    "无尽_点击2队": {
+        "recognition": "OCR",
+        "expected": "2",
+        "roi": [
+            128,
+            125,
+            56,
+            407
+        ],
+        "threshold": 0.5,
+        "action": "Click",
+        "post_delay": 800,
+        "next": [
+            "无尽挑战_点击2队_清空卡牌"
+        ]
+    },
+    "无尽挑战_点击2队_清空卡牌": {
+        "recognition": "OCR",
+        "expected": [
+            "清空卡牌"
+        ],
+        "roi": [
+            22,
+            660,
+            75,
+            27
+        ],
+        "action": "Click",
+        "post_delay": 800,
         "next": [
             "无尽_切换编队序号",
             "无尽_滑动寻找编队"
