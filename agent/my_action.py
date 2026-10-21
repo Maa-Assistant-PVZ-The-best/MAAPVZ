@@ -604,12 +604,12 @@ class PasteClipboard(CustomAction):
 
         # ---------- 5. 执行 ADB 命令 ----------
         if adb_serial:
-            cmd = f'"{adb_path}" -s {adb_serial} shell input text "{escaped}"'
+            cmd = [adb_path, "-s", adb_serial, "shell", "input", "text", f'"{escaped}"']
         else:
-            cmd = f'"{adb_path}" shell input text "{escaped}"'
-        print(f"[PasteClipboard] 执行命令: {cmd[:200]}...")
+            cmd = [adb_path, "shell", "input", "text", f'"{escaped}"']
+        print(f"[PasteClipboard] 执行命令: {cmd}"[:200] + "...")
         import subprocess
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"[PasteClipboard] 执行失败 (code {result.returncode}): {result.stderr}")
             return CustomAction.RunResult(success=False)
