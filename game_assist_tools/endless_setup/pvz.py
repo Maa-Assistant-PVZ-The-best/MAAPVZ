@@ -1,5 +1,5 @@
-from flask import Flask, request, jsonify, send_from_directory
-import os, json, re, shutil, sys
+from flask import Flask, request, jsonify, send_from_directory, session
+import os, json, re, secrets, shutil, sys
 
 # 以脚本所在目录为基准（保持成熟版 static/ 结构；用绝对路径，便于 agent 直接拉起而无需 cd）
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
