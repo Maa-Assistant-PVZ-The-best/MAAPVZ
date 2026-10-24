@@ -175,14 +175,28 @@ function jobCustomIdentity(s) {
     return [s.act || '', s.from || '', s.to || '', pairs].join('|');
 }
 
+// ★ 「滑飞弹」：固定两点滑动（坐标表「滑飞弹点位1」->「滑飞弹点位2」）。
+//   comboWatchOff = 插入时默认「原子连击」（连击中途不参与识别）；
+//   次数/滑动时长走 params 声明（chip/插入弹窗自动跟随），
+//   时长默认 10ms，⚙ 调配参数里也能改（27-jobset-board 的 missile 分支）。
+const JOB_MISSILE_ACTION = {
+    id: 'missile', name: '滑飞弹', icon: '🚀', img: '',
+    desc: '从「滑飞弹点位1」滑到「滑飞弹点位2」，默认 10ms × 连击 20 次（原子连击，中途不识别）',
+    comboWatchOff: true,
+    params: [
+        { key: 'times', type: 'int', label: '次数', min: 1, max: 9999, def: 20, suffix: '次' },
+        { key: 'ms', type: 'int', label: '滑动时长', min: 0, max: 5000, def: 10, suffix: 'ms' }
+    ]
+};
+
 // 可按 id 取到的全部通用动作（含不在按钮组里的「切换形态」「使用神器」）
-const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION, JOB_ARTIFACT_ACTION, JOB_CUSTOM_ACTION]);
+const JOB_ALL_GENERIC_ACTIONS = JOB_GENERIC_ACTIONS.concat([JOB_FORM_ACTION, JOB_ARTIFACT_ACTION, JOB_CUSTOM_ACTION, JOB_MISSILE_ACTION]);
 
 // ★ 「更多」列表里的动作 —— 即「不在按钮组、但可从更多进入」的动作。
 //   新增一个就从这里加，列表 UI 自动渲染（无需改 HTML/弹窗代码）。
 //   （自定义动作例外：进的是专属弹窗 #customPicker，见 30/33。）
 //   （使用神器例外：从神器板块的体型图标进，见 35。）
-const JOB_MORE_ACTIONS = [JOB_FORM_ACTION, JOB_CUSTOM_ACTION];
+const JOB_MORE_ACTIONS = [JOB_FORM_ACTION, JOB_CUSTOM_ACTION, JOB_MISSILE_ACTION];
 
 // ============================================================
 // ★ 「点击格子」—— 摆在棋盘上的落子动作（不是链上的通用动作）

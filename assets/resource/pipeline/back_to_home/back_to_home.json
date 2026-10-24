@@ -81,7 +81,7 @@
         ],
         "method": 10001,
         "action": "DoNothing",
-        "max_hit": 100,
+        "max_hit": 40,
         "inverse": true,
         "next": [
             "返回主界面",

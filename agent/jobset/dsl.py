@@ -214,6 +214,17 @@ GENERIC_BEAN_LINES = [
 ]
 GENERIC_BEAN_MS = 100
 
+# ---------------------------------------------------------------------------
+# ★ 固定两点滑动族：从坐标表里的点位 A 滑到点位 B（无槽位概念）。
+#   新增同类动作只需在这里加一行 + 网页端 24-jobset-fields.js 加定义。
+#   字段：from/to = 坐标键；times_def = 手写 JSON 没给 times 时的默认次数
+#   （网页端段上 params 声明的 def 会显式导出，这里只是手写兜底）。
+# ---------------------------------------------------------------------------
+GENERIC_SWIPE_PAIR: Dict[str, Dict[str, Any]] = {
+    # 滑飞弹：默认 20 次原子连击（网页端插入时默认 comboWatch=false）
+    "missile": {"from": "滑飞弹点位1", "to": "滑飞弹点位2", "times_def": 20},
+}
+
 
 def _coord_any(coords: Dict[str, Any], name: str) -> Optional[str]:
     """在坐标表里找一个键（先带前缀、再裸名）。"""
@@ -370,6 +381,25 @@ def generic_dsl(
             watch = merged.get("comboWatch", True) is not False
             parts.extend(rep_parts(f"click:{key}", n, gap, watch))
 
+    elif aid in GENERIC_SWIPE_PAIR:
+        # ★ 固定两点滑动族（滑飞弹等）：swipe:点A,点B,时长
+        #   时长 = 段上 ms（编辑器「更多」弹窗/⚙ 调配参数里调，默认 10）；
+        #   段上没有（手写 JSON）兜底 10ms。
+        spec = GENERIC_SWIPE_PAIR[aid]
+        a = spec["from"] if _coord_ok(coords, spec["from"]) else None
+        b = spec["to"] if _coord_ok(coords, spec["to"]) else None
+        if a is None:
+            missing.append(f"{aid}：坐标表缺少「{spec['from']}」")
+        if b is None:
+            missing.append(f"{aid}：坐标表缺少「{spec['to']}」")
+        if a and b:
+            n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX,
+                           int(spec.get("times_def") or 1))
+            gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
+            watch = merged.get("comboWatch", True) is not False
+            ms_v = _clamp_int(merged.get("ms"), 0, 5000, 10)
+            parts.extend(rep_parts(f"swipe:{a},{b},{ms_v}", n, gap, watch))
+
     elif aid == "custom":
         # ★ 自定义动作（网页端「更多 -> 自定义动作」）：段上带 act/from/to/ms/pairs
         #   act=click  点击坐标 from
@@ -378,7 +408,12 @@ def generic_dsl(
         #   act=multi  多指：pairs=[[from,to],...]（2~5 组），同时按下/移动/抬起
         #   键名必须是坐标表里的**原名**（用户从坐标表挑的），不做前缀猜测。
         act = str(merged.get("act") or "").strip()
-        ms_v = _clamp_int(merged.get("ms"), 50, 600000, 600)
+        # ★ ms 下限 0（2026-10-12，与作业集滑动时长下限对齐 —— 原来是 50，
+        #   用户把时长设 1 保存出来被静默夹成 50）。
+        # ★ 位置参数 ms 兜底并进参数袋：调用方直传 ms= 时不再静默丢成默认 600。
+        if merged.get("ms") is None and ms is not None:
+            merged["ms"] = ms
+        ms_v = _clamp_int(merged.get("ms"), 0, 600000, 600)
         # ★ 连击：所有自定义动作通用（点/滑/长按/多指 连做 N 次）
         n = _clamp_int(merged.get("times"), 1, GENERIC_FORM_TIMES_MAX, 1)
         # ★ 连击间隔 comboMs（默认 0 = 紧挨着连做；>0 时相邻两次间插 sleep）

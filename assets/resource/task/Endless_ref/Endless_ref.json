@@ -6,6 +6,7 @@
             "cases": [
                 {
                     "name": "编辑作业集",
+                    "description": "选择该选项，启用任务后进入网页端作业集编辑器",
                     "pipeline_override": {
                         "无尽挑战_前置检查_ref": {
                             "next": [
@@ -25,6 +26,7 @@
                 },
                 {
                     "name": "使用本地作业集",
+                    "description": "使用网页端选择的作业集，请在网页端保持为最新保存进度再使用",
                     "option": [
                         "无尽模式_重构",
                         "无尽挑战_选择世界"
@@ -43,6 +45,14 @@
         //
         //  这个 override 指向 JobSetLoad 的 custom_action_param，
         //  运行时用 from_params() 读 "起始关卡" 这一个键。
+        //
+        //  ★★ 本字段只允许本 option 一个写入者 ★★
+        //  GUI 的 option 会合是「同节点同字段整体替换」：两个 option 都写
+        //  无尽挑战_加载作业集代码.custom_action_param 时，后应用的把先应用
+        //  的整个字段顶掉（2026-10-22 事故：世界 case 注入「当前世界」把
+        //  起始关卡顶丢 -> 计数器从 0 起 -> 第 2 关摆的还是第 1 关的表）。
+        //  「当前世界」已改注到 JobSetPlan 双节点（无尽局内_过关_正赛/训练）。
+        //  防护：agent/jobset/selfcheck.py §18 会断言这个唯一写入者规则。
         //
         //  ★ verify 必须是**数字范围**校验（不是 .{1,149}）。
         //    1-149 的正则写法：1 位/2 位任意，或 3 位里 100-149。
@@ -109,6 +119,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_埃及": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "神秘埃及"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "神秘埃及"
+                            }
                         }
                     }
                 },
@@ -117,6 +141,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_海盗港湾": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "海盗港湾"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "海盗港湾"
+                            }
                         }
                     }
                 },
@@ -125,6 +163,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_狂野西部": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "狂野西部"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "狂野西部"
+                            }
                         }
                     }
                 },
@@ -133,6 +185,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_功夫世界": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "功夫世界"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "功夫世界"
+                            }
                         }
                     }
                 },
@@ -141,6 +207,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_未来": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "未来世界"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "未来世界"
+                            }
                         }
                     }
                 },
@@ -149,6 +229,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_黑暗时代": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "黑暗时代"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "黑暗时代"
+                            }
                         }
                     }
                 },
@@ -157,6 +251,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_巨浪沙滩": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "巨浪沙滩"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "巨浪沙滩"
+                            }
                         }
                     }
                 },
@@ -165,6 +273,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_冰河世界": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "冰河世界"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "冰河世界"
+                            }
                         }
                     }
                 },
@@ -173,6 +295,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_天空之城": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "天空之城"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "天空之城"
+                            }
                         }
                     }
                 },
@@ -181,6 +317,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_失落之城": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "失落之城"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "失落之城"
+                            }
                         }
                     }
                 },
@@ -189,6 +339,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_摇滚年代": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "摇滚年代"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "摇滚年代"
+                            }
                         }
                     }
                 },
@@ -197,6 +361,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_恐龙危机": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "恐龙危机"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "恐龙危机"
+                            }
                         }
                     }
                 },
@@ -205,6 +383,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_摩登世界": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "摩登世界"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "摩登世界"
+                            }
                         }
                     }
                 },
@@ -213,6 +405,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_蒸汽时代": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "蒸汽时代"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "蒸汽时代"
+                            }
                         }
                     }
                 },
@@ -221,6 +427,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_复兴时代": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "复兴时代"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "复兴时代"
+                            }
                         }
                     }
                 },
@@ -229,6 +449,20 @@
                     "pipeline_override": {
                         "无尽挑战_选择世界_童话世界": {
                             "enabled": true
+                        },
+                        "无尽局内_过关_正赛": {
+                            "custom_action_param": {
+                                "训练模式": false,
+                                "计数": true,
+                                "当前世界": "童话世界"
+                            }
+                        },
+                        "无尽局内_过关_训练": {
+                            "custom_action_param": {
+                                "训练模式": true,
+                                "计数": true,
+                                "当前世界": "童话世界"
+                            }
                         }
                     }
                 }

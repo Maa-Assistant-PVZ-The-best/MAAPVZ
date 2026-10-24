@@ -11,6 +11,7 @@ on:
       - "**.py"
       - "requirements.txt"
       - "docs/imgs/**"
+      - "pi-profile.android.yaml"
   pull_request:
     branches:
       - "**"
@@ -21,6 +22,7 @@ on:
       - "**.py"
       - "requirements.txt"
       - "docs/imgs/**"
+      - "pi-profile.android.yaml"
   workflow_dispatch:
     inputs:
       version:
@@ -130,6 +132,29 @@ jobs:
             exit 1
           fi
 
+      # ===== 安卓包改 resource id（桌面端保持 MaaPVZ）=====
+      # APK 打包用的 interface.json 就是上一步从 assets/ 拍平拷到 resource 根目录的那份。
+      # 只改行内文本、不解析 JSON：该文件含 // 注释，不是严格 JSON，用 json/jsonc 回写会丢注释。
+      # 上传侧由官方的 mirrorchyan_release.yml 负责（matrix 里 android 那条 rid = MaaPVZ_exec），
+      # 这里只保证包内声明的 rid 与上传用的 rid 一致；桌面端沿用 assets/interface.json 的 MaaPVZ。
+      - name: Patch interface.json resource id for APK
+        working-directory: maafwapp
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("../resource/interface.json")
+          s = p.read_text(encoding="utf-8")
+          old = '"mirrorchyan_rid": "MaaPVZ",'
+          new = '"mirrorchyan_rid": "MaaPVZ_exec",'
+          n = s.count(old)
+          if n != 1:
+              raise SystemExit(f"interface.json 里目标串出现 {n} 次（应为 1 次），拒绝继续打包：{old}")
+          p.write_text(s.replace(old, new, 1), encoding="utf-8")
+          hit = [l.strip() for l in p.read_text(encoding="utf-8").splitlines() if "mirrorchyan_rid" in l]
+          print("patched ->", hit)
+          PY
+
       # ===== 下载 OCR 模型到正确的路径：pi.zip/resource/model/ocr =====
       - name: Download OCR models from official CDN
         working-directory: maafwapp
@@ -182,47 +207,13 @@ jobs:
             echo "⚠️ agent scripts not found, skipping"
           fi
 
-      - name: Create pi profile
-        working-directory: maafwapp
+      # 配方改用仓库里的 pi-profile.android.yaml（不再在 CI 里 heredoc 现生成）：
+      # 改配置能走 review，也不会被 shell 展开 $ 之类的东西。里面的路径相对它自己的目录。
+      - name: Point PI_PROFILE at the checked-in profile
         run: |
-          cat > my-pvz-profile.yaml << EOF
-          assets: "$GITHUB_WORKSPACE/resource"
-          include:
-            - interface.json
-            - tasks/**
-            - resource/**
-            - resource_*/**
-            - data/**
-            - locales/**
-            - agent/**
-            - agent-dist/**
-            - docs/imgs/**
-            - model/**
-            - CONTACT
-            - LICENSE
-          exclude: []
-          agent:
-            sourceDir: "$GITHUB_WORKSPACE/resource/agent-dist"
-            abi: [arm64-v8a]
-            runtimes:
-              - location: bundle
-                executable: bin/python3
-                args: [-u, agent/main.py]
-                env:
-                  PYTHONHOME: "{bundle}/prefix"
-                  PYTHONPATH: "{bundle}/site-packages:{bundle}/site-packages/pure.zip"
-                  LD_LIBRARY_PATH: "{bundle}/prefix/lib:{bundle}/site-packages/chaquopy/lib:{nativeLibs}"
-                  MAAFW_BINARY_PATH: "{nativeLibs}"
-          app:
-            id: pvz
-            label: Maapvz
-            icon: ../resource/docs/imgs/PVZAA.png
-          EOF
-
-      - name: Set PI_PROFILE environment variable
-        working-directory: maafwapp
-        run: |
-          echo "PI_PROFILE=$(pwd)/my-pvz-profile.yaml" >> $GITHUB_ENV
+          PROFILE="$GITHUB_WORKSPACE/resource/pi-profile.android.yaml"
+          ls -la "$PROFILE"
+          echo "PI_PROFILE=$PROFILE" >> "$GITHUB_ENV"
 
       - name: Create local.properties
         working-directory: maafwapp
@@ -240,6 +231,97 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:assembleDebug -Pmaa.abi=arm64-v8a
+
+      # ===== 校验安卓端的 MirrorChyan rid 是 MaaPVZ_exec（配方声明 + 包内声明）=====
+      # 配方那一份（update.mirrorchyanRid）才是 MaaFwApp 真正读的，会覆盖 interface.json 的值；
+      # 包内那一份是保险，防止 CI 拉的 MaaFwApp 版本不认该字段时静默退回桌面端的 rid。
+      # MaaFwApp 不会把 PI 散装放进 APK：整份 PI 由 build-logic 的 packPiArchive 打成
+      # assets/pi.zip（散装 assets 会被 AAPT 改写文件名），interface.json 在这个 zip 的根。
+      # 所以要先从 APK 取出 pi.zip、再读里面那份；顺带兼容将来改回散装的形式。
+      # 用 Python 而不是 shell：嵌套 zip 读起来干净，也避开 bash -eo pipefail 下
+      # grep -q / head 提前退出把上游 unzip 打成 SIGPIPE 的那种假失败。
+      - name: Verify android MirrorChyan rid
+        working-directory: maafwapp
+        run: |
+          python - <<'PY'
+          import io
+          import os
+          import re
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          RID = "MaaPVZ_exec"
+          OLD = '"mirrorchyan_rid": "MaaPVZ",'
+          NEW = f'"mirrorchyan_rid": "{RID}"'
+          APK = Path("app/build/outputs/apk/debug/app-debug.apk")
+
+          # 1) 配方里的声明。MaaFwApp 用 update.mirrorchyanRid 覆盖 interface.json 的值，
+          #    所以这条才是安卓端真正会用的 rid；被删掉/改错时这里要红。
+          #    路径直接取前面步骤写进 GITHUB_ENV 的 PI_PROFILE：不自己拼相对路径
+          #    （校验步骤的 cwd 是 maafwapp，仓库在 ../resource，写死很容易写歪）。
+          profile_env = os.environ.get("PI_PROFILE", "")
+          if not profile_env:
+              print("❌ 环境变量 PI_PROFILE 没设置，前面的 Point PI_PROFILE 步骤可能没跑")
+              sys.exit(1)
+          PROFILE = Path(profile_env)
+          ptext = PROFILE.read_text(encoding="utf-8") if PROFILE.is_file() else ""
+          if not ptext:
+              print(f"❌ 找不到 PI_PROFILE 指向的配方: {PROFILE}")
+              sys.exit(1)
+          if not re.search(rf"^\s*mirrorchyanRid:\s*['\"]?{RID}['\"]?\s*$", ptext, re.M):
+              print(f"❌ {PROFILE} 里没有 update.mirrorchyanRid: {RID}")
+              sys.exit(1)
+          print(f"OK: {PROFILE} 声明了 mirrorchyanRid = {RID}")
+
+          # 2) 包内声明。属于保险：万一 CI 拉的 MaaFwApp 那版不认上面的字段（会被静默忽略），
+          #    包内这份也得是对的，不能让 APK 悄悄去查桌面端那个 rid。
+          def read_interface(apk):
+              """返回 (来源描述, interface.json 文本)；找不到时返回 (None, None) 并打印诊断。"""
+              with zipfile.ZipFile(apk) as z:
+                  names = z.namelist()
+                  archives = [n for n in names if n.endswith("pi.zip")]
+                  loose = [n for n in names if n.endswith("interface.json")]
+
+                  if archives:
+                      entry = archives[0]
+                      with zipfile.ZipFile(io.BytesIO(z.read(entry))) as pi:
+                          inner = pi.namelist()
+                          hit = [n for n in inner if n.endswith("interface.json")]
+                          if not hit:
+                              print(f"APK 内的 {entry} 里没有 interface.json，前 20 条：")
+                              for n in inner[:20]:
+                                  print("   ", n)
+                              return None, None
+                          return f"{entry}!/{hit[0]}", pi.read(hit[0]).decode("utf-8")
+
+                  if loose:
+                      return loose[0], z.read(loose[0]).decode("utf-8")
+
+                  print("APK 内既没有 pi.zip、也没有散装的 interface.json，前 40 条：")
+                  for n in names[:40]:
+                      print("   ", n)
+                  return None, None
+
+
+          print(f"APK: {APK} ({APK.stat().st_size} bytes)")
+          source, text = read_interface(APK)
+          if text is None:
+              sys.exit(1)
+
+          print(f"检查: {source}")
+          for line in text.splitlines():
+              if "mirrorchyan_rid" in line:
+                  print("   ", line.strip())
+
+          if OLD in text:
+              print("❌ 包内声明的 rid 还是 MaaPVZ，说明打包时没替换成功")
+              sys.exit(1)
+          if NEW not in text:
+              print("❌ 包内声明里找不到 MaaPVZ_exec")
+              sys.exit(1)
+          print("✅ APK 内 PI 的 mirrorchyan_rid = MaaPVZ_exec")
+          PY
 
       - name: Rename APK with version tag
         working-directory: maafwapp

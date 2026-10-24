@@ -132,7 +132,7 @@ function _cpMsRow(labelText, def) {
     const inp = document.createElement('input');
     inp.type = 'number';
     inp.className = 'cp-ms';
-    inp.min = '50'; inp.step = '50';
+    inp.min = '0'; inp.step = '10';
     inp.value = String(def || 600);
     row.appendChild(inp);
     const unit = document.createElement('span');
@@ -400,7 +400,7 @@ function jobRenderCustomCfgInto(box, st, onChange) {
         lb.style.cssText = 'font-size:11px;color:#64748b;width:52px;flex:none;';
         lb.textContent = labelText;
         const inp = document.createElement('input');
-        inp.type = 'number'; inp.min = '50'; inp.step = '50';
+        inp.type = 'number'; inp.min = '0'; inp.step = '10';
         inp.style.cssText = 'width:90px;padding:4px 6px;border:1px solid #e2e8f0;border-radius:7px;font-size:12px;';
         inp.value = String(initVal || 600);
         inp.addEventListener('change', emit);

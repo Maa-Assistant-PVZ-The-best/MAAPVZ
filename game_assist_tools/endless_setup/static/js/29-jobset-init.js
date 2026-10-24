@@ -17,7 +17,9 @@ function jobSaveLocal() {
                     name: jobMeta.name || '',
                     version: '1.0',
                     maxLevel: '149',
-                    worlds: Array.from(document.querySelectorAll('#jobWorlds input:checked')).map(cb => cb.value),
+                    // 选择世界：主适配世界 + 副世界（运行时与 GUI「选择世界」比对告警）
+                    world: jobGetWorld(),
+                    sub_worlds: jobGetSubWorlds(),
                     // ★ 作业集级参数：识别速率 / 默认滑动时长。
                     //   不存的话刷新网页就丢（load 端在读它们）。
                     everyN: jobGetEveryN(),
@@ -26,6 +28,8 @@ function jobSaveLocal() {
                 currentTable: currentTable,
                 tables: jobTables,
                 rarityFilter: plantRarityFilter,
+                // 植物备注（阶数/挂件标注，38-jobset-notes.js）
+                plantNotes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
                 // 局外选卡（作业集级；32-jobset-outer.js）
                 outerPick: (typeof jobOuterPick !== 'undefined')
                     ? { plants: (jobOuterPick.plants || []).slice(), mode: jobOuterPick.mode || 'auto', order: (jobOuterPick.order || []).slice() }
@@ -105,9 +109,10 @@ function jobLoadLocal() {
         // 调配参数（步骤设置弹窗）；旧数据没有 -> 默认 80ms
         jobMeta.swipeMs = (Number.isFinite(+m.swipeMs) && +m.swipeMs >= 0)
             ? Math.floor(+m.swipeMs) : 80;
-        if (Array.isArray(m.worlds)) {
-            document.querySelectorAll('#jobWorlds input').forEach(cb => { cb.checked = m.worlds.includes(cb.value); });
-        }
+        // 选择世界（旧缓存没有 -> 未选择）
+        jobSetWorldUI(m.world, m.sub_worlds);
+        // 植物备注（旧缓存没有 -> 空）
+        if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(data.plantNotes);
         if (typeof data.rarityFilter === 'string') plantRarityFilter = data.rarityFilter;
         // 局外选卡（作业集级）；旧缓存没有 -> 空列表 + auto
         if (typeof jobOuterPick !== 'undefined') {
@@ -127,16 +132,17 @@ function jobClearLocal() {
 }
 
 
+// ---- 选择世界（主/副）的读写函数 jobGetWorld/jobGetSubWorlds/jobSetWorldUI
+//      已挪到 37-jobset-world.js（立绘轮播弹窗版），这里只留调用 ----
+
+
 function jobInit() {
-    // 世界复选框
-    const wBox = document.getElementById('jobWorlds');
-    wBox.innerHTML = '';
-    JOB_WORLDS.forEach(w => {
-        const lab = document.createElement('label');
-        lab.style.cssText = 'font-size:12px;display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid #d0d7de;border-radius:6px;padding:2px 8px;cursor:pointer;';
-        lab.innerHTML = `<input type="checkbox" value="${w}" style="width:14px;height:14px;margin:0;cursor:pointer;"> ${w}`;
-        wBox.appendChild(lab);
-    });
+    // 选择世界弹窗（立绘轮播选主世界 + 图库多选副世界）
+    if (typeof jobWorldInit === 'function') jobWorldInit();
+    // 备注配置弹窗（神器/植物总览 + 阶数/挂件标注）
+    if (typeof jobNotesInit === 'function') jobNotesInit();
+    // 表格映射对照（🔍 把别的作业集的棋盘叠加到当前棋盘）
+    if (typeof jobRefInit === 'function') jobRefInit();
 
     // 优先恢复本地缓存（刷新网页不丢配置），否则新建一张表
     const restored = jobLoadLocal();

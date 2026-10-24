@@ -1,0 +1,48 @@
+{
+    "定位_主界面": {
+        "recognition": "And",
+        "all_of": [
+            "定位_主界面ui_1",
+            "定位_主界面ui_2",
+            "定位_主界面ui_3",
+            "定位_主界面ui_4"
+        ]
+    },
+    "定位_公告类": {
+        "recognition": "OCR",
+        "expected": [
+            "今日内不再弹出",
+            "不再弹出",
+            "弹出",
+            "公告"
+        ],
+        "action": "Click",
+        "next": [
+            "关闭公告"
+        ]
+    },
+    "定位_菊花": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/ref_backtohome/妙趣横生的菊花才受大众喜爱.png"
+        ],
+        "focus": "妙趣横生的菊花才是王道",
+        "post_delay": 3000
+    },
+    "定位_服务器通讯中": {
+        "recognition": "OCR",
+        "expected": [
+            "服务器通讯中",
+            "服务",
+            "服"
+        ],
+        "focus": "萌趣的服务器通讯才受大众喜爱",
+        "roi": [
+            462,
+            216,
+            339,
+            127
+        ],
+        "post_delay": 3000
+    }
+}

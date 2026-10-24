@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/imgs/PVZAA.png" alt="MaaPVZ" width="128">
+  <img src="./docs/imgs/logo.png" alt="MaaPVZ" width="128">
 </div>
 
 # MaaPVZ - 植物大战僵尸2自动化脚本

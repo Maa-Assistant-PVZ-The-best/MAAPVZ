@@ -7,8 +7,12 @@
       "code": "pvz_20260926_015808",
       "name": "心塔",
       "version": "1.0",
-      "worlds": [],
       "max_level": 149,
+      "world": "冰河世界",           # 主适配世界（2026-10-13 新增，旧作业集无此字段）
+      "sub_worlds": ["海盗港湾"],    # 副适配世界（可多选；运行时校验只告警不拦停）
+      "plant_notes": {               # 植物备注（阶数/挂件标注，仅展示，运行时不消费）
+        "冰西瓜": {"tier": 5, "pendant": "闪耀雪花挂坠"}
+      },
       "tables": [
         {
           "from_level": 1,
@@ -183,7 +187,10 @@ class Table:
         # squad = 1..6，表示这一阶段用第几个编队。
         #   · None / 缺省 / 非法值 -> 关闭切换编队，走原来的选卡逻辑（向后兼容）
         #   · 1..6               -> 换阵容时走到「无尽挑战_切换编队」，
-        #                           并把「无尽_切换编队序号」的 expected 改成该数字
+        #                           并把 custom 节点「无尽_选择编队」的
+        #                           custom_action_param.目标编队 改成该数字
+        #                           （2026-10-23 起：编队选择是 SelectPlants 的
+        #                             闭环 custom 模式，旧 Or 具名分支已退役）
         #
         # ★ 放在 Table 层（每张表各自一个编队号），和「一张表 = 一个阵容阶段」
         #   的现有模型一致：50 关换编队2、150 关换编队3 这种天然支持。
@@ -495,13 +502,42 @@ class JobSet:
         self.version: str = str(raw.get("version") or "").strip()
         self.source: Optional[Path] = source
 
-        worlds = raw.get("worlds")
-        self.worlds: List[str] = [
-            w.strip() for w in worlds
-            if isinstance(w, str) and w.strip()
-        ] if isinstance(worlds, (list, tuple)) else []
-
         self.max_level: Optional[int] = _as_int(raw.get("max_level"), None)
+
+        # ---- 适配世界（作业集级；网页端「选择世界」导出，2026-10-13 新增）----
+        #   world      = 主适配世界（单选）；sub_worlds = 副适配世界（可多选）。
+        #   运行时（JobSetLoad）拿它和 GUI 选项「选择世界」的当前值比对，
+        #   不一致只告警不拦停。旧作业集没这两个字段 -> 空 -> 提示未标注。
+        self.world: str = str(raw.get("world") or "").strip()
+        sub_worlds = raw.get("sub_worlds")
+        self.sub_worlds: List[str] = [
+            w.strip() for w in sub_worlds
+            if isinstance(w, str) and w.strip()
+        ] if isinstance(sub_worlds, (list, tuple)) else []
+
+        # ---- 植物备注（网页端「📝 配置」导出，2026-10-13 新增）----
+        #   { 植物名: {"tier": 1-5, "pendant": "挂件中文名", "costume": "装扮名"} }
+        #   —— 仅展示用，运行时不消费。这里只做结构校验后原样保留
+        #   （旧作业集无此字段 -> {}）。costume 的选择功能后做，先透传。
+        pn = raw.get("plant_notes")
+        self.plant_notes: Dict[str, Dict[str, Any]] = {}
+        if isinstance(pn, dict):
+            for name, note in pn.items():
+                if not isinstance(name, str) or not isinstance(note, dict):
+                    continue
+                entry: Dict[str, Any] = {}
+                tier = _as_int(note.get("tier"), 0)
+                if tier and 1 <= tier <= 5:
+                    entry["tier"] = tier
+                pendant = note.get("pendant")
+                if isinstance(pendant, str) and pendant.strip():
+                    entry["pendant"] = pendant.strip()
+                costume = note.get("costume")
+                # 布尔：是否需要装扮（旧版字符串装扮名也视为需要）
+                if costume is True or isinstance(costume, str) and costume.strip():
+                    entry["costume"] = True
+                if entry:
+                    self.plant_notes[name] = entry
 
         # ---- 无尽局外 80 选卡（作业集级；网页端 32-jobset-outer.js 导出）----
         #   mode:   auto     = 按 plants 列表自动选（runtime 注入到 80 选卡 custom 节点）

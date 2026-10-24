@@ -1036,6 +1036,7 @@ function jobStepCfgKind(st) {
     if (ga) {
         if (ga.id === 'form') return 'form';
         if (ga.id === 'custom') return 'custom';   // 自定义动作：专属参数编辑器（类型/坐标/时长）
+        if (ga.id === 'missile') return 'missile'; // 滑飞弹：连击 + 独立滑动时长（默认 10ms）
         return 'clickish';    // 点波/捡豆/加速 都是单击
     }
     const act = (typeof jobBoardActionOfKey === 'function') ? jobBoardActionOfKey(st.key) : null;
@@ -1177,6 +1178,25 @@ function jobRenderStepCfgParams() {
             function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
         mkComboWatch(st);
         mkTip('只作用于这一步；块上会显示「槽N 丨 N次」。');
+    } else if (kind === 'missile') {
+        // ★ 滑飞弹：连击三件套 + 独立滑动时长（默认 10ms，0 = 瞬滑）。
+        //   ★ st.ms 缺省要回落 10，但 0 是合法值（瞬滑）——不能用 || 10 兜底。
+        const st = _stepCfgCtx.st;
+        bindInt(mkRow('连击次数', '次（这个动作连做 N 次）'), 1, 9999,
+            Math.min(9999, Math.max(1, Number(st.times) || 20)),
+            function (v) { jobStepCfgSave({ times: v }); },
+            function (v) { return '⚙ 连击次数 = ' + v; });
+        bindInt(mkRow('连击间隔', 'ms（默认 0 = 紧挨着连做）'), 0, 10000,
+            Math.min(10000, Math.max(0, Number(st.comboMs) || 0)),
+            function (v) { jobStepCfgSave({ comboMs: v }); },
+            function (v) { return '⚙ 连击间隔 = ' + v + 'ms'; });
+        mkComboWatch(st);
+        bindInt(mkRow('滑动时长', 'ms（滑飞弹专用；0 = 瞬滑）'), 0, 5000,
+            Math.min(5000, Math.max(0,
+                (st.ms === undefined || st.ms === null) ? 10 : Number(st.ms))),
+            function (v) { jobStepCfgSave({ ms: v }); },
+            function (v) { return '⚙ 滑飞弹滑动时长 = ' + v + 'ms'; });
+        mkTip('只作用于这一步；时长独立于作业集级默认滑动时长。');
     } else if (kind === 'wait') {
         const st = _stepCfgCtx.st;
         bindInt(mkRow('等待时长', 'ms'), 1, 600000,
@@ -3332,7 +3352,6 @@ function jobSlotPlants(slots) {
 
 function jobBuild() {
     jobSaveCurrentBoard();
-    const worlds = [...document.querySelectorAll('#jobWorlds input:checked')].map(cb => cb.value);
     const tables = jobTables.map((t, ti) => {
         // ★ boss 链永远用**本表自己的** boardLate 构建。
         //   以前有 inheritBoss：为 true 时拿上一张表的棋盘来建链 ——
@@ -3386,7 +3405,8 @@ function jobBuild() {
             // ★ 编队切换：lineupMode='deck' 时把编队号写进 squad（1..6）。
             //   运行时（agent/jobset/runtime.py 的 _inject_squad）读到后：
             //     · 「清空卡牌」的 next 改成「无尽挑战_切换编队」
-            //     · 「无尽_切换编队序号」的 expected 改成这个数字
+            //     · custom 节点「无尽_选择编队」的 custom_action_param.目标编队
+            //       改成这个数字（2026-10-23 起：SelectPlants 编队选择闭环模式）
             //   于是「选卡」整段被跳过，直接切编队开打。
             //   'plants' 模式写 null，让运行时把上面两个字段还原（避免残留）。
             squad: (t.lineupMode === 'deck' && t.deckNo) ? Number(t.deckNo) : null,
@@ -3480,8 +3500,12 @@ function jobBuild() {
         code: jobCurrentCode(),
         name: jobCurrentName(),
         version: '1.0',            // 版本不再让用户填，固定 1.0
-        worlds,
         max_level: 149,            // 最大关卡固定 149
+        // 选择世界：主适配世界 + 副世界（运行时 JobSetLoad 与 GUI「选择世界」比对告警）
+        world: jobGetWorld(),
+        sub_worlds: jobGetSubWorlds(),
+        // 植物备注（阶数/挂件标注，仅展示；38-jobset-notes.js）
+        plant_notes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
         // 调配参数（步骤 ⚙ 弹窗）：compile.py 的 swipe_ms。
         // （动作间隔固定 0.1s = BatchSwipe 默认，不导出、不可调）

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN"><head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
-<link rel="icon" type="image/png" href="https://daoyanxiaoz.github.io/Endless_Visualization_Configuration/images/PVZAA_small.png">
+<link rel="icon" type="image/png" href="/static/favicon.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MaaPvz—无尽挑战-作业集编辑工具</title>
@@ -61,6 +61,11 @@
   28-jobset-io.js      作业集下拉栏与后端读写（list_jobs / 删除 / 下载远程作业集）
   29-jobset-init.js    localStorage 本地缓存(刷新不丢) + 整体初始化(jobInit)
   30-jobset-generic.js 通用动作（点波/捡豆/加速）：无需格子直接插链 + 选链弹窗
+  （31-36 见各文件头注释：boss 棋盘/外观/复制/神器等）
+  37-jobset-world.js   选择世界弹窗：立绘轮播选主世界 + 图库多选副世界（world/sub_worlds）
+  38-jobset-notes.js   备注配置弹窗：神器/植物总览 + 阶数/挂件标注（plant_notes）
+  39-jobset-ref.js     表格映射对照：本地作业集棋盘叠加到当前棋盘（纯显示）
+  40-jobset-mech.js    地图机制层：按主世界在棋盘叠加机制标记（WORLD_MECHANICS 草稿待校对）
 
   ── 页面内主要区块（自上而下）──────────────────────────────
   #tooltip / #cellCancelPicker / #genPicker / #supplyPicker  全局弹层（由 JS 控制显隐）
@@ -435,6 +440,113 @@
     </div>
 </div>
 
+<!-- ============ 选择世界弹窗（主世界轮播 + 副世界多选，2026-10-13） ============ -->
+<div id="worldPicker">
+    <div class="wp-panel">
+        <div class="wp-head">
+            <span class="wp-dot"></span>
+            <span class="wp-title">选择世界</span>
+            <span class="wp-sub">◀ ▶ 轮换世界立绘，「设为主世界」落定；下方图库点选副世界</span>
+            <button class="wp-close" id="worldPickerClose" title="关闭">✕</button>
+        </div>
+        <div class="wp-body">
+            <div class="wp-carousel">
+                <button class="wp-arrow" id="wpPrev" title="上一个世界">◀</button>
+                <div class="wp-stage">
+                    <img id="wpStageImg" alt="">
+                    <div class="wp-stage-name" id="wpStageName"></div>
+                    <button class="wp-set-main" id="wpSetMain">设为主世界</button>
+                </div>
+                <button class="wp-arrow" id="wpNext" title="下一个世界">▶</button>
+            </div>
+            <div class="wp-lib-title">主世界是该作业集的最佳适配世界，副世界是候选（可多选；与主世界互斥）</div>
+            <div class="wp-grid" id="wpSubGrid"><!-- 由 JS 渲染 --></div>
+        </div>
+        <div class="wp-foot">
+            <span class="wp-tip" id="wpTip">主：未选 · 副 × 0</span>
+            <button class="wp-reset" id="wpClear">✕ 清除世界标注</button>
+            <button id="worldPickerDone">完成</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 备注配置弹窗（神器/植物总览 + 阶数/挂件标注，2026-10-13） ============ -->
+<div id="notesPicker">
+    <div class="np-panel">
+        <div class="np-head">
+            <span class="np-dot"></span>
+            <span class="np-title">备注配置</span>
+            <span class="np-sub" id="npModeHint">总览本作业集用到的神器与植物</span>
+            <button class="np-close" id="notesPickerClose" title="关闭">✕</button>
+        </div>
+        <div class="np-modebar">
+            <button class="np-mode" data-mode="view" type="button">👁 查看</button>
+            <button class="np-mode" data-mode="tier" type="button">🔢 调配阶数</button>
+            <button class="np-mode" data-mode="pendant" type="button">💎 佩戴挂件</button>
+            <button class="np-mode" data-mode="costume" type="button">🎭 装扮</button>
+        </div>
+        <div class="np-arm" id="npArmBar" style="display:none;"><!-- 阶数条 / 挂件条 --></div>
+        <div class="np-body">
+            <div class="np-sec-title">神器（本作业集使用）</div>
+            <div class="np-art-row" id="npArtRow"></div>
+            <div class="np-sec-title">植物（本作业集使用）</div>
+            <div class="np-grid" id="npGrid"></div>
+        </div>
+        <div class="np-foot">
+            <span class="np-tip" id="npTip"></span>
+            <button id="notesPickerDone">完成</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 表格映射对照弹窗（2026-10-13） ============ -->
+<div id="refPicker">
+    <div class="rp-panel">
+        <div class="rp-head">
+            <span class="rp-dot"></span>
+            <span class="rp-title">表格映射对照</span>
+            <span class="rp-sub">叠加到当前棋盘，纯显示不影响数据</span>
+            <button class="rp-close" id="refPickerClose" title="关闭">✕</button>
+        </div>
+        <div class="rp-body">
+            <label class="rp-label">来源作业集</label>
+            <select id="refJobSel" class="rp-select"></select>
+            <div class="rp-row">
+                <div>
+                    <label class="rp-label">阵容表</label>
+                    <select id="refTableSel" class="rp-select"></select>
+                </div>
+                <div>
+                    <label class="rp-label">棋盘</label>
+                    <select id="refBoardSel" class="rp-select">
+                        <option value="early">普通关</option>
+                        <option value="late">boss关</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="rp-label">显示</label>
+                    <select id="refModeSel" class="rp-select">
+                        <option value="under">底层透明</option>
+                        <option value="over">覆盖显示</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="rp-foot">
+            <span class="rp-tip">只叠加植物；刷新页面即失效</span>
+            <button class="rp-clear" id="refClear">✕ 清除对照</button>
+            <button id="refApply">应用</button>
+        </div>
+    </div>
+</div>
+
+<!-- 「是否查看配置」提示条（载入作业集后弹出，10 秒自动消失） -->
+<div id="notesPrompt" class="npr" style="display:none">
+    <span class="npr-text" id="nprText"></span>
+    <button class="npr-view" id="nprView">📝 查看配置</button>
+    <button class="npr-skip" id="nprSkip">忽略</button>
+</div>
+
 <div class="app">
     <h1>🧩 无尽挑战-作业集编辑工具 <button class="btn" id="jobGuideBtn" onclick="jobGuideOpen()" title="重开新手引导" style="font-size:13px; vertical-align:middle;">🌱 新手教程</button></h1>
     <div class="toolbar">
@@ -461,14 +573,21 @@
             <span id="jobStatus" style="color:#22a65e;font-size:13px;"></span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-            <b style="font-size:12px;color:#555;">兼容世界：</b>
-            <div id="jobWorlds" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+            <b style="font-size:12px;color:#555;">选择世界：</b>
+            <button class="btn" id="worldToggle" title="轮播选择主世界 + 勾选副世界；运行时与 GUI「选择世界」不一致会提示">
+                🌍 <span id="worldLabel">未选择</span>
+            </button>
+            <button class="btn" id="notesToggle" title="总览本作业集用到的神器与植物；可标注植物阶数与挂件（仅展示，不影响运行）">
+                📝 配置
+            </button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;border-top:1px solid #e2e8f0;padding-top:8px;">
             <b style="font-size:13px;">阵容表：</b>
             <span id="jobTableLabel" style="font-size:12px;color:#334155;"></span>
             <button class="btn" id="jobLayoutBtn" title="配置每张表覆盖哪些关（1-149 图层模式）">🧩 布局配置</button>
             <button class="btn" id="jobCopyTable" title="把其它阵容表的内容复制到当前阵容">📋 复制阵容</button>
+            <button class="btn" id="refToggle" title="把别的作业集的普通关/boss关棋盘叠加到当前棋盘做对照（纯显示，不影响数据）">🔍 对照</button>
+            <span id="refBadge" class="ref-badge" style="display:none" title="点击清除对照"></span>
         </div>
         <div id="jobTableForm" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px;">
             <label style="font-size:12px;margin-left:8px;">换阵
@@ -745,6 +864,23 @@
     </div>
 </div>
 
+<!-- ============ 右上角「关闭后台」（悬停浮出） ============ -->
+<div id="shutdownWrap"
+     data-tooltip="关闭后端进程，下次打开需要重新开启编辑器；更新 MAAPVZ 后也需要重新打开编辑器"
+     data-tooltip-delay="200">
+    <button id="shutdownBtn" type="button">✕ 关闭后台</button>
+</div>
+<script>
+document.getElementById('shutdownBtn').addEventListener('click', async function () {
+    const b = this;
+    b.disabled = true;
+    b.textContent = '关闭中…';
+    try { await fetch('/shutdown', { method: 'POST' }); } catch (e) { /* 进程已死连接断开，正常 */ }
+    b.textContent = '✓ 后端已关闭（本页可直接关）';
+    document.title = '后端已关闭';
+});
+</script>
+
 
 <!-- 脚本：按依赖顺序依次加载（01..14 选项树编辑器，20..29 作业集编辑器） -->
 <script src="/static/js/01-options.js"></script>
@@ -779,4 +915,8 @@
 <script src="/static/js/34-jobset-layout.js"></script>
 <script src="/static/js/35-jobset-artifact.js"></script>
 <script src="/static/js/36-jobset-guide.js"></script>
+<script src="/static/js/37-jobset-world.js"></script>
+<script src="/static/js/38-jobset-notes.js"></script>
+<script src="/static/js/39-jobset-ref.js"></script>
+<script src="/static/js/40-jobset-mech.js"></script>
 </body></html>

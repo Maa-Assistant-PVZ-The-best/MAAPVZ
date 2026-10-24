@@ -1,0 +1,476 @@
+{
+    "启动游戏_选择渠道服": {
+        "action": "ClickKey",
+        "key": [
+            3
+        ],
+        //暂时注释着，可以等mfa修了再启用，防止重复登录黑屏用的
+        //↑不用注释，mfa没修也能用，就是只能在vscode里面用
+        "next": [
+            "打开pvz_自定义包",
+            "打开pvz_官服",
+            "打开pvz_华为",
+            "打开pvz_联想",
+            "打开pvz_360",
+            "打开pvz_九游",
+            "打开pvz_OPPO",
+            "打开pvz_应用宝",
+            "打开pvz_b服",
+            "打开pvz_vivo",
+            "打开pvz_荣耀",
+            "打开pvz_好游快报",
+            "打开pvz_百度",
+            "打开pvz_7723",
+            "打开pvz_taptap",
+            "打开pvz_4399",
+            "打开pvz_小米"
+        ]
+    },
+    "打开pvz_自定义包": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_华为": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdhwct",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_联想": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdlx",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_360": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd360",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_九游": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthduc",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_OPPO": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdop",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_应用宝": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.tencent.tmgp.pvz2hdtxyyb",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_b服": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.bilibili",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_vivo": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbbg",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_荣耀": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.honor",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_好游快报": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_百度": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.g.baidu",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_7723": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbazhang",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_官服": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_taptap": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_4399": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd4399",
+        "post_delay": 400,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_小米": {
+        "timeout": 180000,
+        "action": "StartApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdxm",
+        "post_delay": 13000,
+        "next": [
+            "打开pvz_中转"
+        ]
+    },
+    "打开pvz_jumpback_EA": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Start_game/EA.png"
+        ],
+        "post_delay": 3000
+    },
+    "打开pvz_jumpback_游戏": {
+        "recognition": "OCR",
+        "expected": [
+            "游戏"
+        ],
+        "post_delay": 3000
+    },
+    "打开pvz_中转": {
+        "next": [
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "打开pvz_识别登录",
+            "点击登录_开始游戏",
+            "开始游戏_识别进度",
+            "[JumpBack]打开pvz_jumpback_EA",
+            "[JumpBack]打开pvz_jumpback_游戏"
+        ]
+    },
+    "打开pvz_识别登录": {
+        "recognition": "OCR",
+        "expected": [
+            "登录"
+        ],
+        "next": [
+            "打开pvz_点击登录_常规",
+            //默认是正常的点击登录，后续在option设置内替换，例如taptap渠道服，应用宝的qq/微信登录
+            "[JumpBack]点击登录_jumpback_关闭广告"
+        ]
+        //等到点击登录出现后再进行点击登录的操作
+    },
+    "打开pvz_点击登录_常规": {
+        "recognition": "OCR",
+        "expected": [
+            "登录"
+        ],
+        "threshold": 0.8,
+        "action": "Click",
+        "post_delay": 4000,
+        "next": [
+            "点击登录_开始游戏",
+            "[JumpBack]点击登录_jumpback_关闭广告",
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "打开pvz_点击登录_常规"
+        ]
+    },
+    //4399小米等渠道服的点击登录都是只有一个登录按钮，所以就直接ocr识别点击登录2字即可
+    "打开pvz_点击登录_应用宝_微信": {
+        "recognition": "OCR",
+        "expected": [
+            "微信登录"
+        ],
+        "threshold": 0.8,
+        "pre_wait_freezes": {
+            "time": 2000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "post_delay": 4000,
+        "next": [
+            "[JumpBack]点击登录_jumpback_关闭广告",
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "点击登录_开始游戏",
+            "打开pvz_点击登录_应用宝_微信"
+        ]
+    },
+    "打开pvz_点击登录_应用宝_qq": {
+        "timeout": 30000,
+        "recognition": "OCR",
+        "expected": [
+            "QQ登录",
+            "QQ"
+        ],
+        "threshold": 0.8,
+        "pre_wait_freezes": {
+            "time": 2000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "post_delay": 4000,
+        "next": [
+            "[JumpBack]点击登录_jumpback_关闭广告",
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "点击登录_开始游戏",
+            "打开pvz_点击登录_应用宝_qq"
+        ]
+    },
+    "打开pvz_点击登录_taptap": {
+        "recognition": "OCR",
+        "expected": [
+            "登录"
+        ],
+        "pre_wait_freezes": {
+            "time": 2000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "roi": [
+            644,
+            251,
+            517,
+            437
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]点击登录_jumpback_关闭广告",
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "点击登录_开始游戏",
+            "打开pvz_点击登录_taptap"
+        ]
+    },
+    "点击登录_jumpback_关闭广告": {
+        "recognition": "Custom",
+        "enabled": false,
+        //调试期间会注释，如果你看到我给他注释了还发版了肯定是我脑子笨了忘掉了，请你一定要提醒我ToT
+        //默认关闭，用户有需求才能开启，随时可能下架这个功能                                                                                  ……我讨厌这群投广告的，投广告的有一个算一个全都扫码
+        "custom_recognition": "get_ui",
+        "custom_recognition_param": {
+            "keyword": "close"
+        },
+        "action": "Click"
+    },
+    "点击登录_jumpback_绑定设备": {
+        "recognition": "OCR",
+        "expected": [
+            "确定",
+            "绑定设备"
+        ],
+        "order_by": "Expected", // 按 expected 列表顺序排序
+        "index": 0, // 取排序后的第一个结果
+        "roi": [
+            251,
+            412,
+            521,
+            164
+        ],
+        // "action": "Click",
+        "action": "StopTask",
+        "focus": "请先绑定设备"
+    },
+    "点击登录_开始游戏": {
+        "recognition": "OCR",
+        "expected": [
+            "开始游戏"
+        ],
+        "action": "Click",
+        "focus": "点击开始游戏",
+        "next": [
+            "点击登录_寻找悬浮球",
+            "[JumpBack]定位_菊花",
+            "[JumpBack]定位_服务器通讯中",
+            "定位_主界面",
+            "开始游戏_识别进度",
+            "[JumpBack]点击登录_jumpback_绑定设备",
+            "点击登录_开始游戏",
+            "[JumpBack]定位_公告类"
+        ]
+    },
+    "点击登录_寻找悬浮球": {
+        "enabled": false,
+        "recognition": "Custom",
+        "custom_recognition": "get_ui",
+        "custom_recognition_param": {
+            "keyword": ""
+            //识别指定的ui控件，这一步需要人工补齐数据，在option后替换，接下来的操作在同目录01文件内
+        },
+        "next": [
+            "悬浮球关闭方式_4399",
+            "悬浮球关闭方式_华为",
+            "悬浮球关闭方式_小米"
+        ]
+    },
+    "开始游戏_识别进度": {
+        "recognition": "OCR",
+        "expected": [
+            "进度不同"
+        ],
+        "next": [
+            "开始游戏_最新进度",
+            "开始游戏_使用云端进度",
+            "开始游戏_使用本地进度"
+        ]
+    },
+    "开始游戏_最新进度": {
+        "enabled": false,
+        "next": [
+            "开始游戏_最新进度_云端",
+            "开始游戏_最新进度_本地",
+            "点击登录_开始游戏"
+        ]
+    },
+    "开始游戏_最新进度_云端": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Start_game/最新进度.png"
+        ],
+        "roi": [
+            352,
+            121,
+            288,
+            232
+        ],
+        "next": [
+            "开始游戏_使用云端进度"
+        ]
+    },
+    "开始游戏_最新进度_本地": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Start_game/最新进度.png"
+        ],
+        "roi": [
+            722,
+            118,
+            288,
+            233
+        ],
+        "next": [
+            "开始游戏_使用本地进度"
+        ]
+    },
+    "开始游戏_使用云端进度": {
+        "recognition": "OCR",
+        "expected": [
+            "使用云端进度"
+        ],
+        "action": "Click",
+        "next": [
+            "开始游戏_存档覆盖",
+            "[JumpBack]定位_菊花",
+            "[JumpBack]定位_服务器通讯中",
+            "定位_主界面",
+            "[JumpBack]定位_公告类"
+        ]
+    },
+    "开始游戏_使用本地进度": {
+        "recognition": "OCR",
+        "expected": [
+            "使用本地进度"
+        ],
+        "action": "Click",
+        "next": [
+            "开始游戏_存档覆盖",
+            "[JumpBack]定位_菊花",
+            "[JumpBack]定位_服务器通讯中",
+            "定位_主界面",
+            "[JumpBack]定位_公告类"
+        ]
+    },
+    "开始游戏_存档覆盖": {
+        "timeout": 40000,
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "action": "Click",
+        "post_delay": 5000,
+        "next": [
+            "[JumpBack]定位_菊花",
+            "[JumpBack]定位_服务器通讯中",
+            "定位_主界面",
+            "[JumpBack]定位_公告类"
+        ]
+    }
+}

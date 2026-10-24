@@ -13,8 +13,9 @@ def configure_ocr_model():
 
     ocr_dir = assets_dir / "resource" / "model" / "ocr"
     if not ocr_dir.exists():   # copy default OCR model only if dir does not exist
+        # 使用 PP-OCRv6_small：v5_mobile 的 det 对窄高比字形（如编队序号的 "1"）会丢框
         shutil.copytree(
-            assets_dir / "MaaCommonAssets" / "OCR" / "ppocr_v5" / "zh_cn",
+            assets_dir / "MaaCommonAssets" / "OCR" / "ppocr_v6" / "small",
             ocr_dir,
             dirs_exist_ok=True,
         )

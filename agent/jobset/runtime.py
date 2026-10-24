@@ -68,6 +68,30 @@ def _log(msg: str) -> None:
     print(f"[JobSet] {msg}", file=sys.stderr, flush=True)
 
 
+def _check_world(js: JobSet, cur_world: str) -> str:
+    """适配世界校验：作业集标注的 world/sub_worlds vs GUI 选项「选择世界」当前值。
+
+    返回提示文案（"" = 无提示）。只告警不拦停 ——
+    由 JobSetPlan 首跑时打印日志，任务照常运行。
+    「当前世界」由 task/Endless_ref 的 16 个世界 case 各自 override 注入到
+    JobSetPlan 双节点（无尽局内_过关_正赛/训练）的 custom_action_param。
+    ★ 不走 JobSetLoad 的 param：起始关卡 option 也写那个字段，GUI 的
+      option 会合是「同节点同字段整体替换」，两个 option 写同一字段必丢一个
+      （2026-10-22 起始关卡丢失事故）。
+    """
+    if not js.world:
+        return "ℹ️ 该作业集未标注适配世界（用最新版编辑器重新保存可开启校验）"
+    if not cur_world:
+        return ""                       # 没接到 GUI 世界值（option 未注入）-> 不比
+    if cur_world == js.world:
+        return f"🌍 世界校验通过：{cur_world}"
+    if cur_world in js.sub_worlds:
+        return f"🌍 世界校验通过：{cur_world}（副世界）"
+    sub = f"（副：{'、'.join(js.sub_worlds)}）" if js.sub_worlds else ""
+    return (f"⚠️ 作业集适配世界「{js.world}」{sub}与当前选择世界「{cur_world}」不一致，"
+            "可以继续运行，但请自行鉴别")
+
+
 def _parse_param(raw: Any) -> Dict[str, Any]:
     """宽松解析 custom_action_param（可能是 dict / JSON 串 / 空）。"""
     if raw is None or raw == "":
@@ -136,19 +160,22 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
     #   预热可能被调两次（Load / AutoCount），走签名会被第二次还原，必须 force。
     _inject_artifact(context, table, _pw_boss, lineup_changed=True, force=True)
 
-    # ★ v3：种植链也在预热时灌好（能量豆节点直灌，出手零中转）。
-    #   灌不进去（老 compiled）= 整条任务必然空转 -> 让调用方决定 fail-fast。
-    return _inject_fight(context, table)
-
     # ★ 回写「当前关卡」focus：MFA 界面显示的关卡号来自这两个节点的 focus，
     #   而 focus 平时只有 JobSetPlan（过关计数时）才写 —— 打完 149 开新一轮时
     #   自动计数把计数器重置成 1，但 focus 不还就继续显示旧的 149
     #   （issue #203：界面在第 1 关、计数器显示 149；阵容选择不受影响）。
+    #   ★ 2026-10-22 修复：这三行曾被 v3 fail-fast 的 return 顶成死代码
+    #     （10-12 起）—— 自动计数收号后界面永远停在「当前关卡：1」，
+    #     且 plan_table_index 不落账导致 Plan 每关保守换阵。
     _lv_msg = f"当前关卡：{lv}"
-    _set_focus(context, NODE_BATTLE_START, _lv_msg)
-    _set_focus(context, NODE_START_FIGHT, _lv_msg)
+    _set_focus(context, NODE_PLAN_NORMAL, _lv_msg)
+    _set_focus(context, NODE_PLAN_TRAINING, _lv_msg)
 
     _STATE["plan_table_index"] = table.index
+
+    # ★ v3：种植链也在预热时灌好（能量豆节点直灌，出手零中转）。
+    #   灌不进去（老 compiled）= 整条任务必然空转 -> 让调用方决定 fail-fast。
+    return _inject_fight(context, table)
 
 
 def _ensure_tracker(param: Dict[str, Any]) -> LevelTracker:
@@ -233,6 +260,29 @@ def _reco_text(argv: Any) -> Optional[str]:
     return None
 
 
+def _reco_all_texts(reco: Any) -> List[str]:
+    """把一次 OCR 识别详情里的**全部**候选文本按 best > filtered > all 顺序去重拿出。
+
+    ★ 2026-10-22 实锤：关卡号的数字偶发被 OCR 成字母（日志里出现过
+      「第NUM}关」）——best 烂了不代表 filtered/all 里没有带数字的候选，
+      全扫一遍再判死刑。
+    """
+    texts: List[str] = []
+    if reco is None:
+        return texts
+    cands = []
+    best = getattr(reco, "best_result", None)
+    if best is not None:
+        cands.append(best)
+    cands.extend(getattr(reco, "filtered_results", None) or [])
+    cands.extend(getattr(reco, "all_results", None) or [])
+    for r in cands:
+        t = getattr(r, "text", None)
+        if t and str(t) not in texts:
+            texts.append(str(t))
+    return texts
+
+
 # ---------------------------------------------------------------------------
 # 切换编队（用编队代替选卡）
 #
@@ -250,36 +300,44 @@ def _reco_text(argv: Any) -> Optional[str]:
 #   无尽挑战_切换编队                (OCR 识别到「配队」-> Click)
 #        └─ next: ["无尽_过滤编队颜色"]
 #   无尽_过滤编队颜色                (ColorMatch 找蓝色 -> DoNothing)
-#        └─ next: ["无尽_切换编队序号", "无尽_滑动寻找编队"]
-#   无尽_切换编队序号                (Or + 两个 any_of OCR -> Click)
+#        └─ next: ["无尽_确认在编队界面"]
+#   无尽_确认在编队界面              (OCR「植物编队」)
+#        └─ next: ["无尽_选择编队"]
+#   无尽_选择编队                    (Custom: SelectPlants 编队选择模式)
 #        └─ next: ["无尽挑战_选取植物_开始战斗"]     <- 跳过选卡，直接开战
 #
 # 所以运行时要改的只有两个字段：
 #   1) 「清空卡牌」的 next  -> ["无尽挑战_切换编队"]   （默认是 ["无尽挑战_选取植物"]）
-#   2) 「切换编队序号」的 expected -> ["3"]            （默认是 []）
+#   2) 「无尽_选择编队」的 custom_action_param.目标编队 -> 编队号
 #
 # ★ 「确认自己在选卡界面」由「清空卡牌」那个 OCR 节点天然保证：
 #   它认到「清空卡牌」才会 Click 并走 next。认不到 -> OCR 超时 -> 不会误点编队。
 #   所以这里不需要额外加识别节点。
 #
-# ★★ 「切换编队序号」是 **Or 节点**（2026-10 由单 any_of 改成**两个** any_of）：
-#   Or 的命中由各 any_of[i] 自己的 expected 决定，**节点顶层的 expected 对 Or 无效**。
-#   所以编队号必须写进**每一个** any_of 项里。
-#   原来只往节点顶层写 expected —— 对 Or 节点等于没写，编队号永远匹配不上。
-#
-#   两个 any_of 的 roi 不同（135,129,57,167 与 132,125,77,566），对应
-#   「编队列表的不同显示区域」，是**同一个语义**：同一个编队号要同时写进两项。
-#
-#   ⚠️ 这里**重建整个 any_of 数组**，而不是只盖 any_of[i].expected ——
-#     不依赖 MAA 对「any_of 子项能不能被 override 合进去」的实现细节。
-#     roi/threshold 等字段从 pipe 原值照抄，改的只有 expected。
+# ★★ 2026-10-23 重写：编队选择改为 SelectPlants 的「编队选择」custom 模式
+#   （闭环：整列 OCR -> 点击 -> 白字核对 -> 回弹重试），旧 Or 具名分支节点
+#   「切换编队序号 / 识别编队1 / 识别编队2 / 滑动寻找编队」已退役 ——
+#   旧写法的死穴是「目标编队=当前编队时数字渲染变色，OCR 永认不出 -> 死循环」。
+#   识别几何（整列 roi [132,125,77,566]、滑动向量）继承进 custom 内部。
 # ---------------------------------------------------------------------------
 
 # pipe 节点名（与 02_Endless_plant_Choose_ref.json 一一对应）
 NODE_CLEAR_CARDS = "无尽挑战_识别开始战斗_清空卡牌"
 NODE_CHOOSE_PLANTS = "无尽挑战_选取植物"
 NODE_SWITCH_SQUAD = "无尽挑战_切换编队"
-NODE_SQUAD_INDEX = "无尽_切换编队序号"
+# 编队选择 custom 节点（SelectPlants 编队选择模式）：目标编队号注入它的 param
+NODE_SQUAD_PICK = "无尽_选择编队"
+
+# JobSetPlan 双节点（pipe: 03_Endless_fight/0300Endless_fight.json）——
+# 「当前关卡」focus 挂这两个节点：每关只在点「继续挑战」时精确触发一次，
+# 每关恰好一条 [Record]。别挂开始战斗节点：focus 走事件携带制，
+# 节点的每次识别/动作事件都复读 focus（2026-10-22 用户反馈一关连跳多条）。
+NODE_PLAN_NORMAL = "无尽局内_过关_正赛"
+NODE_PLAN_TRAINING = "无尽局内_过关_训练"
+
+# 「自动计数」节点（pipe: 01_Endless_plant_ref.json）——OCR 主界面「第X关」。
+# JobSetAutoCount 首帧解析失败时会用这个名字自行重截重试。
+NODE_AUTO_COUNT = "无尽挑战_自动计数"
 
 # ---- 无尽局外 80 选卡（作业集级 outer_pick 的注入目标）----
 # pipe 文件：06_Endless_80plant_choose/0601~0603
@@ -396,8 +454,16 @@ NODE_SUPPLY = "无尽局内_补给"
 NODE_SUPPLY_CONFIRM = "神器补给_确定"
 NODE_DONE = "无尽挑战_完成"
 NODE_149 = "无尽挑战_149点击开始挑战"
-_JUMP_SAME_ORIG = [NODE_SUPPLY, NODE_BATTLE_START, NODE_149, NODE_DONE]
-_JUMP_DIFF_ORIG = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_DONE]
+# 闸门 next 的尾件（pipe 0300 里用户加的 JumpBack）：识别「继续训练」，
+# 链走完跳回闸门。⚠️ 下面四个清单尾部都必须带它 —— override 是整表替换，
+# 漏一个 = 那个分支每关把 JumpBack 抹掉（2026-10-23 实锤踩过）。
+NODE_JUMPBACK_CONTINUE = "无尽挑战_jumpback_继续挑战"
+JB_CONTINUE = "[JumpBack]" + NODE_JUMPBACK_CONTINUE
+_JUMP_SAME_ORIG = [NODE_SUPPLY, NODE_BATTLE_START, NODE_149, NODE_DONE, JB_CONTINUE]
+_JUMP_DIFF_ORIG = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_DONE, JB_CONTINUE]
+# 换神器分支的闸门 next（插在 ENTRY 之后、其余同原值）
+_JUMP_SAME_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_149, NODE_DONE, JB_CONTINUE]
+_JUMP_DIFF_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_DONE, JB_CONTINUE]
 _SUPPLY_CONFIRM_ORIG = [NODE_BATTLE_START, NODE_SUPPLY_CONFIRM]
 _ARTIFACT_PICK_ORIG = {
     "recognition": "OCR",
@@ -568,8 +634,8 @@ def _inject_artifact(context: Context, table, is_boss: bool,
         #   阵容也变了 -> 清空卡牌（走完整选卡）；没变 -> 直接开始战斗
         close_next = [NODE_CLEAR_CARDS if lineup_changed else NODE_BATTLE_START]
         context.override_pipeline({
-            NODE_JUMP_SAME: {"next": [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_149, NODE_DONE]},
-            NODE_JUMP_DIFF: {"next": [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_DONE]},
+            NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ART)},
+            NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ART)},
             NODE_START_OCR: {"next": [NODE_ARTIFACT_PICK]},
             NODE_SUPPLY_CONFIRM: {"next": [NODE_ARTIFACT_PICK, NODE_SUPPLY_CONFIRM]},
             NODE_ARTIFACT_PICK: dict(_ARTIFACT_PICK_ORIG),
@@ -585,42 +651,29 @@ def _inject_artifact(context: Context, table, is_boss: bool,
     except Exception as e:
         _log(f"注入神器流程失败（{type(e).__name__}: {e}）")
 
-# 「无尽_切换编队序号」的 Or 分支骨架（从 pipe 照抄，只留结构字段）。
-#   两项的 roi 不同 = 覆盖编队列表的不同显示区域；expected 由 squad 注入。
-#   ⚠️ 这两项必须与 02_Endless_plant_Choose_ref.json 的 any_of **保持同步**：
-#      改了 pipe 里的 roi / 项数，这里也要跟着改，否则注入会把 pipe 的改动盖掉。
-_SQUAD_ANY_OF = [
-    {"recognition": "OCR", "roi": [135, 129, 57, 167], "threshold": 0.5},
-    {"recognition": "OCR", "roi": [132, 125, 77, 566], "threshold": 0.5},
-]
-
-
-def _squad_any_of(expected: List[str]) -> List[Dict[str, Any]]:
-    """按 expected 重建 Or 的 any_of 数组（每个分支都写入同一个 expected）。"""
-    return [
-        dict(entry, expected=list(expected))
-        for entry in _SQUAD_ANY_OF
-    ]
+# 编队号注入目标 = custom 节点「无尽_选择编队」的 custom_action_param.目标编队。
+# override 是字段级合并：整个 custom_action_param 字段替换（编队选择模式
+# 只认 编队选择/目标编队 两个键，其余全走内置缺省）。
 
 
 def _squad_param(squad: Optional[int]) -> Dict[str, Any]:
     """把编队号翻成一份 pipeline_override。
 
-    squad 为 None -> 回滚成「选卡」分支（把 next 和 expected 都还原）。
+    squad 为 None -> 回滚成「选卡」分支（next 还原 + 目标编队清 0）。
     这样从「编队表」切回「选卡表」时不会残留上一次的编队设置。
+    （目标编队=0 时节点本来就走不到 —— 清空卡牌.next 已还原成选卡；
+      清零只是防万一被别的链碰到的卫生措施。）
     """
     if squad is None:
         return {
             NODE_CLEAR_CARDS: {"next": list(NEXT_PICK_PLANTS)},
-            # ★ 回滚也要走 any_of：只写顶层 expected 对 Or 节点无效，清不掉编队号。
-            NODE_SQUAD_INDEX: {"any_of": _squad_any_of([])},
+            NODE_SQUAD_PICK: {"custom_action_param": {
+                "编队选择": True, "目标编队": 0}},
         }
     return {
         NODE_CLEAR_CARDS: {"next": [NODE_SWITCH_SQUAD]},
-        # expected 必须是**字符串列表**（OCR 的比对格式）；
-        # 写成数字 MAA 会当成非法 expected，识别永不命中。
-        # ★ Or 节点：两个 any_of 分支都要写，只写顶层 expected 是无效的。
-        NODE_SQUAD_INDEX: {"any_of": _squad_any_of([str(squad)])},
+        NODE_SQUAD_PICK: {"custom_action_param": {
+            "编队选择": True, "目标编队": int(squad)}},
     }
 
 
@@ -649,7 +702,8 @@ def _fail() -> CustomAction.RunResult:
     return CustomAction.RunResult(success=False)
 
 
-# 「识别开始战斗」节点名 —— 状态行刷新（_set_focus）的挂载点
+# 「识别开始战斗」节点名 —— 跳转骨架等仍引用；「当前关卡」focus 已改挂
+# NODE_PLAN_NORMAL/TRAINING（每关一次，不再用它做状态行挂载点）
 NODE_START_FIGHT = "无尽挑战_识别开始战斗"
 
 
@@ -658,8 +712,8 @@ NODE_START_FIGHT = "无尽挑战_识别开始战斗"
 #
 # ★ 计数说明（2026-10-09 清理）：过关计数已并入 JobSetPlan（计数=true 参数），
 #   原 JobSetTick 节点 / _tick_param() / JobSetStatus 包装类均已删除 ——
-#   状态行刷新由 _set_focus(NODE_START_FIGHT) 直接实现，日志播报由 JobSetPlan 内
-#   tr.status_line() 直接输出，都不再需要独立节点。
+#   状态行刷新由 _set_focus(NODE_PLAN_NORMAL/TRAINING) 直接实现，
+#   日志播报由 JobSetPlan 内 tr.status_line() 直接输出，都不再需要独立节点。
 #
 # ★ 这是把「换阵容」从局内搬到局外的**主路径**。
 #
@@ -799,6 +853,20 @@ class JobSetPlan(CustomAction):
             _log("尚未载入作业集（JobSetLoad 未执行）-> 无法判断阵容")
             return _fail()
 
+        # ---- 适配世界校验（每任务一次；「当前世界」由 16 个世界 case 注入到
+        #   **本节点**的 custom_action_param。不走 JobSetLoad 的 param ——
+        #   起始关卡 option 也写那个字段，GUI 按字段整体会合，后应用的 option
+        #   会把先应用的整个 custom_action_param 顶掉（2026-10-22 起始关卡
+        #   丢失事故：日志显示 GUI 先后应用 {起始关卡:1} 与 {当前世界:…} 到
+        #   同一节点同一字段，起始关卡被顶没）。Plan 双节点
+        #   （无尽局内_过关_正赛/训练）的 param 只有世界 option 一个写入者，
+        #   注入时静态键「训练模式/计数」按 pipe 原值原样带上。）----
+        if not _STATE.get("world_checked"):
+            _STATE["world_checked"] = True
+            _wnote = _check_world(js, str(param.get("当前世界") or "").strip())
+            if _wnote:
+                _log(_wnote)
+
         lv = tr.count
         table = js.pick_table(lv)
         training = bool(param.get("训练模式"))
@@ -866,11 +934,12 @@ class JobSetPlan(CustomAction):
             _inject_artifact(context, table, upcoming_boss, lineup_changed=False)
 
         # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
-        #   关卡号挂在两个「开始战斗」节点上（未变/变化两分支必走其一），
-        #   覆盖掉 pipe 里静态的「boss关」focus；
+        #   关卡号挂在 Plan 双节点上（本节点自己，每关精确触发一次 ->
+        #   每关恰好一条 [Record]；2026-10-22 起不再挂开始战斗节点 ——
+        #   focus 走事件携带制，那边每个识别/动作事件都复读，一关连跳多条）。
         #   「当前使用」块挂在「清空卡牌」上（只有变化分支才跑到）。
         #   换表但阵容相同被跳过（未变分支，清空卡牌不跑）时，
-        #   把阵容块并到「开始战斗」的关卡号消息前面，保证换表一定有提示。
+        #   把阵容块并到关卡号消息前面，保证换表一定有提示。
         switched = used is None or used != table.index
         if switched:
             block = _focus_lineup_block(table, upcoming_boss)
@@ -880,8 +949,8 @@ class JobSetPlan(CustomAction):
         lv_msg = f"当前关卡：{lv}"
         if block and not need:
             lv_msg = block + "\n" + lv_msg
-        _set_focus(context, NODE_BATTLE_START, lv_msg)
-        _set_focus(context, NODE_START_FIGHT, lv_msg)
+        _set_focus(context, NODE_PLAN_NORMAL, lv_msg)
+        _set_focus(context, NODE_PLAN_TRAINING, lv_msg)
 
         # ---- 翻闸门（每次都写，避免残留上一次的判断）----
         #
@@ -926,8 +995,14 @@ class JobSetLoad(CustomAction):
         {
           "作业集代码": "pvz_20260926_015808",   // 缺省读 jobs/current.json
           "起始关卡": 87,                          // ★ 由 MAA option「无尽_起始关卡」填入
-          "重置": true                             // 重新开始任务 -> 清空计数器
+          "重置": true,                            // 重新开始任务 -> 清空计数器
         }
+
+    ★ 本节点的 custom_action_param **只允许「无尽_起始关卡」一个 option 写**：
+      GUI 的 option 会合是「同节点同字段整体替换」，再有一个 option 写这个
+      字段就会把 起始关卡/重置 顶没（2026-10-22 事故：世界 case 曾把
+      「当前世界」注入这里，把起始关卡顶丢）。当前世界改注到 JobSetPlan
+      双节点，世界校验在 JobSetPlan 首跑时做。
 
     ★ 「起始关卡」是**必需**的：砍掉 OCR 后关卡号只由它 + 计数器推出。
       没填 -> 计数器从 0 起 -> 表选择落回第 1 张表（日志会告警）。
@@ -954,6 +1029,7 @@ class JobSetLoad(CustomAction):
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
+            _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
             _log("已重置作业集状态（重新开始任务）")
 
         # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
@@ -980,6 +1056,25 @@ class JobSetLoad(CustomAction):
         for t in js.tables:
             rng = f"{t.from_level}~{t.to_level if t.to_level is not None else '末'}"
             _log(f"  表{t.index + 1} 关卡{rng} 植物={t.plants}")
+
+        # ---- 覆盖重叠检查（图层模式）：同一关被多张表覆盖时，**先涂的赢** ----
+        #   2026-10-22 事故：表1{1,2} 与 表2{2,3} 都覆盖第 2 关，用户以为
+        #   第 2 关会用表2，实际归属表1。载入时大声报出来，别静默。
+        if js.layered:
+            _overlap: Dict[int, List[int]] = {}
+            for _lv in range(1, (js.max_level or 149) + 1):
+                _own = [t.index + 1 for t in js.tables if t.covers(_lv)]
+                if len(_own) > 1:
+                    _overlap[_lv] = _own
+            if _overlap:
+                _samples = sorted(_overlap.items())[:3]
+                _txt = "；".join(
+                    f"关卡{l}: 表{'/表'.join(map(str, o))}→表{o[0]}"
+                    for l, o in _samples
+                )
+                _log(f"⚠️ 图层覆盖重叠 {len(_overlap)} 关（{_txt}"
+                     f"{' …' if len(_overlap) > 3 else ''}）：先涂的表生效；"
+                     "想换归属就在编辑器「布局配置」里把先涂的那格擦掉")
 
         # ---- 计数器 ----
         #
@@ -1054,17 +1149,52 @@ class JobSetAutoCount(CustomAction):
     ★ 设完关卡必须**重新预热**选卡/编队：JobSetLoad 预热时计数器可能还是
       option 里的「起始关卡」（甚至 0），预热的表不一定是要打的表。
 
-    ★ 解析失败**不致命**：保留计数器原值、日志告警、流程继续 ——
-      这样「手动填起始关卡」的用法即使路过本节点也不受影响。
+    ★ 语义（2026-10-22 用户定稿）：计数器初值 = option「起始关卡」；
+      流程路过本节点且 OCR 读出数字 -> 覆盖成主界面真实关卡。
+      读不出（数字被 OCR 成字母，实锤「第NUM}关」）-> 全候选扫描 +
+      重截重试 3 次，仍不行才保持 option 兜底值（不致命，流程继续）。
     """
 
     def run(self, context: Context, argv) -> Any:
-        text = _reco_text(argv)
-        lv = _parse_level_text(text or "")
+        # ---- 1) 解析关卡号：先吃 argv 的识别详情（全部候选），不行就重截重试 ----
+        #   ★ 2026-10-22 实锤：数字偶发被 OCR 成字母（「第NUM}关」），
+        #     单帧识别烂了 -> 自动计数覆盖不了 option 的「起始关卡」。
+        #     期望语义：计数器初值 = option 起始关卡；自动计数读出数字就覆盖。
+        #     所以解析失败时重截重试（屏幕动画微动，重试有机会读出数字）；
+        #     重试也全灭 -> 保持 option 兜底值，不算故障。
+        text = ""
+        lv = None
+        for t in _reco_all_texts(getattr(argv, "reco_detail", None)):
+            text = text or t
+            lv = _parse_level_text(t)
+            if lv is not None:
+                text = t
+                break
+        if lv is None:
+            import time as _time
+            for attempt in range(3):
+                try:
+                    _time.sleep(0.3)
+                    image = context.tasker.controller.post_screencap().wait().get()
+                    reco = context.run_recognition(NODE_AUTO_COUNT, image)
+                except Exception as e:
+                    _log(f"⚠️ 自动计数：重试 {attempt + 1}/3 识别异常"
+                         f"（{type(e).__name__}: {e}）")
+                    continue
+                for t in _reco_all_texts(reco):
+                    text = text or t
+                    lv = _parse_level_text(t)
+                    if lv is not None:
+                        text = t
+                        break
+                if lv is not None:
+                    _log(f"📟 自动计数：首帧没读出数字，重试第 {attempt + 1} 次成功")
+                    break
         if lv is None:
             cur = _STATE.get("tracker")
-            _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号"
-                 f" -> 保持计数器原值（{cur.count if cur else 0}）")
+            _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号（含重试 3 次）"
+                 f" -> 保持计数器原值（{cur.count if cur else 0}"
+                 f"{'，即 option 起始关卡兜底' if cur and cur.count else ''}）")
             return _ok()
 
         tr = _ensure_tracker({})

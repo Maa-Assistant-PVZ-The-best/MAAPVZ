@@ -479,11 +479,12 @@ except Exception as _e9:
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 10. 编队注入：Or 节点必须写进 each any_of ===")
+print("\n=== 10. 编队注入：custom 节点「无尽_选择编队」写 custom_action_param ===")
 #
-# 背景：`无尽_切换编队序号` 是 **Or 节点**，命中由各 any_of[i] 自己的 expected
-# 决定，节点顶层的 expected 对 Or 无效。曾经只往顶层写 -> 编队号永不命中。
-# 这里同时把注入结果与**真实 pipe 文件**对照，pipe 改了就立刻报出来。
+# 背景（2026-10-23 重写）：编队选择从 pipe 节点链（Or 具名分支识别编队1/2）
+# 改为 SelectPlants 的「编队选择」custom 模式闭环（识别->点击->白字核对->
+# 回弹重试）。运行时注入只动两处：清空卡牌.next + 无尽_选择编队 的
+# custom_action_param。这里同时把注入结果与**真实 pipe 文件**对照。
 try:
     import json as _json10
     from agent.jobset import runtime as _rt10
@@ -491,37 +492,29 @@ try:
     _p_none = _rt10._squad_param(None)
     _p_sq = _rt10._squad_param(3)
 
-    # --- 选卡分支：next 还原 + expected 清空（也要走 any_of）---
+    # --- 选卡分支：next 还原 + custom 目标编队清 0 ---
     check("squad=None: 清空卡牌 next 还原成选卡",
           _p_none[_rt10.NODE_CLEAR_CARDS]["next"] == [_rt10.NODE_CHOOSE_PLANTS],
           str(_p_none[_rt10.NODE_CLEAR_CARDS]["next"]))
-    check("squad=None: 切换编队序号 走 any_of 清空",
-          "any_of" in _p_none[_rt10.NODE_SQUAD_INDEX]
-          and "expected" not in _p_none[_rt10.NODE_SQUAD_INDEX],
-          str(sorted(_p_none[_rt10.NODE_SQUAD_INDEX].keys())))
-    check("squad=None: 所有 any_of 分支 expected 都是 []",
-          all(e.get("expected") == []
-              for e in _p_none[_rt10.NODE_SQUAD_INDEX]["any_of"]),
-          str([e.get("expected") for e in _p_none[_rt10.NODE_SQUAD_INDEX]["any_of"]]))
+    check("squad=None: 选择编队 param 清 0（防残留）",
+          _p_none[_rt10.NODE_SQUAD_PICK]["custom_action_param"]["目标编队"] == 0
+          and _p_none[_rt10.NODE_SQUAD_PICK]["custom_action_param"]["编队选择"] is True)
 
-    # --- 编队分支：next 换成切换编队 + 每个分支都带字符串编队号 ---
+    # --- 编队分支：next 换成切换编队 + custom param 写入编队号 ---
     check("squad=3: 清空卡牌 next 换成切换编队",
           _p_sq[_rt10.NODE_CLEAR_CARDS]["next"] == [_rt10.NODE_SWITCH_SQUAD],
           str(_p_sq[_rt10.NODE_CLEAR_CARDS]["next"]))
-    _any10 = _p_sq[_rt10.NODE_SQUAD_INDEX]["any_of"]
-    check("squad=3: 是 Or 且 any_of 有两项",
-          len(_any10) == 2, f"len={len(_any10)}")
-    check("★squad=3: **每一个** any_of 分支都写入 expected",
-          all(e.get("expected") == ["3"] for e in _any10),
-          str([e.get("expected") for e in _any10]))
-    check("★squad=3: 顶层不写 expected（对 Or 无效，写了是误导）",
-          "expected" not in _p_sq[_rt10.NODE_SQUAD_INDEX],
-          str(sorted(_p_sq[_rt10.NODE_SQUAD_INDEX].keys())))
-    check("★squad=3: expected 是字符串列表（写数字 MAA 认不出）",
-          all(isinstance(x, str) for e in _any10 for x in e.get("expected", [])),
-          str([type(x).__name__ for e in _any10 for x in e.get("expected", [])]))
+    check("★squad=3: 选择编队 param 写入目标编队 3",
+          _p_sq[_rt10.NODE_SQUAD_PICK]["custom_action_param"] ==
+          {"编队选择": True, "目标编队": 3},
+          str(_p_sq[_rt10.NODE_SQUAD_PICK]))
+    check("squad=3: 注入只动 next 与 custom_action_param（不重建骨架）",
+          sorted(_p_sq.keys()) == sorted(
+              [_rt10.NODE_CLEAR_CARDS, _rt10.NODE_SQUAD_PICK])
+          and sorted(_p_sq[_rt10.NODE_SQUAD_PICK].keys()) == ["custom_action_param"],
+          str(sorted(_p_sq.keys())))
 
-    # --- ★ 与真实 pipe 对照：项数 / roi / recognition 必须一致 ---
+    # --- ★ 与真实 pipe 对照：新写法（custom 节点）逐项核对 ---
     # ⚠️ pipe 文件是 **JSONC**（带 // 注释），标准 json 解析不了，先去掉注释。
     _pipe10 = Path(__file__).resolve().parent.parent.parent / (
         "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
@@ -531,30 +524,71 @@ try:
         ln for ln in _raw10.splitlines() if not ln.lstrip().startswith("//")
     )
     _pj10 = _json10.loads(_raw10)
-    _node10 = _pj10[_rt10.NODE_SQUAD_INDEX]
-    check("pipe: 切换编队序号 确实是 Or",
-          _node10.get("recognition") == "Or", str(_node10.get("recognition")))
-
-    _real_any10 = _node10.get("any_of", [])
-    check("★pipe any_of 项数与 runtime 骨架一致（改了 pipe 要同步 _SQUAD_ANY_OF）",
-          len(_real_any10) == len(_rt10._SQUAD_ANY_OF),
-          f"pipe={len(_real_any10)} runtime={len(_rt10._SQUAD_ANY_OF)}")
-    check("★pipe any_of 的 roi 与 runtime 骨架一致",
-          [e.get("roi") for e in _real_any10] == [e.get("roi") for e in _rt10._SQUAD_ANY_OF],
-          f"pipe={[e.get('roi') for e in _real_any10]} "
-          f"runtime={[e.get('roi') for e in _rt10._SQUAD_ANY_OF]}")
-    check("★pipe any_of 的 recognition 与 runtime 骨架一致",
-          [e.get("recognition") for e in _real_any10]
-          == [e.get("recognition") for e in _rt10._SQUAD_ANY_OF],
-          str([e.get("recognition") for e in _real_any10]))
-    check("pipe: 切换编队序号 next 指向开始战斗（跳过选卡）",
+    _node10 = _pj10[_rt10.NODE_SQUAD_PICK]
+    check("pipe: 选择编队 是 Custom(SelectPlants)",
+          _node10.get("action") == "Custom"
+          and _node10.get("custom_action") == "SelectPlants",
+          str(_node10))
+    check("pipe: 选择编队 自带编队选择模式参数占位",
+          _node10.get("custom_action_param", {}).get("编队选择") is True
+          and _node10.get("custom_action_param", {}).get("目标编队") == 0)
+    check("pipe: 选择编队 next 指向开始战斗（跳过选卡）",
           _node10.get("next") == ["无尽挑战_选取植物_开始战斗"],
           str(_node10.get("next")))
+    check("pipe: 确认在编队界面 next 指向 选择编队",
+          _pj10["无尽_确认在编队界面"].get("next") == [_rt10.NODE_SQUAD_PICK],
+          str(_pj10["无尽_确认在编队界面"].get("next")))
+    check("pipe: 旧节点已退役（切换编队序号/识别编队/滑动寻找编队 不存在）",
+          all(k not in _pj10 for k in
+              ("无尽_切换编队序号", "识别编队1", "识别编队2", "无尽_滑动寻找编队")),
+          str([k for k in ("无尽_切换编队序号", "识别编队1", "识别编队2",
+                           "无尽_滑动寻找编队") if k in _pj10]))
     check("pipe: 清空卡牌 next 默认走选卡",
           _pj10[_rt10.NODE_CLEAR_CARDS].get("next") == ["无尽挑战_选取植物"],
           str(_pj10[_rt10.NODE_CLEAR_CARDS].get("next")))
 except Exception as _e10:
     check("squad: 编队注入端到端", False, f"{type(_e10).__name__}: {_e10}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 10b. 闸门 next 双写同步（pipe 0300 vs runtime 常量）===")
+#
+# 背景（2026-10-23 实锤）：用户在 pipe 的 跳转_未变/跳转_变化 的 next 尾部
+# 加了 [JumpBack]无尽挑战_jumpback_继续挑战，但 runtime 的 _JUMP_*_ORIG /
+# _JUMP_*_ART 四份硬编码清单没带 —— _inject_artifact 每关整表替换 next，
+# JumpBack 被抹掉。pipe 与 runtime 任何一边改了闸门 next，这里立刻报。
+try:
+    import json as _json10b
+    import re as _re10b
+    from agent.jobset import runtime as _rt10b
+
+    _pipe10b = Path(__file__).resolve().parent.parent.parent / (
+        "assets/resource/pipeline/Endless_ref/03_Endless_fight/0300Endless_fight.json"
+    )
+    _pj10b = _json10b.loads(
+        _re10b.sub(r"//[^\n]*", "", _pipe10b.read_text(encoding="utf-8")))
+    _jb = "[JumpBack]无尽挑战_jumpback_继续挑战"
+
+    _pipe_same = _pj10b[_rt10b.NODE_JUMP_SAME]["next"]
+    _pipe_diff = _pj10b[_rt10b.NODE_JUMP_DIFF]["next"]
+    check("pipe: 两个闸门 next 尾部都带 JumpBack 继续挑战",
+          _pipe_same[-1] == _jb and _pipe_diff[-1] == _jb,
+          f"未变尾={_pipe_same[-1]} 变化尾={_pipe_diff[-1]}")
+    check("★同步: runtime _JUMP_SAME_ORIG == pipe 未变闸门 next",
+          _rt10b._JUMP_SAME_ORIG == _pipe_same,
+          f"runtime={_rt10b._JUMP_SAME_ORIG} pipe={_pipe_same}")
+    check("★同步: runtime _JUMP_DIFF_ORIG == pipe 变化闸门 next",
+          _rt10b._JUMP_DIFF_ORIG == _pipe_diff,
+          f"runtime={_rt10b._JUMP_DIFF_ORIG} pipe={_pipe_diff}")
+    check("换神器分支清单也带 JumpBack 尾件",
+          _rt10b._JUMP_SAME_ART[-1] == _rt10b.JB_CONTINUE
+          and _rt10b._JUMP_DIFF_ART[-1] == _rt10b.JB_CONTINUE,
+          f"{_rt10b._JUMP_SAME_ART} / {_rt10b._JUMP_DIFF_ART}")
+    check("pipe: JumpBack 目标节点存在且是 OCR",
+          _pj10b[_rt10b.NODE_JUMPBACK_CONTINUE].get("recognition") == "OCR",
+          str(_pj10b.get(_rt10b.NODE_JUMPBACK_CONTINUE)))
+except Exception as _e10b:
+    check("squad: 闸门同步检查", False, f"{type(_e10b).__name__}: {_e10b}")
 
 
 # ---------------------------------------------------------------------------
@@ -618,6 +652,27 @@ try:
 
     _argv12c = _NS12(reco_detail=None)
     check("reco: 无识别详情 -> None", _rt12._reco_text(_argv12c) is None)
+
+    # _reco_all_texts：best 烂了（数字被 OCR 成字母，实锤「第NUM}关」）时
+    # 还能从 filtered/all 候选里捞出带数字的文本
+    _reco12d = _NS12(
+        best_result=_NS12(text="第NUM}关"),
+        filtered_results=[_NS12(text="第NUM}关"), _NS12(text="47")],
+        all_results=[_NS12(text="无尽挑战")])
+    _texts12d = _rt12._reco_all_texts(_reco12d)
+    check("全候选: 去重保序", _texts12d == ["第NUM}关", "47", "无尽挑战"])
+    _lv12d = None
+    for _t in _texts12d:
+        _lv12d = _rt12._parse_level_text(_t)
+        if _lv12d is not None:
+            break
+    check("全候选: best 烂 -> filtered 兜底解析出 47", _lv12d == 47)
+    check("全候选: None -> 空表", _rt12._reco_all_texts(None) == [])
+    _reco12e = _NS12(best_result=_NS12(text="第NUM}关"),
+                     filtered_results=[], all_results=[])
+    check("全候选全烂 -> 解析不出（走重试/兜底）",
+          all(_rt12._parse_level_text(_t) is None
+              for _t in _rt12._reco_all_texts(_reco12e)))
 except Exception as _e12:
     check("自动计数解析", False, f"{type(_e12).__name__}: {_e12}")
 
@@ -844,6 +899,267 @@ try:
           _blk.split("\n")[0] == "当前使用：表1" and "大喷菇" in _blk, _blk)
 except Exception as _e14:
     check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
+
+
+# ---------------------------------------------------------------------------
+# §15 适配世界（world/sub_worlds 载入 + _check_world 校验文案）
+# ---------------------------------------------------------------------------
+print("\n== §15 适配世界校验 ==")
+try:
+    from agent.jobset import engine as _eng15
+    from agent.jobset import runtime as _rt15
+
+    # 载入：有 world/sub_worlds
+    _j15 = _eng15.JobSet({"name": "w", "world": "冰河世界",
+                          "sub_worlds": ["海盗港湾", "  ", ""],
+                          "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="w")
+    check("world 载入", _j15.world == "冰河世界", _j15.world)
+    check("sub_worlds 载入（过滤空串）", _j15.sub_worlds == ["海盗港湾"], str(_j15.sub_worlds))
+
+    # 旧作业集（无字段）-> 空
+    _j15b = _eng15.JobSet({"name": "old", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="o")
+    check("旧作业集 world 为空", _j15b.world == "" and _j15b.sub_worlds == [])
+
+    # 校验文案四种情形
+    check("未标注 -> 提示重存",
+          "未标注适配世界" in _rt15._check_world(_j15b, "冰河世界"))
+    check("主世界一致 -> 通过",
+          _rt15._check_world(_j15, "冰河世界") == "🌍 世界校验通过：冰河世界")
+    check("副世界一致 -> 通过（副）",
+          "（副世界）" in _rt15._check_world(_j15, "海盗港湾"))
+    _mis = _rt15._check_world(_j15, "摩登世界")
+    check("不一致 -> ⚠️ 且含两个世界名",
+          "不一致" in _mis and "冰河世界" in _mis and "摩登世界" in _mis
+          and "海盗港湾" in _mis, _mis)
+    check("GUI 未注入世界值 -> 不比对（空提示）",
+          _rt15._check_world(_j15, "") == "")
+except Exception as _e15:
+    check("适配世界校验", False, f"{type(_e15).__name__}: {_e15}")
+
+
+# ---------------------------------------------------------------------------
+# §16 植物备注（plant_notes 载入）
+# ---------------------------------------------------------------------------
+print("\n== §16 植物备注 ==")
+try:
+    from agent.jobset import engine as _eng16
+
+    _j16 = _eng16.JobSet({"name": "n", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}],
+                          "plant_notes": {
+                              "冰西瓜": {"tier": 5, "pendant": "闪耀雪花挂坠"},
+                              "豌豆射手": {"tier": 0, "pendant": ""},      # 全空 -> 剪除
+                              "桑葚爆破手": {"pendant": "珍稀的肥料"},        # 仅挂件
+                              "苹果迫击炮": {"tier": 3},                    # 仅阶数
+                              "仙人掌": {"costume": True},                  # 仅装扮（布尔）
+                              "坏行": "不是dict",                            # 非法 -> 跳过
+                              123: {"tier": 2},                             # 非字符串键 -> 跳过
+                          }}, code="n")
+    check("合法备注载入", _j16.plant_notes.get("冰西瓜") == {"tier": 5, "pendant": "闪耀雪花挂坠"},
+          str(_j16.plant_notes.get("冰西瓜")))
+    check("空备注剪除", "豌豆射手" not in _j16.plant_notes)
+    check("仅挂件保留", _j16.plant_notes.get("桑葚爆破手") == {"pendant": "珍稀的肥料"})
+    check("仅阶数保留", _j16.plant_notes.get("苹果迫击炮") == {"tier": 3})
+    check("仅装扮保留", _j16.plant_notes.get("仙人掌") == {"costume": True})
+    check("非法项跳过", "坏行" not in _j16.plant_notes and 123 not in _j16.plant_notes)
+
+    _j16b = _eng16.JobSet({"name": "old", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="o")
+    check("旧作业集 plant_notes 为空 dict", _j16b.plant_notes == {})
+except Exception as _e16:
+    check("植物备注", False, f"{type(_e16).__name__}: {_e16}")
+
+
+# ---------------------------------------------------------------------------
+# §17 图层覆盖重叠：先涂的赢（2026-10-22「第二关摆法没换」事故规则固化）
+# ---------------------------------------------------------------------------
+print("\n== §17 图层覆盖重叠：先涂的赢 ==")
+try:
+    from agent.jobset import engine as _eng17
+
+    _j17 = _eng17.JobSet({
+        "name": "overlap", "max_level": 3,
+        "tables": [
+            {"from_level": 1, "levels": [1, 2], "lineup": {"plants": ["A"]}},
+            {"from_level": 2, "levels": [2, 3], "lineup": {"plants": ["B"]}},
+        ]}, code="ov")
+    check("图层重叠：关卡2 归属先涂的表1", _j17.pick_table(2).index == 0,
+          f"got=表{_j17.pick_table(2).index + 1}")
+    check("图层：关卡3 归属表2", _j17.pick_table(3).index == 1,
+          f"got=表{_j17.pick_table(3).index + 1}")
+except Exception as _e17:
+    check("图层覆盖重叠", False, f"{type(_e17).__name__}: {_e17}")
+
+
+# ---------------------------------------------------------------------------
+# §18 option 覆写冲突全量扫描（2026-10-22 事故的根源性防护）
+#
+#   事故根因：GUI 的 option 会合是「同节点同字段整体替换」——
+#   两个 option 都写 无尽挑战_加载作业集代码.custom_action_param 时，
+#   后应用的把先应用的**整个字段**顶掉（起始关卡/重置 被 当前世界 顶丢）。
+#
+#   这不是某一处的 bug，而是全局隐患，所以这里做**全 task 目录**机械扫描，
+#   固化两条不变量：
+#     1) 同一 task 文件内，任意 (节点, 字段) 最多只有一个可共存的 option
+#        写入者（同一 select option 的各个 case 互斥，视为一个写入者；
+#        option 级 override 与它的每个 case 都可共存，单独算一组）。
+#     2) option 写 custom_action_param 时，写入键集必须 ⊇ pipe 里该节点的
+#        静态 custom_action_param 键（否则整体替换会把静态键抹掉 ——
+#        这就是 16 个世界 case 写 Plan 节点时必须带上 训练模式/计数 的原因）。
+# ---------------------------------------------------------------------------
+print("\n== §18 option 覆写冲突全量扫描（同节点同字段唯一写入者） ==")
+try:
+    import json as _json18
+
+    _R18 = Path(__file__).resolve().parent.parent.parent
+
+    def _jsonc18(p):
+        _raw = p.read_text(encoding="utf-8")
+        _raw = "\n".join(ln for ln in _raw.splitlines()
+                         if not ln.lstrip().startswith("//"))
+        return _json18.loads(_raw)
+
+    # ---- pipe 节点静态 param 索引：node -> 静态 custom_action_param 键集 ----
+    _pipe_static: dict = {}
+    for _pf in (_R18 / "assets" / "resource" / "pipeline").rglob("*.json"):
+        try:
+            _pj = _jsonc18(_pf)
+        except Exception:
+            continue
+        if not isinstance(_pj, dict):
+            continue
+        for _nd, _body in _pj.items():
+            if isinstance(_body, dict):
+                _sp = _body.get("custom_action_param")
+                if isinstance(_sp, dict):
+                    _pipe_static.setdefault(_nd, set()).update(_sp.keys())
+    check("pipe 静态 param 索引建立", len(_pipe_static) > 0,
+          f"{len(_pipe_static)} 个节点带静态 param")
+
+    # ---- 逐 task 文件扫描 option 写入（同文件内的 option 才可能共存）----
+    # 已确认的历史隐患（用户 2026-10-22 决定「不用管」）——留着扫描能力，
+    # 只豁免这两条已知项；新的异值多写照样 FAIL。
+    _KNOWN_BAD18 = {
+        ("get_gold_coins.json", "星系_进入世界.next"),        # 装备街机神器 vs 需要刷的关卡
+        ("Secret_realm.json", "地宫2无尽_第一关_寻找8槽.template"),  # 藤蔓植物 vs 远程植物
+    }
+    _bad_all: list = []
+    _lost_all: list = []
+    _scanned = 0
+    for _tf in sorted((_R18 / "assets" / "resource" / "task").rglob("*.json")):
+        try:
+            _tj = _jsonc18(_tf)
+        except Exception:
+            continue
+        _opts = _tj.get("option") if isinstance(_tj, dict) else None
+        if not isinstance(_opts, dict):
+            continue
+        _scanned += 1
+        _writes: dict = {}        # (node, field) -> {写入组: 规范化写入值}
+        _param_writes: list = []  # (node, 写入组, 写入键集)
+        for _oname, _o in _opts.items():
+            if not isinstance(_o, dict):
+                continue
+            _ovs = [(f"{_oname}$option级", _o.get("pipeline_override"))]
+            for _c in _o.get("cases") or []:
+                if isinstance(_c, dict):
+                    _ovs.append((_oname, _c.get("pipeline_override")))
+            for _wgroup, _ov in _ovs:
+                if not isinstance(_ov, dict):
+                    continue
+                for _nd, _fields in _ov.items():
+                    if not isinstance(_fields, dict):
+                        continue
+                    for _fld, _val in _fields.items():
+                        _writes.setdefault((_nd, _fld), {})[_wgroup] = \
+                            _json18.dumps(_val, ensure_ascii=False, sort_keys=True)
+                        if _fld == "custom_action_param" and isinstance(_val, dict):
+                            _param_writes.append((_nd, _wgroup, set(_val.keys())))
+        for (_nd, _fld), _groups in sorted(_writes.items()):
+            # 同值多写 = 无害冗余（replace 后值不变）；**异值多写** 才是事故同款
+            if len(_groups) > 1 and len(set(_groups.values())) > 1 \
+                    and (_tf.name, f"{_nd}.{_fld}") not in _KNOWN_BAD18:
+                _bad_all.append(f"{_tf.name}: {_nd}.{_fld} <- {sorted(_groups)}")
+        for _nd, _wg, _keys in _param_writes:
+            _need = _pipe_static.get(_nd)
+            if _need:
+                _miss = _need - _keys
+                if _miss:
+                    _lost_all.append(
+                        f"{_tf.name}: {_wg} 写 {_nd} 丢了静态键 {sorted(_miss)}")
+    check(f"全 task（{_scanned} 个文件）：(节点,字段) 无异值多写入者",
+          not _bad_all, "；".join(_bad_all[:5]))
+    check("option 写 custom_action_param 均保住 pipe 静态键",
+          not _lost_all, "；".join(_lost_all[:5]))
+
+    # ---- 本次事故的定点检查：当前世界/起始关卡 分信道 ----
+    _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "Endless_ref.json")
+    _cases18 = _t18["option"]["无尽挑战_选择世界"]["cases"]
+    check("世界 case 共 16 个", len(_cases18) == 16, f"got={len(_cases18)}")
+
+    _worlds18 = set()
+    _shape_ok = True
+    for _c in _cases18:
+        _ov = _c.get("pipeline_override", {})
+        if "无尽挑战_加载作业集代码" in _ov:
+            _shape_ok = False      # 冲突回归：世界 case 又去碰 JobSetLoad
+        for _node, _tr in (("无尽局内_过关_正赛", False), ("无尽局内_过关_训练", True)):
+            _prm = _ov.get(_node, {}).get("custom_action_param")
+            if not isinstance(_prm, dict) \
+                    or _prm.get("训练模式") is not _tr \
+                    or _prm.get("计数") is not True \
+                    or not _prm.get("当前世界"):
+                _shape_ok = False
+            else:
+                _worlds18.add(_prm["当前世界"])
+    check("16 case 都写 Plan 双节点且带静态键（训练模式/计数）", _shape_ok)
+    check("16 case 当前世界互不相同", len(_worlds18) == 16, str(sorted(_worlds18)))
+except Exception as _e18:
+    check("注入信道防冲突", False, f"{type(_e18).__name__}: {_e18}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 19. settle 等待结算时长挂在收尾链节点自己（非候选节点）===")
+# 历史 bug：等待结算时长曾覆写到「继续挑战/继续训练」候选节点身上 ——
+# MAA 的 timeout 语义是「当前节点轮询自己 next 列表」，候选身上的 timeout
+# 根本不会被读到，用户设 1.5e9 ms 也照样 20s 超时任务失败（2026-10-22 实锤）。
+try:
+    _seg19 = [{"key": "card1", "slot": "1", "type": "plant",
+               "cells": ["格子2_3"], "waits": []}]
+
+    def _mk19(after, settle_ms):
+        raw = {
+            "from_level": 1,
+            "lineup": {"plants": ["大喷菇"]},
+            "slots": {"1": "大喷菇"},
+            "endAfterAction": after,
+            "endSettleMs": settle_ms,
+            "non_boss": {
+                "once_chain": [], "loop_chain": _seg19, "end_chain": _seg19,
+            },
+        }
+        return _cpl8j.build_fight_override(_eng.Table(raw, 0), False,
+                                           _coords, 10, 80, None)
+
+    _ovr19, _cn19 = _mk19("settle", 1500000000)
+    _endn19 = (_cn19.get("end") or {}).get("node")
+    check("settle: 收尾链节点存在", bool(_endn19), repr(_cn19))
+    check("settle: timeout 写在收尾链节点自己身上",
+          bool(_endn19) and _ovr19.get(_endn19, {}).get("timeout") == 1500000000,
+          repr(_ovr19.get(_endn19)))
+    check("settle: 候选节点（继续挑战/继续训练）不再被覆写",
+          "无尽局内_继续挑战" not in _ovr19 and "无尽训练_继续训练" not in _ovr19,
+          str([k for k in _ovr19 if "继续" in k]))
+    check("settle: 收尾链 next = [继续挑战, 失败]",
+          bool(_endn19) and _ovr19.get(_endn19, {}).get("next")
+          == ["无尽局内_继续挑战", "无尽挑战_失败"],
+          repr(_ovr19.get(_endn19, {}).get("next")))
+
+    _ovr19b, _cn19b = _mk19("sub", 1500000000)
+    _endn19b = (_cn19b.get("end") or {}).get("node")
+    check("非 settle: 收尾链节点不带 timeout（默认 20s 语义不变）",
+          bool(_endn19b) and "timeout" not in _ovr19b.get(_endn19b, {}),
+          repr(_ovr19b.get(_endn19b)))
+except Exception as _e19:
+    check("settle 等待结算时长挂载点", False, f"{type(_e19).__name__}: {_e19}")
 
 
 # ---------------------------------------------------------------------------

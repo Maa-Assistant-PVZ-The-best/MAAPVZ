@@ -331,10 +331,10 @@
         "recognition": "TemplateMatch",
         "template": "General/加速.png",
         "roi": [
-            1146,
-            9,
-            56,
-            59
+            1126,
+            5,
+            76,
+            73
         ],
         "action": "Click",
         "target": [

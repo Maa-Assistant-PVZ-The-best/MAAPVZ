@@ -328,7 +328,9 @@ def build_fight_override(
     #   · 「收尾前等待」   = 「无尽挑战_收尾」检测节点的 post_delay（默认 15000ms，仅 detect）
     #   · 「循环链重复次数」= 仅 loops：循环链跑满 N 次后直接进收尾链（期间不识别收尾）
     #   · 「收尾超时后动作」= sub（执行子动作）/ restart（重开）/ settle（等待结算）
-    #   · 「等待结算时长」 = 仅 settle：结算识别节点的 timeout（超时识别不到 = 任务结束）
+    #   · 「等待结算时长」 = 仅 settle：收尾链节点自己的 timeout（超时识别不到 = 任务结束）
+    #     ★ 是「收尾链节点」的 timeout，不是结算按钮节点的 —— MAA 的 timeout
+    #       语义是「当前节点轮询自己 next 列表」的超时，写候选身上是死配置。
     #   · 「子动作」       = once（单次动作）/ loop（循环动作）/ end（收尾动作）
     #   （endLastPostDelay 已删除：post_delay 做不到边等边识别，等待结算改用 timeout）
     # ★ 注意：必须先算 loops_gate 再调 build_chain_nodes ——
@@ -438,7 +440,8 @@ def build_fight_override(
         #     下一关（2026-10-07 日志实锤：loops 模式 next 只挂失败识别）。
         #   · 「继续训练」不接 next：训练模式的任务选项已把
         #     「无尽局内_继续挑战.next = [无尽训练_继续训练]」接好了，会自己续上。
-        #   · settle（等待结算）：结算节点 timeout = 等待时长，边等边识别；
+        #   · settle（等待结算）：next 只留 [继续挑战, 失败]，等待时长写在
+        #     收尾链节点自己的 timeout 上，边等边识别；
         #     超时识别不到 -> 无 on_error -> 任务结束（网页端已告知用户）。
         if end_after_action == "restart":
             after = [NODE_END_RESTART]
@@ -450,13 +453,9 @@ def build_fight_override(
             after = [loop_chain]
         if end_after_action == "settle":
             end_next = [REF_SETTLE, REF_FAILED]
-            # ★ 只覆写 timeout 一个字段（next 等沿用 pipe/任务选项，别整体替换 ——
-            #   训练模式的「继续训练」接线就是任务选项覆写的，顶掉就完了）。
-            override[REF_SETTLE] = {"timeout": int(end_settle_ms)}
-            override[REF_TRAIN] = {"timeout": int(end_settle_ms)}
         else:
             end_next = [REF_SETTLE, REF_FAILED] + after
-        override[end_node["node"]] = {
+        end_node_override: Dict[str, Any] = {
             "action": "Custom",
             "custom_action": "BatchSwipe",
             "custom_action_param": end_node["dsl"],
@@ -464,6 +463,15 @@ def build_fight_override(
             "post_delay": 0,
             "next": end_next,
         }
+        if end_after_action == "settle":
+            # ★★ 「等待结算时长」必须写在收尾链节点**自己**身上：
+            #   MAA 的 timeout 语义 = 当前节点轮询自己 next+interrupt 列表的
+            #   超时（官方协议：while(!timeout){ foreach(next+interrupt); }）——
+            #   等结算时当前节点是收尾链节点，候选节点身上的 timeout 根本
+            #   不会被读到（曾把时长覆写到「继续挑战/继续训练」上，用户设
+            #   1.5e9 ms 也照样 20s 超时任务失败，2026-10-22 实锤）。
+            end_node_override["timeout"] = int(end_settle_ms)
+        override[end_node["node"]] = end_node_override
 
     # ---- 2) 循环计数门（仅 loops 收尾模式的普通关需要）----
     #
@@ -546,8 +554,9 @@ def compile_jobset(raw: Dict[str, Any], log: LogFn = _noop) -> Dict[str, Any]:
     js = JobSet(raw, code=str(raw.get("code") or ""))
     every_n = _num(raw.get("everyN"), 10)
     # ★ 调配参数（步骤块 ⚙ 弹窗里调）：默认滑动毫秒数 / 动作间隔秒数。
-    #   swipeMs 空 -> 80；actionInterval 空 -> 不加 @前缀（BatchSwipe 用自己的默认间隔）。
-    swipe_ms = _num(raw.get("swipeMs"), 80)
+    #   swipeMs 空 -> 80；下限 0（瞬滑），手写负数兜底夹回 0；
+    #   actionInterval 空 -> 不加 @前缀（BatchSwipe 用自己的默认间隔）。
+    swipe_ms = max(0, _num(raw.get("swipeMs"), 80))
     interval = raw.get("actionInterval")
     if interval in (None, ""):
         interval = None

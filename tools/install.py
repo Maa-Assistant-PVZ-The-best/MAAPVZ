@@ -204,6 +204,12 @@ def install_chores():
         working_dir / "docs" / "imgs" / "logo.ico",
         install_path / "resource" / "logo.ico",
     )
+    # ★ PNG 版图标：interface.json 的 icon 引用它（ico 是 Windows 专用格式，
+    #   Mac/Linux 的 MFA 宿主不认，PNG 全平台可显示）。
+    shutil.copy2(
+        working_dir / "docs" / "imgs" / "logo.png",
+        install_path / "resource" / "logo.png",
+    )
     shutil.copy2(
         Path(__file__).parent / "AGENTS.md",
         install_path,

@@ -253,8 +253,11 @@ function jobResetEditor(quiet) {
         if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
     }
 
-    // 世界复选框全不勾
-    document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = false; });
+    // 选择世界清空
+    if (typeof jobSetWorldUI === 'function') jobSetWorldUI('', []);
+    // 植物备注清空
+    if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes({});
+
     // 阵容表表单恢复默认
     const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
     set('tfLineupMode', 'plants'); set('tfDeckNo', '1');
@@ -403,8 +406,10 @@ function jobApplyLoaded(job, code) {
     });
     if (!jobTables.length) jobNewTable();
     currentTable = 0;
-    const worlds = Array.isArray(job.worlds) ? job.worlds : [];
-    document.querySelectorAll('#jobWorlds input').forEach(function (cb) { cb.checked = worlds.includes(cb.value); });
+    // 选择世界（旧作业集没有该字段 -> 未选择）
+    if (typeof jobSetWorldUI === 'function') jobSetWorldUI(job.world, job.sub_worlds);
+    // 植物备注（旧作业集没有该字段 -> 空）
+    if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(job.plant_notes);
     // 局外选卡（作业集级）：旧作业集没有该字段 -> 空列表 + auto；
     // mode 为 oneclick/confirm 时 JSON 本就不存 plants，读进来也置空
     const _op = (job.outer_pick && typeof job.outer_pick === 'object') ? job.outer_pick : {};
@@ -421,6 +426,8 @@ function jobApplyLoaded(job, code) {
     jobRenderSlots();
     jobRenderSeqChains();
     jobSaveLocal();
+    // 「是否查看配置」提示条（38-jobset-notes.js；三个载入入口共用本函数，一处挂即可）
+    if (typeof jobPromptViewNotes === 'function') jobPromptViewNotes(job.name || code);
 }
 
 // 删除当前选中的作业集

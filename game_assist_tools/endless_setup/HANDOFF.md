@@ -1,4 +1,4 @@
-﻿# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
+# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
 
 > 工作区：`D:\maapvz\MAAPVZ`
 > 网页端（作业集编辑器）：`game_assist_tools\endless_setup\static\`
@@ -130,32 +130,24 @@ static/
 | pipe 节点 | 字段 | 值 |
 | --- | --- | --- |
 | `无尽挑战_识别开始战斗_清空卡牌` | `next` | `["无尽挑战_切换编队"]`（默认 `["无尽挑战_选取植物"]`） |
-| `无尽_切换编队序号` | `any_of[i].expected`（**每一项**） | `["3"]`（**字符串**；默认 `[]`） |
+| `无尽_选择编队`（custom 节点） | `custom_action_param` | `{"编队选择": true, "目标编队": N}`（默认目标 0=占位） |
 
 注入点共 **4 处**：`JobSetLoad`（预计表预热）、`JobSetStage` 首次锁定、`JobSetStage` 换阵容、`_apply_table`（切表辅助）。
 
-> ⚠️⚠️ **`无尽_切换编队序号` 是 Or 节点 —— 顶层 `expected` 无效！**
+> ⚠️⚠️ **2026-10-23 重写：编队选择 = SelectPlants 的「编队选择」custom 模式！**
 >
-> **2026-10 该节点由「1 个 any_of」改成「2 个 any_of」**，覆盖方式必须跟着改：
+> 旧写法（`无尽_切换编队序号` Or 节点 + 具名分支 `识别编队1/2` 写 expected）
+> 已退役。死穴：目标编队=当前编队时数字渲染变色，OCR 永认不出 -> 死循环。
 >
-> - **Or 的命中由各 `any_of[i]` 自己的 `expected` 决定**，节点顶层的 `expected`
->   **对 Or 节点不起作用**。
-> - 原来只往顶层写 `expected` —— 对 Or 等于**没写**，编队号永远匹配不上，
->   `无尽_切换编队序号` 永不点火，**切编队功能整体静默失效**。
-> - 现在两个 any_of（roi `135,129,57,167` 与 `132,125,77,566`，
->   覆盖编队列表的**不同显示区域**，同一语义）**都写入同一个编队号**。
-> - `squad=None` 回滚时**同样要走 any_of 清空**，只清顶层是清不掉的。
->
-> **实现方式**：`runtime.py` 用 `_SQUAD_ANY_OF` 骨架 + `_squad_any_of(expected)`
-> **重建整个 any_of 数组**，而不是只盖 `any_of[i].expected` ——
-> 不依赖 MAA 对「any_of 子项能否被 override 合并」的实现细节。
->
-> 🚨 **`_SQUAD_ANY_OF` 必须与 pipe 的 `any_of` 保持同步**（项数 / roi / recognition）。
-> 改了 pipe 不同步，注入就会把 pipe 的改动**盖回去**。
-> `selfcheck.py` 第 10 节会**自动对照真实 pipe 文件**并把不一致报出来。
->
-> 另外 pipe 文件是 **JSONC**（带 `//` 注释），用标准 `json` 读会炸，
-> 自测里先按行剥掉注释再解析。
+> - 新链：`清空卡牌 -> 切换编队(点配队) -> 过滤编队颜色 -> 确认在编队界面
+>   -> 无尽_选择编队(Custom) -> 选取植物_开始战斗`。
+> - custom 内部闭环：整列 OCR（roi 沿用 `[132,125,77,566]`）找目标号 -> 点击
+>   -> 等 500ms -> **白字核对**（白色集合 = {1,天生白} ∪ {当前选中}；
+>   目标≠1 看目标变白，目标=1 看白色集合收窄为 {1}）-> 不对就反向滑回顶重选；
+>   滑动带 `end_hold=1500` 防惯性过冲。
+> - `squad=None` 回滚：next 还原成选卡 + 目标编队清 0（防残留）。
+> - `selfcheck.py` 第 10 节会**自动对照真实 pipe 文件**（含新版结构断言），
+>   pipe 结构变了会立刻报出来。
 
 - **未配置时会主动回滚**（把 `next` 还原成「选取植物」、`expected` 清空），
   否则从编队表切回选卡表会残留上次设置。
@@ -264,7 +256,15 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
 
 ```jsonc
 {
-  "code": "...", "name": "...", "worlds": [], "max_level": 149,
+  "code": "...", "name": "...", "max_level": 149,
+  // 适配世界（2026-10-13 新增；37-jobset-world.js 弹窗编辑；运行时 JobSetPlan 首跑校验告警。
+  //   ★ 当前世界注到 JobSetPlan 双节点 param —— 别注 JobSetLoad：option 会合是
+  //     同节点同字段整体替换，会顶掉起始关卡 option 的 起始关卡/重置，2026-10-22 事故）
+  "world": "冰河世界",              // 主适配世界（最佳适配）；"" / 缺省 = 未标注
+  "sub_worlds": ["海盗港湾"],       // 副适配世界（候选，可多选，与主世界互斥）
+  // 植物备注（2026-10-13 新增；38-jobset-notes.js 弹窗编辑；仅展示，运行时不消费）
+  //   costume = 布尔：是否需要装扮（🎭 模式下点植物切换，与阶数同款交互）
+  "plant_notes": { "冰西瓜": { "tier": 5, "pendant": "闪耀雪花挂坠", "costume": true } },
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
@@ -923,7 +923,7 @@ agent/jobset/selfcheck.py                    第 8 节 form 21 条 + 第 9 节 t
 本轮（编队注入适配 Or 节点，见 §2.1）改动文件：
 
 ```
-agent/jobset/runtime.py     _SQUAD_ANY_OF 骨架 + _squad_any_of()；
+agent/jobset/runtime.py     具名分支 expected 注入（识别编队1/2）；
                             _squad_param 改走 any_of（顶层 expected 对 Or 无效）
                             typing 补 List
 agent/jobset/selfcheck.py   第 10 节 squad 14 条（含与真实 pipe 对照的漂移检测）

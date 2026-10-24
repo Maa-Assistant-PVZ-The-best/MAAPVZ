@@ -1,0 +1,55 @@
+# MaaFwApp（Android APK）打包配方。
+#
+# 为什么放仓库里而不是 CI 现生成：改配置能走 review；也避免把 YAML 写进未加引号的
+# bash heredoc 时被 shell 展开（$、反引号等）。
+#
+# 路径规则（见 MaaFwApp 的 build-logic/.../BuildProfile.kt）：
+#   配方里的相对路径相对「本文件所在目录」解析。
+# CI（.github/workflows/install_apk.yml）会把本仓库 checkout 出来、把 assets/* 摊平到
+# 该目录根部，再生成 agent 运行时到 <该目录>/agent-dist，所以下面写 . 和 agent-dist。
+#
+# 本地想复用同一份配方时（buildProfile 支持 ${NAME} / ${NAME:-默认值}，变量取自环境）：
+#   PI_PROFILE=<本文件> PI_ASSETS=<摊平后的 PI 根> AGENT_DIST=<agent-dist>
+
+assets: ${PI_ASSETS:-.}
+
+include:
+  - interface.json
+  - tasks/**
+  - resource/**
+  - resource_*/**
+  - data/**
+  - locales/**
+  - agent/**
+  - agent-dist/**
+  - docs/imgs/**
+  - model/**
+  - CONTACT
+  - LICENSE
+
+exclude: []
+
+agent:
+  sourceDir: ${AGENT_DIST:-agent-dist}
+  abi: [arm64-v8a]
+  runtimes:
+    - location: bundle
+      executable: bin/python3
+      args: [-u, agent/main.py]
+      env:
+        PYTHONHOME: "{bundle}/prefix"
+        PYTHONPATH: "{bundle}/site-packages:{bundle}/site-packages/pure.zip"
+        LD_LIBRARY_PATH: "{bundle}/prefix/lib:{bundle}/site-packages/chaquopy/lib:{nativeLibs}"
+        MAAFW_BINARY_PATH: "{nativeLibs}"
+
+# Android APK 在 Mirror酱 是独立资源，rid 与桌面端（assets/interface.json 里的 MaaPVZ）分开：
+# 不同 UI 共用同一个 rid 会让增量更新互相打架，见 Mirror酱 FAQ。
+# MaaFwApp 用这里的值**覆盖** interface.json 中的 mirrorchyan_rid；
+# 上传侧由 .github/workflows/mirrorchyan_release.yml 的 android 那条用同一个 rid。
+update:
+  mirrorchyanRid: MaaPVZ_exec
+
+app:
+  id: pvz
+  label: Maapvz
+  icon: ./docs/imgs/logo.png

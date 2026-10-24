@@ -1,0 +1,128 @@
+{
+    // 关闭游戏分发：纯中转节点（DirectHit 必中），next 挂全部渠道服的关闭节点。
+    // 渠道节点全部 enabled=false，由 option（稍后做）按用户渠道开对应的一个 ——
+    // 与启动侧的「启动游戏_选择渠道服 -> 打开pvz_*」结构一一对应。
+    "关闭游戏_选择渠道服": {
+        "next": [
+            "关闭pvz_自定义包",
+            "关闭pvz_官服",
+            "关闭pvz_华为",
+            "关闭pvz_联想",
+            "关闭pvz_360",
+            "关闭pvz_九游",
+            "关闭pvz_OPPO",
+            "关闭pvz_应用宝",
+            "关闭pvz_b服",
+            "关闭pvz_vivo",
+            "关闭pvz_荣耀",
+            "关闭pvz_好游快报",
+            "关闭pvz_百度",
+            "关闭pvz_7723",
+            "关闭pvz_taptap",
+            "关闭pvz_4399",
+            "关闭pvz_小米"
+        ]
+    },
+    "关闭pvz_自定义包": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "",
+        "post_delay": 400
+    },
+    "关闭pvz_官服": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400
+    },
+    "关闭pvz_华为": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdhwct",
+        "post_delay": 400
+    },
+    "关闭pvz_联想": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdlx",
+        "post_delay": 400
+    },
+    "关闭pvz_360": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd360",
+        "post_delay": 400
+    },
+    "关闭pvz_九游": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthduc",
+        "post_delay": 400
+    },
+    "关闭pvz_OPPO": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdop",
+        "post_delay": 400
+    },
+    "关闭pvz_应用宝": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.tencent.tmgp.pvz2hdtxyyb",
+        "post_delay": 400
+    },
+    "关闭pvz_b服": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.bilibili",
+        "post_delay": 400
+    },
+    "关闭pvz_vivo": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbbg",
+        "post_delay": 400
+    },
+    "关闭pvz_荣耀": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.honor",
+        "post_delay": 400
+    },
+    "关闭pvz_好游快报": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400
+    },
+    "关闭pvz_百度": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd.g.baidu",
+        "post_delay": 400
+    },
+    "关闭pvz_7723": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbazhang",
+        "post_delay": 400
+    },
+    "关闭pvz_taptap": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdbk",
+        "post_delay": 400
+    },
+    "关闭pvz_4399": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthd4399",
+        "post_delay": 400
+    },
+    "关闭pvz_小米": {
+        "action": "StopApp",
+        "enabled": false,
+        "package": "com.popcap.pvz2cthdxm",
+        "post_delay": 400
+    }
+}

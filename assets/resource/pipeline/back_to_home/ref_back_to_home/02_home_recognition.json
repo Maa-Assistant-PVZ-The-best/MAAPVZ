@@ -1,0 +1,66 @@
+{
+    "定位_主界面ui_1": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Panni_free/商店.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面ui_2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/日常.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面ui_3": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/竞技.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面ui_4": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Detection_Order/植物.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    }
+}

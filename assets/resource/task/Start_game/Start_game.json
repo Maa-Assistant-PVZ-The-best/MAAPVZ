@@ -4,16 +4,309 @@
             "type": "select",
             "cases": [
                 {
-                    "name": "云端进度"
+                    "name": "云端进度",
+                    "pipeline_override": {
+                        "开始游戏_使用本地进度": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
                     "name": "本地进度",
                     "pipeline_override": {
-                        "开始游戏": {
+                        "开始游戏_使用云端进度": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "最新进度",
+                    "pipeline_override": {
+                        "开始游戏_最新进度": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "绑定设备": {
+            "type": "switch",
+            "description": "有时换设备登录需要绑定设置，可以开启此功能",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "点击登录_jumpback_绑定设备": {
+                            "action": "Click"
+                        }
+                    }
+                }
+            ]
+        },
+        "开始登录_关闭广告": {
+            "label": "关闭广告",
+            "type": "switch",
+            "description": "搜索控件树中的close字段并且点击，通常情况下这个ui控件是关闭按钮，也可能有例外",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "点击登录_jumpback_关闭广告": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "渠道服": {
+            "type": "select",
+            "description": "选择你的渠道服，该选项还会与关闭悬浮窗强关联，且不与自定义包名冲突",
+            "cases": [
+                {
+                    "name": "官服",
+                    "pipeline_override": {
+                        "打开pvz_官服": {
+                            "enabled": true
+                        },
+                        "关闭pvz_官服": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "联想",
+                    "pipeline_override": {
+                        "打开pvz_联想": {
+                            "enabled": true
+                        },
+                        "关闭pvz_联想": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "4399",
+                    "pipeline_override": {
+                        "打开pvz_4399": {
+                            "enabled": true
+                        },
+                        "关闭pvz_4399": {
+                            "enabled": true
+                        },
+                        "点击登录_寻找悬浮球": {
+                            "custom_recognition_param": {
+                                "keyword": "win:GameAssistWindow",
+                                "sort": "min",
+                                "index": 1
+                            }
+                        },
+                        "悬浮球关闭方式_4399": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "小米",
+                    "pipeline_override": {
+                        "点击登录_寻找悬浮球": {
+                            "custom_recognition_param": {
+                                "keyword": "",
+                                "sort": "min",
+                                "index": 1
+                            }
+                        },
+                        "悬浮球关闭方式_小米": {
+                            "enabled": true
+                        },
+                        "点击登录_jumpback_关闭广告": {
+                            "custom_recognition_param": {
+                                "keyword": "",
+                                "sort": "min",
+                                "index": 1
+                            },
+                            "max_hit": 1
+                        },
+                        "打开pvz_小米": {
+                            "enabled": true
+                        },
+                        "关闭pvz_小米": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "应用宝",
+                    "option": [
+                        "应用宝_登录方式"
+                    ],
+                    "pipeline_override": {
+                        "打开pvz_应用宝": {
+                            "enabled": true
+                        },
+                        "关闭pvz_应用宝": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "b服",
+                    "pipeline_override": {
+                        "打开pvz_b服": {
+                            "enabled": true
+                        },
+                        "关闭pvz_b服": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "荣耀",
+                    "pipeline_override": {
+                        "打开pvz_荣耀": {
+                            "enabled": true
+                        },
+                        "关闭pvz_荣耀": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "vivo",
+                    "pipeline_override": {
+                        "打开pvz_vivo": {
+                            "enabled": true
+                        },
+                        "关闭pvz_vivo": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "九游",
+                    "pipeline_override": {
+                        "打开pvz_九游": {
+                            "enabled": true
+                        },
+                        "关闭pvz_九游": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "OPPO",
+                    "pipeline_override": {
+                        "打开pvz_OPPO": {
+                            "enabled": true
+                        },
+                        "关闭pvz_OPPO": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "好游快报",
+                    "pipeline_override": {
+                        "打开pvz_好游快报": {
+                            "enabled": true
+                        },
+                        "关闭pvz_好游快报": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "百度",
+                    "pipeline_override": {
+                        "打开pvz_百度": {
+                            "enabled": true
+                        },
+                        "关闭pvz_百度": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "360",
+                    "pipeline_override": {
+                        "打开pvz_360": {
+                            "enabled": true
+                        },
+                        "关闭pvz_360": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "华为",
+                    "pipeline_override": {
+                        "打开pvz_华为": {
+                            "enabled": true
+                        },
+                        "关闭pvz_华为": {
+                            "enabled": true
+                        },
+                        "点击登录_寻找悬浮球": {
+                            "custom_recognition_param": {
+                                "keyword": "win:com.huawei.hms.game.circle"
+                            }
+                        },
+                        "悬浮球关闭方式_华为": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "7723",
+                    "pipeline_override": {
+                        "打开pvz_7723": {
+                            "enabled": true
+                        },
+                        "关闭pvz_7723": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "taptap",
+                    "pipeline_override": {
+                        "打开pvz_taptap": {
+                            "enabled": true
+                        },
+                        "关闭pvz_taptap": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "应用宝_登录方式": {
+            "label": "登录方式",
+            "type": "select",
+            "cases": [
+                {
+                    "name": "qq登录",
+                    "pipeline_override": {
+                        "打开pvz_识别登录": {
                             "next": [
-                                "开始游戏",
-                                "使用本地进度",
-                                "关闭公告"
+                                "打开pvz_点击登录_应用宝_qq",
+                                "[JumpBack]点击登录_jumpback_关闭广告"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "微信登录",
+                    "pipeline_override": {
+                        "打开pvz_识别登录": {
+                            "next": [
+                                "打开pvz_点击登录_应用宝_微信",
+                                "[JumpBack]点击登录_jumpback_关闭广告"
                             ]
                         }
                     }
@@ -21,7 +314,31 @@
             ]
         },
         "自定义包名": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "option": [
+                        "输入_自定义包名"
+                    ],
+                    "pipeline_override": {
+                        "打开pvz_自定义包": {
+                            "enabled": true
+                        },
+                        "关闭pvz_自定义包": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "输入_自定义包名": {
             "type": "input",
+            "label": "自定义包名",
+            "description": "通常用于共存免绑包，请知道如何查询包名后使用，包名并非软件名字，也不是你的用户名",
             "inputs": [
                 {
                     "name": "包名",
@@ -37,284 +354,20 @@
                 }
             }
         },
-        "渠道服": {
-            "type": "select",
-            "description": "选择你要进入的渠道服",
-            "cases": [
-                {
-                    "name": "联想",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_联想",
-                                "打开pvz_联想"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "4399",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_4399",
-                                "打开pvz_4399"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "小米",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_XM",
-                                "打开pvz_XM"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "应用宝",
-                    "option": [
-                        "登录方式"
-                    ]
-                },
-                {
-                    "name": "b服",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_b服",
-                                "打开pvz_b服"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "荣耀",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_荣耀",
-                                "打开pvz_荣耀"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "vivo",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_vivo",
-                                "打开pvz_vivo"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "九游",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_九游",
-                                "打开pvz_九游"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "OPPO",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_OPPO",
-                                "打开pvz_OPPO"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "好游快报",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_好游快报",
-                                "打开pvz_好游快报"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "百度",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_百度",
-                                "打开pvz_百度"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "360",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_360",
-                                "打开pvz_360"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "华为",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_华为",
-                                "打开pvz_华为"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "7723",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_7723",
-                                "打开pvz_7723"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "taptap",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_taptap",
-                                "打开pvz_taptap"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "官服",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_官服",
-                                "打开pvz_官服"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "(不会填包名不要用)自定义包名",
-                    "option": [
-                        "自定义包名"
-                    ],
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_自定义包",
-                                "打开pvz_自定义包"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        "登录方式": {
-            "type": "select",
-            "cases": [
-                {
-                    "name": "qq登录",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_应用宝_qq",
-                                "打开pvz_应用宝_qq"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "微信登录",
-                    "pipeline_override": {
-                        "选择渠道服": {
-                            "next": [
-                                "关闭pvz_应用宝_微信",
-                                "打开pvz_应用宝_微信"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        "重复启动时黑屏请打开": {
-            "description": "会重启pvz",
+        "关闭悬浮窗": {
             "type": "switch",
-            "default_case": "No",
+            "description": "会关闭资源预设配置中所选的渠道服，不过目前只适配了4399和华为渠道服（由于时效性的原因，建议以用户文档为准），maapvz的开发者由衷的欢迎你来帮忙提交pr！",
             "cases": [
+                {
+                    "name": "No"
+                },
                 {
                     "name": "Yes",
                     "pipeline_override": {
-                        "关闭pvz_联想": {
-                            "enabled": true
-                        },
-                        "关闭pvz_4399": {
-                            "enabled": true
-                        },
-                        "关闭pvz_XM": {
-                            "enabled": true
-                        },
-                        "关闭pvz_b服": {
-                            "enabled": true
-                        },
-                        "关闭pvz_荣耀": {
-                            "enabled": true
-                        },
-                        "关闭pvz_vivo": {
-                            "enabled": true
-                        },
-                        "关闭pvz_九游": {
-                            "enabled": true
-                        },
-                        "关闭pvz_OPPO": {
-                            "enabled": true
-                        },
-                        "关闭pvz_好游快报": {
-                            "enabled": true
-                        },
-                        "关闭pvz_百度": {
-                            "enabled": true
-                        },
-                        "关闭pvz_360": {
-                            "enabled": true
-                        },
-                        "关闭pvz_华为": {
-                            "enabled": true
-                        },
-                        "关闭pvz_7723": {
-                            "enabled": true
-                        },
-                        "关闭pvz_官服": {
-                            "enabled": true
-                        },
-                        "关闭pvz_应用宝_qq": {
-                            "enabled": true
-                        },
-                        "关闭pvz_应用宝_微信": {
+                        "点击登录_寻找悬浮球": {
                             "enabled": true
                         }
                     }
-                },
-                {
-                    "name": "No"
                 }
             ]
         }

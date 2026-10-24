@@ -356,6 +356,10 @@ function renderAllBoards() {
 function jobRenderCurrentBoard() {
     if (jobIsBossBoard()) renderBoard('gridLate', boardLate, true);
     else renderBoard('gridEarly', boardEarly, false);
+    // 地图机制层（40-jobset-mech.js；未选主世界时为空操作）
+    if (typeof jobRenderMech === 'function') jobRenderMech();
+    // 表格映射对照幽灵层（39-jobset-ref.js；未开启对照时为空操作）
+    if (typeof jobRenderRefGhosts === 'function') jobRenderRefGhosts();
     jobRenderEndParams();
 }
 

@@ -1435,8 +1435,10 @@ guard:节点A|节点B@@roi:盒1|盒2 —— 区域守卫声明：click/swipe/mul
             return False, False
         specs = []
         for i, f in enumerate(fingers):
+            # ★ duration 0 是合法值（瞬滑）——不能用 `or 100`，会把 0 吃掉
+            _fd = f.get('duration')
             one = {'type': 'swipe', 'from': f.get('from'), 'to': f.get('to'),
-                   'duration': int(f.get('duration', 100) or 100)}
+                   'duration': int(_fd) if _fd is not None else 100}
             sp = self._action_to_swipe_spec(one, i)
             if sp is None:
                 return False, False
@@ -1462,8 +1464,10 @@ guard:节点A|节点B@@roi:盒1|盒2 —— 区域守卫声明：click/swipe/mul
     def _run_multi_serial(self, controller, act, pos=""):
         """多指动作的退化路径：一根一根串行滑（不丢动作，只是不并发）。"""
         for f in (act.get('fingers') or []):
+            # ★ duration 0 是合法值（瞬滑）——不能用 `or 100`，会把 0 吃掉
+            _fd = f.get('duration')
             one = {'type': 'swipe', 'from': f.get('from'), 'to': f.get('to'),
-                   'duration': int(f.get('duration', 100) or 100)}
+                   'duration': int(_fd) if _fd is not None else 100}
             if not self._do_action(controller, one, pos=pos):
                 return False
         return True

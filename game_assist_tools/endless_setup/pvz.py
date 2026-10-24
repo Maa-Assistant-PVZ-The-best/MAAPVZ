@@ -258,7 +258,6 @@ def list_jobs():
                 d = json.load(f)
             entry['name'] = d.get('name', '')
             entry['version'] = d.get('version', '')
-            entry['worlds'] = d.get('worlds', [])
             entry['tables'] = len(d.get('tables', []) or [])
         except Exception:
             pass
@@ -369,6 +368,19 @@ def set_current_job():
         return jsonify({'status': 'success', 'msg': '已设为当前作业集 ' + code})
     except Exception as e:
         return jsonify({'status': 'error', 'msg': str(e)}), 500
+
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    """右上角「✕ 关闭后台」：杀掉编辑器后端进程。
+
+    先回响应再自杀（延迟 0.4s 让响应发到浏览器）。
+    关掉之后页面还在但所有接口都会断；下次用要点 pvz.bat 重新开启。
+    （更新 MAAPVZ 后也该这样重启一次，否则跑的还是旧代码。）
+    """
+    import threading
+    threading.Timer(0.4, os._exit, args=(0,)).start()
+    return jsonify({'status': 'success', 'msg': '后端进程已关闭'})
 
 
 def _listener_pids(port: int):

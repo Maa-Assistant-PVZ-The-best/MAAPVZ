@@ -188,7 +188,14 @@ class SelectPlants(CustomAction):
 
     参数（中文）:
         {
-          "植物列表": ["豌豆射手","向日葵"],        // 必填，按槽位顺序
+          // ---- ★ 编队选择模式（2026-10-23 新增，与选卡互斥，给了就走编队）----
+          "编队选择": true,            // 编队界面闭环选择模式
+          "目标编队": 2,               // 1-6；白色集合={1,天生白}∪{选中}，
+                                       //   核对：目标≠1 看目标变白，目标=1 看只剩 1 白
+          "滑动按住": 1500,            // end_hold：滑到终点按住再松，防惯性过冲
+          "核对等待": 500,             // 点击后等数字变白再核对
+
+          "植物列表": ["豌豆射手","向日葵"],        // 选卡模式必填，按槽位顺序
           "模板目录": "...",                        // 可选
           "对照表":   "...",                        // 可选
           "核对roi":  [320,95,215,61],              // 可选，点卡后核对名字的 OCR 区域
@@ -278,6 +285,32 @@ class SelectPlants(CustomAction):
         [176, 583], [301, 583], [422, 581], [539, 581], [661, 583],
     ]
 
+    # ==================== 编队选择模式（2026-10-23 新增） ====================
+    # 目标界面：选卡屏点「配队」后的编队列表（标题「植物编队」，1-6 号编队）。
+    # ★ 识别几何全部继承自已退役的 pipe 节点（识别编队1/2、滑动寻找编队）：
+    #   整列 OCR roi = 原「识别编队2」的 [132,125,77,566]。
+    #
+    # ★ 白色语义（用户 2026-10-23 实测）：
+    #   编队1 的数字天生纯白（不是选中态）；其余编号的数字被选中后才变白。
+    #   => 白字集合 = {1} ∪ {当前选中}。核对了就靠这个：
+    #      目标≠1 -> 目标号得在白色集合里；
+    #      目标=1 -> 不走路由短路、无条件多点一次，然后看白色集合
+    #                收窄为 {1}（旧选中号变回彩色才算选上）。
+    #   白不白用 numpy 直接数近白像素（行框就是 OCR 给的 box），
+    #   不再走 pipe 的 color_filter+二次 OCR —— v5 模型下瘦字形「1」会读成
+    #   "(cid:)"（2026-10-23 事故），少一层 OCR 少一层脆。
+    #
+    # ★ 闭环：整列 OCR 找目标号 -> 点击 -> 等 500ms -> 白字核对 ->
+    #   不对/找不到 -> 反向滑回顶 -> 重试；滑动带 end_hold=1500 防惯性过冲。
+    #   逃逸：目标是 1/2/3 却连续 2 轮看到 6（列表不在顶部）-> 回弹。
+    SQUAD_COL_ROI = [132, 125, 77, 566]
+    SQUAD_SWIPE = {"begin": [447, 535], "end": [450, 147], "duration": 200}
+    SQUAD_BACKTOP = {"begin": [450, 147], "end": [447, 535], "duration": 200}
+    SQUAD_END_HOLD = 1500    # 滑到终点按住 1.5s 再松（用户定的值）
+    SQUAD_VERIFY_WAIT = 500  # 点击后等数字变白的延迟（用户定的值）
+    SQUAD_MAX_RETRY = 10     # 闭环总轮数上限
+    SQUAD_MAX_SLIDES = 6     # 6 个编队、视口约 3 行，滑 6 次必到底
+
     # ------------------------------------------------------------------
     @staticmethod
     def _load_coords_slot_xy(coords_file=None, default_roi=None):
@@ -322,6 +355,17 @@ class SelectPlants(CustomAction):
             fill_only = not plants
             # 无尽局外选卡开关要提前解析：模板目录缺省值按它分流（见下）
             endless_mode = self._to_bool(param.get("无尽局外选卡"))
+
+            # ---- ★ 编队选择模式（与选卡无关，最先分流）----
+            #   编队界面闭环选择：识别->点击->白字核对->回弹重试。
+            #   参数：{"编队选择": true, "目标编队": 1..6}（由 runtime 注入）。
+            if self._to_bool(param.get("编队选择")):
+                try:
+                    squad_target = int(param.get("目标编队", 0) or 0)
+                except Exception:
+                    squad_target = 0
+                ok = self._run_squad_select(context, squad_target, param)
+                return CustomAction.RunResult(success=ok)
 
             tdir = param.get("模板目录")
             if not tdir:
@@ -918,6 +962,212 @@ class SelectPlants(CustomAction):
                   f"（若真身在里面，把读错的写法加进 PLANT_NAME_ALIASES）",
                   file=sys.stderr, flush=True)
         return False, slide_count
+
+    # ==================== 编队选择模式 ====================
+    def _squad_swipe(self, ctl, vec, end_hold):
+        """带 end_hold 的滑动。
+
+        controller 的 post_swipe 没有 end_hold 参数（pipe 里 Swipe 的
+        end_hold 是框架层实现的），这里用 touch down/move/up 手工复现：
+        分段移动到终点后按住 end_hold 毫秒再松手 —— 按住期间列表不动，
+        松开即停，防止惯性滚动过冲把列表带跑。
+        """
+        try:
+            x1, y1 = int(vec["begin"][0]), int(vec["begin"][1])
+            x2, y2 = int(vec["end"][0]), int(vec["end"][1])
+            dur = max(50, int(vec.get("duration", 200)))
+            steps = 8
+            ctl.post_touch_down(x1, y1).wait()
+            for i in range(1, steps + 1):
+                xi = int(x1 + (x2 - x1) * i / steps)
+                yi = int(y1 + (y2 - y1) * i / steps)
+                ctl.post_touch_move(xi, yi).wait()
+                time.sleep(dur / steps / 1000.0)
+            time.sleep(end_hold / 1000.0)
+            ctl.post_touch_up().wait()
+        except Exception as e:
+            print(f"[SelectPlants] 编队选择: 滑动失败: {e}",
+                  file=sys.stderr, flush=True)
+
+    @staticmethod
+    def _ocr_digits(context, image, roi):
+        """整列 OCR -> {编队号: [x,y,w,h]}（同号多框取第一个）。
+
+        候选取 best > filtered > all 全部扫（继承 _reco_all_texts 的策略：
+        best 烂了不代表 all 里没有）。文本里抠第一串数字，只收 1-6。
+        """
+        out = {}
+        if not _DIRECT_OCR:
+            return out
+        if image is None or getattr(image, "size", 0) == 0:
+            return out
+        try:
+            r = tuple(int(v) for v in roi)
+            detail = context.run_recognition_direct(
+                JRecognitionType.OCR, JOCR(roi=r), image)
+        except Exception as e:
+            print(f"[SelectPlants] 编队选择: OCR 失败: {e}",
+                  file=sys.stderr, flush=True)
+            return out
+        if detail is None:
+            return out
+        cands = []
+        best = getattr(detail, "best_result", None)
+        if best is not None:
+            cands.append(best)
+        cands.extend(getattr(detail, "filtered_results", None) or [])
+        cands.extend(getattr(detail, "all_results", None) or [])
+        for c in cands:
+            t = getattr(c, "text", None)
+            box = getattr(c, "box", None)
+            if not t or box is None:
+                continue
+            m = re.search(r"\d+", str(t))
+            if not m:
+                continue
+            n = int(m.group())
+            if 1 <= n <= 6 and n not in out:
+                out[n] = [int(v) for v in box]
+        return out
+
+    @staticmethod
+    def _white_digits(image, digit_boxes, white_min=235, ratio=0.10):
+        """白字核对：逐框数近白像素占比，>= ratio 判白，返回白字编队号集合。
+
+        白色 = BGR 三通道都 >= white_min（纯白 + 抗锯齿近白）。
+        白字笔画在紧凑框里的占比实测约 20-50%；彩色数字近白像素≈0，
+        0.10 的阈值余量很大。
+        """
+        whites = set()
+        if image is None or getattr(image, "size", 0) == 0:
+            return whites
+        for n, box in digit_boxes.items():
+            x, y, w, h = box
+            crop = image[max(0, y):y + h, max(0, x):x + w]
+            if crop.size == 0:
+                continue
+            near_white = (crop.min(axis=2) >= white_min)
+            if float(near_white.mean()) >= ratio:
+                whites.add(n)
+        return whites
+
+    @staticmethod
+    def _squad_done(white_set, target):
+        """选中核对（**点击后**用；目标≠1 时也用于点击前的完成短路）。
+
+        目标≠1：目标号在白色集合里即可（1 天生白不影响判定）。
+        目标=1：1 天生白，「1 是白的」区分不了选中态 —— 所以本函数对
+        目标=1 只在点击后核对：看白色集合是否收窄为 {1}（旧选中号变回
+        彩色；本来就没别的选中号时，点完白字仍={1}，也算选上）。
+        点击前的完成短路【禁止】用于目标=1（必须无条件多点一次）。"""
+        if target == 1:
+            return white_set == {1}
+        return target in white_set
+
+    def _run_squad_select(self, context, target, param):
+        """编队选择闭环主流程（参数语义见 SQUAD_* 常量注释）。
+
+        每轮：整列 OCR -> 已经是目标直接收工 -> 看得见目标就点、
+        500ms 后白字核对，不过就回弹重选 -> 看不见就下滑（end_hold=1500）；
+        目标是 1/2/3 却连续 2 轮看到 6 -> 列表不在顶部 -> 回弹。
+        """
+        ctl = context.tasker.controller
+        if not (1 <= target <= 6):
+            print(f"[SelectPlants] 编队选择: 目标编队 {target} 非法（要 1-6）",
+                  file=sys.stderr, flush=True)
+            return False
+        col_roi = param.get("编队列roi") or self.SQUAD_COL_ROI
+        swipe = dict(self.SQUAD_SWIPE)
+        swipe.update(param.get("滑动") or {})
+        back = dict(self.SQUAD_BACKTOP)
+        back.update(param.get("回弹") or {})
+        end_hold = int(param.get("滑动按住", self.SQUAD_END_HOLD))
+        verify_wait = int(param.get("核对等待", self.SQUAD_VERIFY_WAIT))
+        max_retry = int(param.get("最多重试", self.SQUAD_MAX_RETRY))
+        max_slides = int(param.get("最多滑动步数", self.SQUAD_MAX_SLIDES))
+        post_swipe_wait = int(param.get("滑动后等待", 300))
+
+        def backtop(n_slides):
+            # 反着滑回顶：次数 = 本轮下滑次数 + 2（与选卡回顶同思路，留余量）
+            for _ in range(max(1, n_slides + 2)):
+                self._squad_swipe(ctl, back, end_hold)
+
+        slides = 0
+        consec_last6 = 0
+        for attempt in range(1, max_retry + 1):
+            if self._stopped(context):
+                return False
+            img = self._screen(ctl)
+            if img is None:
+                return False
+            digits = self._ocr_digits(context, img, col_roi)
+            white = self._white_digits(img, digits)
+            print(f"[SelectPlants] 编队选择: 第{attempt}轮 "
+                  f"可见={sorted(digits)} 白字={sorted(white)}",
+                  file=sys.stderr, flush=True)
+
+            # 已完成短路只对 目标≠1 生效（不把已选中的再点一遍，防反选）。
+            # ★ 编队1 是例外：它天生纯白，「白字={1}」不代表选中态 ——
+            #   目标=1 时必须无条件多点一次（用户 2026-10-23 实测确认），
+            #   点完再用「白色集合收窄为 {1}」核对（旧选中号变回彩色才算选上；
+            #   本来就没有别的选中号时，点完白字仍={1}，也算选上）。
+            if target != 1 and self._squad_done(white, target):
+                print(f"[SelectPlants] 编队选择: 编队{target} 已是选中态 ✓",
+                      file=sys.stderr, flush=True)
+                return True
+
+            if target in digits:
+                x, y, w, h = digits[target]
+                self._click(ctl, x + w // 2, y + h // 2)
+                print(f"[SelectPlants] 编队选择: 点击编队{target} "
+                      f"@({x + w // 2},{y + h // 2})", file=sys.stderr, flush=True)
+                time.sleep(verify_wait / 1000.0)
+                if self._stopped(context):
+                    return False
+                img2 = self._screen(ctl)
+                digits2 = self._ocr_digits(context, img2, col_roi)
+                white2 = self._white_digits(img2, digits2)
+                if self._squad_done(white2, target):
+                    print(f"[SelectPlants] 编队选择: 编队{target} 核对通过 ✓",
+                          file=sys.stderr, flush=True)
+                    return True
+                print(f"[SelectPlants] 编队选择: 核对不过 "
+                      f"（白字={sorted(white2)}）-> 回弹重选",
+                      file=sys.stderr, flush=True)
+                backtop(slides)
+                slides = 0
+                consec_last6 = 0
+                time.sleep(post_swipe_wait / 1000.0)
+                continue
+
+            # 目标不可见：目标是 1/2/3 却连续看到 6 -> 列表肯定不在顶部
+            if target <= 3 and 6 in digits:
+                consec_last6 += 1
+                if consec_last6 >= 2:
+                    print(f"[SelectPlants] 编队选择: 目标是{target}但连续 2 轮"
+                          f"看到 6 -> 列表不在顶部，回弹",
+                          file=sys.stderr, flush=True)
+                    backtop(slides)
+                    slides = 0
+                    consec_last6 = 0
+                    time.sleep(post_swipe_wait / 1000.0)
+                    continue
+            else:
+                consec_last6 = 0
+
+            if slides >= max_slides:
+                print(f"[SelectPlants] 编队选择: 单轮下滑 {slides} 次仍不见 "
+                      f"{target} -> 回弹", file=sys.stderr, flush=True)
+                backtop(slides)
+                slides = 0
+            else:
+                self._squad_swipe(ctl, swipe, end_hold)
+                slides += 1
+            time.sleep(post_swipe_wait / 1000.0)
+
+        print(f"[SelectPlants] 编队选择: {max_retry} 轮仍未选中编队{target}，放弃",
+              file=sys.stderr, flush=True)
+        return False
 
     # ---- 无尽局外选卡：严格按列表顺序，当前帧优先找下一个，触底回顶重扫 ----
     def _run_endless_select(self, context, ctl, targets, search_roi, swipe,

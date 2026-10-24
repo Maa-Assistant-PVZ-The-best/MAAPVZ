@@ -2108,3 +2108,367 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
     padding: 10px 16px; border-top: 1px solid #e2e8f0;
 }
 #layoutModal .lz-warn { flex: 1; font-size: 12px; color: #dc2626; }
+
+/* ============ 选择世界弹窗（主世界轮播 + 副世界多选，2026-10-13） ============ */
+#worldPicker {
+    position: fixed; inset: 0; z-index: 10060;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#worldPicker.sp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#worldPicker .wp-panel {
+    width: min(720px, 92vw); max-height: 86vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#worldPicker .wp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#worldPicker .wp-dot { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
+#worldPicker .wp-title { font-size: 14px; font-weight: 700; color: #16a34a; letter-spacing: 1px; }
+#worldPicker .wp-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#worldPicker .wp-close {
+    width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1; margin-left: 8px;
+}
+#worldPicker .wp-close:hover { background: #e2e8f0; }
+#worldPicker .wp-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+
+/* 主世界轮播 */
+#worldPicker .wp-carousel { display: flex; align-items: center; gap: 10px; justify-content: center; }
+#worldPicker .wp-arrow {
+    width: 38px; height: 64px; border: 1px solid #e2e8f0; border-radius: 10px;
+    background: #f8fafc; color: #334155; font-size: 16px; cursor: pointer; flex: 0 0 auto;
+}
+#worldPicker .wp-arrow:hover { background: #eff6ff; border-color: #93c5fd; }
+#worldPicker .wp-stage { text-align: center; flex: 0 1 auto; }
+#worldPicker .wp-stage img {
+    height: 260px; max-width: 240px; object-fit: contain;
+    filter: drop-shadow(0 10px 18px rgba(15,23,42,.22));
+    user-select: none; -webkit-user-drag: none;
+}
+#worldPicker .wp-stage-name { font-size: 15px; font-weight: 700; color: #0f172a; margin-top: 6px; }
+#worldPicker .wp-set-main {
+    margin-top: 8px; border: none; border-radius: 8px; padding: 6px 18px;
+    background: #16a34a; color: #fff; font-size: 13px; cursor: pointer;
+}
+#worldPicker .wp-set-main:hover { background: #15803d; }
+#worldPicker .wp-set-main.wp-is-main { background: #94a3b8; cursor: default; }
+
+/* 副世界图库 */
+#worldPicker .wp-lib-title {
+    margin: 14px 0 10px; padding-top: 12px; border-top: 1px dashed #e2e8f0;
+    font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .5px;
+}
+#worldPicker .wp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 10px; }
+#worldPicker .wp-item {
+    position: relative; cursor: pointer; border-radius: 10px; padding: 6px 4px 4px;
+    border: 2px solid transparent; background: #f8fafc; text-align: center;
+    transition: border-color .14s ease, background .14s ease, transform .14s ease;
+}
+#worldPicker .wp-item:hover { background: #eff6ff; border-color: #93c5fd; transform: translateY(-2px); }
+/* ★ 方形缩略格：宽度撑满格子 + aspect-ratio 固定 1:1 + contain。
+     竖长条立绘在方格里居中完整显示（不再是 56px 高的一条细缝，看着像被压扁）。
+     与 .lz-plant-cell img 同pattern。 */
+#worldPicker .wp-item img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
+#worldPicker .wp-name { font-size: 11px; color: #334155; margin-top: 2px; }
+#worldPicker .wp-item.wp-sub { border-color: #22a65e; background: #f0fdf4; }
+#worldPicker .wp-item.wp-main { border-color: #d97706; background: #fffbeb; cursor: default; }
+#worldPicker .wp-tag {
+    position: absolute; top: 4px; right: 4px;
+    font-size: 9px; font-weight: 700; color: #fff; border-radius: 5px; padding: 1px 5px;
+}
+#worldPicker .wp-tag-main { background: #d97706; }
+#worldPicker .wp-tag-sub { background: #22a65e; }
+
+/* 底栏 */
+#worldPicker .wp-foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#worldPicker .wp-tip { font-size: 12px; color: #64748b; margin-right: auto; }
+#worldPicker .wp-reset {
+    border: 1px solid #e2e8f0; background: #fff; color: #64748b;
+    border-radius: 8px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+}
+#worldPicker .wp-reset:hover { background: #f8fafc; }
+#worldPicker #worldPickerDone {
+    border: none; border-radius: 8px; padding: 6px 20px;
+    background: #16a34a; color: #fff; font-size: 13px; cursor: pointer;
+}
+#worldPicker #worldPickerDone:hover { background: #15803d; }
+
+/* ============ 备注配置弹窗（神器/植物总览 + 阶数/挂件标注，2026-10-13） ============ */
+#notesPicker {
+    position: fixed; inset: 0; z-index: 10060;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#notesPicker.sp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#notesPicker .np-panel {
+    width: min(860px, 94vw); max-height: 88vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#notesPicker .np-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#notesPicker .np-dot { width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; }
+#notesPicker .np-title { font-size: 14px; font-weight: 700; color: #7c3aed; letter-spacing: 1px; }
+#notesPicker .np-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#notesPicker .np-close {
+    width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1; margin-left: 8px;
+}
+#notesPicker .np-close:hover { background: #e2e8f0; }
+
+/* 模式栏 */
+#notesPicker .np-modebar {
+    display: flex; gap: 8px; padding: 10px 18px 0; flex: 0 0 auto;
+}
+#notesPicker .np-mode {
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #334155;
+    border-radius: 8px; padding: 5px 14px; font-size: 12px; cursor: pointer;
+}
+#notesPicker .np-mode:hover { border-color: #93c5fd; background: #eff6ff; }
+#notesPicker .np-mode.np-mode-on { border-color: #7c3aed; background: #f5f3ff; color: #7c3aed; font-weight: 700; }
+
+/* 武装条（阶数条 / 挂件条） */
+#notesPicker .np-arm {
+    display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;
+    overflow-x: auto; padding: 10px 18px 0; flex: 0 0 auto;
+}
+#notesPicker .np-arm-item {
+    flex: 0 0 auto; min-width: 40px; height: 40px; padding: 3px 6px;
+    border: 2px solid #e2e8f0; border-radius: 8px; background: #fff;
+    font-size: 12px; color: #475569; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+}
+#notesPicker .np-arm-item img { width: 30px; height: 30px; object-fit: contain; pointer-events: none; }
+#notesPicker .np-arm-item:hover { border-color: #93c5fd; }
+#notesPicker .np-arm-item.np-armed { border-color: #7c3aed; background: #f5f3ff; box-shadow: 0 0 0 2px #ddd6fe; }
+
+#notesPicker .np-body { padding: 12px 18px; overflow-y: auto; flex: 1 1 auto; }
+#notesPicker .np-sec-title {
+    margin: 8px 0 8px; font-size: 11px; font-weight: 700; color: #64748b; letter-spacing: .5px;
+}
+#notesPicker .np-empty { font-size: 12px; color: #94a3b8; }
+
+/* 神器行 */
+#notesPicker .np-art-row { display: flex; flex-wrap: wrap; gap: 10px; }
+#notesPicker .np-art {
+    width: 84px; text-align: center; border: 2px solid #e2e8f0;
+    border-radius: 10px; padding: 6px 4px 4px; background: #f8fafc;
+}
+#notesPicker .np-art img { width: 48px; height: 48px; object-fit: contain; }
+
+/* 植物网格（方形缩略格，与棋盘/世界图库同 pattern） */
+#notesPicker .np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
+#notesPicker .np-item {
+    position: relative; border: 2px solid transparent; border-radius: 10px;
+    background: #f8fafc; padding: 6px 4px 4px; text-align: center;
+}
+#notesPicker .np-item.np-clickable { cursor: pointer; transition: border-color .14s, background .14s, transform .14s; }
+#notesPicker .np-item.np-clickable:hover { background: #f5f3ff; border-color: #c4b5fd; transform: translateY(-2px); }
+#notesPicker .np-plant-img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
+#notesPicker .np-name { font-size: 11px; color: #334155; margin-top: 2px; }
+/* 角标：挂件右上（金圈），阶数右下 */
+#notesPicker .np-badge {
+    position: absolute; width: 24px; height: 24px; object-fit: contain;
+    background: #fff; border-radius: 50%; padding: 1px;
+    box-shadow: 0 1px 4px rgba(15,23,42,.25); pointer-events: none;
+}
+#notesPicker .np-badge-pendant { top: 2px; right: 2px; border: 2px solid #d97706; }
+#notesPicker .np-badge-tier { bottom: 20px; right: 2px; border: 2px solid #7c3aed; }
+
+#notesPicker .np-foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#notesPicker .np-tip { font-size: 12px; color: #64748b; margin-right: auto; }
+#notesPicker #notesPickerDone {
+    border: none; border-radius: 8px; padding: 6px 20px;
+    background: #7c3aed; color: #fff; font-size: 13px; cursor: pointer;
+}
+#notesPicker #notesPickerDone:hover { background: #6d28d9; }
+
+/* ============ 表格映射对照（2026-10-13） ============ */
+.ref-badge {
+    font-size: 11px; color: #7c3aed; background: #f5f3ff;
+    border: 1px solid #ddd6fe; border-radius: 8px; padding: 3px 8px; cursor: pointer;
+}
+.ref-badge:hover { background: #ede9fe; }
+
+#refPicker {
+    position: fixed; inset: 0; z-index: 10070;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#refPicker.sp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#refPicker .rp-panel {
+    width: min(480px, 92vw);
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#refPicker .rp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0;
+}
+#refPicker .rp-dot { width: 6px; height: 6px; border-radius: 50%; background: #0891b2; }
+#refPicker .rp-title { font-size: 14px; font-weight: 700; color: #0891b2; letter-spacing: 1px; }
+#refPicker .rp-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#refPicker .rp-close {
+    width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1; margin-left: 8px;
+}
+#refPicker .rp-close:hover { background: #e2e8f0; }
+#refPicker .rp-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 8px; }
+#refPicker .rp-label { font-size: 11px; font-weight: 700; color: #64748b; display: block; margin-bottom: 4px; }
+#refPicker .rp-row { display: flex; gap: 10px; }
+#refPicker .rp-row > div { flex: 1; }
+#refPicker .rp-select {
+    width: 100%; border: 1px solid #e2e8f0; border-radius: 8px;
+    padding: 6px 8px; font-size: 12px; color: #334155; background: #fff;
+}
+#refPicker .rp-select:focus { border-color: #0891b2; outline: none; }
+#refPicker .rp-foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid #e2e8f0;
+}
+#refPicker .rp-tip { font-size: 11px; color: #94a3b8; margin-right: auto; }
+#refPicker .rp-clear {
+    border: 1px solid #fecaca; border-radius: 8px; padding: 6px 12px;
+    background: #fef2f2; color: #b91c1c; font-size: 12px; cursor: pointer;
+}
+#refPicker .rp-clear:hover { background: #fee2e2; }
+#refPicker #refApply {
+    border: none; border-radius: 8px; padding: 6px 20px;
+    background: #0891b2; color: #fff; font-size: 13px; cursor: pointer;
+}
+#refPicker #refApply:hover { background: #0e7490; }
+
+/* 对照幽灵图：绝对叠在格子上，不吃点击 */
+.cell { position: relative; }
+.ref-ghost-wrap {
+    position: absolute; inset: 2px; width: calc(100% - 4px); height: calc(100% - 4px);
+    pointer-events: none; border-radius: 6px;
+}
+.ref-ghost-wrap.ref-under { opacity: .30; filter: grayscale(.35); z-index: 0; }
+.ref-ghost-wrap.ref-over  { opacity: .72; z-index: 5; }
+/* ★ 幽灵项镜像 .cell.job-nN .tag.plant.job-pK 的迷你网格：
+   同格多株（藤蔓叠种等）各就各位，不再全尺寸叠成一团（2026-10-22 UI 修复）。
+   坐标比本体小 2px（wrap 已 inset 2px），档位数对齐 job-n1..9。 */
+.ref-ghost { position: absolute; object-fit: contain; pointer-events: none; }
+.ref-ghost-wrap.ref-n1 .ref-ghost { left:1px; top:1px; width:calc(100% - 2px); height:calc(100% - 2px); }
+.ref-ghost-wrap.ref-n2 .ref-ghost,
+.ref-ghost-wrap.ref-n3 .ref-ghost,
+.ref-ghost-wrap.ref-n4 .ref-ghost { width:27px; height:27px; }
+.ref-ghost-wrap.ref-n2 .ref-ghost { top:50%; transform:translateY(-50%); }
+.ref-ghost-wrap.ref-n2 .ref-p1 { left:2px; }
+.ref-ghost-wrap.ref-n2 .ref-p2 { left:33px; }
+.ref-ghost-wrap.ref-n3 .ref-p1, .ref-ghost-wrap.ref-n4 .ref-p1 { left:2px;  top:2px; }
+.ref-ghost-wrap.ref-n3 .ref-p2, .ref-ghost-wrap.ref-n4 .ref-p2 { left:33px; top:2px; }
+.ref-ghost-wrap.ref-n3 .ref-p3, .ref-ghost-wrap.ref-n4 .ref-p3 { left:2px;  top:33px; }
+.ref-ghost-wrap.ref-n4 .ref-p4 { left:33px; top:33px; }
+.ref-ghost-wrap.ref-n5 .ref-ghost, .ref-ghost-wrap.ref-n6 .ref-ghost,
+.ref-ghost-wrap.ref-n7 .ref-ghost, .ref-ghost-wrap.ref-n8 .ref-ghost,
+.ref-ghost-wrap.ref-n9 .ref-ghost { width:17px; height:17px; }
+.ref-ghost-wrap.ref-n5 .ref-p1, .ref-ghost-wrap.ref-n6 .ref-p1,
+.ref-ghost-wrap.ref-n7 .ref-p1, .ref-ghost-wrap.ref-n8 .ref-p1,
+.ref-ghost-wrap.ref-n9 .ref-p1 { left:2px;  top:2px; }
+.ref-ghost-wrap.ref-n5 .ref-p2, .ref-ghost-wrap.ref-n6 .ref-p2,
+.ref-ghost-wrap.ref-n7 .ref-p2, .ref-ghost-wrap.ref-n8 .ref-p2,
+.ref-ghost-wrap.ref-n9 .ref-p2 { left:23px; top:2px; }
+.ref-ghost-wrap.ref-n5 .ref-p3, .ref-ghost-wrap.ref-n6 .ref-p3,
+.ref-ghost-wrap.ref-n7 .ref-p3, .ref-ghost-wrap.ref-n8 .ref-p3,
+.ref-ghost-wrap.ref-n9 .ref-p3 { left:44px; top:2px; }
+.ref-ghost-wrap.ref-n5 .ref-p4, .ref-ghost-wrap.ref-n6 .ref-p4,
+.ref-ghost-wrap.ref-n7 .ref-p4, .ref-ghost-wrap.ref-n8 .ref-p4,
+.ref-ghost-wrap.ref-n9 .ref-p4 { left:2px;  top:23px; }
+.ref-ghost-wrap.ref-n5 .ref-p5, .ref-ghost-wrap.ref-n6 .ref-p5,
+.ref-ghost-wrap.ref-n7 .ref-p5, .ref-ghost-wrap.ref-n8 .ref-p5,
+.ref-ghost-wrap.ref-n9 .ref-p5 { left:23px; top:23px; }
+.ref-ghost-wrap.ref-n6 .ref-p6, .ref-ghost-wrap.ref-n7 .ref-p6,
+.ref-ghost-wrap.ref-n8 .ref-p6, .ref-ghost-wrap.ref-n9 .ref-p6 { left:44px; top:23px; }
+.ref-ghost-wrap.ref-n7 .ref-p7, .ref-ghost-wrap.ref-n8 .ref-p7,
+.ref-ghost-wrap.ref-n9 .ref-p7 { left:2px;  top:44px; }
+.ref-ghost-wrap.ref-n8 .ref-p8, .ref-ghost-wrap.ref-n9 .ref-p8 { left:23px; top:44px; }
+.ref-ghost-wrap.ref-n9 .ref-p9 { left:44px; top:44px; }
+
+/* ============ 右上角「关闭后台」（悬停浮出） ============ */
+/* 平时低透明度常驻（可点）；鼠标探到右上角热区时完全显形 */
+#shutdownWrap { position: fixed; top: 0; right: 0; z-index: 10100; padding: 10px 10px 22px 22px; }
+#shutdownBtn {
+    opacity: .35; transition: opacity .15s;
+    background: #dc2626; color: #fff; border: none; border-radius: 8px;
+    padding: 6px 12px; font-size: 12px; cursor: pointer;
+    box-shadow: 0 2px 10px rgba(220, 38, 38, .35);
+}
+#shutdownWrap:hover #shutdownBtn { opacity: 1; }
+#shutdownBtn:hover { background: #b91c1c; }
+#shutdownBtn:disabled { background: #94a3b8; cursor: default; }
+
+/* ============ 地图机制层（2026-10-13） ============ */
+/* 格子左上角小标记；机制层垫在格子内容最底下（insertBefore firstChild） */
+.mech-mark {
+    position: absolute; top: 1px; left: 1px; z-index: 0;
+    font-size: 11px; line-height: 1; pointer-events: auto;
+    opacity: .9;
+}
+/* 机制格底色（弱提示，不遮内容） */
+.cell.mech-bg-water  { background: #e0f2fe; }
+.cell.mech-bg-gap    { background: #1e293b; }
+.cell.mech-bg-sky    { background: #f0f9ff; }
+.cell.mech-bg-tomb   { background: #e7e5e4; }
+.cell.mech-bg-cart   { background: #fef3c7; }
+.cell.mech-bg-power  { background: #dcfce7; }
+.cell.mech-bg-gold   { background: #fef9c3; }
+.cell.mech-bg-ice    { background: #cffafe; }
+.cell.mech-bg-sewer  { background: #d6d3d1; }
+.cell.mech-bg-arrow  { background: #ede9fe; }
+.cell.mech-bg-fungus { background: #fae8ff; }
+
+/* 「是否查看配置」提示条（载入作业集后弹出） */
+.npr {
+    position: fixed; left: 50%; bottom: 56px; transform: translateX(-50%);
+    z-index: 10055; display: flex; align-items: center; gap: 10px;
+    background: #fff; border: 1px solid #ddd6fe; border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(76,29,149,.22);
+    padding: 10px 14px; animation: jobPanelUp .25s cubic-bezier(.22,.61,.36,1) both;
+}
+.npr-text { font-size: 12px; color: #334155; }
+.npr-view {
+    border: none; border-radius: 8px; padding: 5px 14px;
+    background: #7c3aed; color: #fff; font-size: 12px; cursor: pointer;
+}
+.npr-view:hover { background: #6d28d9; }
+.npr-skip {
+    border: 1px solid #e2e8f0; border-radius: 8px; padding: 5px 12px;
+    background: #f8fafc; color: #64748b; font-size: 12px; cursor: pointer;
+}
+.npr-skip:hover { background: #f1f5f9; }
+
+/* 装扮徽标：阶数那一栏（右下），固定在阶数角标左边；只有标记了才渲染 */
+#notesPicker .np-badge-costume {
+    bottom: 20px; right: 28px; left: auto; top: auto;
+    width: 24px; height: 24px; border: 2px solid #0891b2;
+    border-radius: 50%; background: #ecfeff; padding: 2px;
+}
+
+/* 装扮模式武装条：纯提示（装扮只有 有/无，无需挑选） */
+#notesPicker .np-arm-static {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; color: #475569; padding: 3px 6px;
+}
+#notesPicker .np-arm-static img { width: 26px; height: 26px; object-fit: contain; }
