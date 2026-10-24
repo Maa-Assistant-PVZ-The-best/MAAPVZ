@@ -646,6 +646,9 @@
             "Start_game/主界面特征.png"
         ],
         "green_mask": true,
+        "threshold": [
+            0.92
+        ],
         "post_wait_freezes": 1000,
         "next": [
             "关闭公告",
