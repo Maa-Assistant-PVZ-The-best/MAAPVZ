@@ -43,7 +43,6 @@
         "./resource/task/fragment_challenge.json",
         "./resource/task/get_gold_coins.json",
         "./resource/task/Start_game/Start_game.json",
-        "./resource/task/Start_game/Start_game_too.json",
         "./resource/task/Secret_realm.json",
         "./resource/task/pair_duel.json",
         "./resource/task/mini_tools.json",
