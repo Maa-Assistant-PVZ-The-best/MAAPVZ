@@ -47,8 +47,14 @@ python Android/MaaFwApp/scripts/setup_maa_framework.py --tag v5.13.0
 ./Android/MaaFwApp/gradlew.bat -p Android/MaaFwApp :app:assembleRelease
 ```
 
-签名读环境变量，缺了就打未签名包并告警：`KEYSTORE_PATH`、`KEYSTORE_PASSWORD`、
-`KEY_ALIAS`、`KEY_PASSWORD`。
+签名读环境变量或 `local.properties`，缺了就打未签名包：`KEYSTORE_PATH`、`KEYSTORE_PASSWORD`、
+`KEY_ALIAS`、`KEY_PASSWORD`（环境变量优先，CI 注入不会被本地 stale 值覆盖）。
+**未签名 APK 在真机上装不上**（无 v1/v2 签名 → `INSTALL_PARSE_FAILED_NO_CERTIFICATES`），
+所以本地要出可安装的 release 包必须配这四项。
+
+本机签名材料放在 `Android/keystore/`（根 `.gitignore` 已忽略，不进仓库）：
+`release.jks` + `release.jks.b64`，密码在 `Android/MaaFwApp/local.properties`。
+这把 key 一旦对外发过包就不能再换，否则老用户只能卸载重装 —— 务必备份。
 
 ## CI
 
@@ -58,8 +64,13 @@ python Android/MaaFwApp/scripts/setup_maa_framework.py --tag v5.13.0
   校验包内 pi.zip 的 rid = MaaPVZ_exec；上传 APK 与 mapping.txt 为 Artifact
 - `.github/workflows/release.yml`：推 `v*` tag 后统一构建桌面端 + Android 公开包
 
-仓库 Secrets（公开发版签名，可选）：`ANDROID_KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、
-`KEY_ALIAS`、`KEY_PASSWORD`。没配就出未签名包，workflow 会告警但不失败。
+仓库 Secrets：`ANDROID_KEYSTORE_BASE64`、`KEYSTORE_PASSWORD`、`KEY_ALIAS`、`KEY_PASSWORD`。
+
+- **公开发版（`distribution: public`）必须配齐**，缺一项 workflow 直接失败，
+  不会再静默发出装不上的包。
+- **内部包允许缺**：缺了会临时生成一把一次性 debug key 签名，保证内部包可安装
+  （公钥与正式 key 不同，冒充不了正式包）。
+- 构建后会校验 APK 确实带签名（v1 或 v2/v3 签名块），没有就失败。
 
 升外壳：
 

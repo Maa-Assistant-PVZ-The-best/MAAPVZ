@@ -101,29 +101,93 @@ jobs:
             --requirements requirements.txt \
             --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
 
-      - name: Decode keystore
+      # 未签名 APK 在真机上根本装不上（INSTALL_PARSE_FAILED_NO_CERTIFICATES：
+      # 没有任何 v1/v2 签名 → 解析期就失败），所以这里不能"告警一下继续"：
+      # 公开发版缺材料直接失败，内部包降级成一次性 debug key 签名，保证产物可安装。
+      - name: Prepare release signing material
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          DISTRIBUTION: ${{ inputs.distribution || 'internal' }}
         run: |
-          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
-            echo "::warning::Android signing secrets are incomplete; the Release APK will be unsigned."
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ] && [ -n "$KEYSTORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks"
+              echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "KEY_ALIAS=$KEY_ALIAS"
+              echo "KEY_PASSWORD=$KEY_PASSWORD"
+            } >> "$GITHUB_ENV"
+            echo "签名材料：仓库 Secrets"
             exit 0
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+          if [ "$DISTRIBUTION" = "public" ]; then
+            echo "::error::公开发版必须配齐 ANDROID_KEYSTORE_BASE64 / KEYSTORE_PASSWORD / KEY_ALIAS / KEY_PASSWORD；未签名 APK 装不上，不能作为发布产物"
+            exit 1
+          fi
+
+          # 内部包只需要能装到设备上测试。用一次性 debug key：可安装，但公钥与正式 key 不同，
+          # 无法冒充正式包（公开发版走上面那条 secrets 分支，拿不到正式 key 会先失败）
+          keytool -genkeypair -keystore "$RUNNER_TEMP/debug.jks" -storetype PKCS12 \
+            -alias androiddebugkey -storepass android -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" > /dev/null
+          {
+            echo "KEYSTORE_PATH=$RUNNER_TEMP/debug.jks"
+            echo "KEYSTORE_PASSWORD=android"
+            echo "KEY_ALIAS=androiddebugkey"
+            echo "KEY_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+          echo "::warning::内部包未配正式签名材料，已用一次性 debug key 签名：可安装，但不是正式签名"
 
       - name: Assemble release APK (${{ matrix.abi }})
         working-directory: Android/MaaFwApp
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           chmod +x gradlew
           ./gradlew --no-daemon :app:assembleRelease
+
+      # 门禁：签名配置丢了 / secrets 没传到 / plugin 静默跳过，都会在这里拦下来，
+      # 而不是等用户装不上才发现
+      - name: Verify release APK is signed
+        working-directory: Android/MaaFwApp
+        run: |
+          python - <<'PY'
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          apk_dir = Path("app/build/outputs/apk/release")
+          apks = sorted(apk_dir.glob("*.apk"))
+          if len(apks) != 1:
+              print(f"❌ {apk_dir} 下应有且仅有 1 个 APK，实际 {len(apks)} 个")
+              sys.exit(1)
+          APK = apks[0]
+          print(f"APK: {APK.name} ({APK.stat().st_size} bytes)")
+
+          if APK.name.endswith("-unsigned.apk"):
+              print("❌ 文件名就是 app-release-unsigned.apk：AGP 没有套用任何 signingConfig")
+              sys.exit(1)
+
+          with zipfile.ZipFile(APK) as z:
+              v1 = [
+                  n for n in z.namelist()
+                  if n.startswith("META-INF/")
+                  and n.upper().endswith((".RSA", ".DSA", ".EC"))
+              ]
+          with APK.open("rb") as f:
+              f.seek(max(0, APK.stat().st_size - 65536))
+              v2 = b"APK Sig Block 42" in f.read()
+
+          print(f"v1 签名文件: {v1 or '无'}")
+          print(f"v2/v3 签名块: {'有' if v2 else '无'}")
+          if not (v1 or v2):
+              print("❌ APK 没有任何签名，装不上；检查签名 secrets 与 signingConfig")
+              sys.exit(1)
+          print("✅ APK 已签名")
+          PY
 
       # ===== 校验安卓端 Mirror酱 rid 是 MaaPVZ_exec =====
       # MaaFwApp 以 profile 的 update.mirrorchyanRid 覆盖 interface.json 的值，
