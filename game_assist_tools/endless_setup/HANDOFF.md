@@ -61,7 +61,8 @@ static/
 └── js/
     ├── 01-options.js … 14-onload.js              # 选项树编辑器（section 1–14）
     ├── 15-board-actions.js ★                     # 落子动作注册表（扩展入口）
-    └── 20-jobset-core.js … 31-jobset-adv.js      # 作业集编辑器
+    └── 20-jobset-core.js … 41-jobset-tags.js     # 作业集编辑器
+                                                  # （37 世界 / 38 备注 / 41 标签 …）
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -264,7 +265,20 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   "sub_worlds": ["海盗港湾"],       // 副适配世界（候选，可多选，与主世界互斥）
   // 植物备注（2026-10-13 新增；38-jobset-notes.js 弹窗编辑；仅展示，运行时不消费）
   //   costume = 布尔：是否需要装扮（🎭 模式下点植物切换，与阶数同款交互）
+  //   ★ 2026-10-26 起这份是「通用」套：所有标签的回落基准
   "plant_notes": { "冰西瓜": { "tier": 5, "pendant": "闪耀雪花挂坠", "costume": true } },
+  "artifact_notes": { "风扇": { "tier": 2 } },   // 神器备注的通用套（同 plant_notes 口径）
+  // 作业集标签（2026-10-26 新增；41-jobset-tags.js「＋ 添加标签」弹窗编辑）
+  //   tags = 适配条件：僵尸场外加速 开/关、刷新下一波 开/关、氪金档位（难民/0氪/微氪/氪佬）
+  //          ★ 同一组只能挂一个（不能同时「开加速 + 关加速」），一份作业集可挂多组
+  "tags": ["开僵尸场外加速", "氪佬"],
+  // 各标签单独的备注套（38-jobset-notes.js）：没标的植物/字段回落上面的「通用」套
+  //   ★ 标签套允许显式取消值盖掉通用：tier:0（任意）/ pendant:""（无挂件）/ costume:false
+  //   ★ 只导出「tags 里挂着的标签」；摘掉的标签数据留在编辑器内存里，加回来还在
+  "tag_notes": {
+    "氪佬": { "plant_notes": { "冰西瓜": { "tier": 3 } },
+              "artifact_notes": { "风扇": { "tier": 4 } } }
+  },
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
@@ -301,6 +315,33 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
 - `from:0, to:null` = 该槽全部落点（按 seq）
 - `picked:[0,2]` = 指定下标（不连续时用）
 - `order:[2,0,1]` = **块内自定义顺序**（拖动 chip 后写入）
+
+### 5.1 标签与备注分套（2026-10-26）
+
+**标签**（`41-jobset-tags.js`，作业集栏「＋ 添加标签」）：8 个固定标签，分 3 组 ——
+
+| 组 | 标签 | 组内规则 |
+| --- | --- | --- |
+| 僵尸场外加速 | 关僵尸场外加速 / 开僵尸场外加速 | 单选 |
+| 刷新下一波 | 关刷新下一波 / 开刷新下一波 | 单选 |
+| 氪金档位 | 难民 / 0氪 / 微氪 / 氪佬 | 单选 |
+
+- 一份作业集可挂多组（例：`开僵尸场外加速` + `氪佬`），同组互斥由 `jobTagNormalize` 保证
+  （手改 JSON 写了同组两个也只会留先出现的那个）。
+- 标签只在编辑器里是可增删的 chip；选择弹窗（`#jobPickModal`）里由 `/list_jobs` 带回显示。
+
+**备注分套**（`38-jobset-notes.js`）：
+
+- 「📝 配置」弹窗顶部多了一条标签条 = `通用` + 本作业集挂上的标签；
+  点哪个标签就编辑哪一套标注，**默认停在「通用」**。
+- 生效值 = `通用` ← 当前标签 逐字段覆盖；没覆盖的字段按「沿用通用」半透明显示。
+- 标签套里可以**显式取消**通用套的标注（盖掉它）：
+  `tier: 0`（任意阶）/ `pendant: ""`（不带挂件）/ `costume: false`（不需要装扮）——
+  同一个按钮点第二次会退回「继承通用」。
+- 挂件那对字段成对取值：**只有同款挂件**才继承通用的挂件阶数（换挂件不带旧阶数）。
+- 导出：`plant_notes` / `artifact_notes` 恒为「通用」套（旧字段语义不变），
+  标签套进 `tag_notes`；空套不写，摘掉的标签不写（数据留在内存，加回来还在）。
+- 运行时（`engine.py`）只解析不消费：`JobSet.tags` / `JobSet.tag_notes` 供展示/调试。
 
 ---
 

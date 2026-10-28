@@ -1,6 +1,7 @@
 
 // ============================================================
 // 备注配置弹窗（2026-10-13）—— 神器/植物总览 + 阶数/挂件标注
+//                        （2026-10-26 起按「标签」分套）
 //
 // 交互（用户定的流程）：
 //   点「📝 配置」→ 弹窗列出本作业集用到的所有神器与植物（总览）。
@@ -11,12 +12,19 @@
 //                    再点植物 = 摘除）。挂件阶数 1-5 / 任意（2026-10-25）。
 //   仅作展示与导出，不影响运行时逻辑。
 //
-// 数据：jobPlantNotes = { 植物名: { tier: 1-5, pendant: "挂件中文名",
-//                                   pendantTier: 1-5, costume: true } }
-//       jobArtifactNotes = { 神器名: { tier: 1-5 } }
-//   tier 缺省 = 任意阶数可用；pendant 缺省 = 无挂件；pendantTier 缺省 = 任意阶。
-//   出口：jobGetPlantNotes() / jobSetPlantNotes(n)
-//         jobGetArtifactNotes() / jobSetArtifactNotes(n)（都剪掉空备注）
+// ★ 标签分套（2026-10-26，41-jobset-tags.js）：
+//   作业集挂了标签（场外加速 / 刷新下一波 / 氪金档位）后，弹窗顶部出现标签条：
+//   「通用」+ 本作业集挂上的标签。每个标签各存一套标注，切换即切换那一套。
+//   某标签里**没标的植物/字段**自动回落到「通用」那一套（角标半透明显示），
+//   所以只需要标「和通用不一样的部分」。
+//
+// 数据：jobNotesStore = { 标签: { plants: {植物名: {tier, pendant, pendantTier, costume}},
+//                                  artifacts: {神器名: {tier}} } }
+//       「通用」= 所有标签的回落基准（旧作业集/旧缓存直接落在这里）。
+//   出口：jobGetPlantNotes() / jobSetPlantNotes(n)        —— 通用套（旧字段 plant_notes）
+//         jobGetArtifactNotes() / jobSetArtifactNotes(n)  —— 通用套（旧字段 artifact_notes）
+//         jobGetTagNotes() / jobSetTagNotes(n)            —— 非通用标签套（新字段 tag_notes）
+//         jobGetNoteTag() / jobSetNoteTag(t)              —— 弹窗当前编辑的标签
 //
 // 素材：static/pendants/item_*.png（挂件，45 个，有中文名的全收录）
 //       static/ranks/rank1..5.png（卡面阶数角标）
@@ -77,74 +85,203 @@ const JOB_PENDANT_IMG = {};   // 挂件中文名 -> 图标文件
 JOB_PENDANTS.forEach(function (p) { JOB_PENDANT_IMG[p.name] = p.img; });
 
 // ---- 状态（作业集级）----
-let jobPlantNotes = {};          // { 植物名: {tier, pendant, pendantTier, costume:true} }
-                                 // costume = 布尔：是否需要装扮（与阶数同款点选配置）
-let jobArtifactNotes = {};       // { 神器名: {tier} }（2026-10-25 神器阶数）
+// ★ 2026-10-26 起按标签分套：jobNotesStore[标签].plants / .artifacts
+//   「通用」= 回落基准（旧数据都落这里）
+const JOB_NOTE_TAG = '通用';
+let jobNotesStore = { '通用': { plants: {}, artifacts: {} } };
+let jobNoteTag = JOB_NOTE_TAG;   // 弹窗当前编辑的标签（'' -> 视作通用）
 let npMode = 'view';             // view | tier | pendant | costume
 let npArmTier = 0;               // 阶数条当前武装值（0 = 任意）
 let npArmPendant = null;         // 挂件条当前武装（null = 未选；'' = 卸下）
 let npArmPendantTier = 0;        // 挂件阶数条当前武装（0 = 任意阶）
 
-// 出口：导出/缓存用（剪掉「任意阶 + 无挂件 + 无装扮」的空备注）
-function jobGetPlantNotes() {
+// ---- 备注清洗（空字段剪掉；全空 = null）----
+//   allowNeutral = 该套是「标签套」：允许显式取消值并存盘，用来盖掉通用套 ——
+//     tier: 0  = 本标签任意阶（通用标了 5 阶也盖掉）
+//     pendant: "" = 本标签不带挂件
+//     costume: false = 本标签不需要装扮
+function _npTier(v) {
+    const t = parseInt(v);
+    return (t >= 1 && t <= 5) ? t : 0;
+}
+function _npCleanPlant(n, allowNeutral) {
+    if (!n || typeof n !== 'object') return null;
     const out = {};
-    Object.keys(jobPlantNotes).forEach(function (name) {
-        const n = jobPlantNotes[name] || {};
-        const tier = parseInt(n.tier) || 0;
-        const pendant = (typeof n.pendant === 'string' && n.pendant) ? n.pendant : '';
-        const ptier = parseInt(n.pendantTier) || 0;
-        const costume = !!n.costume;
-        if (tier >= 1 && tier <= 5 || pendant || costume) {
-            out[name] = {};
-            if (tier >= 1 && tier <= 5) out[name].tier = tier;
-            if (pendant) {
-                out[name].pendant = pendant;
-                if (ptier >= 1 && ptier <= 5) out[name].pendantTier = ptier;
-            }
-            if (costume) out[name].costume = true;
-        }
+    const tier = _npTier(n.tier);
+    const pendant = (typeof n.pendant === 'string') ? n.pendant : undefined;
+    const ptier = _npTier(n.pendantTier);
+    if (tier >= 1) out.tier = tier;
+    else if (allowNeutral && n.tier !== undefined && parseInt(n.tier) === 0) out.tier = 0;
+    if (pendant) {
+        out.pendant = pendant;
+        if (ptier >= 1) out.pendantTier = ptier;
+    } else if (allowNeutral && pendant === '') {
+        out.pendant = '';
+    }
+    if (n.costume === false && allowNeutral) out.costume = false;
+    else if (n.costume === true || (typeof n.costume === 'string' && n.costume.trim())) out.costume = true;   // 旧版字符串装扮名也视为「需要装扮」
+    return Object.keys(out).length ? out : null;
+}
+function _npCleanArt(n, allowNeutral) {
+    if (!n || typeof n !== 'object') return null;
+    const tier = _npTier(n.tier);
+    if (tier >= 1) return { tier: tier };
+    if (allowNeutral && n.tier !== undefined && parseInt(n.tier) === 0) return { tier: 0 };
+    return null;
+}
+function _npCleanMap(src, cleaner) {
+    const out = {};
+    Object.keys(src || {}).forEach(function (name) {
+        const c = cleaner(src[name]);
+        if (c) out[name] = c;
     });
     return out;
 }
-function jobSetPlantNotes(notes) {
-    jobPlantNotes = {};
-    if (notes && typeof notes === 'object') {
-        Object.keys(notes).forEach(function (name) {
-            const n = notes[name] || {};
-            const tier = parseInt(n.tier) || 0;
-            const pendant = (typeof n.pendant === 'string' && n.pendant) ? n.pendant : '';
-            const ptier = parseInt(n.pendantTier) || 0;
-            const costume = !!n.costume;   // 旧版字符串装扮名也视为「需要装扮」
-            jobPlantNotes[name] = {};
-            if (tier >= 1 && tier <= 5) jobPlantNotes[name].tier = tier;
-            if (pendant) {
-                jobPlantNotes[name].pendant = pendant;
-                if (ptier >= 1 && ptier <= 5) jobPlantNotes[name].pendantTier = ptier;
-            }
-            if (costume) jobPlantNotes[name].costume = true;
-        });
+function _npCleanPlantTag(n) { return _npCleanPlant(n, true); }
+function _npCleanArtTag(n) { return _npCleanArt(n, true); }
+
+// ---- 标签套存取 ----
+function _npEnsureSet(tag) {
+    const t = tag || JOB_NOTE_TAG;
+    if (!jobNotesStore[t] || typeof jobNotesStore[t] !== 'object') {
+        jobNotesStore[t] = { plants: {}, artifacts: {} };
     }
-    if (document.getElementById('notesPicker')) jobRenderNotesPicker();
+    if (!jobNotesStore[t].plants || typeof jobNotesStore[t].plants !== 'object') jobNotesStore[t].plants = {};
+    if (!jobNotesStore[t].artifacts || typeof jobNotesStore[t].artifacts !== 'object') jobNotesStore[t].artifacts = {};
+    return jobNotesStore[t];
+}
+// 当前编辑标签（自愈：不在本作业集标签里 / 空 -> 通用）
+function _npCurTag() {
+    if (!jobNoteTag || jobNoteTag === JOB_NOTE_TAG) {
+        jobNoteTag = JOB_NOTE_TAG;
+        return JOB_NOTE_TAG;
+    }
+    const tags = (typeof jobGetTags === 'function') ? jobGetTags() : [];
+    if (tags.indexOf(jobNoteTag) === -1) jobNoteTag = JOB_NOTE_TAG;
+    return jobNoteTag;
+}
+function _npCurSet() { return _npEnsureSet(_npCurTag()); }
+function _npGeneralSet() { return _npEnsureSet(JOB_NOTE_TAG); }
+
+// 当前标签自己的备注（不含回落；create=true 时顺手建空条目）
+function _npPlantOwn(name, create) {
+    const set = _npCurSet();
+    if (!set.plants[name] && create) set.plants[name] = {};
+    return set.plants[name] || null;
+}
+function _npArtOwn(name, create) {
+    const set = _npCurSet();
+    if (!set.artifacts[name] && create) set.artifacts[name] = {};
+    return set.artifacts[name] || null;
 }
 
-// 神器阶数备注（2026-10-25）：结构与植物同款，剪掉「任意阶」的空备注
-function jobGetArtifactNotes() {
+// 有效备注 = 「通用」← 当前标签 逐字段覆盖
+//   标签套里的显式取消值（tier:0 / pendant:"" / costume:false）会盖掉通用套的值；
+//   挂件那对字段成对取值：只在「同款挂件」时才继承通用的挂件阶数
+function _npPlantEff(name) {
+    const g = _npGeneralSet().plants[name] || {};
+    const o = _npCurSet().plants[name] || {};
+    const eff = {};
+    ['tier', 'costume'].forEach(function (k) {
+        if (o[k] !== undefined) eff[k] = o[k];
+        else if (g[k] !== undefined) eff[k] = g[k];
+    });
+    if (o.pendant !== undefined) {
+        // 标签自己说了算（'' = 本标签不带挂件）
+        if (o.pendant) {
+            eff.pendant = o.pendant;
+            const ptier = (o.pendantTier !== undefined) ? o.pendantTier
+                : (g.pendant === o.pendant ? g.pendantTier : undefined);
+            if (ptier !== undefined) eff.pendantTier = ptier;
+        }
+    } else if (g.pendant) {
+        eff.pendant = g.pendant;
+        if (g.pendantTier !== undefined) eff.pendantTier = g.pendantTier;
+    }
+    return eff;
+}
+function _npArtEff(name) {
+    const g = _npGeneralSet().artifacts[name] || {};
+    const o = _npCurSet().artifacts[name] || {};
+    return { tier: (o.tier !== undefined) ? o.tier : g.tier };
+}
+// 该字段是不是「沿用通用」（当前标签没覆盖）；通用套本身永远不算继承
+function _npInherited(name, field, isArt) {
+    if (_npCurTag() === JOB_NOTE_TAG) return false;
+    const own = isArt ? _npArtOwn(name) : _npPlantOwn(name);
+    if (!own) return true;
+    return own[field] === undefined;
+}
+
+// ---- 备注文本（状态栏/提示用）----
+function _npTierText(t) { return t >= 1 ? (t + ' 阶') : '任意阶数'; }
+function _npPlantText(name) {
+    const e = _npPlantEff(name);
+    const tier = _npTier(e.tier);
+    return (tier >= 1 ? tier + '阶启用' : '任意阶数')
+        + (e.pendant ? ' · 挂件：' + e.pendant + (_npTier(e.pendantTier) >= 1 ? _npTier(e.pendantTier) + '阶' : '') : '')
+        + (e.costume ? ' · 需要装扮' : '');
+}
+
+// ---- 出口：导出 / 本地缓存 ----
+function jobGetPlantNotes() { return _npCleanMap(_npGeneralSet().plants, _npCleanPlant); }
+function jobGetArtifactNotes() { return _npCleanMap(_npGeneralSet().artifacts, _npCleanArt); }
+
+// 非通用标签的备注套：{ 标签: { plant_notes: {...}, artifact_notes: {...} } }
+//   ★ 只导出「作业集上挂着的标签」，摘掉的标签数据留在内存里但不会写进 JSON
+function jobGetTagNotes() {
     const out = {};
-    Object.keys(jobArtifactNotes).forEach(function (name) {
-        const tier = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
-        if (tier >= 1 && tier <= 5) out[name] = { tier: tier };
+    const tags = (typeof jobGetTags === 'function') ? jobGetTags() : [];
+    tags.forEach(function (tag) {
+        if (tag === JOB_NOTE_TAG) return;
+        const set = _npEnsureSet(tag);
+        const p = _npCleanMap(set.plants, _npCleanPlantTag);
+        const a = _npCleanMap(set.artifacts, _npCleanArtTag);
+        if (!Object.keys(p).length && !Object.keys(a).length) return;   // 空套不导出
+        const entry = {};
+        if (Object.keys(p).length) entry.plant_notes = p;
+        if (Object.keys(a).length) entry.artifact_notes = a;
+        out[tag] = entry;
     });
     return out;
 }
+
+// 通用套写入（旧字段 plant_notes / artifact_notes；旧作业集/旧缓存都走这里）
+function jobSetPlantNotes(notes) {
+    _npGeneralSet().plants = _npCleanMap(notes, _npCleanPlant);
+    if (document.getElementById('notesPicker')) jobRenderNotesPicker();
+}
 function jobSetArtifactNotes(notes) {
-    jobArtifactNotes = {};
-    if (notes && typeof notes === 'object') {
-        Object.keys(notes).forEach(function (name) {
-            const tier = parseInt((notes[name] || {}).tier) || 0;
-            if (tier >= 1 && tier <= 5) jobArtifactNotes[name] = { tier: tier };
+    _npGeneralSet().artifacts = _npCleanMap(notes, _npCleanArt);
+    if (document.getElementById('notesPicker')) jobRenderNotesPicker();
+}
+// 标签套写入（新字段 tag_notes）：整份替换非通用套，通用套不动
+function jobSetTagNotes(obj) {
+    Object.keys(jobNotesStore).forEach(function (t) {
+        if (t !== JOB_NOTE_TAG) delete jobNotesStore[t];
+    });
+    if (obj && typeof obj === 'object') {
+        Object.keys(obj).forEach(function (tag) {
+            if (!tag || tag === JOB_NOTE_TAG) return;
+            const e = obj[tag];
+            if (!e || typeof e !== 'object') return;
+            const set = _npEnsureSet(tag);
+            set.plants = _npCleanMap(e.plant_notes, _npCleanPlantTag);
+            set.artifacts = _npCleanMap(e.artifact_notes, _npCleanArtTag);
+            if (!Object.keys(set.plants).length && !Object.keys(set.artifacts).length) delete jobNotesStore[tag];
         });
     }
-    if (document.getElementById('notesPicker')) jobRenderNotesPicker();
+    if (document.getElementById('notesPicker')) {
+        if (typeof jobRenderNpTagBar === 'function') jobRenderNpTagBar();
+        jobRenderNotesPicker();
+    }
+}
+// 弹窗当前编辑的标签（'' = 通用；不在本作业集标签里也回落到通用）
+function jobGetNoteTag() { return _npCurTag(); }
+function jobSetNoteTag(tag) {
+    const tags = (typeof jobGetTags === 'function') ? jobGetTags() : [];
+    jobNoteTag = (typeof tag === 'string' && tag && tag !== JOB_NOTE_TAG && tags.indexOf(tag) !== -1)
+        ? tag : JOB_NOTE_TAG;
 }
 
 // ---- 聚合：本作业集用到的植物与神器 ----
@@ -301,9 +438,55 @@ function jobRenderNpArmBar() {
     }
 }
 
+// ---- 标签条（通用 + 本作业集挂上的标签）----
+//   标签本身在作业集栏「＋ 添加标签」里增删（41-jobset-tags.js），这里只负责切换。
+function jobRenderNpTagBar() {
+    const bar = document.getElementById('npTagBar');
+    if (!bar) return;
+    const tags = (typeof jobGetTags === 'function') ? jobGetTags() : [];
+    // 标签被摘掉 / 换了作业集 -> 当前编辑标签回落到通用
+    if (jobNoteTag !== JOB_NOTE_TAG && tags.indexOf(jobNoteTag) === -1) jobNoteTag = JOB_NOTE_TAG;
+
+    bar.innerHTML = '';
+    const lbl = document.createElement('span');
+    lbl.className = 'np-tag-label';
+    lbl.textContent = '标签：';
+    bar.appendChild(lbl);
+
+    const mk = function (tag, tip) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'np-tag' + (jobNoteTag === tag ? ' np-tag-on' : '');
+        b.textContent = tag;
+        b.title = tip;
+        b.addEventListener('click', function () {
+            if (jobNoteTag === tag) return;
+            jobNoteTag = tag;
+            jobRenderNpTagBar();
+            jobRenderNotesPicker();
+            if (typeof jobSaveLocal === 'function') jobSaveLocal();
+        });
+        bar.appendChild(b);
+    };
+    mk(JOB_NOTE_TAG, '所有标签的公共标注（某个标签没单独标的项回落到这里）');
+    tags.forEach(function (t) {
+        if (t === JOB_NOTE_TAG) return;
+        mk(t, '标签「' + t + '」单独的标注；没标的项回落通用');
+    });
+    if (!tags.length) {
+        const hint = document.createElement('span');
+        hint.className = 'np-tag-hint';
+        hint.textContent = '（本作业集还没加标签 —— 回作业集栏点「＋ 添加标签」）';
+        bar.appendChild(hint);
+    }
+}
+
 // ---- 总览渲染 ----
 function jobRenderNotesPicker() {
+    jobRenderNpTagBar();
     const used = jobCollectUsed();
+    const tagNow = _npCurTag();
+    const inheritOn = (tagNow !== JOB_NOTE_TAG);
 
     // 神器行（2026-10-25 起神器可调配阶数：tier 模式下可点，带阶数角标）
     const artRow = document.getElementById('npArtRow');
@@ -313,10 +496,10 @@ function jobRenderNotesPicker() {
             artRow.innerHTML = '<span class="np-empty">（本作业集未使用神器）</span>';
         }
         used.artifacts.forEach(function (name) {
-            const aTier = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
+            const aTier = _npTier(_npArtEff(name).tier);
             const card = document.createElement('div');
             card.className = 'np-art' + (npMode === 'tier' ? ' np-clickable' : '');
-            card.title = name + (aTier >= 1 ? ` · ${aTier}阶` : ' · 任意阶数');
+            card.title = name + ' · ' + _npTierText(aTier);
             const im = document.createElement('img');
             im.src = _npArtifactImg(name);
             im.alt = name;
@@ -328,22 +511,23 @@ function jobRenderNotesPicker() {
             card.appendChild(nd);
             if (aTier >= 1 && aTier <= 5) {
                 const tg = document.createElement('img');
-                tg.className = 'np-badge np-badge-tier';
+                tg.className = 'np-badge np-badge-tier'
+                    + (_npInherited(name, 'tier', true) ? ' np-inherited' : '');
                 tg.src = RANK_IMG_DIR + 'rank' + aTier + '.png';
-                tg.title = aTier + ' 阶';
+                tg.title = aTier + ' 阶' + (_npInherited(name, 'tier', true) ? '（沿用通用）' : '');
                 card.appendChild(tg);
             }
             card.addEventListener('click', function () {
                 if (npMode !== 'tier') return;
-                const cur = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
-                if (npArmTier >= 1 && cur !== npArmTier) {
-                    jobArtifactNotes[name] = { tier: npArmTier };
-                    setStatus(`🔢 神器 ${name} → ${npArmTier} 阶`);
+                const effTier = _npTier(_npArtEff(name).tier);
+                const own = _npArtOwn(name, true);
+                if (npArmTier >= 1 && effTier !== npArmTier) {
+                    own.tier = npArmTier;
                 } else {
-                    // 再点同阶数 / 武装「任意」= 取消回任意阶
-                    delete jobArtifactNotes[name];
-                    setStatus(`🔢 神器 ${name} → 任意阶数`);
+                    // 再点同阶数 / 武装「任意」= 取消本标签的标注（回落到通用）
+                    _npClearField('artifacts', name, 'tier');
                 }
+                setStatus(`🔢 神器 ${name} → ${_npTierText(_npTier(_npArtEff(name).tier))}`);
                 jobRenderNotesPicker();
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
             });
@@ -359,18 +543,23 @@ function jobRenderNotesPicker() {
         grid.innerHTML = '<span class="np-empty">（本作业集未使用植物）</span>';
     }
     used.plants.forEach(function (name) {
-        const note = jobPlantNotes[name] || {};
-        const tier = parseInt(note.tier) || 0;
-        const pendant = note.pendant || '';
-        const ptier = parseInt(note.pendantTier) || 0;
-        const costume = !!note.costume;
+        const eff = _npPlantEff(name);
+        const tier = _npTier(eff.tier);
+        const pendant = eff.pendant || '';
+        const ptier = _npTier(eff.pendantTier);
+        const costume = !!eff.costume;
+        const inhTier = _npInherited(name, 'tier');
+        const inhPendant = _npInherited(name, 'pendant');
+        const inhPtier = _npInherited(name, 'pendantTier');
+        const inhCostume = _npInherited(name, 'costume');
 
         const card = document.createElement('div');
         card.className = 'np-item' + (npMode !== 'view' ? ' np-clickable' : '');
         card.title = name
             + (tier >= 1 ? ` · ${tier}阶启用` : ' · 任意阶数')
             + (pendant ? ` · 挂件：${pendant}` + (ptier >= 1 ? `${ptier}阶` : '') : '')
-            + (costume ? ' · 需要装扮' : '');
+            + (costume ? ' · 需要装扮' : '')
+            + (inheritOn && (inhTier || inhPendant || inhCostume) ? '\n（半透明角标 = 这项沿用「通用」）' : '');
 
         const im = document.createElement('img');
         im.className = 'np-plant-img';
@@ -386,90 +575,86 @@ function jobRenderNotesPicker() {
 
         if (pendant && JOB_PENDANT_IMG[pendant]) {
             const tg = document.createElement('img');
-            tg.className = 'np-badge np-badge-pendant';
+            tg.className = 'np-badge np-badge-pendant' + (inhPendant ? ' np-inherited' : '');
             tg.src = PENDANT_IMG_DIR + JOB_PENDANT_IMG[pendant];
-            tg.title = '挂件：' + pendant + (ptier >= 1 ? `（${ptier}阶）` : '');
+            tg.title = '挂件：' + pendant + (ptier >= 1 ? `（${ptier}阶）` : '') + (inhPendant ? '（沿用通用）' : '');
             card.appendChild(tg);
             // 挂件阶数迷你角标：挂在挂件徽章正下方（与植物自身阶数角标区分）
             if (ptier >= 1 && ptier <= 5) {
                 const pt = document.createElement('img');
-                pt.className = 'np-badge np-badge-ptier';
+                pt.className = 'np-badge np-badge-ptier' + (inhPtier ? ' np-inherited' : '');
                 pt.src = RANK_IMG_DIR + 'rank' + ptier + '.png';
-                pt.title = `挂件 ${ptier} 阶`;
+                pt.title = `挂件 ${ptier} 阶` + (inhPtier ? '（沿用通用）' : '');
                 card.appendChild(pt);
             }
         }
         // 底栏右下那一栏：[装扮][阶数] 并排 —— 只有标记了才显示
         if (costume) {
             const tg = document.createElement('img');
-            tg.className = 'np-badge np-badge-costume';
+            tg.className = 'np-badge np-badge-costume' + (inhCostume ? ' np-inherited' : '');
             tg.src = '/static/costume.png';
             tg.alt = '装扮';
-            tg.title = '需要装扮';
+            tg.title = '需要装扮' + (inhCostume ? '（沿用通用）' : '');
             tg.onerror = function () { this.style.visibility = 'hidden'; };
             card.appendChild(tg);
         }
         if (tier >= 1 && tier <= 5) {
             const tg = document.createElement('img');
-            tg.className = 'np-badge np-badge-tier';
+            tg.className = 'np-badge np-badge-tier' + (inhTier ? ' np-inherited' : '');
             tg.src = RANK_IMG_DIR + 'rank' + tier + '.png';
-            tg.title = tier + ' 阶启用';
+            tg.title = tier + ' 阶启用' + (inhTier ? '（沿用通用）' : '');
             card.appendChild(tg);
         }
 
         card.addEventListener('click', function () {
             if (npMode === 'tier') {
-                const cur = parseInt((jobPlantNotes[name] || {}).tier) || 0;
-                if (npArmTier >= 1 && cur === npArmTier) {
-                    // 再点同名阶数 = 取消，回到任意
-                    if (jobPlantNotes[name]) delete jobPlantNotes[name].tier;
-                    setStatus(`🔢 ${name} → 任意阶数（已取消标注）`);
-                } else if (npArmTier >= 1) {
-                    jobPlantNotes[name] = jobPlantNotes[name] || {};
-                    jobPlantNotes[name].tier = npArmTier;
-                    setStatus(`🔢 ${name} → ${npArmTier} 阶启用`);
+                const effTier = _npTier(_npPlantEff(name).tier);
+                const own = _npPlantOwn(name, true);
+                if (npArmTier >= 1 && effTier !== npArmTier) {
+                    own.tier = npArmTier;
                 } else {
-                    if (jobPlantNotes[name]) delete jobPlantNotes[name].tier;
-                    setStatus(`🔢 ${name} → 任意阶数`);
+                    // 再点同名阶数 / 武装「任意」= 取消标注（回落到通用）
+                    _npClearField('plants', name, 'tier');
                 }
+                setStatus(`🔢 ${name} → ${_npPlantText(name)}`);
                 jobRenderNotesPicker();
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
             } else if (npMode === 'pendant') {
-                const cur = (jobPlantNotes[name] || {}).pendant || '';
-                const curTier = parseInt((jobPlantNotes[name] || {}).pendantTier) || 0;
                 if (npArmPendant === null) { setStatus('💎 先在挂件条里选一个挂件'); return; }
-                if (npArmPendant === '' || (cur === npArmPendant && curTier === npArmPendantTier)) {
-                    // 「卸下」或再点已佩戴的同款同阶 = 摘除
-                    if (jobPlantNotes[name]) {
-                        delete jobPlantNotes[name].pendant;
-                        delete jobPlantNotes[name].pendantTier;
-                    }
-                    setStatus(`💎 已摘下 ${name} 的挂件`);
-                } else if (cur === npArmPendant) {
+                const eff = _npPlantEff(name);
+                const effPendant = eff.pendant || '';
+                const effPtier = _npTier(eff.pendantTier);
+                const own = _npPlantOwn(name, true);
+                if (npArmPendant === '' || (effPendant === npArmPendant && effPtier === npArmPendantTier)) {
+                    // 「卸下」或再点已佩戴的同款同阶 = 摘除本标签的标注（通用里有就盖掉）
+                    _npClearField('plants', name, 'pendant');
+                } else if (effPendant === npArmPendant) {
                     // 同款不同阶 = 只改挂件阶数
-                    jobPlantNotes[name] = jobPlantNotes[name] || {};
-                    if (npArmPendantTier >= 1) jobPlantNotes[name].pendantTier = npArmPendantTier;
-                    else delete jobPlantNotes[name].pendantTier;
-                    setStatus(`💎 ${name} 的 ${npArmPendant} → ${npArmPendantTier >= 1 ? npArmPendantTier + ' 阶' : '任意阶'}`);
+                    own.pendant = npArmPendant;
+                    if (npArmPendantTier >= 1) own.pendantTier = npArmPendantTier;
+                    else delete own.pendantTier;
                 } else {
-                    jobPlantNotes[name] = jobPlantNotes[name] || {};
-                    jobPlantNotes[name].pendant = npArmPendant;
-                    if (npArmPendantTier >= 1) jobPlantNotes[name].pendantTier = npArmPendantTier;
-                    else delete jobPlantNotes[name].pendantTier;
-                    setStatus(`💎 ${name} 佩戴 ${npArmPendant}${npArmPendantTier >= 1 ? `（${npArmPendantTier} 阶）` : ''}`);
+                    own.pendant = npArmPendant;
+                    if (npArmPendantTier >= 1) own.pendantTier = npArmPendantTier;
+                    else delete own.pendantTier;
                 }
+                setStatus(`💎 ${name} → ${_npPlantText(name)}`);
+                _npPruneSet(jobNotesStore[_npCurTag()], 'plants', name);
                 jobRenderNotesPicker();
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
             } else if (npMode === 'costume') {
                 // 与阶数同款点选：点 = 穿上，再点 = 脱下
-                if (jobPlantNotes[name] && jobPlantNotes[name].costume) {
-                    delete jobPlantNotes[name].costume;
-                    setStatus(`🎭 ${name} → 脱下装扮`);
+                const own = _npPlantOwn(name, true);
+                const genC = !!(_npGeneralSet().plants[name] || {}).costume;
+                if (own.costume === false && genC) {
+                    delete own.costume;          // 取消「显式不需要」-> 回到沿用通用
+                } else if (_npPlantEff(name).costume) {
+                    _npClearField('plants', name, 'costume');
                 } else {
-                    jobPlantNotes[name] = jobPlantNotes[name] || {};
-                    jobPlantNotes[name].costume = true;
-                    setStatus(`🎭 ${name} → 需要装扮`);
+                    own.costume = true;
                 }
+                setStatus(`🎭 ${name} → ${_npPlantText(name)}`);
+                _npPruneSet(jobNotesStore[_npCurTag()], 'plants', name);
                 jobRenderNotesPicker();
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
             }
@@ -481,8 +666,44 @@ function jobRenderNotesPicker() {
     if (tip) {
         const noted = Object.keys(jobGetPlantNotes()).length;
         const artNoted = Object.keys(jobGetArtifactNotes()).length;
-        tip.textContent = `神器 ${used.artifacts.length} · 植物 ${used.plants.length} · 已标注 ${noted + artNoted}`;
+        const tagExtra = (tagNow === JOB_NOTE_TAG) ? '' : (' · 当前标签：' + tagNow
+            + '（' + Object.keys(_npCleanMap(_npCurSet().plants, _npCleanPlantTag)).length + ' 株单独标注）');
+        tip.textContent = `神器 ${used.artifacts.length} · 植物 ${used.plants.length} · 通用已标注 ${noted + artNoted}${tagExtra}`;
     }
+}
+
+// 取消某个字段的标注（标签套里要能「盖掉」通用套的值）：
+//   · 本标签里已经写着「显式取消值」 -> 删掉它，回到继承通用
+//   · 通用套有这个值               -> 写显式取消值（tier:0 / pendant:"" / costume:false）
+//   · 都没有                       -> 直接删掉本标签字段
+const _NP_NEUTRAL = { tier: 0, pendant: '', costume: false };
+function _npClearField(kind, name, field) {
+    const isArt = (kind === 'artifacts');
+    const set = _npCurSet();
+    const own = isArt ? _npArtOwn(name, true) : _npPlantOwn(name, true);
+    if (own[field] !== undefined && own[field] === _NP_NEUTRAL[field]) {
+        // 已经在「显式取消」状态：再点一次回到继承
+        delete own[field];
+        if (field === 'pendant') delete own.pendantTier;
+        _npPruneSet(set, kind, name);
+        return;
+    }
+    const genMap = isArt ? _npGeneralSet().artifacts : _npGeneralSet().plants;
+    const gen = genMap[name] || {};
+    const generalHas = (field === 'tier') ? (_npTier(gen.tier) >= 1)
+        : (field === 'pendant') ? !!gen.pendant
+        : !!gen.costume;
+    if (field === 'pendant') delete own.pendantTier;
+    if (_npCurTag() !== JOB_NOTE_TAG && generalHas) own[field] = _NP_NEUTRAL[field];
+    else delete own[field];
+    _npPruneSet(set, kind, name);
+}
+
+// 剪掉某个标签套里的空条目（全空 = 没标注，别在 JSON 里留空壳）
+function _npPruneSet(set, kind, name) {
+    if (!set || !set[kind]) return;
+    const n = set[kind][name];
+    if (n && !Object.keys(n).length) delete set[kind][name];
 }
 
 // ---- 开关 ----
@@ -504,7 +725,12 @@ function jobPromptViewNotes(label) {
     const bar = document.getElementById('notesPrompt');
     if (!bar) return;
     const txt = document.getElementById('nprText');
-    if (txt) txt.textContent = `已载入「${label || '作业集'}」，是否查看配置（植物阶数/挂件/装扮需求）？`;
+    const tags = (typeof jobGetTags === 'function') ? jobGetTags() : [];
+    if (txt) {
+        txt.textContent = `已载入「${label || '作业集'}」`
+            + (tags.length ? `（标签：${tags.join(' / ')}）` : '')
+            + '，是否查看配置（植物阶数/挂件/装扮需求）？';
+    }
     bar.style.display = 'flex';
     clearTimeout(_nprTimer);
     _nprTimer = setTimeout(function () { bar.style.display = 'none'; }, 10000);
@@ -532,4 +758,5 @@ function jobNotesInit() {
     const skip = document.getElementById('nprSkip');
     if (skip) skip.addEventListener('click', _jobHideNotesPrompt);
     jobNpSetMode('view');
+    jobRenderNpTagBar();
 }

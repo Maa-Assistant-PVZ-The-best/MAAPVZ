@@ -3630,6 +3630,11 @@ function jobBuild() {
         plant_notes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
         // 神器备注（阶数标注，2026-10-25；38-jobset-notes.js）
         artifact_notes: (typeof jobGetArtifactNotes === 'function') ? jobGetArtifactNotes() : {},
+        // 作业集标签（2026-10-26；41-jobset-tags.js）：
+        //   tags = 本作业集适合的开关/档位（场外加速 / 刷新下一波 / 氪金档位）
+        //   tag_notes = 各标签单独的备注套（没标的项回落 plant_notes/artifact_notes = 「通用」）
+        tags: (typeof jobGetTags === 'function') ? jobGetTags() : [],
+        tag_notes: (typeof jobGetTagNotes === 'function') ? jobGetTagNotes() : {},
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
         // 调配参数（步骤 ⚙ 弹窗）：compile.py 的 swipe_ms。
         // （动作间隔固定 0.1s = BatchSwipe 默认，不导出、不可调）

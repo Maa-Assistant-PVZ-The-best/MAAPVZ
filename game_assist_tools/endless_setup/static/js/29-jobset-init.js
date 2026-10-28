@@ -28,10 +28,15 @@ function jobSaveLocal() {
                 currentTable: currentTable,
                 tables: jobTables,
                 rarityFilter: plantRarityFilter,
-                // 植物备注（阶数/挂件标注，38-jobset-notes.js）
+                // 作业集标签（41-jobset-tags.js）
+                tags: (typeof jobGetTags === 'function') ? jobGetTags() : [],
+                // 植物备注（阶数/挂件标注，38-jobset-notes.js）—— 通用套
                 plantNotes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
-                // 神器备注（阶数标注，2026-10-25）
+                // 神器备注（阶数标注，2026-10-25）—— 通用套
                 artifactNotes: (typeof jobGetArtifactNotes === 'function') ? jobGetArtifactNotes() : {},
+                // 标签备注套（非通用套）+ 弹窗当前编辑的标签
+                tagNotes: (typeof jobGetTagNotes === 'function') ? jobGetTagNotes() : {},
+                noteTag: (typeof jobGetNoteTag === 'function') ? jobGetNoteTag() : '',
                 // 局外选卡（作业集级；32-jobset-outer.js）
                 outerPick: (typeof jobOuterPick !== 'undefined')
                     ? { plants: (jobOuterPick.plants || []).slice(), mode: jobOuterPick.mode || 'auto', order: (jobOuterPick.order || []).slice() }
@@ -113,10 +118,15 @@ function jobLoadLocal() {
             ? Math.floor(+m.swipeMs) : 80;
         // 选择世界（旧缓存没有 -> 未选择）
         jobSetWorldUI(m.world, m.sub_worlds);
-        // 植物备注（旧缓存没有 -> 空）
+        // 标签（旧缓存没有 -> 无标签）
+        if (typeof jobSetTags === 'function') jobSetTags(data.tags);
+        // 植物备注（旧缓存没有 -> 空）—— 通用套
         if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(data.plantNotes);
-        // 神器备注（旧缓存没有 -> 空）
+        // 神器备注（旧缓存没有 -> 空）—— 通用套
         if (typeof jobSetArtifactNotes === 'function') jobSetArtifactNotes(data.artifactNotes);
+        // 标签备注套（非通用套）+ 弹窗当前标签
+        if (typeof jobSetTagNotes === 'function') jobSetTagNotes(data.tagNotes);
+        if (typeof jobSetNoteTag === 'function') jobSetNoteTag(data.noteTag);
         if (typeof data.rarityFilter === 'string') plantRarityFilter = data.rarityFilter;
         // 局外选卡（作业集级）；旧缓存没有 -> 空列表 + auto
         if (typeof jobOuterPick !== 'undefined') {
@@ -145,6 +155,8 @@ function jobInit() {
     if (typeof jobWorldInit === 'function') jobWorldInit();
     // 备注配置弹窗（神器/植物总览 + 阶数/挂件标注）
     if (typeof jobNotesInit === 'function') jobNotesInit();
+    // 作业集标签弹窗（「＋ 添加标签」，场外加速 / 刷新下一波 / 氪金档位）
+    if (typeof jobTagInit === 'function') jobTagInit();
     // 表格映射对照（🔍 把别的作业集的棋盘叠加到当前棋盘）
     if (typeof jobRefInit === 'function') jobRefInit();
 
