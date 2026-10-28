@@ -70,7 +70,10 @@ python Android/MaaFwApp/scripts/setup_maa_framework.py --tag v5.13.0
   不会再静默发出装不上的包。
 - **内部包允许缺**：缺了会临时生成一把一次性 debug key 签名，保证内部包可安装
   （公钥与正式 key 不同，冒充不了正式包）。
-- 构建后会校验 APK 确实带签名（v1 或 v2/v3 签名块），没有就失败。
+- 构建后会校验 APK 确实带签名：按 ZIP 结构读 EOCD（含 ZIP64）定位中央目录，
+  再查紧贴其前的 APK Signing Block（v2/v3），**不能只看文件尾 64KB** ——
+  中央目录本身可能几 MB，尾部窗口必然漏判；最后还会把包内证书与
+  `KEYSTORE_PATH` 里的证书比对，签名一致的才算过。
 
 升外壳：
 
