@@ -25,9 +25,11 @@ jobs:
     name: Android APK
     permissions:
       contents: read
-    uses: ./.github/workflows/install_apk.yml
+    uses: ./.github/workflows/android-release-build.yml
     with:
       version: ${{ github.ref_name }}
+      distribution: public
+    secrets: inherit
 
   changelog:
     name: Generate changelog
@@ -95,10 +97,17 @@ jobs:
           pattern: MaaPVZ-linux-*-${{ github.ref_name }}
           path: release-assets/desktop
 
-      - name: Download Android APK
+      # 两个架构各一份；mapping.txt 是另一组 artifact（带 -mapping-），不下载、不公开
+      - name: Download Android APK (arm64-v8a)
         uses: actions/download-artifact@v4
         with:
-          name: MaaPVZ-android-arm64-${{ github.ref_name }}
+          name: MaaPVZ-android-public-release-arm64-v8a-${{ github.ref_name }}
+          path: release-assets/android
+
+      - name: Download Android APK (x86_64)
+        uses: actions/download-artifact@v4
+        with:
+          name: MaaPVZ-android-public-release-x86_64-${{ github.ref_name }}
           path: release-assets/android
 
       - name: Download changelog

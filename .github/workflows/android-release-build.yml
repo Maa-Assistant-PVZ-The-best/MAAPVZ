@@ -1,0 +1,216 @@
+name: android-release-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Artifact version (defaults to the current ref)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Version used in artifact names
+        required: true
+        type: string
+      distribution:
+        description: Artifact distribution label (internal / public)
+        required: true
+        type: string
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      KEYSTORE_PASSWORD:
+        required: false
+      KEY_ALIAS:
+        required: false
+      KEY_PASSWORD:
+        required: false
+
+concurrency:
+  group: android-release-build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: true
+      matrix:
+        abi: [arm64-v8a, x86_64]
+    env:
+      APK_ARTIFACT_NAME: MaaPVZ-android-${{ inputs.distribution || 'internal' }}-release-${{ matrix.abi }}-${{ inputs.version || github.ref_name }}
+      MAPPING_ARTIFACT_NAME: MaaPVZ-android-${{ inputs.distribution || 'internal' }}-release-mapping-${{ matrix.abi }}-${{ inputs.version || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: Android/MaaFwApp/gradle/wrapper/gradle-wrapper.properties
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Cache MaaFramework and agent core (${{ matrix.abi }})
+        uses: actions/cache@v4
+        with:
+          path: |
+            Android/MaaFwApp/.maa-cache
+            Android/MaaFwApp/.maafw
+          key: android-native-${{ runner.os }}-fw5.13.0-${{ matrix.abi }}
+          restore-keys: |
+            android-native-${{ runner.os }}-
+
+      - name: Write local.properties
+        run: |
+          {
+            echo "sdk.dir=${ANDROID_SDK_ROOT}"
+            echo "pi.profile=../profile.yaml"
+            echo "build.releaseAbi=${{ matrix.abi }}"
+          } > Android/MaaFwApp/local.properties
+
+      - name: Prepare PI tree
+        run: python Android/prepare_android_pi.py
+
+      - name: Fetch MaaFramework native libs (${{ matrix.abi }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python Android/MaaFwApp/scripts/setup_maa_framework.py --abi ${{ matrix.abi }} --tag v5.13.0
+
+      - name: Pack agent runtime (${{ matrix.abi }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python Android/MaaFwApp/scripts/build_agent_bundle.py --out Android/agent-dist \
+            --abi arm64-v8a --abi x86_64 \
+            --requirements requirements.txt \
+            --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
+
+      - name: Decode keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::warning::Android signing secrets are incomplete; the Release APK will be unsigned."
+            exit 0
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Assemble release APK (${{ matrix.abi }})
+        working-directory: Android/MaaFwApp
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleRelease
+
+      # ===== 校验安卓端 Mirror酱 rid 是 MaaPVZ_exec =====
+      # MaaFwApp 以 profile 的 update.mirrorchyanRid 覆盖 interface.json 的值，
+      # 包内那份（prepare_android_pi.py 打的补丁）是保险，防外壳静默不认该字段。
+      # PI 不打散装：build-logic 的 packPiArchive 会打成 assets/pi.zip，
+      # 所以从 APK 取 pi.zip 读里面那份；顺带兼容将来改回散装。
+      # 用 Python 不用 shell：嵌套 zip 干净，避开 pipefail 下 grep -q 提前退出
+      # 把上游 unzip 打成 SIGPIPE 的假失败。
+      - name: Verify android Mirror酱 rid
+        working-directory: Android/MaaFwApp
+        run: |
+          python - <<'PY'
+          import io
+          import sys
+          import zipfile
+          from pathlib import Path
+
+          RID = "MaaPVZ_exec"
+          OLD = '"mirrorchyan_rid": "MaaPVZ",'
+          NEW = f'"mirrorchyan_rid": "{RID}"'
+          apk_dir = Path("app/build/outputs/apk/release")
+          apks = sorted(apk_dir.glob("*.apk"))
+          if len(apks) != 1:
+              print(f"❌ {apk_dir} 下应有且仅有 1 个 APK，实际 {len(apks)} 个")
+              sys.exit(1)
+          APK = apks[0]
+
+          def read_interface(apk):
+              with zipfile.ZipFile(apk) as z:
+                  names = z.namelist()
+                  archives = [n for n in names if n.endswith("pi.zip")]
+                  loose = [n for n in names if n.endswith("interface.json")]
+                  if archives:
+                      entry = archives[0]
+                      with zipfile.ZipFile(io.BytesIO(z.read(entry))) as pi:
+                          inner = pi.namelist()
+                          hit = [n for n in inner if n.endswith("interface.json")]
+                          if not hit:
+                              print(f"APK 内的 {entry} 里没有 interface.json，前 20 条：")
+                              for n in inner[:20]:
+                                  print("   ", n)
+                              return None, None
+                          return f"{entry}!/{hit[0]}", pi.read(hit[0]).decode("utf-8")
+                  if loose:
+                      return loose[0], z.read(loose[0]).decode("utf-8")
+                  print("APK 内既没有 pi.zip、也没有散装 interface.json，前 40 条：")
+                  for n in names[:40]:
+                      print("   ", n)
+                  return None, None
+
+          print(f"APK: {APK} ({APK.stat().st_size} bytes)")
+          source, text = read_interface(APK)
+          if text is None:
+              sys.exit(1)
+          print(f"检查: {source}")
+          for line in text.splitlines():
+              if "mirrorchyan_rid" in line:
+                  print("   ", line.strip())
+          if OLD in text:
+              print("❌ 包内声明的 rid 还是 MaaPVZ，说明打包时没替换成功")
+              sys.exit(1)
+          if NEW not in text:
+              print("❌ 包内声明里找不到 MaaPVZ_exec")
+              sys.exit(1)
+          print("✅ APK 内 PI 的 mirrorchyan_rid = MaaPVZ_exec")
+          PY
+
+      - name: Rename release APK
+        working-directory: Android/MaaFwApp
+        shell: bash
+        run: |
+          apk_dir="app/build/outputs/apk/release"
+          apks=("$apk_dir"/*.apk)
+          if (( ${#apks[@]} != 1 )) || [[ ! -f "${apks[0]}" ]]; then
+            echo "Expected exactly one release APK in $apk_dir" >&2
+            exit 1
+          fi
+          mv "${apks[0]}" "$apk_dir/${APK_ARTIFACT_NAME}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APK_ARTIFACT_NAME }}
+          path: Android/MaaFwApp/app/build/outputs/apk/release/${{ env.APK_ARTIFACT_NAME }}.apk
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.MAPPING_ARTIFACT_NAME }}
+          path: Android/MaaFwApp/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error

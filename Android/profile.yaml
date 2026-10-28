@@ -1,0 +1,44 @@
+# MaaFwApp 打包配方。相对路径相对本文件。
+# 先跑：python Android/prepare_android_pi.py（把 assets + agent 摊成 Android/pi-root/）
+# agent 运行时（chaquopy 打包）：见 Android/README.md
+
+assets: pi-root
+
+include:
+  - interface.json
+  - resource/**
+  - agent/**
+  - docs/imgs/logo.png
+  - LICENSE
+
+# announcement 的 md 只给桌面端看；识别用的图和模型都在 resource/ 里，别挖
+exclude:
+  - resource/announcement/*.md
+
+# agent 运行时打包（两架构一次打齐；CI/本地同一条命令）：
+#   python Android/MaaFwApp/scripts/build_agent_bundle.py --out Android/agent-dist \
+#     --abi arm64-v8a --abi x86_64 \
+#     --requirements requirements.txt \
+#     --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/agent:
+  sourceDir: agent-dist
+  abi: [arm64-v8a, x86_64]
+  runtimes:
+    - location: bundle
+      executable: bin/python3
+      args: [-u, agent/main.py]
+      env:
+        PYTHONHOME: "{bundle}/prefix"
+        PYTHONPATH: "{bundle}/site-packages/pure.zip:{bundle}/site-packages"
+        LD_LIBRARY_PATH: "{bundle}/prefix/lib:{bundle}/site-packages/chaquopy/lib:{nativeLibs}"
+        MAAFW_BINARY_PATH: "{nativeLibs}"
+
+update:
+  # Android APK 在 Mirror酱 是独立资源（MaaPVZ_exec），与桌面端 MaaPVZ 分开上传；
+  # 包内 interface.json 的 rid 由 tools/prepare_android_pi.py 同步打补丁成同一个值
+  mirrorchyanRid: MaaPVZ_exec
+
+app:
+  # id 决定包名（com.aliothmoon.maafw.pvz），与旧包一致才能覆盖升级——别改
+  id: pvz
+  label: MaaPVZ
+  icon: ../docs/imgs/logo.png

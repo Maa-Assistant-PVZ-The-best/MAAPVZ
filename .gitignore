@@ -467,3 +467,7 @@ flask.log
 # 这些是用户数据 / 开发者本地调试数据，不进仓库。
 assets/resource/jobs/
 resource/jobs/
+
+# Android 构建产物（prepare_android_pi.py 生成 / chaquopy agent 运行时）
+Android/pi-root/
+Android/agent-dist/
