@@ -19,7 +19,9 @@ exclude:
 #   python Android/MaaFwApp/scripts/build_agent_bundle.py --out Android/agent-dist \
 #     --abi arm64-v8a --abi x86_64 \
 #     --requirements requirements.txt \
-#     --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/agent:
+#     --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
+
+agent:
   sourceDir: agent-dist
   abi: [arm64-v8a, x86_64]
   runtimes:
@@ -34,7 +36,7 @@ exclude:
 
 update:
   # Android APK 在 Mirror酱 是独立资源（MaaPVZ_exec），与桌面端 MaaPVZ 分开上传；
-  # 包内 interface.json 的 rid 由 tools/prepare_android_pi.py 同步打补丁成同一个值
+  # 包内 interface.json 的 rid 由 Android/prepare_android_pi.py 同步打补丁成同一个值
   mirrorchyanRid: MaaPVZ_exec
 
 app:
