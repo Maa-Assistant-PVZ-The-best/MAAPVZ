@@ -289,14 +289,12 @@ function jobResetEditor(quiet) {
 
     // 选择世界清空
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI('', []);
-    // 标签清空（连各标签的备注套一起清；41-jobset-tags.js）
+    // 标签清空（41-jobset-tags.js）
     if (typeof jobSetTags === 'function') jobSetTags([]);
     // 植物备注清空
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes({});
     // 神器备注清空
     if (typeof jobSetArtifactNotes === 'function') jobSetArtifactNotes({});
-    // 标签备注套清空（非通用套）
-    if (typeof jobSetTagNotes === 'function') jobSetTagNotes({});
 
     // 阵容表表单恢复默认
     const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
@@ -454,8 +452,6 @@ function jobApplyLoaded(job, code) {
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(job.plant_notes);
     // 神器备注（旧作业集没有该字段 -> 空）
     if (typeof jobSetArtifactNotes === 'function') jobSetArtifactNotes(job.artifact_notes);
-    // 标签备注套（非通用套；旧作业集没有该字段 -> 空）
-    if (typeof jobSetTagNotes === 'function') jobSetTagNotes(job.tag_notes);
     // 局外选卡（作业集级）：旧作业集没有该字段 -> 空列表 + auto；
     // mode 为 oneclick/confirm 时 JSON 本就不存 plants，读进来也置空
     const _op = (job.outer_pick && typeof job.outer_pick === 'object') ? job.outer_pick : {};

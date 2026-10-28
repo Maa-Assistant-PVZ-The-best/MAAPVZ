@@ -1057,27 +1057,14 @@ try:
         "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}],
         "tags": ["开僵尸场外加速", "氪佬", "", 123, "  "],
         "plant_notes": {"冰西瓜": {"tier": 5}},
-        "tag_notes": {
-            "氪佬": {"plant_notes": {"冰西瓜": {"tier": 3},
-                                     "仙人掌": {"tier": 0}},      # tier 0 = 显式任意，剪掉
-                      "artifact_notes": {"风扇": {"tier": 2}}},
-            "难民": {"plant_notes": {}},                          # 空套 -> 整个标签跳过
-            "坏标签": "不是dict",                                  # 非法 -> 跳过
-            123: {"plant_notes": {"冰西瓜": {"tier": 2}}},         # 非字符串键 -> 跳过
-        },
     }, code="t")
     check("标签载入（去空/去非串）",
           _j16c.tags == ["开僵尸场外加速", "氪佬"], str(_j16c.tags))
-    check("标签备注按标签分套",
-          _j16c.tag_notes.get("氪佬") == {"冰西瓜": {"tier": 3}}, str(_j16c.tag_notes.get("氪佬")))
-    check("空备注套跳过", "难民" not in _j16c.tag_notes)
-    check("非法标签备注跳过", "坏标签" not in _j16c.tag_notes and 123 not in _j16c.tag_notes)
-    check("通用套与标签套互不影响", _j16c.plant_notes == {"冰西瓜": {"tier": 5}}, str(_j16c.plant_notes))
+    check("标签不影响植物备注", _j16c.plant_notes == {"冰西瓜": {"tier": 5}}, str(_j16c.plant_notes))
 
     _j16d = _eng16.JobSet({"name": "notag", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]},
                           code="nt")
     check("旧作业集 tags 为空 list", _j16d.tags == [])
-    check("旧作业集 tag_notes 为空 dict", _j16d.tag_notes == {})
 except Exception as _e16:
     check("植物备注", False, f"{type(_e16).__name__}: {_e16}")
 

@@ -66,8 +66,7 @@
   38-jobset-notes.js   备注配置弹窗：神器/植物总览 + 阶数/挂件标注（plant_notes）
   39-jobset-ref.js     表格映射对照：本地作业集棋盘叠加到当前棋盘（纯显示）
   40-jobset-mech.js    地图机制层：按主世界在棋盘叠加机制标记（WORLD_MECHANICS 草稿待校对）
-  41-jobset-tags.js    作业集标签：「＋ 添加标签」弹窗（场外加速 / 刷新下一波 / 氪金档位），
-                       导出 tags；每个标签在备注弹窗里各有一套标注（tag_notes）
+  41-jobset-tags.js    作业集标签：备注弹窗顶部的「标签」行 +「＋ 选择标签」弹窗（只导出 tags）
 
   ── 页面内主要区块（自上而下）──────────────────────────────
   #tooltip / #cellCancelPicker / #genPicker / #supplyPicker  全局弹层（由 JS 控制显隐）
@@ -463,28 +462,7 @@
     </div>
 </div>
 
-<!-- ============ 作业集标签弹窗（2026-10-26） ============ -->
-<div id="tagPicker">
-    <div class="tp-panel">
-        <div class="tp-head">
-            <span class="tp-dot"></span>
-            <span class="tp-title">作业集标签</span>
-            <span class="tp-sub">同一组单选（不能同时「开加速」和「关加速」）</span>
-            <button class="tp-close" id="tagPickerClose" title="关闭">✕</button>
-        </div>
-        <div class="tp-body">
-            <div class="tp-lib-title">标签表示这份作业集适合的账号与开关；挂上后在「📝 配置」里可以给每个标签单独标注植物阶数/挂件</div>
-            <div class="tp-grid" id="tpGrid"><!-- 由 JS 渲染 --></div>
-        </div>
-        <div class="tp-foot">
-            <span class="tp-tip" id="tpTip">已挂：无</span>
-            <button class="tp-reset" id="tpClear">✕ 清空标签</button>
-            <button id="tagPickerDone">完成</button>
-        </div>
-    </div>
-</div>
-
-<!-- ============ 备注配置弹窗（神器/植物总览 + 阶数/挂件标注，2026-10-13） ============ -->
+<!-- ============ 备注配置弹窗（神器/植物总览 + 阶数/挂件标注 + 标签，2026-10-13） ============ -->
 <div id="notesPicker">
     <div class="np-panel">
         <div class="np-head">
@@ -493,7 +471,7 @@
             <span class="np-sub" id="npModeHint">总览本作业集用到的神器与植物</span>
             <button class="np-close" id="notesPickerClose" title="关闭">✕</button>
         </div>
-        <div class="np-tagbar" id="npTagBar"><!-- 「通用」+ 本作业集挂上的标签（38-jobset-notes.js 渲染） --></div>
+        <div class="np-tagbar" id="npTagPickBar"><!-- 标签：已加的标签 +「＋ 选择标签」（41-jobset-tags.js 渲染） --></div>
         <div class="np-modebar">
             <button class="np-mode" data-mode="view" type="button">👁 查看</button>
             <button class="np-mode" data-mode="tier" type="button">🔢 调配阶数</button>
@@ -510,6 +488,25 @@
         <div class="np-foot">
             <span class="np-tip" id="npTip"></span>
             <button id="notesPickerDone">完成</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============ 标签选择弹窗（2026-10-26；「📝 配置」里点「＋ 选择标签」跳出，压在上面） ============ -->
+<div id="tagPicker">
+    <div class="tp-panel">
+        <div class="tp-head">
+            <span class="tp-dot"></span>
+            <span class="tp-title">选择标签</span>
+            <span class="tp-sub">点一下加进「标签」，再点一次摘掉</span>
+            <button class="tp-close" id="tagPickerClose" title="关闭">✕</button>
+        </div>
+        <div class="tp-body">
+            <div class="tp-grid" id="tpGrid"><!-- 由 41-jobset-tags.js 渲染 --></div>
+        </div>
+        <div class="tp-foot">
+            <span class="tp-tip" id="tpTip">已加：无</span>
+            <button id="tagPickerDone">完成</button>
         </div>
     </div>
 </div>
@@ -592,16 +589,8 @@
             <button class="btn" id="worldToggle" title="轮播选择主世界 + 勾选副世界；运行时与 GUI「选择世界」不一致会提示">
                 🌍 <span id="worldLabel">未选择</span>
             </button>
-            <button class="btn" id="notesToggle" title="总览本作业集用到的神器与植物；可标注植物阶数与挂件（仅展示，不影响运行）">
+            <button class="btn" id="notesToggle" title="总览本作业集用到的神器与植物；挂标签、标注植物阶数与挂件（仅展示，不影响运行）">
                 📝 配置
-            </button>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
-            <b style="font-size:12px;color:#555;">标签：</b>
-            <span class="job-tag-chips" id="jobTagChips"><!-- 已挂上的标签（41-jobset-tags.js 渲染） --></span>
-            <button class="btn" id="jobTagAddBtn"
-                    title="给这份作业集挂标签：僵尸场外加速 / 刷新下一波 / 氪金档位。每个标签在「📝 配置」里可以单独标注植物阶数与挂件（没标的项回落通用）">
-                ＋ 添加标签
             </button>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;border-top:1px solid #e2e8f0;padding-top:8px;">
