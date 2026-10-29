@@ -13,6 +13,8 @@
       "plant_notes": {               # 植物备注（阶数/挂件标注，仅展示，运行时不消费）
         "冰西瓜": {"tier": 5, "pendant": "闪耀雪花挂坠"}
       },
+      # 作业集标签（2026-10-26 新增，旧作业集无此字段）：打法适配条件，纯标注
+      "tags": ["开僵尸场外加速", "氪佬"],
       "tables": [
         {
           "from_level": 1,
@@ -144,6 +146,37 @@ def _norm_plants(v: Any) -> List[str]:
             continue
         seen.add(name)
         out.append(name)
+    return out
+
+
+def _parse_plant_notes(pn: Any) -> Dict[str, Dict[str, Any]]:
+    """解析植物备注：{ 植物名: {"tier": 1-5, "pendant": 挂件名, "costume": True} }。
+
+    仅展示用（运行时不消费），所以这里只做结构校验 + 剪空：
+      · 名字不是字符串 / 备注不是 dict -> 跳过
+      · tier 越界、pendant 空串、costume 非真值 -> 剪掉
+      · 剪完一个字都不剩 -> 整个条目跳过
+    旧作业集没有该字段 -> {}。
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+    if not isinstance(pn, dict):
+        return out
+    for name, note in pn.items():
+        if not isinstance(name, str) or not isinstance(note, dict):
+            continue
+        entry: Dict[str, Any] = {}
+        tier = _as_int(note.get("tier"), 0)
+        if tier and 1 <= tier <= 5:
+            entry["tier"] = tier
+        pendant = note.get("pendant")
+        if isinstance(pendant, str) and pendant.strip():
+            entry["pendant"] = pendant.strip()
+        costume = note.get("costume")
+        # 布尔：是否需要装扮（旧版字符串装扮名也视为需要）
+        if costume is True or isinstance(costume, str) and costume.strip():
+            entry["costume"] = True
+        if entry:
+            out[name] = entry
     return out
 
 
@@ -516,28 +549,19 @@ class JobSet:
         ] if isinstance(sub_worlds, (list, tuple)) else []
 
         # ---- 植物备注（网页端「📝 配置」导出，2026-10-13 新增）----
-        #   { 植物名: {"tier": 1-5, "pendant": "挂件中文名", "costume": "装扮名"} }
+        #   { 植物名: {"tier": 1-5, "pendant": "挂件中文名", "costume": true} }
         #   —— 仅展示用，运行时不消费。这里只做结构校验后原样保留
         #   （旧作业集无此字段 -> {}）。costume 的选择功能后做，先透传。
-        pn = raw.get("plant_notes")
-        self.plant_notes: Dict[str, Dict[str, Any]] = {}
-        if isinstance(pn, dict):
-            for name, note in pn.items():
-                if not isinstance(name, str) or not isinstance(note, dict):
-                    continue
-                entry: Dict[str, Any] = {}
-                tier = _as_int(note.get("tier"), 0)
-                if tier and 1 <= tier <= 5:
-                    entry["tier"] = tier
-                pendant = note.get("pendant")
-                if isinstance(pendant, str) and pendant.strip():
-                    entry["pendant"] = pendant.strip()
-                costume = note.get("costume")
-                # 布尔：是否需要装扮（旧版字符串装扮名也视为需要）
-                if costume is True or isinstance(costume, str) and costume.strip():
-                    entry["costume"] = True
-                if entry:
-                    self.plant_notes[name] = entry
+        self.plant_notes: Dict[str, Dict[str, Any]] = _parse_plant_notes(raw.get("plant_notes"))
+
+        # ---- 作业集标签（网页端「＋ 选择标签」导出，2026-10-26 新增）----
+        #   打法的适配条件：僵尸场外加速 开/关、刷新下一波 开/关、氪金档位
+        #   （难民/0氪/微氪/氪佬）。一份作业集可挂多个，纯标注（运行时不消费）。
+        raw_tags = raw.get("tags")
+        self.tags: List[str] = [
+            t.strip() for t in raw_tags
+            if isinstance(t, str) and t.strip()
+        ] if isinstance(raw_tags, (list, tuple)) else []
 
         # ---- 无尽局外 80 选卡（作业集级；网页端 32-jobset-outer.js 导出）----
         #   mode:   auto     = 按 plants 列表自动选（runtime 注入到 80 选卡 custom 节点）

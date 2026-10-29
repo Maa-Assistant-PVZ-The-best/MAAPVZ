@@ -471,3 +471,9 @@ resource/jobs/
 # Android 构建产物（prepare_android_pi.py 生成 / chaquopy agent 运行时）
 Android/pi-root/
 Android/agent-dist/
+
+# Android 签名材料：只在本地/CI 注入，绝不进仓库
+# （Android/MaaFwApp 是 submodule，它的 *.jks 忽略规则管不到父仓库的 Android/keystore）
+Android/keystore/
+*.jks
+*.keystore

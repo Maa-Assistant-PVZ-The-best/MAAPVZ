@@ -28,6 +28,8 @@ function jobSaveLocal() {
                 currentTable: currentTable,
                 tables: jobTables,
                 rarityFilter: plantRarityFilter,
+                // 作业集标签（41-jobset-tags.js）
+                tags: (typeof jobGetTags === 'function') ? jobGetTags() : [],
                 // 植物备注（阶数/挂件标注，38-jobset-notes.js）
                 plantNotes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
                 // 神器备注（阶数标注，2026-10-25）
@@ -113,6 +115,8 @@ function jobLoadLocal() {
             ? Math.floor(+m.swipeMs) : 80;
         // 选择世界（旧缓存没有 -> 未选择）
         jobSetWorldUI(m.world, m.sub_worlds);
+        // 标签（旧缓存没有 -> 无标签）
+        if (typeof jobSetTags === 'function') jobSetTags(data.tags);
         // 植物备注（旧缓存没有 -> 空）
         if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(data.plantNotes);
         // 神器备注（旧缓存没有 -> 空）
@@ -145,6 +149,8 @@ function jobInit() {
     if (typeof jobWorldInit === 'function') jobWorldInit();
     // 备注配置弹窗（神器/植物总览 + 阶数/挂件标注）
     if (typeof jobNotesInit === 'function') jobNotesInit();
+    // 作业集标签（备注弹窗顶部那排「点一下就挂上」，41-jobset-tags.js）
+    if (typeof jobTagInit === 'function') jobTagInit();
     // 表格映射对照（🔍 把别的作业集的棋盘叠加到当前棋盘）
     if (typeof jobRefInit === 'function') jobRefInit();
 

@@ -496,6 +496,8 @@ function jobOpenNotesPicker() {
 function jobCloseNotesPicker() {
     const p = document.getElementById('notesPicker');
     if (p) p.classList.remove('sp-open');
+    // 标签选择弹窗压在这个弹窗上面，一起关掉（41-jobset-tags.js）
+    if (typeof jobCloseTagPicker === 'function') jobCloseTagPicker();
 }
 
 // ---- 「是否查看配置」提示条（载入作业集后由 jobApplyLoaded 调用）----

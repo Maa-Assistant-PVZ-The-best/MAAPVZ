@@ -275,6 +275,13 @@ def arm(AgentServer=None) -> None:
       Android 上没有 VSCode 扩展宿主,不装
     """
     global _dev_mode
+    # 2026-10-28：安卓端（chaquopy）没有 ctypes.windll，_ancestor_chain 必炸
+    # （AttributeError -> agent 启动即退出码 1）。安卓上 agent 生命周期由
+    # MaaFwApp 外壳自己管理，看门狗整体不适用——非 Windows 直接不武装。
+    if sys.platform != "win32":
+        print(f"[exit_watchdog] 非 Windows 平台（{sys.platform}），不武装"
+              "（宿主生命周期由外壳管理）", file=sys.stderr, flush=True)
+        return
     chain = _ancestor_chain()
     _start_ancestor_watch(chain)
 

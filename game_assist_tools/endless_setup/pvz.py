@@ -259,6 +259,10 @@ def list_jobs():
             entry['name'] = d.get('name', '')
             entry['version'] = d.get('version', '')
             entry['tables'] = len(d.get('tables', []) or [])
+            # 作业集标签（41-jobset-tags.js 导出；选择弹窗里显示成小 chip）
+            tags = d.get('tags')
+            entry['tags'] = [t for t in tags if isinstance(t, str) and t.strip()] \
+                if isinstance(tags, (list, tuple)) else []
         except Exception:
             pass
         jobs.append(entry)

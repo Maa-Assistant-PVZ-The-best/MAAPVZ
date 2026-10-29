@@ -3630,6 +3630,8 @@ function jobBuild() {
         plant_notes: (typeof jobGetPlantNotes === 'function') ? jobGetPlantNotes() : {},
         // 神器备注（阶数标注，2026-10-25；38-jobset-notes.js）
         artifact_notes: (typeof jobGetArtifactNotes === 'function') ? jobGetArtifactNotes() : {},
+        // 标签（2026-10-26；41-jobset-tags.js）：本作业集适合的打法开关 / 账号档位，纯标注
+        tags: (typeof jobGetTags === 'function') ? jobGetTags() : [],
         everyN: jobGetEveryN(),    // 识别结算速率（高级设置，作用于所有组合动作）
         // 调配参数（步骤 ⚙ 弹窗）：compile.py 的 swipe_ms。
         // （动作间隔固定 0.1s = BatchSwipe 默认，不导出、不可调）

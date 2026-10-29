@@ -1050,6 +1050,21 @@ try:
 
     _j16b = _eng16.JobSet({"name": "old", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="o")
     check("旧作业集 plant_notes 为空 dict", _j16b.plant_notes == {})
+
+    # ---- 作业集标签（2026-10-26）----
+    _j16c = _eng16.JobSet({
+        "name": "tagged",
+        "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}],
+        "tags": ["开僵尸场外加速", "氪佬", "", 123, "  "],
+        "plant_notes": {"冰西瓜": {"tier": 5}},
+    }, code="t")
+    check("标签载入（去空/去非串）",
+          _j16c.tags == ["开僵尸场外加速", "氪佬"], str(_j16c.tags))
+    check("标签不影响植物备注", _j16c.plant_notes == {"冰西瓜": {"tier": 5}}, str(_j16c.plant_notes))
+
+    _j16d = _eng16.JobSet({"name": "notag", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]},
+                          code="nt")
+    check("旧作业集 tags 为空 list", _j16d.tags == [])
 except Exception as _e16:
     check("植物备注", False, f"{type(_e16).__name__}: {_e16}")
 

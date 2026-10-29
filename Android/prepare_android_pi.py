@@ -133,6 +133,8 @@ def main() -> int:
         dest_logo = DEST / "docs" / "imgs"
         dest_logo.mkdir(parents=True, exist_ok=True)
         shutil.copy2(logo, dest_logo / "logo.png")
+        # MaaFwApp 的 PI 图标固定找 resource/logo.png（缺了只告警，顺手补上）
+        shutil.copy2(logo, DEST / "resource" / "logo.png")
 
     patch_rid()
     ensure_ocr_models()

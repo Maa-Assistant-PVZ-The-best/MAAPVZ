@@ -103,10 +103,44 @@ function jobRenderJobPicker() {
         item.type = 'button';
         const on = (j.code === curCode);
         item.className = 'jp-item' + (on ? ' jp-item-on' : '');
-        item.innerHTML = '<span class="jp-item-ico">📚</span><span>'
-            + '<div class="jp-item-name">' + (j.name || j.code) + '</div>'
-            + '<div class="jp-item-code">' + j.code + '</div></span>'
-            + (on ? '<span class="jp-item-cur">当前</span>' : '');
+
+        const ico = document.createElement('span');
+        ico.className = 'jp-item-ico';
+        ico.textContent = '📚';
+        item.appendChild(ico);
+
+        const mid = document.createElement('span');
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'jp-item-name';
+        nameDiv.textContent = (j.name || j.code);
+        mid.appendChild(nameDiv);
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'jp-item-code';
+        codeDiv.textContent = j.code;
+        mid.appendChild(codeDiv);
+        // 标签（41-jobset-tags.js 导出；服务端 /list_jobs 顺带带回）
+        const tags = (Array.isArray(j.tags) ? j.tags : []).filter(function (t) {
+            return typeof t === 'string' && t;
+        });
+        if (tags.length) {
+            const tw = document.createElement('div');
+            tw.className = 'jp-item-tags';
+            tags.forEach(function (t) {
+                const chip = document.createElement('span');
+                chip.className = 'jp-item-tag';
+                chip.textContent = t;
+                tw.appendChild(chip);
+            });
+            mid.appendChild(tw);
+        }
+        item.appendChild(mid);
+
+        if (on) {
+            const cur = document.createElement('span');
+            cur.className = 'jp-item-cur';
+            cur.textContent = '当前';
+            item.appendChild(cur);
+        }
         item.addEventListener('click', function () { pick(j.code); });
         body.appendChild(item);
     });
@@ -255,6 +289,8 @@ function jobResetEditor(quiet) {
 
     // 选择世界清空
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI('', []);
+    // 标签清空（41-jobset-tags.js）
+    if (typeof jobSetTags === 'function') jobSetTags([]);
     // 植物备注清空
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes({});
     // 神器备注清空
@@ -410,6 +446,8 @@ function jobApplyLoaded(job, code) {
     currentTable = 0;
     // 选择世界（旧作业集没有该字段 -> 未选择）
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI(job.world, job.sub_worlds);
+    // 标签（旧作业集没有该字段 -> 无标签）
+    if (typeof jobSetTags === 'function') jobSetTags(job.tags);
     // 植物备注（旧作业集没有该字段 -> 空）
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(job.plant_notes);
     // 神器备注（旧作业集没有该字段 -> 空）
