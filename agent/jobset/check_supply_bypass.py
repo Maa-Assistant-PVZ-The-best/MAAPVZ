@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from agent.jobset import runtime as rt  # noqa: E402
+from agent.jobset import engine as _engine  # noqa: E402
 from agent.jobset.check_graph import strip_comments  # noqa: E402
 
 # ---------- 1) 载入真实 pipe（JSONC：剥 // 与 /* */ 注释，含行尾注释）----------
@@ -162,7 +163,9 @@ def simulate_overrides(boss_lv, lineup_changed, artifact_changed):
     boss_lv=None -> 自动挑「带 boss 差异阵容的表」覆盖的第一个 5 倍数关
     （找不到差异表就退而求其次：任何 5 倍数关，供场景 D 用）。"""
     job = _load_test_job()
-    dst = ROOT / "assets" / "resource" / "jobs" / "_sim_current.json"
+    # 夹具落到真实的作业集目录（口径由 engine 决定，别在这里写死路径）
+    _engine.DEFAULT_JOBS_DIR.mkdir(parents=True, exist_ok=True)
+    dst = _engine.DEFAULT_JOBS_DIR / "_sim_current.json"
     dst.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
     try:
         if boss_lv is None:

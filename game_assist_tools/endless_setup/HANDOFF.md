@@ -35,7 +35,7 @@
 | 层 | 位置 | 职责 |
 | --- | --- | --- |
 | 网页（编辑器） | `game_assist_tools\endless_setup\static\` | 可视化配置，导出作业集 JSON |
-| 数据（作业集） | `assets/resource/jobs/<code>.json` + `current.json` | 每个阵容一张表 |
+| 数据（作业集） | 用户数据目录，口径见 `agent/jobset/engine.py` 的 `jobs_dir_for()`：开发仓库 `assets/resource/jobs/`、桌面发行包 `<包根>/jobs/`、安卓 `<pi>/../jobs/`（**必须在包外**，否则更新清空，见 §12.1「作业集目录」） | 每个阵容一张表 |
 | 运行时（执行） | `agent/jobset/*` + pipeline → 驱动 BatchSwipe | 解析作业集并注入管道 |
 
 执行层**复用两个成熟动作，不重写**：
@@ -1272,6 +1272,44 @@ static registries = {
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
 | 退出看门狗 | `agent/exit_watchdog.py`：关闭宿主（MFA/VSCode）时 `AgentServer.join()` 不返回，python.exe 残留。基础路径=**祖先进程监控**（toolhelp32 快照记录祖先链 **最多 6 层** 的 PID 与 exe 名，1.5s 轮询，消失或 PID 被复用即判宿主已关 → 2s 后 `os._exit`；2026-10-07 从 2 层放宽——扩展链路变成 `python <- powershell <- Code.exe`，Code 在第 3 层，2 层够不到导致 dev 模式失效、"停任务即退"不武装）。**VSCode 扩展宿主（祖先含 Code.exe）额外武装停止即退出**，双保险：① `Tasker.Task` 终态事件 sink（客户端是否转发没保证）；② 长动作循环里的协作检查 `_stopped()`（custom_select_plant）观测到停止即 `on_task_stopped()`——**action 运行期间是唯一可靠观测点**（句柄有效；action 外即被回收）。扩展每次 startTask 会 agent start race 重拉死进程 → 停=自杀=下次跑新代码（dev 循环刚需；扩展复用进程导致旧代码驻留，容易误判"改动没生效"）。**桌面端 MFAAvalonia 绝不停止即退**：它停任务后不重拉只复用，自杀后第二次任务 custom 全废（2026-10-04 打包版实测）。轮询 `tasker.running` 路线废弃（句柄 action 结束即回收，报 `tasker not found`/误自杀）。⚠️ `_stopped` 必须查 `stopping` 而不只 `running`——停止期间 running 要等当前 action 返回才变 False（鸡生蛋），SelectPlants 曾因此停任务后还多滑 20s |
+
+---
+
+## 12.1 ★ 作业集目录必须在「包外」（2026-10-30 踩坑）
+
+**现象**：用户更新一版就发现本地作业集全没了。
+
+**成因**：2026-09-30 的 `perf:更换打包目录地址` 把作业集从
+`<根>/assets/resource/jobs` 挪进了 MaaFramework 的资源目录
+`<根>/resource/jobs`。安卓端 `<根>` 是 MaaFwApp 的 **pi 解包树**，而
+`resource/` 是包里带的**根级条目**：
+
+- App 升级时 `versionCode` 与 `pi/pi.version` 标记对不上 →
+  `PiInstaller.install(wipe=false)` 先按上一份包的清单把
+  `resource/`、`agent/`… 整棵 `deleteRecursively()` 再重解；
+- 设置页「重新解压资源」走 `reinstall()`，`wipe=true` 直接把整棵 pi 删掉；
+- 包里又没有作业集（`prepare_android_pi.py` 明确清掉），重解后就是**空白**，不可恢复。
+
+MaaFwApp 自己的契约写在 `Android/MaaFwApp/INTEGRATION.md`：
+> 更新只整体替换新包根目录下有的条目（`resource/`、`tasks/`、`agent/` 这些），
+> 其余不动。所以记录、缓存放 `debug/`、`config/` 这类包里没有的目录。
+
+**现在的位置**（唯一口径：`agent/jobset/engine.py` 的 `jobs_dir_for()`，
+`pvz.py` / `pvz_android.py` 各留一份同口径实现，selfcheck §21 断言不漂移）：
+
+| 布局 | 作业集目录 | 为什么安全 |
+| --- | --- | --- |
+| 安卓（`<根>` = pi 解包树） | `<根>/../jobs` | 与 `pi` 同级；升级只替换包内根级条目，重解资源也不会删它 |
+| 桌面发行包 | `<根>/jobs` | 包里没有 `jobs/` 这一项，差分更新/解压覆盖都不碰 |
+| 开发仓库 | `<根>/assets/resource/jobs` | `.gitignore` 已排除，测试夹具也用它 |
+
+**迁移**：`migrate_legacy_jobs()` 会把历史位置（`<根>/resource/jobs`、
+`<根>/assets/resource/jobs`）里的 `*.json` 搬到新位置，同名不覆盖；
+agent 在 `load_jobset()` 前搬一次，网页端在启动时搬一次。
+
+**以后再加新功能**：**任何用户数据都不要写进 `resource/`、`agent/`、
+`game_assist_tools/` 这三个根级条目**，否则下次更新一起没（`debug/`、
+`config/` 是包外安全区的惯用名）。
 
 ---
 

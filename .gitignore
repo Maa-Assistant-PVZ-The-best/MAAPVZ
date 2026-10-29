@@ -462,11 +462,13 @@ debug
 .DS_Store
 flask.log
 
-# 作业集（网页端本地产出：jobs/<code>.json + current.json）
-# 两种布局都忽略：开发仓库是 assets/resource/jobs，发行包是 resource/jobs。
-# 这些是用户数据 / 开发者本地调试数据，不进仓库。
+# 作业集（网页端本地产出：<code>.json + current.json），用户数据，不进仓库。
+# 路径口径见 agent/jobset/engine.py 的 jobs_dir_for()：
+#   开发仓库 <仓库根>/assets/resource/jobs/ ｜ 桌面发行包 <包根>/jobs/ ｜ 安卓 <pi>/../jobs/
+# 后两条本来就在包外，列在这儿是防止谁在仓库里跑发行包布局时把数据提交进来。
 assets/resource/jobs/
 resource/jobs/
+/jobs/
 
 # Android 构建产物（prepare_android_pi.py 生成 / chaquopy agent 运行时）
 Android/pi-root/

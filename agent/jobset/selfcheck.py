@@ -1498,6 +1498,76 @@ except Exception as _e20:
 
 
 # ---------------------------------------------------------------------------
+print("\n=== 21. 作业集目录口径（必须在包外 / 三处实现不漂移） ===")
+# 2026-10-30 事故：作业集曾被放进 <根>/resource/jobs（包根级条目），
+# 安卓端每次 App 升级都会整棵删掉 resource/ 再重解 -> 用户作业集全丢。
+# 这里钉住三件事：目录判据、迁移源、网页端与 agent 的口径一致。
+try:
+    import importlib.util as _ilu21
+
+    from agent.jobset import engine as _eng21
+
+    # ---- 21a. 三布局判据（不落盘：用真实存在的 resource/ 子树当"发行包"样本）----
+    _repo21 = _eng21._REPO_ROOT
+    check("开发仓库（<根> 无 resource/）-> <根>/assets/resource/jobs",
+          _eng21.jobs_dir_for(_repo21) == _repo21 / "assets" / "resource" / "jobs",
+          str(_eng21.jobs_dir_for(_repo21)))
+    check("发行包（<根> 有 resource/）-> <根>/jobs（包外）",
+          _eng21.jobs_dir_for(_repo21 / "assets") == _repo21 / "assets" / "jobs",
+          str(_eng21.jobs_dir_for(_repo21 / "assets")))
+    check("安卓 -> <根>/../jobs（与 pi 同级）",
+          _eng21.jobs_dir_for(_repo21, android=True) == _repo21.parent / "jobs",
+          str(_eng21.jobs_dir_for(_repo21, android=True)))
+
+    # ---- 21b. ★ 包内布局下作业集绝不能落在资源树里 ----
+    #   （落进去 = 安卓升级 /「重新解压资源」时被整棵删掉，2026-10-30 的事故）
+    #   开发仓库是唯一例外：那里作业集按设计就在 assets/resource/jobs。
+    def _inside21(child, parent):
+        return Path(parent).resolve() in Path(child).resolve().parents
+
+    check("发行包布局: 作业集不在资源目录内",
+          not _inside21(_eng21.jobs_dir_for(_repo21 / "assets"),
+                        _repo21 / "assets" / "resource"),
+          str(_eng21.jobs_dir_for(_repo21 / "assets")))
+    check("安卓布局: 作业集不在 pi 解包树内",
+          not _inside21(_eng21.jobs_dir_for(_repo21, android=True), _repo21),
+          str(_eng21.jobs_dir_for(_repo21, android=True)))
+    if _eng21.RESOURCE_DIR == _repo21 / "assets" / "resource":
+        print("  [SKIP] 当前实际布局: 开发仓库（作业集按设计就在 assets/resource/jobs）")
+    else:
+        check("当前实际布局: 作业集不在资源目录内",
+              not _inside21(_eng21.DEFAULT_JOBS_DIR, _eng21.RESOURCE_DIR),
+              f"jobs={_eng21.DEFAULT_JOBS_DIR}")
+
+    # ---- 21c. 迁移源：两处历史位置都得在（删了老用户的作业集就找不回来了）----
+    _want21 = [_repo21 / "resource" / "jobs",
+               _repo21 / "assets" / "resource" / "jobs"]
+    check("迁移源含两处历史位置", _eng21.LEGACY_JOBS_DIRS == _want21,
+          str(_eng21.LEGACY_JOBS_DIRS))
+
+    # ---- 21d. 网页端两份实现与 agent 不漂移（三份同口径，靠这条门禁守着）----
+    _srv_dir21 = Path(__file__).resolve().parents[2] / "game_assist_tools" / "endless_setup"
+    for _name21 in ("pvz.py", "pvz_android.py"):
+        try:
+            _spec21 = _ilu21.spec_from_file_location(
+                _name21[:-3] + "_server", _srv_dir21 / _name21)
+            _mod21 = _ilu21.module_from_spec(_spec21)
+            _spec21.loader.exec_module(_mod21)
+            check(f"{_name21}: JOBS_DIR 与 engine 同口径",
+                  Path(_mod21.JOBS_DIR).resolve() == _eng21.DEFAULT_JOBS_DIR.resolve(),
+                  f"{_mod21.JOBS_DIR}")
+            check(f"{_name21}: 迁移源与 engine 同口径",
+                  [Path(p) for p in _mod21.LEGACY_JOBS_DIRS]
+                  == _eng21.LEGACY_JOBS_DIRS,
+                  str(_mod21.LEGACY_JOBS_DIRS))
+        except ImportError as _ie21:
+            # 少了 flask 之类就跳过（编辑器本身跑不起来，没必要卡 agent 门禁）
+            print(f"  [SKIP] {_name21} 口径比对：{_ie21}")
+except Exception as _e21:
+    check("作业集目录口径", False, f"{type(_e21).__name__}: {_e21}")
+
+
+# ---------------------------------------------------------------------------
 print("\n" + "=" * 52)
 if FAILED:
     print(f"FAILED {len(FAILED)}: {FAILED}")

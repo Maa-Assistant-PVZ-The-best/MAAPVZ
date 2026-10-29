@@ -104,8 +104,11 @@ def main() -> int:
         else:
             shutil.copy2(child, target)
 
-    # 作业集是用户数据（gitignored），不打进包里
+    # 作业集是用户数据（gitignored），不打进包里。
+    # 安卓端它的正式落点是 <pi>/../jobs（见 agent/jobset/engine.py 的 jobs_dir_for），
+    # 但开发仓库的 assets/resource/jobs 会被上面那次摊平拷进来，这里一律清掉。
     shutil.rmtree(DEST / "resource" / "jobs", ignore_errors=True)
+    shutil.rmtree(DEST / "jobs", ignore_errors=True)
 
     copy_tree(REPO / "agent", DEST / "agent")
 

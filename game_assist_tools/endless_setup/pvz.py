@@ -21,11 +21,41 @@ def _pick_resource_dir():
     return os.path.join(PROJECT_DIR, "assets", "resource")
 
 
+def _is_android():
+    """是否跑在安卓端（与 agent/jobset/engine.py 的 _is_android 同一口径）。"""
+    return (
+        os.environ.get("MAA_JOB_EDITOR_ANDROID") == "1"
+        or "ANDROID_ROOT" in os.environ
+        or "ANDROID_DATA" in os.environ
+        or (sys.platform.startswith("linux")
+            and os.path.isfile("/system/build.prop"))
+    )
+
+
+def _jobs_dir_for(root, android=False):
+    """作业集目录（用户数据）—— 与 agent/jobset/engine.py 的 jobs_dir_for 同一口径。
+
+    ★ 必须落在「更新不会整棵替换」的位置，否则用户更新一次作业集就被清空：
+      - 安卓（root = pi 解包树）：root/../jobs（App 升级只替换包内根级条目）
+      - 桌面发行包：root/jobs（包里没有 jobs/，差分更新不会动它）
+      - 开发仓库：root/assets/resource/jobs（.gitignore 已排除）
+    """
+    if android:
+        return os.path.join(os.path.dirname(os.path.abspath(root)), "jobs")
+    if os.path.isdir(os.path.join(root, "resource")):
+        return os.path.join(root, "jobs")
+    return os.path.join(root, "assets", "resource", "jobs")
+
+
 RESOURCE_DIR = _pick_resource_dir()
 # 作业集目录（网页保存 + agent 运行时读取）；agent 端算法与此一致
-JOBS_DIR = os.path.join(RESOURCE_DIR, "jobs")
-# 旧版布局的作业集位置（老用户数据在这里，需要迁移）
-LEGACY_JOBS_DIR = os.path.join(PROJECT_DIR, "assets", "resource", "jobs")
+JOBS_DIR = _jobs_dir_for(PROJECT_DIR, _is_android())
+# 历史布局的作业集位置（老用户数据可能还躺在这儿，启动时迁到 JOBS_DIR）。
+# 顺序 = 新 -> 旧。
+LEGACY_JOBS_DIRS = [
+    os.path.join(PROJECT_DIR, "resource", "jobs"),             # 2026-09-30 ~ 2026-10-30
+    os.path.join(PROJECT_DIR, "assets", "resource", "jobs"),   # 更早
+]
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 CONFIG_FILE = os.path.join(BASE_DIR, 'config.json')
@@ -50,29 +80,30 @@ def ensure_jobs_dir():
 
 
 def migrate_legacy_jobs():
-    """把旧布局 <根>/assets/resource/jobs 里的作业集搬到新位置。
+    """把历史布局里的作业集搬到 JOBS_DIR。
 
     只在两个目录确实不同时才做（开发仓库里相同 -> 直接跳过）。
     目标已有同名文件时不覆盖（新位置优先）。
     """
-    if os.path.normpath(LEGACY_JOBS_DIR) == os.path.normpath(JOBS_DIR):
-        return 0
-    if not os.path.isdir(LEGACY_JOBS_DIR):
-        return 0
     moved = 0
-    for name in sorted(os.listdir(LEGACY_JOBS_DIR)):
-        if not name.endswith('.json'):
+    for legacy in LEGACY_JOBS_DIRS:
+        if os.path.normpath(legacy) == os.path.normpath(JOBS_DIR):
             continue
-        src = os.path.join(LEGACY_JOBS_DIR, name)
-        dst = os.path.join(JOBS_DIR, name)
-        if not os.path.isfile(src) or os.path.exists(dst):
+        if not os.path.isdir(legacy):
             continue
-        try:
-            os.makedirs(JOBS_DIR, exist_ok=True)
-            shutil.move(src, dst)
-            moved += 1
-        except OSError:
-            continue
+        for name in sorted(os.listdir(legacy)):
+            if not name.endswith('.json'):
+                continue
+            src = os.path.join(legacy, name)
+            dst = os.path.join(JOBS_DIR, name)
+            if not os.path.isfile(src) or os.path.exists(dst):
+                continue
+            try:
+                os.makedirs(JOBS_DIR, exist_ok=True)
+                shutil.move(src, dst)
+                moved += 1
+            except OSError:
+                continue
     return moved
 
 
@@ -558,8 +589,9 @@ def _ensure_port_free(host: str, port: int, reuse: bool = False) -> None:
 
 
 if __name__ == '__main__':
-    # 老版本把作业集放在 <根>/assets/resource/jobs，新版改到资源目录下。
-    # 这里迁移一次，避免老用户升级后作业集「消失」。
+    # 历史布局：<根>/resource/jobs（2026-09-30 起误放进资源目录）与
+    # <根>/assets/resource/jobs（更早）。启动时迁到包外的新位置，
+    # 避免老用户升级后作业集「消失」。
     try:
         _moved = migrate_legacy_jobs()
         if _moved:
