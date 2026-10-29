@@ -95,6 +95,9 @@ jobs:
             --requirements requirements.txt \
             --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
 
+      - name: Patch pure.zip namespace packages
+        run: python tools/ci/patch_pure_zip.py Android/agent-dist
+
       - name: Assemble debug APK
         working-directory: Android/MaaFwApp
         run: |
@@ -105,7 +108,7 @@ jobs:
         working-directory: Android/MaaFwApp
         run: |
           mv app/build/outputs/apk/debug/app-debug.apk \
-            "app/build/outputs/apk/debug/MaaPVZ-android-internal-debug-${{ matrix.abi }}-${{ github.sha }}.apk"
+          "app/build/outputs/apk/debug/MaaPVZ-android-internal-debug-${{ matrix.abi }}-${{ github.sha }}.apk"
 
       - uses: actions/upload-artifact@v4
         with:

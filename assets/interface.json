@@ -148,7 +148,7 @@
         {
             "name": "无尽挑战（重构）",
             "entry": "无尽挑战_前置检查_ref",
-            "description": "初次使用请打开作业集编辑器一次，随后切换为选择本地作业集。\n\n[作业集使用教学](https://daoyanxiaoz.github.io/Maapvz_User_md/%E6%97%A0%E5%B0%BD/%E4%BD%9C%E4%B8%9A%E9%9B%86%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B.html)",
+            "description": "初次使用请打开作业集编辑器一次，随后切换为选择本地作业集。\n\n[作业集使用教学](https://daoyanxiaoz.github.io/Maapvz_User_md/%E6%97%A0%E5%B0%BD/%E4%BD%9C%E4%B8%9A%E9%9B%86%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B.html);[编辑网页](http://127.0.0.1:5000)",
             "option": [
                 "作业集模式"
             ]

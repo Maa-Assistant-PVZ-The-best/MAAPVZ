@@ -1,14 +1,16 @@
+import json
+import os
 import sys
 import time
 from pathlib import Path
+
 from maa.agent.agent_server import AgentServer
-from maa.custom_action import CustomAction
 from maa.context import Context
-import json
+from maa.custom_action import CustomAction
 from PIL import Image
 
 # 智能获取根目录（兼容开发与 PyInstaller 打包）
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     ROOT_DIR = Path(sys.executable).parent
 else:
     ROOT_DIR = Path(__file__).parent.parent
@@ -19,7 +21,9 @@ _plant_states = {}
 SCREENSHOT_DIR = ROOT_DIR / "screenshots"
 
 
-def _get_plant_state(name: str, level: int = None, initial_count: int = None, initial_counts: dict = None) -> dict:
+def _get_plant_state(
+    name: str, level: int = None, initial_count: int = None, initial_counts: dict = None
+) -> dict:
     """获取或初始化指定植物的计数状态，支持单独设置某阶初始运行次数。
     如果状态已存在但对应阶的 run_counts 为 0，仍会应用 initial_count。
     """
@@ -49,7 +53,9 @@ def _get_plant_state(name: str, level: int = None, initial_count: int = None, in
 
 @AgentServer.custom_action("CleanupMaafwBakLogs")
 class CleanupMaafwBakLogs(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         try:
             keep_count = 3
             if argv.custom_action_param:
@@ -84,13 +90,20 @@ def cleanup_maafw_bak_logs(context=None, keep_count: int = 3):
 
 
 def get_node_name_from_argv(argv):
-    candidates = ['node', 'node_name', 'name', 'task_node', 'current_node', 'recognition_name']
+    candidates = [
+        "node",
+        "node_name",
+        "name",
+        "task_node",
+        "current_node",
+        "recognition_name",
+    ]
     for attr in candidates:
         if hasattr(argv, attr):
             val = getattr(argv, attr)
             if val is not None and isinstance(val, str):
                 return val
-    attrs = [a for a in dir(argv) if not a.startswith('_')]
+    attrs = [a for a in dir(argv) if not a.startswith("_")]
     print(f"[DEBUG] argv 属性: {attrs}")
     return None
 
@@ -100,13 +113,18 @@ def get_node_name_from_argv(argv):
 @AgentServer.custom_action("OffsetClick_y")
 class OffsetClick(CustomAction):
     """原版：每次点击 x 增加 dx，每 max_hits 次后重置，重置时 y 减去 n，x 回到初始值+dx"""
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         try:
             node_name = get_node_name_from_argv(argv)
             if node_name is None:
-                print("[OffsetClick] 警告：无法获取节点名称，使用固定键'DefaultNode'，状态可能串扰")
+                print(
+                    "[OffsetClick] 警告：无法获取节点名称，使用固定键'DefaultNode'，状态可能串扰"
+                )
                 node_name = "DefaultNode"
-            
+
             key = f"OffsetState_{node_name}"
             state = _offset_state_map.get(key)
 
@@ -133,10 +151,12 @@ class OffsetClick(CustomAction):
                     "base_y_offset": 0,
                     "hit_count": 0,
                     "initial_x": initial_x,
-                    "initial_y": initial_y
+                    "initial_y": initial_y,
                 }
                 _offset_state_map[key] = state
-                print(f"[OffsetClick][{node_name}] 初始化: x={initial_x}, y基={initial_y}, dx={dx}, max_hits={max_hits}, n={n}")
+                print(
+                    f"[OffsetClick][{node_name}] 初始化: x={initial_x}, y基={initial_y}, dx={dx}, max_hits={max_hits}, n={n}"
+                )
 
             current_y = state["initial_y"] + state["base_y_offset"]
             will_reset = (state["hit_count"] + 1) >= max_hits
@@ -145,11 +165,15 @@ class OffsetClick(CustomAction):
                 new_offset = state["base_y_offset"] - n
                 click_y = state["initial_y"] + new_offset
                 click_x = state["initial_x"]
-                print(f"[OffsetClick][{node_name}] 重置点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)")
+                print(
+                    f"[OffsetClick][{node_name}] 重置点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)"
+                )
             else:
                 click_x = state["current_x"]
                 click_y = current_y
-                print(f"[OffsetClick][{node_name}] 正常点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)")
+                print(
+                    f"[OffsetClick][{node_name}] 正常点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)"
+                )
 
             context.tasker.controller.post_click(click_x, click_y, contact=0)
 
@@ -157,7 +181,9 @@ class OffsetClick(CustomAction):
                 state["current_x"] = state["initial_x"] + dx
                 state["base_y_offset"] -= n
                 state["hit_count"] = 0
-                print(f"[OffsetClick][{node_name}] 重置后: y偏移={state['base_y_offset']}, x起点={state['current_x']}")
+                print(
+                    f"[OffsetClick][{node_name}] 重置后: y偏移={state['base_y_offset']}, x起点={state['current_x']}"
+                )
             else:
                 state["current_x"] += dx
                 state["hit_count"] += 1
@@ -165,6 +191,7 @@ class OffsetClick(CustomAction):
             return CustomAction.RunResult(success=True)
         except Exception as e:
             import traceback
+
             traceback.print_exc()
             print(f"OffsetClick 异常: {e}")
             return CustomAction.RunResult(success=False)
@@ -182,12 +209,17 @@ class OffsetClickSwapped(CustomAction):
         max_hits: 触发重置的点击次数（默认 3）
         n: 重置时 x 的减少量（默认 100）
     """
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         node_name = get_node_name_from_argv(argv)
         if node_name is None:
-            print("[OffsetClick_x] 警告：无法获取节点名称，使用固定键'DefaultNode'，状态可能串扰")
+            print(
+                "[OffsetClick_x] 警告：无法获取节点名称，使用固定键'DefaultNode'，状态可能串扰"
+            )
             node_name = "DefaultNode"
-        
+
         key = f"OffsetSwapped_{node_name}"
         state = _offset_state_map.get(key)
 
@@ -211,10 +243,12 @@ class OffsetClickSwapped(CustomAction):
                 "base_x_offset": 0,
                 "hit_count": 0,
                 "initial_x": initial_x,
-                "initial_y": initial_y
+                "initial_y": initial_y,
             }
             _offset_state_map[key] = state
-            print(f"[OffsetClick_x][{node_name}] 初始化: x基={initial_x}, y基={initial_y}, dy={dy}, max_hits={max_hits}, n={n}")
+            print(
+                f"[OffsetClick_x][{node_name}] 初始化: x基={initial_x}, y基={initial_y}, dy={dy}, max_hits={max_hits}, n={n}"
+            )
 
         current_x = state["initial_x"] + state["base_x_offset"]
         will_reset = (state["hit_count"] + 1) >= max_hits
@@ -223,11 +257,15 @@ class OffsetClickSwapped(CustomAction):
             new_x_offset = state["base_x_offset"] - n
             click_x = state["initial_x"] + new_x_offset
             click_y = state["initial_y"]
-            print(f"[OffsetClick_x][{node_name}] 重置点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)")
+            print(
+                f"[OffsetClick_x][{node_name}] 重置点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)"
+            )
         else:
             click_x = current_x
             click_y = state["current_y"]
-            print(f"[OffsetClick_x][{node_name}] 正常点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)")
+            print(
+                f"[OffsetClick_x][{node_name}] 正常点击 ({click_x}, {click_y}) (第{state['hit_count']+1}次)"
+            )
 
         context.tasker.controller.post_click(click_x, click_y, contact=0)
 
@@ -235,14 +273,16 @@ class OffsetClickSwapped(CustomAction):
             state["current_y"] = state["initial_y"]
             state["base_x_offset"] -= n
             state["hit_count"] = 0
-            print(f"[OffsetClick_x][{node_name}] 重置后: x偏移={state['base_x_offset']}, y起点={state['current_y']}")
+            print(
+                f"[OffsetClick_x][{node_name}] 重置后: x偏移={state['base_x_offset']}, y起点={state['current_y']}"
+            )
         else:
             state["current_y"] += dy
             state["hit_count"] += 1
 
         return CustomAction.RunResult(success=True)
 
-    
+
 # ⚠️ 待删（零引用）：按节点名单清偏移，被 ResetAllOffsets 取代；
 #    pipe/task/interface 全库零引用，可直接删。〔退役清单 2026-10-25〕
 @AgentServer.custom_action("ResetOffset")
@@ -254,30 +294,33 @@ class ResetOffset(CustomAction):
         "node_name": "节点名"   // 如果不提供，则使用当前执行此动作的节点名
     }
     """
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         param = {}
         if argv.custom_action_param:
             param = json.loads(argv.custom_action_param)
-        
+
         target_node = param.get("node_name")
         if target_node is None:
             target_node = get_node_name_from_argv(argv)
-        
+
         if target_node is None:
             print("[ResetOffset] 错误：无法确定要重置的节点名")
             return CustomAction.RunResult(success=False)
-        
+
         key_y = f"OffsetState_{target_node}"
         key_x = f"OffsetSwapped_{target_node}"
-        
+
         removed_y = _offset_state_map.pop(key_y, None) is not None
         removed_x = _offset_state_map.pop(key_x, None) is not None
-        
+
         if removed_y or removed_x:
             print(f"[ResetOffset] 已重置节点 '{target_node}' 的状态")
         else:
             print(f"[ResetOffset] 节点 '{target_node}' 没有偏移状态记录，无需重置")
-        
+
         return CustomAction.RunResult(success=True)
 
 
@@ -289,7 +332,10 @@ class ResetAllOffsets(CustomAction):
     重置所有节点的偏移状态（清空整个状态字典）
     不需要任何参数
     """
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         global _offset_state_map
         count = len(_offset_state_map)
         _offset_state_map.clear()
@@ -302,7 +348,9 @@ class ResetAllOffsets(CustomAction):
 #    找图点击+按阶计数的整套测量件随功能一起删（含配套 pipe mini_tools/Detection_Order*.json）。〔退役清单 2026-10-25〕
 @AgentServer.custom_action("ClickAndCount")
 class ClickAndCount(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         param = {}
         if argv.custom_action_param:
             try:
@@ -342,9 +390,12 @@ class ClickAndCount(CustomAction):
 
         # 合并初始化：仅调用一次 _get_plant_state，确保 initial_count 仅作用于 run_counts
         init_level = specified_level if specified_level is not None else 1
-        state = _get_plant_state(plant_name, level=init_level,
-                                 initial_count=initial_count,
-                                 initial_counts=initial_counts)
+        state = _get_plant_state(
+            plant_name,
+            level=init_level,
+            initial_count=initial_count,
+            initial_counts=initial_counts,
+        )
 
         level = specified_level if specified_level is not None else state["level"]
         if level not in (1, 2, 3, 4):
@@ -354,7 +405,9 @@ class ClickAndCount(CustomAction):
         # force_initial 现在只重置运行次数，不修改累计点击次数
         if force_initial and initial_count is not None:
             state["run_counts"][level] = int(initial_count) - 1
-            print(f"[ClickAndCount] 强制初始化运行次数：{plant_name} {level}阶={initial_count - 1}")
+            print(
+                f"[ClickAndCount] 强制初始化运行次数：{plant_name} {level}阶={initial_count - 1}"
+            )
 
         # 确定本次点击次数
         if repeat_param is not None:
@@ -373,8 +426,14 @@ class ClickAndCount(CustomAction):
             pass
 
         roi_str = f", roi={roi}" if roi else ""
-        reset_str = f", 重置阈值={reset_after}" if (reset_after > 0 and repeat_param is None) else ""
-        print(f"[ClickAndCount] 准备识别: 植物={plant_name}, 模板={template}, 阶数={level}, 阈值={threshold}, {mode_str}, 实际点击={actual_repeat}次, 延迟={delay}ms{roi_str}{reset_str}")
+        reset_str = (
+            f", 重置阈值={reset_after}"
+            if (reset_after > 0 and repeat_param is None)
+            else ""
+        )
+        print(
+            f"[ClickAndCount] 准备识别: 植物={plant_name}, 模板={template}, 阶数={level}, 阈值={threshold}, {mode_str}, 实际点击={actual_repeat}次, 延迟={delay}ms{roi_str}{reset_str}"
+        )
 
         recognition_param = {
             "recognition": "TemplateMatch",
@@ -387,7 +446,7 @@ class ClickAndCount(CustomAction):
         reco = context.run_recognition(
             "click_and_count_recog",
             context.tasker.controller.cached_image,
-            {"click_and_count_recog": recognition_param}
+            {"click_and_count_recog": recognition_param},
         )
 
         if reco is None:
@@ -395,12 +454,14 @@ class ClickAndCount(CustomAction):
             return CustomAction.RunResult(success=False)
 
         print(f"[ClickAndCount] 识别完成，命中状态: {reco.hit}")
-        if hasattr(reco, 'results') and reco.results:
+        if hasattr(reco, "results") and reco.results:
             print(f"[ClickAndCount] 候选结果数量: {len(reco.results)}")
             for idx, res in enumerate(reco.results[:5]):
                 print(f"  候选{idx}: box={res.box}, score={res.score:.4f}")
         elif reco.best_result:
-            print(f"[ClickAndCount] 最佳匹配: score={reco.best_result.score:.3f}, box={reco.best_result.box}")
+            print(
+                f"[ClickAndCount] 最佳匹配: score={reco.best_result.score:.3f}, box={reco.best_result.box}"
+            )
         else:
             print("[ClickAndCount] 未获取到任何候选结果（请检查资源包是否加载）")
 
@@ -421,11 +482,19 @@ class ClickAndCount(CustomAction):
         if specified_level is None:
             state["level"] = level
 
-        print(f"[ClickAndCount] 完成 {actual_repeat} 次点击 {plant_name} {level}阶，该阶累计点击: {state['counts'][level]}次")
+        print(
+            f"[ClickAndCount] 完成 {actual_repeat} 次点击 {plant_name} {level}阶，该阶累计点击: {state['counts'][level]}次"
+        )
 
-        if repeat_param is None and reset_after > 0 and state["run_counts"][level] >= reset_after:
+        if (
+            repeat_param is None
+            and reset_after > 0
+            and state["run_counts"][level] >= reset_after
+        ):
             state["run_counts"][level] = 0
-            print(f"[ClickAndCount] {plant_name} {level}阶运行次数已达 {reset_after}，已重置为 0（下次从 1 开始）")
+            print(
+                f"[ClickAndCount] {plant_name} {level}阶运行次数已达 {reset_after}，已重置为 0（下次从 1 开始）"
+            )
 
         return CustomAction.RunResult(success=True)
 
@@ -434,7 +503,9 @@ class ClickAndCount(CustomAction):
 @AgentServer.custom_action("TakeCountScreenshot")
 class TakeCountScreenshot(CustomAction):
     # ...（未改动）
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         param = {}
         if argv.custom_action_param:
             try:
@@ -476,25 +547,34 @@ class TakeCountScreenshot(CustomAction):
 # ⚠️ 待删（功能已关停）：ClickAndCount 计数表的清表件（含轮次），随定向测序列一起删。〔退役清单 2026-10-25〕
 @AgentServer.custom_action("ResetPlantCount")
 class ResetPlantCount(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         count = len(_plant_states)
         _plant_states.clear()
-        print(f"[ResetPlantCount] 已清空所有植物计数器（含运行次数），共 {count} 条记录")
+        print(
+            f"[ResetPlantCount] 已清空所有植物计数器（含运行次数），共 {count} 条记录"
+        )
         return CustomAction.RunResult(success=True)
 
 
 # ⚠️ 待删（功能已关停）：ClickAndCount 计数表只清点击保轮次的件，随定向测序列一起删。〔退役清单 2026-10-25〕
 @AgentServer.custom_action("ResetCounts")
 class ResetCounts(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         for plant_name, state in _plant_states.items():
             state["counts"] = {1: 0, 2: 0, 3: 0, 4: 0}
         print(f"[ResetCounts] 已重置所有植物的点击次数，保留运行次数")
         return CustomAction.RunResult(success=True)
-    
+
+
 @AgentServer.custom_action("SaveScreenshot")
 class SaveScreenshot(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         param = json.loads(argv.custom_action_param) if argv.custom_action_param else {}
 
         # 如果提供了 filename，直接使用（兼容旧用法）
@@ -537,18 +617,26 @@ class SaveScreenshot(CustomAction):
         Image.fromarray(rgb_image).save(str(filepath))
         print(f"[SaveScreenshot] 已保存: {filepath}")
         return CustomAction.RunResult(success=True)
+
+
 @AgentServer.custom_action("PasteClipboard")
 class PasteClipboard(CustomAction):
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         # ---------- 1. 确保 pyperclip 可用 ----------
         try:
             import pyperclip
         except ImportError:
             import subprocess, sys
+
             print("[PasteClipboard] pyperclip 未安装，正在自动安装...")
             try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", "pyperclip"])
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "pyperclip"]
+                )
                 import pyperclip
+
                 print("[PasteClipboard] pyperclip 安装成功")
             except Exception as e:
                 print(f"[PasteClipboard] 自动安装失败: {e}")
@@ -584,6 +672,7 @@ class PasteClipboard(CustomAction):
         # 3b. 如果失败，尝试从系统 PATH 中查找 adb
         if not adb_path:
             import shutil
+
             adb_path = shutil.which("adb")
             if not adb_path:
                 print("[PasteClipboard] 未找到 adb，请确保 adb 已安装并在 PATH 中")
@@ -592,10 +681,17 @@ class PasteClipboard(CustomAction):
         # 如果序列号仍未获取，尝试从 adb devices 自动获取（仅当只有一个设备时）
         if not adb_serial:
             import subprocess
+
             try:
-                result = subprocess.run([adb_path, "devices"], capture_output=True, text=True)
-                lines = result.stdout.strip().split('\n')[1:]  # 跳过标题
-                devices = [line.split('\t')[0] for line in lines if line.strip() and 'device' in line]
+                result = subprocess.run(
+                    [adb_path, "devices"], capture_output=True, text=True
+                )
+                lines = result.stdout.strip().split("\n")[1:]  # 跳过标题
+                devices = [
+                    line.split("\t")[0]
+                    for line in lines
+                    if line.strip() and "device" in line
+                ]
                 if len(devices) == 1:
                     adb_serial = devices[0]
                     print(f"[PasteClipboard] 自动检测到设备: {adb_serial}")
@@ -609,8 +705,8 @@ class PasteClipboard(CustomAction):
                 print(f"[PasteClipboard] 自动检测设备失败: {e}")
 
         # ---------- 4. 转义文本 ----------
-        escaped = text.replace('\\', '\\\\').replace('"', '\\"')
-        escaped = escaped.replace('\r\n', ' ').replace('\n', ' ')
+        escaped = text.replace("\\", "\\\\").replace('"', '\\"')
+        escaped = escaped.replace("\r\n", " ").replace("\n", " ")
         if len(escaped) > 3800:
             print(f"[PasteClipboard] 文本过长，截断至 3800 字符")
             escaped = escaped[:3800]
@@ -622,9 +718,12 @@ class PasteClipboard(CustomAction):
             cmd = f'"{adb_path}" shell input text "{escaped}"'
         print(f"[PasteClipboard] 执行命令: {cmd[:200]}...")
         import subprocess
+
         result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"[PasteClipboard] 执行失败 (code {result.returncode}): {result.stderr}")
+            print(
+                f"[PasteClipboard] 执行失败 (code {result.returncode}): {result.stderr}"
+            )
             return CustomAction.RunResult(success=False)
         else:
             print(f"[PasteClipboard] 发送成功，文本长度: {len(text)}")
@@ -638,13 +737,25 @@ import socket
 import subprocess
 import webbrowser
 
+# ---- 平台检测 ----
+# 优先级:显式环境变量 > Android 系统特征 > Linux + build.prop
+_IS_ANDROID = (
+    os.environ.get("MAA_JOB_EDITOR_ANDROID") == "1"
+    or "ANDROID_ROOT" in os.environ
+    or "ANDROID_DATA" in os.environ
+    or (sys.platform.startswith("linux") and Path("/system/build.prop").is_file())
+)
+
 # 网页工具目录：<仓库根>/game_assist_tools/endless_setup
 JOB_EDITOR_DIR = ROOT_DIR / "game_assist_tools" / "endless_setup"
-JOB_EDITOR_SERVER = JOB_EDITOR_DIR / "pvz.py"
+JOB_EDITOR_SERVER = JOB_EDITOR_DIR / ("pvz_android.py" if _IS_ANDROID else "pvz.py")
 JOB_EDITOR_URL = "http://127.0.0.1:5000"
+JOB_EDITOR_LOG = JOB_EDITOR_DIR / "flask.log"
 
 
-def _is_port_open(host: str = "127.0.0.1", port: int = 5000, timeout: float = 1.0) -> bool:
+def _is_port_open(
+    host: str = "127.0.0.1", port: int = 5000, timeout: float = 1.0
+) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
@@ -653,15 +764,36 @@ def _is_port_open(host: str = "127.0.0.1", port: int = 5000, timeout: float = 1.
 
 
 def _pick_flask_python():
-    """挑一个装了 flask 的解释器（项目 .venv 可能尚未安装 flask）
+    """挑一个装了 flask 的解释器。
 
-    候选顺序覆盖两种布局：
-      - 开发布局：<仓库根>/agent -> <仓库根>/.venv
-      - 发行包布局：install/agent -> install/python/python.exe（CI 内置解释器）
+    Android：直接用 sys.executable（agent bundle 的 python3，
+             flask 闭包已在 pure.zip 里）。用 `-c "import flask"` 探测一次。
+    PC：原逻辑（.venv / install/python/python.exe 或 D:\\ana\\python.exe / python）。
     """
+    if _IS_ANDROID:
+        exe = sys.executable
+        if not exe:
+            print("[OpenJobEditor] sys.executable 为空，无法启动编辑器")
+            return None
+        try:
+            probe = subprocess.run(
+                [exe, "-c", "import flask"],
+                capture_output=True,
+                timeout=10,
+            )
+            if probe.returncode != 0:
+                err = (probe.stderr or b"").decode("utf-8", "replace").strip()[:300]
+                print(f"[OpenJobEditor] bundle 解释器 import flask 失败：{err}")
+                return None
+        except Exception as e:
+            print(f"[OpenJobEditor] 探测 bundle 解释器失败：{type(e).__name__}: {e}")
+            return None
+        return exe
+
+    # PC 原逻辑
     candidates = [
         sys.executable,
-        # 发行包布局：install/python/python.exe（Windows）/ python/bin/python3（unix）
+        # 发行包布局：install/python/python.exe / python/bin/python3
         str(ROOT_DIR / "python" / "python.exe"),
         str(ROOT_DIR / "python" / "bin" / "python3"),
         # 开发布局：<仓库根>/.venv
@@ -677,7 +809,9 @@ def _pick_flask_python():
         if is_path and not Path(exe).exists():
             continue
         try:
-            probe = subprocess.run([exe, "-c", "import flask"], capture_output=True, timeout=8)
+            probe = subprocess.run(
+                [exe, "-c", "import flask"], capture_output=True, timeout=8
+            )
             if probe.returncode == 0:
                 return exe
         except Exception:
@@ -685,47 +819,151 @@ def _pick_flask_python():
     return None
 
 
+def _open_browser(url: str) -> bool:
+    """Android 上优先 `am start`;PC 上 webbrowser.open。"""
+    if _IS_ANDROID:
+        try:
+            r = subprocess.run(
+                ["am", "start", "-a", "android.intent.action.VIEW", "-d", url],
+                capture_output=True,
+                timeout=5,
+            )
+            if r.returncode == 0:
+                print("[OpenJobEditor] am start 打开浏览器成功")
+                return True
+            err = (r.stderr or b"").decode("utf-8", "replace").strip()
+            print(f"[OpenJobEditor] am start 失败：{err or r.returncode}")
+        except FileNotFoundError:
+            print("[OpenJobEditor] 未找到 am 命令，回落到 webbrowser")
+        except Exception as e:
+            print(f"[OpenJobEditor] am start 异常：{type(e).__name__}: {e}")
+
+    try:
+        return bool(webbrowser.open(url))
+    except Exception as e:
+        print(f"[OpenJobEditor] webbrowser.open 异常：{type(e).__name__}: {e}")
+        return False
+
+
+def _tail_log(lines: int = 30) -> None:
+    """启动失败时打印日志尾部（Android 排查用）。"""
+    if not JOB_EDITOR_LOG.is_file():
+        return
+    try:
+        text = JOB_EDITOR_LOG.read_text(encoding="utf-8", errors="replace")
+        for line in text.splitlines()[-lines:]:
+            print(f"    {line}")
+    except Exception as e:
+        print(f"[OpenJobEditor] 读取日志失败：{type(e).__name__}: {e}")
+
+
 @AgentServer.custom_action("OpenJobEditor")
 class OpenJobEditor(CustomAction):
-    """打开作业集编辑网页；服务未启动则先拉起 Flask（game_assist_tools/endless_setup/pvz.py）"""
+    """打开作业集编辑网页；服务未启动则先拉起 Flask
 
-    def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
+    PC     :game_assist_tools/endless_setup/pvz.py
+    Android:game_assist_tools/endless_setup/pvz_android.py
+    """
+
+    def run(
+        self, context: Context, argv: CustomAction.RunArg
+    ) -> CustomAction.RunResult:
         try:
             # 1) 校验网页工具存在
             if not JOB_EDITOR_SERVER.exists():
                 print(f"[OpenJobEditor] 找不到网页工具: {JOB_EDITOR_SERVER}")
                 return CustomAction.RunResult(success=False)
 
-            # 2) 挑解释器（需要 flask）
+            # 2) 挑解释器
             exe = _pick_flask_python()
             if not exe:
-                print("[OpenJobEditor] 未找到已安装 flask 的 Python，请先执行：")
-                print(r"    .venv\Scripts\python.exe -m pip install -r requirements.txt")
+                print("[OpenJobEditor] 未找到装了 flask 的 Python")
+                if not _IS_ANDROID:
+                    print(
+                        r"    .venv\Scripts\python.exe -m pip install -r requirements.txt"
+                    )
                 return CustomAction.RunResult(success=False)
 
-            # 3) 后台拉起服务（--reuse：已在跑且是记录在案的实例就复用；
+            # 3) 构造启动参数
+            env = os.environ.copy()
+            popen_kwargs = {
+                "cwd": str(JOB_EDITOR_DIR),
+                "env": env,
+            }
+
+            if _IS_ANDROID:
+                # 标记 Android 环境（给 pvz_android.py 留的钩子）
+                env["MAA_JOB_EDITOR_ANDROID"] = "1"
+                # PID 文件放到 endless_setup 目录（pi-root 下通常可写）
+                env.setdefault(
+                    "MAA_PVZ_EDITOR_PIDFILE",
+                    str(JOB_EDITOR_DIR / ".maapvz_pvz_editor.pid"),
+                )
+                # 日志重定向到 endless_setup/flask.log，便于 adb / MFA 日志排查
+                try:
+                    log_fp = open(JOB_EDITOR_LOG, "ab", buffering=0)
+                    log_fp.write(
+                        f"\n\n===== {time.strftime('%Y-%m-%d %H:%M:%S')} "
+                        f"OpenJobEditor start {exe} {JOB_EDITOR_SERVER} =====\n".encode(
+                            "utf-8"
+                        )
+                    )
+                    popen_kwargs["stdout"] = log_fp
+                    popen_kwargs["stderr"] = subprocess.STDOUT
+                except OSError as e:
+                    print(f"[OpenJobEditor] 打开日志文件失败（继续不重定向）：{e}")
+            else:
+                # PC 保持原行为：CREATE_NO_WINDOW（POSIX 上 getattr 返回 0 也可传，
+                # 但只在 Windows 上加更清晰）
+                popen_kwargs["creationflags"] = getattr(
+                    subprocess, "CREATE_NO_WINDOW", 0
+                )
+
+            # 4) 后台拉起服务（--reuse：已在跑且是记录在案的实例就复用；
             #    端口被旧实例/残留 python 占着则由 pvz.py 自己杀掉接管——
             #    不能只靠"端口通了就直接用"，否则旧代码实例会一直吃请求）
-            subprocess.Popen(
+            # --reuse：OpenJobEditor 呼出用——已在跑且是记录在案的实例就复用
+            proc = subprocess.Popen(
                 [exe, str(JOB_EDITOR_SERVER), "--reuse"],
-                cwd=str(JOB_EDITOR_DIR),
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                **popen_kwargs,
             )
+            # Popen 已 dup fd 到子进程；父进程这边的 file object 可以关了
+            log_fp = popen_kwargs.get("stdout")
+            if log_fp is not None:
+                try:
+                    log_fp.close()
+                except Exception:
+                    pass
 
-            # 4) 等待服务就绪（最多 12 秒）
+            # 5) 等待服务就绪（最多 12 秒）
+            ready = False
             for _ in range(24):
                 if _is_port_open():
+                    ready = True
                     break
                 time.sleep(0.5)
 
-            if not _is_port_open():
-                print("[OpenJobEditor] 服务启动超时，请查看 game_assist_tools/endless_setup/flask.log")
+            if not ready:
+                print("[OpenJobEditor] 服务启动超时")
+                if _IS_ANDROID:
+                    _tail_log(30)
+                else:
+                    print(f"[OpenJobEditor] 看日志: {JOB_EDITOR_LOG}")
                 return CustomAction.RunResult(success=False)
 
-            # 5) 打开浏览器
-            webbrowser.open(JOB_EDITOR_URL)
+            # 6) 打开浏览器
+            ok = _open_browser(JOB_EDITOR_URL)
+            if not ok:
+                print(
+                    f"[OpenJobEditor] 无法自动打开浏览器，请手动访问 {JOB_EDITOR_URL}"
+                )
+
             print(f"[OpenJobEditor] 已打开 {JOB_EDITOR_URL}（解释器: {exe}）")
             return CustomAction.RunResult(success=True)
+
         except Exception as e:
-            print(f"[OpenJobEditor] 异常: {e}")
+            import traceback
+
+            traceback.print_exc()
+            print(f"[OpenJobEditor] 异常: {type(e).__name__}: {e}")
             return CustomAction.RunResult(success=False)

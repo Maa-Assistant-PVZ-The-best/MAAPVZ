@@ -9,6 +9,7 @@ include:
   - resource/**
   - agent/**
   - docs/imgs/logo.png
+  - game_assist_tools/**
   - LICENSE
 
 # announcement 的 md 只给桌面端看；识别用的图和模型都在 resource/ 里，别挖
