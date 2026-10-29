@@ -46,6 +46,17 @@ from .level_tracker import BOSS_SNAP as _BOSS_SNAP
 # 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
 from .compile import CHAIN_NODE_TPL, KIND_CN
 
+# ★ 主界面「第X关」= 本局要打的那一关（2026-10-29 用户实跑确认）
+#
+#   ⚠️ 别再加 +1：曾（同日）误以为主界面显示的是「已通过的那一关」而加了偏移，
+#      实跑日志直接打脸 ——
+#        `✅ 用户确认：识别到「第111关」时，游戏里确实是 111 关`
+#      加偏移后计数器反而多 1（按 112 记账）。已回退。
+#   真实出现过的「计数器落后 1 格（bot 说 107、实际 108）」另有原因，
+#   用户观测：自动计数只在**第 2 关**才打出关卡数，且打的是上一关的数字 ——
+#   即**触发时机 / 取帧偏晚**，不是换算口径问题。待查：把校准挪到
+#   「过关后、选卡前」并在报数时打印识别耗时/帧时间。
+
 # ---------------------------------------------------------------------------
 # 进程级单例状态
 #
@@ -158,7 +169,7 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
 
     # ★ 神器同理：首关必走选神器流程（开局局内装备未知 -> force）。
     #   预热可能被调两次（Load / AutoCount），走签名会被第二次还原，必须 force。
-    _inject_artifact(context, table, _pw_boss, lineup_changed=True, force=True)
+    _inject_artifact(context, table, _pw_boss, force=True)
 
     # ★ 回写「当前关卡」focus：MFA 界面显示的关卡号来自这两个节点的 focus，
     #   而 focus 平时只有 JobSetPlan（过关计数时）才写 —— 打完 149 开新一轮时
@@ -311,8 +322,10 @@ def _reco_all_texts(reco: Any) -> List[str]:
 #   2) 「无尽_选择编队」的 custom_action_param.目标编队 -> 编队号
 #
 # ★ 「确认自己在选卡界面」由「清空卡牌」那个 OCR 节点天然保证：
-#   它认到「清空卡牌」才会 Click 并走 next。认不到 -> OCR 超时 -> 不会误点编队。
+#   它认到「清空卡牌」才走 next。认不到 -> OCR 超时 -> 不会误点编队。
 #   所以这里不需要额外加识别节点。
+#   ⚠️ 2026-10-28 补：这道保证的前提是「recognition 永不覆盖」——
+#     阵容不变时只把 action 翻成 DoNothing（只认不点），不再改 DirectHit。
 #
 # ★★ 2026-10-23 重写：编队选择改为 SelectPlants 的「编队选择」custom 模式
 #   （闭环：整列 OCR -> 点击 -> 白字核对 -> 回弹重试），旧 Or 具名分支节点
@@ -437,12 +450,29 @@ NODE_BATTLE_START = "无尽挑战_选取植物_开始战斗"
 # 选神器流程里的模板识别节点（pipe：06Endless_god_vessel）——
 #   template 由本 agent 按当前表神器动态覆盖（god_vessel/<en>/ + <en>_1.png）。
 NODE_ARTIFACT_TPL = "无尽挑战_神器"
-# 选神器入口/收尾节点（pipe：06Endless_god_vessel）。
-#   ★ pipe 里没有任何节点指向「选取神器」—— 进出都靠这里 runtime 覆盖：
-#     需要换神器：识别开始战斗.next=[选取神器]，关闭神器界面.next=跟随选卡逻辑；
-#     不需要：    识别开始战斗.next=[清空卡牌]（还原），选取神器 改 DirectHit 兜底。
+# ★ 骨架（2026-10-28 用户定稿：「骨架固定、只翻动作」）——
+#
+#     识别开始战斗(OCR) -> 清空卡牌(OCR) -> 选取植物 -> (选取神器?) -> 开始战斗
+#
+#   这条路线**永远一样**，runtime 只翻每站的动作，不拆节点、不换识别：
+#     · 清空卡牌：recognition 一律不碰（它就是「确实站在选卡界面」的闸口），
+#                 action = 阵容变 ? Click : DoNothing；
+#                 next   = 永远指向选植物（真选不真选由下一站的动作决定）。
+#     · 选取植物：action = 阵容变 ? Custom : DoNothing；
+#                 next   = 神器要换 ? [选取神器] : [开始战斗]。
+#     · 选取神器：**唯一入口 = 选植物终点**，所以它不在链上 = 不换神器；
+#                 节点全程保持 pipe 原样（OCR 认「神器」），runtime 不再覆盖
+#                 它的任何字段（旧版神器没变时改成 DirectHit 兜底，已删）。
+#     · 关闭神器界面：next 固定 [开始战斗] —— 植物在进神器链之前就换完了。
+#     · 补给确定/闸门/首关入口：一律进骨架，不再各自塞一条神器分支。
+#
+#   ⚠️ 字段分工是刻意的（「不冲突」的根）：清空卡牌/选取植物的 next 归
+#      _inject_artifact（要不要接神器），动作归 _inject_lineup（要不要真做），
+#      两个函数各写各的字段，MAA 按字段合并 -> 谁都不会把对方顶掉。
 NODE_ARTIFACT_PICK = "无尽挑战_选取神器"
+# 仅用于文档/断言：pipe 里它的 next 是静态 [开始战斗]，runtime 不碰。
 NODE_ARTIFACT_CLOSE = "无尽挑战_关闭神器界面"
+# 首关入口：next 静态 [清空卡牌]（骨架第一站），runtime 不碰。
 NODE_START_OCR = "无尽挑战_识别开始战斗"
 # ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
 #   两个换阵闸门 + 首关入口 + 补给确定（补给关卡从补给屏回到选卡屏的落点）。
@@ -455,44 +485,51 @@ NODE_SUPPLY_CONFIRM = "神器补给_确定"
 NODE_DONE = "无尽挑战_完成"
 NODE_149 = "无尽挑战_149点击开始挑战"
 # 闸门 next 的尾件（pipe 0300 里用户加的 JumpBack）：识别「继续训练」，
-# 链走完跳回闸门。⚠️ 下面四个清单尾部都必须带它 —— override 是整表替换，
+# 链走完跳回闸门。⚠️ 下面每一份清单尾部都必须带它 —— override 是整表替换，
 # 漏一个 = 那个分支每关把 JumpBack 抹掉（2026-10-23 实锤踩过）。
 NODE_JUMPBACK_CONTINUE = "无尽挑战_jumpback_继续挑战"
 JB_CONTINUE = "[JumpBack]" + NODE_JUMPBACK_CONTINUE
 _JUMP_SAME_ORIG = [NODE_SUPPLY, NODE_BATTLE_START, NODE_149, NODE_DONE, JB_CONTINUE]
 _JUMP_DIFF_ORIG = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_DONE, JB_CONTINUE]
-# 换神器分支的闸门 next（插在 ENTRY 之后、其余同原值）
-_JUMP_SAME_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_149, NODE_DONE, JB_CONTINUE]
-_JUMP_DIFF_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_DONE, JB_CONTINUE]
-_SUPPLY_CONFIRM_ORIG = [NODE_BATTLE_START, NODE_SUPPLY_CONFIRM]
+# 换神器分支的闸门 next：多插一站「清空卡牌」（骨架首站），神器由骨架终点接。
+# （未变闸门平时直跳开始战斗 —— 但要换神器就不能直跳，必须先进骨架。）
+_JUMP_SAME_ART = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_149, NODE_DONE, JB_CONTINUE]
+# 补给确定：**永远**回「清空卡牌」—— 清不清卡/选不选植物由骨架的动作决定，
+# 不再按阵容/神器分支（「补给屏旁路选卡」那个 bug 由此结构性消失）。
+_SUPPLY_CONFIRM_ORIG = [NODE_CLEAR_CARDS, NODE_SUPPLY_CONFIRM]
 # ★ 快照原则（2026-10-24 用户定稿）：只收录「runtime 自己会改、还原时必须
-#   写回」的字段 —— recognition / action / next。
-#   MAA override 是同节点按字段合并：没写进 override 的字段永远保持 pipe
-#   现值。expected/roi/target_offset 这类 runtime 从不动的字段【故意不收】，
-#   pipe 随便改都不会被恢复顶掉（旧版全量照抄，pipe 加了 OCR 单字兜底
-#   「神」「器」后被恢复成只剩「神器」，识别变脆 —— 实锤漂移）。
-_ARTIFACT_PICK_ORIG = {
-    "recognition": "OCR",
-    "action": "Click",
-    # 自回跳：神器界面没认出来时重试本节点（2026-10-24 pipe 侧新增；next 是
-    # runtime 管辖字段，快照必须跟随 pipe —— selfcheck §13 有断言盯着）
-    "next": ["无尽挑战_神器界面", "无尽挑战_选取神器"],
-}
-
-# 「清空卡牌」同上：只收 runtime 会动的三个字段（阵容不变时 runtime 把它
-# 改成 DirectHit+DoNothing 直跳开始战斗，阵容变了按这套还原）。
+#   写回」的字段。MAA override 是同节点按字段合并：没写进 override 的字段
+#   永远保持 pipe 现值 —— expected/roi/template 这类 runtime 从不动的字段
+#   【故意不收】，pipe 随便改都不会被恢复顶掉（旧版全量照抄，pipe 给
+#   「选取神器」加 OCR 单字兜底「神」「器」后被打回只剩「神器」，实锤漂移）。
+#
+#   ⚠️ 清空卡牌的 recognition **不在快照里**（2026-10-28 起 runtime 永不写它）：
+#      它是「确实站在选卡界面」的闸口，换成 DirectHit 等于把闸口拆了
+#      （旧版的错：任何画面都「识别成功」，然后带着 60s 超时去 OCR 开始战斗）。
 _CLEAR_CARDS_ORIG = {
-    "recognition": "OCR",
     "action": "Click",
     "next": [NODE_CHOOSE_PLANTS],
 }
+# 「选取植物」的两个字段分家：action 归 _inject_lineup（要不要真选），
+# next 归 _inject_artifact（要不要接神器）—— 各写各的，互不覆盖。
+#
+# ⚠️ 2026-10-29 实锤事故：只写 `{"action": "Custom"}` 有风险 —— MaaFW 那次跑出
+#    `[ERR] Action is null [node_name=无尽挑战_选取植物] [param.name=]`：
+#    节点 action 是 Custom，但**自定义动作名是空的** → Node.Action.Failed →
+#    Tasker.Task.Failed（整局挂掉，日志里看着像"莫名其妙的任务失败"）。
+#    所以凡是覆盖 action，就把 custom_action 一起写全，绝不依赖合并语义。
+_CHOOSE_PLANTS_ACTION_ORIG = {"action": "Custom", "custom_action": "SelectPlants"}
+_CHOOSE_PLANTS_NEXT_ORIG = [NODE_BATTLE_START]
+# 「无尽_选择编队」（编队模式下的选植物终点）：next 同样归 _inject_artifact
+_SQUAD_PICK_NEXT_ORIG = [NODE_BATTLE_START]
 
 # ---------------------------------------------------------------------------
 # 用户可见 focus 播报（MFAAvalonia 日志面板上用户实际看到的消息）
 #   focus 是普通节点字段（override_pipeline 深合并，不碰 next），
 #   节点完成时由 MAA 弹出。三种播报：
 #     1. 加载作业集：「已加载作业集：xx」+ 当前使用块（JobSetLoad 写在本节点上）
-#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上，只有变化分支才跑）
+#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上；骨架会跑它，
+#        但阵容未变时闸门可能直跳开始战斗 -> 没跑到就并进关卡号消息）
 #     3. 每关：「当前关卡：N」（JobSetPlan 写在两个「开始战斗」节点上，
 #        替代 pipe 里静态的「boss关」focus）
 # ---------------------------------------------------------------------------
@@ -534,41 +571,51 @@ def _focus_lineup_block(table, is_boss: bool) -> str:
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
 
-    ★ 签名相同（boss 关配置与普通关一致 / 换表后阵容没变）->
-       「清空卡牌」改成 DirectHit + DoNothing 直跳「开始战斗」：
-       不清空卡牌、不重新选卡、不切编队（未来：不重选神器——签名已含神器占位），
-       只换种植链（compiled 注入在调用方，不受影响）。
-       首次进关（签名为 None）永远不跳 —— 局内还没有任何配置。
+    ★ 骨架固定（2026-10-28 用户定稿）：
+      清空卡牌 -> 选取植物 -> (选取神器?) -> 开始战斗 这条路线永远一样。
+      签名相同（boss 关配置与普通关一致 / 换表后阵容没变）时，runtime 只把
+      「清空卡牌」「选取植物」的 **action 翻成 DoNothing**（只认不做）：
+      不清卡、不选卡、不切编队，识别与 next 一个都不动 ——
+      于是「认到『清空卡牌』才往下走」这道闸口一直有效，不会瞎点。
+      只换种植链（compiled 注入在调用方，不受影响）。
+      首次进关（签名为 None）永远不做空动作 —— 局内还没有任何配置。
     """
     sig = table.lineup_sig(is_boss)
     # ★ 神器闸门独立判定（不跟植物签名、不跟训练模式）——必须先跑：
-    #   下面「阵容未变」分支会 early-return，若不在这里调用，换表后的
-    #   同表关卡会留着「选取神器」原值，每关都白跑一次选神器流程。
+    #   它负责把神器唯一入口（选植物终点）接好，且下面「阵容未变」分支会
+    #   early-return，不在这里调用的话换表后的同表关卡会留着上一关的接线。
     _lineup_unchanged = (not _STATE.get("training")
                          and _STATE.get("lineup_sig") is not None
                          and _STATE.get("lineup_sig") == sig)
-    _inject_artifact(context, table, is_boss, lineup_changed=not _lineup_unchanged)
-    # ★ 训练模式永不跳：用户设定「训练 = 每一关都清空卡牌重选阵容」，
+    _inject_artifact(context, table, is_boss)
+    # ★ 训练模式永不 neuter：用户设定「训练 = 每一关都清空卡牌重选阵容」，
     #   闸门（lineup_gate_adjust）挡不住这里 —— 它只翻 next 分支，
-    #   清空卡牌节点本身会不会被改成空跳是这里说了算。
-    if (not _STATE.get("training")
-            and _STATE.get("lineup_sig") is not None
-            and _STATE.get("lineup_sig") == sig):
+    #   节点本身会不会变成空动作是这里说了算。
+    if _lineup_unchanged:
         try:
             context.override_pipeline({
+                # 清空卡牌：只认不点；next 复位成选植物（骨架下一站）
                 NODE_CLEAR_CARDS: {
-                    "recognition": "DirectHit",
                     "action": "DoNothing",
-                    "next": [NODE_BATTLE_START],
+                    "next": [NODE_CHOOSE_PLANTS],
+                },
+                # 选取植物：自定义动作关掉（不真选）。
+                # ⚠️ custom_action 一起写上：只改 action 会留下「action=Custom、
+                #    动作名空」的半截状态（2026-10-29 事故：Action is null）。
+                NODE_CHOOSE_PLANTS: {
+                    "action": "DoNothing",
+                    "custom_action": "SelectPlants",
                 },
             })
-            _log(f"阵容未变 -> 跳过清空卡牌/选卡/编队，直接开始战斗"
+            _log(f"阵容未变 -> 清空卡牌/选取植物只认不做，直接开打"
                  f"（{'boss 关' if is_boss else '普通关'}配置与当前生效阵容一致）")
         except Exception as e:
-            _log(f"跳过选卡注入失败（{type(e).__name__}: {e}）")
+            _log(f"阵容未变注入失败（{type(e).__name__}: {e}）")
+        # 跳过的前提就是「形态与阵容都没变」，所以形态照记（闸门靠它判形态）
+        _STATE["lineup_is_boss"] = bool(is_boss)
         return
 
-    # 阵容变了（或首次进关）：还原清空卡牌节点 + 正常注入选卡/编队
+    # 阵容变了（或首次进关）：两个动作还原成「真清卡 + 真选卡」+ 注入植物/编队
     plants = table.eff_plants(is_boss)
     squad = table.eff_squad(is_boss)
     kind_cn = "boss 关" if is_boss else "普通关"
@@ -576,7 +623,8 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
         context.override_pipeline({
             NODE_CHOOSE_PLANTS: {
                 "custom_action_param": json.dumps(
-                    {"植物列表": plants}, ensure_ascii=False)
+                    {"植物列表": plants}, ensure_ascii=False),
+                **_CHOOSE_PLANTS_ACTION_ORIG,   # action 还原 Custom（next 归神器闸门）
             },
             NODE_CLEAR_CARDS: dict(_CLEAR_CARDS_ORIG),
         })
@@ -585,27 +633,33 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
         _log(f"注入选卡失败（{type(e).__name__}: {e}）")
     _inject_squad(context, squad)
     _STATE["lineup_sig"] = sig
+    # ★ 记下「当前生效卡组是按哪套形态注入的」——闸门用它兜住
+    #   「签名未知/被等价判断吞掉」时 boss 关误用普通关卡组（2026-10-29 实锤）
+    _STATE["lineup_is_boss"] = bool(is_boss)
 
 
 def _inject_artifact(context: Context, table, is_boss: bool,
-                     lineup_changed: bool, force: bool = False) -> None:
-    """按当前表神器覆盖选神器流程（进线/出线/模板三处）。
+                     force: bool = False) -> None:
+    """把「选神器」这一步挂到选植物路线的终点（唯一入口）。
 
-    ★ 闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
+    ★ 2026-10-28 重构（用户定稿「骨架固定、只翻动作」）：
+      神器链不再从 识别开始战斗 / 两个闸门 / 补给确定 四处分别插入 ——
+      那几处一律进骨架（清空卡牌 -> 选取植物），由这里改**选卡终点**的两个
+      next 决定接不接神器：
+        要换   -> 选取植物.next = 无尽_选择编队.next = [选取神器]
+        不换   -> 两者都还原 [开始战斗]
+      于是「选取神器」全程保持 pipe 原样（OCR 认「神器」）：
+        不在链上 = 不换神器；在链上 = 必换神器，没有第三种状态。
+      「关闭神器界面」的 next 是 pipe 静态 [开始战斗] —— 植物在进神器链
+      之前就换完了，关掉神器界面直接开打（runtime 不再碰它）。
+
+    闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
       不管正赛还是训练，只要「当前生效神器 == 上一关的神器」就跳过；
       不同 / 首次 -> 走选取神器流程。与植物分离判定（植物看训练标记）。
     本表不带神器 -> 也跳过（游戏内保留着上一局的装备，没什么可选的）。
-    ★ force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
+    force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
       （预热可能被 Load/AutoCount 调两次 —— 走签名的话第二次会误判
       「相同」而把刚接好的线还原掉。）
-
-    需要换（need=True）：进线挂到**选卡界面的所有入口**——
-      两个换阵闸门（补给后插选取神器）、首关入口「识别开始战斗」、
-      补给关卡的「神器补给_确定」（补给完回到选卡屏，原本直跳开始战斗）；
-      关闭神器界面.next = 跟随选卡逻辑：阵容也变了 -> [清空卡牌]，
-      否则 -> [选取植物_开始战斗]（直接开打）。
-    不需要（need=False）：全部还原 pipe 原值（防上一关覆盖残留），
-      「选取神器」改 DirectHit 直跳清空卡牌兜底。
     """
     art = table.eff_artifact(is_boss)
     en = table.eff_artifact_en(is_boss)
@@ -613,23 +667,13 @@ def _inject_artifact(context: Context, table, is_boss: bool,
     need = bool(art) and bool(en) and (force or prev != art)
     try:
         if not need:
+            # 不换神器：两个选卡终点都回「开始战斗」，闸门/补给/首关入口走原值
             context.override_pipeline({
                 NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ORIG)},
                 NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
-                NODE_START_OCR: {"next": [NODE_CLEAR_CARDS]},
-                # ★ 补给屏（boss 关前必弹）的收尾落点必须跟随选卡逻辑：
-                #   阵容变了 -> 回「清空卡牌」走完整选卡；没变才直跳开始战斗。
-                #   旧版无条件恢复成 [开始战斗]，把「阵容变但神器没变」的
-                #   boss 关选卡整段旁路掉（2026-10-24 水皮实锤：boss 槽位
-                #   覆盖的植物永远不进卡组，换槽 6/槽 7 都一样——与槽位无关）。
-                NODE_SUPPLY_CONFIRM: {"next": (
-                    [NODE_CLEAR_CARDS, NODE_SUPPLY_CONFIRM] if lineup_changed
-                    else list(_SUPPLY_CONFIRM_ORIG))},
-                NODE_ARTIFACT_PICK: {
-                    "recognition": "DirectHit",
-                    "action": "DoNothing",
-                    "next": [NODE_CLEAR_CARDS],
-                },
+                NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
+                NODE_CHOOSE_PLANTS: {"next": list(_CHOOSE_PLANTS_NEXT_ORIG)},
+                NODE_SQUAD_PICK: {"next": list(_SQUAD_PICK_NEXT_ORIG)},
             })
             if art and not en:
                 _log(f"⚠️ 神器「{art}」没有英文名（artifact_en 缺失）——"
@@ -638,23 +682,20 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 _log(f"神器相同（{art}）-> 跳过选取神器，直接走选卡")
             _STATE["artifact_sig"] = art
             return
-        # 关闭神器界面之后的去向 = 跟随选卡逻辑（和植物的判定同源）：
-        #   阵容也变了 -> 清空卡牌（走完整选卡）；没变 -> 直接开始战斗
-        close_next = [NODE_CLEAR_CARDS if lineup_changed else NODE_BATTLE_START]
+        # 换神器：闸门（未变分支要先进骨架）+ 两个选卡终点接「选取神器」+ 模板
         context.override_pipeline({
             NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ART)},
-            NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ART)},
-            NODE_START_OCR: {"next": [NODE_ARTIFACT_PICK]},
-            NODE_SUPPLY_CONFIRM: {"next": [NODE_ARTIFACT_PICK, NODE_SUPPLY_CONFIRM]},
-            NODE_ARTIFACT_PICK: dict(_ARTIFACT_PICK_ORIG),
+            NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
+            NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
+            NODE_CHOOSE_PLANTS: {"next": [NODE_ARTIFACT_PICK]},
+            NODE_SQUAD_PICK: {"next": [NODE_ARTIFACT_PICK]},
             NODE_ARTIFACT_TPL: {
                 "template": [f"General/god_vessel/{en}/",
                              f"General/god_vessel/{en}/{en}_1.png"],
             },
-            NODE_ARTIFACT_CLOSE: {"next": close_next},
         })
-        _log(f"已注入神器流程：{art}（{en}）-> 选卡入口全部指向 选取神器，"
-             f"关闭后 -> {close_next[0]}")
+        _log(f"已注入神器流程：{art}（{en}）-> 选卡终点接 选取神器，"
+             f"装备后回 开始战斗")
         _STATE["artifact_sig"] = art
     except Exception as e:
         _log(f"注入神器流程失败（{type(e).__name__}: {e}）")
@@ -783,7 +824,9 @@ def plan_decision(training: bool, used: Optional[int], table_index: int) -> "Tup
 
 
 def lineup_gate_adjust(training: bool, need: bool, table: Any,
-                       upcoming_boss: bool, cur_sig) -> "Tuple[bool, Optional[str]]":
+                       upcoming_boss: bool, cur_sig,
+                       cur_is_boss: Optional[bool] = None,
+                       ) -> "Tuple[bool, Optional[str]]":
     """阵容维度修正闸门判断（纯函数，便于离线自测）。
 
     闸门原来只看「表变没变」（plan_decision）。一张表有普通/boss 两套阵容后：
@@ -794,11 +837,29 @@ def lineup_gate_adjust(training: bool, need: bool, table: Any,
           跳过清空/选卡/编队直接开打，只换种植链（compiled 照表切换）。
 
     训练模式每关必重选（用户设定），不做任何修正。
-    cur_sig 为 None（首次进关/签名为未知）时不修正 —— 保守走原判断。
+
+    ★ 2026-10-29 日志实锤（第一次进 boss 关走了普通关路线）：
+      旧版「cur_sig 为 None -> 保守不修正」这条规则对 boss 关是**反的**：
+      任务刚起手时签名必然是 None，于是第 5/50/105 关这种 boss 关被判成
+      「未变」，拿上一关的普通关卡组直接开打。所以：
+        · cur_sig 未知 + boss 关 -> 一律重选 boss 卡组；
+        · cur_is_boss（当前生效卡组的形态）与本关形态不同 -> 一律重选。
 
     返回 (need, 修正原因 or None)。
     """
-    if training or cur_sig is None:
+    if training:
+        return need, None
+    # ★ 形态闸门：当前生效卡组是按哪套形态注入的，本关就该用哪套 ——
+    #   不依赖签名（签名可能是 None，也可能被「表变了但阵容相同」吞掉）。
+    if cur_is_boss is not None and bool(cur_is_boss) != bool(upcoming_boss):
+        return True, ("本关形态与当前生效卡组不同（"
+                      + ("boss 关" if upcoming_boss else "普通关")
+                      + "配置）-> 重新选卡")
+    if cur_sig is None:
+        # 普通关：维持原判断（保守沿用）；boss 关：说不清就重选 ——
+        # 「宁多重选一次，也别用错阵容开打」（与 plan_decision 同一原则）。
+        if upcoming_boss:
+            return True, "阵容签名未知 + boss 关 -> 保守重选 boss 卡组"
         return need, None
     target_sig = table.lineup_sig(upcoming_boss)
     if need and cur_sig == target_sig:
@@ -882,6 +943,16 @@ class JobSetPlan(CustomAction):
         #   （节点参数只有 JobSetPlan 有，Fight/Stage 的注入路径读不到）。
         _STATE["training"] = training
 
+        # ★ 「自动计数」没跑成时必须喊一声（2026-10-29 日志实锤）：那次全程没有
+        #   `📟 自动计数` 行 —— 节点没被触发（OCR 没认到「第」），计数器就完全是
+        #   option「起始关卡」的值，而日志一个字都不提。用户于是无从判断
+        #   「计数器对不对」，只能靠事后复盘。只提醒一次，不刷屏。
+        if not _STATE.get("autocount_seen") and not _STATE.get("autocount_warned"):
+            _STATE["autocount_warned"] = True
+            _log(f"⚠️ 本次任务「自动计数」没跑成（没认到主界面「第X关」）—— "
+                 f"关卡号完全来自 option「起始关卡」= {lv}；"
+                 f"若它和游戏里显示的不一致，整局都会错一格，请核对")
+
         # ---- 播报（每关都报；两种模式都经过本节点）----
         # ★ 「本关是否 boss」此时还不知道（头像识别在局内才发生），
         #   param 里的「是boss关」键早已没人传 —— 只能用计数器**预测**：
@@ -916,7 +987,8 @@ class JobSetPlan(CustomAction):
         #   局外此刻还没有头像识别可用。
         upcoming_boss = lv > 0 and lv % _BOSS_SNAP == 0
         need2, adj = lineup_gate_adjust(
-            training, need, table, upcoming_boss, _STATE.get("lineup_sig"))
+            training, need, table, upcoming_boss, _STATE.get("lineup_sig"),
+            _STATE.get("lineup_is_boss"))
         if adj:
             _log(f"★ 阵容维度修正：{adj}")
             reason = f"{reason}；{adj}"
@@ -939,14 +1011,15 @@ class JobSetPlan(CustomAction):
         else:
             # ★ 阵容不变不走 _apply_table，但神器闸门是独立判定 —— 每关都要评估：
             #   预热 force 注入后、同表的第二关必须把进线还原，否则会每关白跑选神器。
-            _inject_artifact(context, table, upcoming_boss, lineup_changed=False)
+            _inject_artifact(context, table, upcoming_boss)
 
         # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
         #   关卡号挂在 Plan 双节点上（本节点自己，每关精确触发一次 ->
         #   每关恰好一条 [Record]；2026-10-22 起不再挂开始战斗节点 ——
         #   focus 走事件携带制，那边每个识别/动作事件都复读，一关连跳多条）。
-        #   「当前使用」块挂在「清空卡牌」上（只有变化分支才跑到）。
-        #   换表但阵容相同被跳过（未变分支，清空卡牌不跑）时，
+        #   「当前使用」块挂在「清空卡牌」上（2026-10-28 起骨架会跑它，
+        #   但阵容未变的关卡仍可能被闸门直跳开始战斗 -> 不一定跑到）。
+        #   换表但阵容相同被跳过（未变分支）时，
         #   把阵容块并到关卡号消息前面，保证换表一定有提示。
         switched = used is None or used != table.index
         if switched:
@@ -1035,9 +1108,12 @@ class JobSetLoad(CustomAction):
                                               #   曾残留 147 进新一轮，日志误诊断）
             _STATE["plan_table_index"] = None  # 预热表指针同理
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
+            _STATE["lineup_is_boss"] = None  # 当前生效卡组的形态（boss/普通，闸门用）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
             _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
+            _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）
+            _STATE["autocount_warned"] = None  # 「自动计数没跑成」是否已提醒过
             _log("已重置作业集状态（重新开始任务）")
 
         # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
@@ -1092,7 +1168,8 @@ class JobSetLoad(CustomAction):
         #     · 换卡可以发生在**局外**（这就是「不重开」的关键）
         tr = from_params(param)
         if tr.count > 0:
-            _log(f"起始关卡={tr.count}（由参数给定）")
+            _log(f"起始关卡={tr.count}（由参数给定，填的是「你要打的那一关」，"
+             f"与主界面显示的数字一致）")
         else:
             _log("未给定起始关卡 -> 计数器暂从 0 起；若流程走「自动计数」节点，"
                  "会用主界面识别到的关卡号覆盖，否则请在 option 里填「起始关卡」")
@@ -1112,6 +1189,8 @@ class JobSetLoad(CustomAction):
         # ★ 阵容签名同理保持 None：新任务开局时局内卡牌状态未知，
         #   首次锁定必须走完整的清空+选卡，不能跳过。
         _STATE["lineup_sig"] = None
+        # 形态一律未知：boss 关不许靠「未知」蒙过去（闸门会保守重选）
+        _STATE["lineup_is_boss"] = None
         # 神器签名同理：新任务局内装备未知，首次必须走选神器流程
         _STATE["artifact_sig"] = None
         # 训练标记同理清空，等 JobSetPlan 首跑重写
@@ -1208,7 +1287,9 @@ class JobSetAutoCount(CustomAction):
         tr = _ensure_tracker({})
         old = tr.count
         tr.reset(lv)
-        _log(f"📟 自动计数：识别到「{text}」-> 起始关卡 = {tr.count}")
+        _STATE["autocount_seen"] = True     # 本次任务确实用画面数字校准过
+        _log(f"📟 自动计数：识别到「{text}」-> 计数器 = {tr.count}"
+             f"（主界面这个数字就是本关要打的关卡）")
 
         # ★ 关卡号回落 = 新一轮无尽开始（重置流程走到「重置完毕（第1关）」
         #   会回本节点）。表锁/锁关卡号/阵容签名/神器签名全是上一轮的
@@ -1219,6 +1300,7 @@ class JobSetAutoCount(CustomAction):
             _STATE["table_index"] = None
             _STATE["locked_level"] = None
             _STATE["lineup_sig"] = None
+            _STATE["lineup_is_boss"] = None
             _STATE["artifact_sig"] = None
             _log(f"🏁 关卡回落 {old} -> {tr.count}：新一轮无尽 -> "
                  f"已清表锁与阵容/神器签名（重新走完整选卡）")
@@ -1756,7 +1838,7 @@ class JobSetStage(CustomAction):
             _STATE["locked_level"] = lv
             seen.add(table.index)
 
-            ok = self._apply_table(context, js, table)
+            ok = self._apply_table(context, js, table, is_boss)
 
             # ★ 先重开（退出当前关回到局外），再跳回清空卡牌。
             #   清空卡牌是局外节点，必须先重开退出局内才能工作。
@@ -1783,8 +1865,13 @@ class JobSetStage(CustomAction):
         if prev != table.index:
             _STATE["table_index"] = table.index
             _STATE["locked_level"] = lv
-            self._apply_table(context, js, table)
-            _log(f"锁定表{table.index + 1}（关卡{lv}，植物 {table.plants}）")
+            self._apply_table(context, js, table, is_boss)
+            # ⚠️ 这里必须打**生效**植物（boss 关是 boss 卡组），别打 table.plants
+            #    ——普通关列表在 boss 关打出来会把日志看成人错的
+            #    （2026-10-29 用户就是被「锁定表1（关卡115，植物 […杜英投手…]）」
+            #     这行误导的：实际注入的是 boss 卡组）。
+            _log(f"锁定表{table.index + 1}（关卡{lv}，"
+                 f"植物 {table.eff_plants(is_boss)}）")
         seen.add(table.index)
 
         _log(f"阶段确认完成：{reason or '维持当前表'} -> 表{table.index + 1}")
@@ -1807,10 +1894,19 @@ class JobSetStage(CustomAction):
           「表有没有变」。所有换阵路径都走这里，所以记录不会漏。
 
         is_boss：目标关卡的 boss 形态。局外换阵（JobSetPlan）传「下一关」的
-          计数器预判；局内纠正路径（JobSetStage）不传 -> 用当前关的识别结果。
+          计数器预判；局内阶段确认（JobSetStage）传**它自己刚从管道拿到的**
+          `是boss关`（头像识别结论）。
+
+        ⚠️ 2026-10-29 日志实锤：不给 is_boss 时会回退读 `_STATE["is_boss"]`，
+          而那个 state 只有 JobSetFight 写 —— 阶段确认节点若先于它跑（或那关
+          Fight 走的是普通关变体），就会用 False 去注入，于是**boss 关被按普通关
+          注入/锁定**（日志形态：`boss关，当前关卡数：105` 紧跟
+          `已注入选卡植物（普通关）`）。所以调用方**必须**显式传。
         """
         if is_boss is None:
             is_boss = bool(_STATE.get("is_boss"))
+            _log(f"⚠️ _apply_table 没收到 is_boss，回退读 state（{is_boss}）"
+                 f"—— 调用方必须显式传，否则 boss 关会被按普通关注入")
         try:
             # ★ 阵容注入统一走 _inject_lineup：boss 关取 boss 阵容；
             #   与当前生效阵容相同会跳过清空/选卡/编队直接开打

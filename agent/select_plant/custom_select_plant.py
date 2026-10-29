@@ -222,6 +222,10 @@ class SelectPlants(CustomAction):
           "无尽局外选卡": false,     // ★ 80 选卡模式：严格按列表顺序逐个选，
                                      //    点完留在当前帧找下一个，没有就直接回顶重扫；
                                      //    隐含不做核对/槽位检查/占位填充，无槽位上限
+          "踩点数量": 3,             // 局外选卡：每帧顺带记录后面几个未选植物的屏数
+                                     //    （缺省 3；0 = 关掉顺路踩点）
+          "回顶额外次数": 10,        // 局外选卡专用：回顶次数 = 本轮下滑次数 + 本值
+                                     //    （缺省 10；局内 8 槽仍是 +3，不受影响）
           "核对": true,              // false = 点击即成功，不做 OCR/槽位核对（无文本界面）
           "占位填充": true,          // false = 结尾不做占位填充
           "槽位上限": 8,             // 仅单目标模式：最多处理列表前几个（局外选卡不生效）
@@ -279,7 +283,11 @@ class SelectPlants(CustomAction):
     #   duration 缺省 600（旧的 80 是给 30 次连刷用的；次数变成动态后单次滑稳一点更好）。
     #   若参数里显式给了 "回顶":{"repeat":N}，则仍按旧行为固定滑 N 次（兼容旧作业集）。
     DEFAULT_BACKTOP = {"begin": [381, 401], "end": [381, 611], "duration": 100}
-    BACKTOP_EXTRA_STEPS = 3   # 回顶次数 = 本轮下滑次数 + 本值
+    BACKTOP_EXTRA_STEPS = 3   # 回顶次数 = 本轮下滑次数 + 本值（局内 8 槽）
+    # ★ 局外 80 选卡的余量单独一档（2026-10-29 用户定：+10，局内仍 +3 不动）。
+    #   原因：80 个卡的网格比 8 槽列表长得多，按「本轮下滑 +3」算出的次数在
+    #   中途回顶时容易欠一口气 —— 回不到顶，后面「从顶重扫」就是假的。
+    ENDLESS_BACKTOP_EXTRA_STEPS = 10
 
     # 默认填充位置（滑回最顶上后依次快速点击这些坐标占位）
     # 当 custom_action_param 没传「填充位置」时使用。
@@ -459,7 +467,10 @@ class SelectPlants(CustomAction):
                     swipe, backtop, threshold, scales,
                     post_swipe_wait, endless_click_gap,
                     sim_threshold, backoff_frames,
-                    max_retry, max_slides)
+                    max_retry, max_slides,
+                    watch_count=int(param.get("踩点数量", 3)),
+                    backtop_extra=int(param.get(
+                        "回顶额外次数", self.ENDLESS_BACKTOP_EXTRA_STEPS)))
                 return CustomAction.RunResult(success=ok)
 
             # ---- 槽位状态：-1=跳过/未用 0=未就绪 1=已就绪 ----
@@ -642,11 +653,14 @@ class SelectPlants(CustomAction):
         except Exception as e:
             print(f"[SelectPlants] 滑动失败: {e}", file=sys.stderr, flush=True)
 
-    def _do_swipe_backtop(self, ctl, backtop, steps=None):
+    def _do_swipe_backtop(self, ctl, backtop, steps=None, extra=None):
         """回顶：把植物列表往上翻回最顶端。
 
-        ★ 次数是**动态**的：steps = 本轮实际往下滑了几次 -> 回顶 steps + 3 次。
-          传 steps=None（还没滑过 / 独立调用）时按 1+3 次刷，保证至少翻得到顶。
+        ★ 次数是**动态**的：steps = 本轮实际往下滑了几次 -> 回顶 steps + extra 次。
+          extra 缺省 = BACKTOP_EXTRA_STEPS(3)（局内 8 槽）；局外 80 选卡传
+          ENDLESS_BACKTOP_EXTRA_STEPS(10) —— 80 个卡的网格更长、回顶更容易欠，
+          3 次不够（2026-10-29 用户定：局外 +10，局内保持 +3 不变）。
+          传 steps=None（还没滑过 / 独立调用）时按 0+extra 次刷，保证至少翻得到顶。
 
         兼容：参数里显式给了 回顶.repeat 时，仍按固定次数滑（老作业集行为不变）。
 
@@ -656,6 +670,7 @@ class SelectPlants(CustomAction):
         b = backtop.get("begin", self.DEFAULT_BACKTOP["begin"])
         e = backtop.get("end", self.DEFAULT_BACKTOP["end"])
         dur = int(backtop.get("duration", self.DEFAULT_BACKTOP["duration"]))
+        extra = self.BACKTOP_EXTRA_STEPS if extra is None else int(extra)
 
         forced = backtop.get("repeat")
         if forced is not None:
@@ -663,9 +678,9 @@ class SelectPlants(CustomAction):
             repeat = max(1, int(forced))
             why = f"固定 {repeat} 次(参数指定 repeat)"
         else:
-            # 动态：本轮下滑 N 次 -> 回顶 N+3 次
-            repeat = max(1, int(steps or 0) + self.BACKTOP_EXTRA_STEPS)
-            why = f"本轮下滑 {int(steps or 0)} 次 + {self.BACKTOP_EXTRA_STEPS}"
+            # 动态：本轮下滑 N 次 -> 回顶 N+extra 次
+            repeat = max(1, int(steps or 0) + extra)
+            why = f"本轮下滑 {int(steps or 0)} 次 + {extra}"
 
         for _ in range(repeat):
             try:
@@ -1181,7 +1196,8 @@ class SelectPlants(CustomAction):
     def _run_endless_select(self, context, ctl, targets, search_roi, swipe,
                             backtop, threshold, scales, post_swipe_wait,
                             click_gap, sim_threshold, backoff_frames,
-                            max_retry, max_slides):
+                            max_retry, max_slides, watch_count=3,
+                            backtop_extra=None):
         """无尽局外 80 选卡（「选择挑战植物」界面，无文本、无核对手段）。
 
         ★ 严格按「植物列表」顺序选取（2026-10 改）：
@@ -1194,14 +1210,23 @@ class SelectPlants(CustomAction):
           - ★ 触底反弹**不算失败次数**：选中任意一个就把连续触底计数清零，
             连续 max_retry 次触底都没选中才判失败。
 
+        ★ 顺路踩点（2026-10-29 加，与局内 8 槽同款）：
+          每帧除了找「当前第一个未选的」，顺带对**后面最多 watch_count 个**
+          （参数「踩点数量」，缺省 3）未选植物做匹配，命中只**记录**它在第几屏
+          （seen_depth），不点。
+          当前目标这帧没找到时：若踩点记录显示「它在上方」（记录屏数 < 当前屏数），
+          就直接回顶再找，不再一路滑到底 —— 省掉整轮下滑。
+          记录用过即 pop，所以不会反复触发；真正的失败上限仍是「连续触底」。
+
         按名除名天然防呆：点过的植物弹出待选集，已打勾的卡留在原位也不会
         再为它匹配（重复点 = 取消选中）。
 
         返回 True = 全部选中；连续触底上限仍有剩余 -> 打日志 + False。
         （手截图严格对照时理论上不会漏，漏了就是该报警的信号。）
         """
-        remaining = list(targets)      # 顺序即优先级，严格逐个选
-        if not remaining:
+        # seq = 原始列表序号（打印用）；dict 拷贝一份，别污染调用方的 targets
+        pending = [dict(t, seq=i) for i, t in enumerate(targets)]
+        if not pending:
             print("[SelectPlants] 局外选卡: 植物列表为空，直接完成",
                   file=sys.stderr, flush=True)
             return True
@@ -1209,20 +1234,27 @@ class SelectPlants(CustomAction):
             # 手截图与界面同尺度，单尺度足够且快；
             # 要抗截图偏差就传 "尺度":[0.95,1.0,1.05]。
             scales = (1.0,)
+        watch_count = max(0, int(watch_count))
+        # 局外回顶余量单独一档（缺省 +10，局内保持不变）
+        backtop_extra = (self.ENDLESS_BACKTOP_EXTRA_STEPS
+                         if backtop_extra is None else int(backtop_extra))
 
-        # 顶点重启扫描（还没滑过 -> 按 0+3 次刷）
-        self._do_swipe_backtop(ctl, backtop, 0)
+        # 顶点重启扫描（还没滑过 -> 按 0+extra 次刷）
+        self._do_swipe_backtop(ctl, backtop, 0, extra=backtop_extra)
 
         bounce_run = 0           # 连续触底反弹次数（选中一个就清零）；到上限判失败
         slide_count = 0          # 本轮回顶之后，已经向下扫了几屏
         identical_run = 0
+        seen_depth = {}          # seq -> 在第几屏出现过（顺路踩点记录）
 
         # ★ 2026-10-03 扫描策略改版：
         #   - 点中一个 -> 留在当前帧再找下一个（循环开头重截帧就是这次检查），
         #     有就直接点（同屏连续命中一趟点完）；
         #   - 当前帧没有 -> 不再「直接回顶」，顺势往下滑，直到触底才反弹回顶；
         #   - 触底反弹【不算失败次数】，只有连续 max_retry 次触底都没选中才放弃。
-        while remaining and bounce_run < max_retry:
+        # ★ 2026-10-29 加顺路踩点：每帧顺带记录后面 watch_count 个在第几屏出现过；
+        #   当前目标没找到且记录显示它在上方 -> 先回顶，别白滑到底。
+        while pending and bounce_run < max_retry:
             if self._stopped(context):
                 return False
             img = self._screen(ctl)
@@ -1230,8 +1262,22 @@ class SelectPlants(CustomAction):
                 time.sleep(0.3)
                 continue
 
+            # ---- 顺路踩点：只记不点（后面 watch_count 个未选的）----
+            if watch_count:
+                for wt in pending[1:1 + watch_count]:
+                    if wt["seq"] in seen_depth:
+                        continue          # 已踩过点，省一次匹配
+                    hit_w = PM.find_best(img, wt["templates"], roi=search_roi,
+                                         threshold=threshold, scales=scales)
+                    if hit_w is not None:
+                        seen_depth[wt["seq"]] = slide_count
+                        print(f"[SelectPlants] 局外选卡: 踩点 #{wt['seq'] + 1} "
+                              f"**{wt['zh']}** 在第 {slide_count} 屏出现过"
+                              f"（先记下，轮到它时少滑几屏）",
+                              file=sys.stderr, flush=True)
+
             # ---- 只找「第一个未选中的」（严格顺序）----
-            tgt = remaining[0]
+            tgt = pending[0]
             hit = PM.find_best(img, tgt["templates"], roi=search_roi,
                                threshold=threshold, scales=scales)
             if hit is not None:
@@ -1239,14 +1285,28 @@ class SelectPlants(CustomAction):
                 cy = hit["y"] + hit["h"] // 2
                 print(f"[SelectPlants] 局外选卡: 选中 **{tgt['zh']}** "
                       f"({hit['name']}, score={hit['score']:.3f}) "
-                      f"点击 ({cx},{cy})（剩 {len(remaining) - 1} 个）",
+                      f"点击 ({cx},{cy})（剩 {len(pending) - 1} 个）",
                       file=sys.stderr, flush=True)
                 self._click(ctl, cx, cy)
                 time.sleep(click_gap / 1000.0)
-                remaining.pop(0)          # 按名除名：已打勾的卡不再匹配
+                seen_depth.pop(tgt["seq"], None)   # 已选上，踩点记录作废
+                pending.pop(0)          # 按名除名：已打勾的卡不再匹配
                 identical_run = 0
-                bounce_run = 0            # 有进展 -> 连续触底清零
-                continue                  # 留在当前画面，重截帧找下一个
+                bounce_run = 0          # 有进展 -> 连续触底清零
+                continue                # 留在当前画面，重截帧找下一个
+
+            # ---- 这帧没找到：踩点说它在上面 -> 先回顶（省掉整轮下滑）----
+            d = seen_depth.get(tgt["seq"])
+            if d is not None and d < slide_count:
+                seen_depth.pop(tgt["seq"], None)   # 用过即清，避免反复触发
+                print(f"[SelectPlants] 局外选卡: **{tgt['zh']}** "
+                      f"之前在第 {d} 屏出现过（当前在第 {slide_count} 屏）"
+                      f"-> 先回顶再找", file=sys.stderr, flush=True)
+                self._do_swipe_backtop(ctl, backtop, slide_count,
+                                       extra=backtop_extra)
+                slide_count = 0
+                identical_run = 0
+                continue
 
             # ---- 没找到 -> 顺势往下滑（不回顶），触底才反弹 ----
             img_before = PL.bgr_to_gray(img)
@@ -1264,17 +1324,18 @@ class SelectPlants(CustomAction):
             if identical_run >= backoff_frames or slide_count >= max_slides:
                 bounce_run += 1
                 print(f"[SelectPlants] 局外选卡: 本轮下滑 {slide_count} 次 "
-                      f"仍没找到 **{tgt['zh']}**（共剩 {len(remaining)} 个），"
+                      f"仍没找到 **{tgt['zh']}**（共剩 {len(pending)} 个），"
                       f"触底反弹回顶（连续 {bounce_run}/{max_retry} 次，不耗重试）",
                       file=sys.stderr, flush=True)
-                self._do_swipe_backtop(ctl, backtop, slide_count)
+                self._do_swipe_backtop(ctl, backtop, slide_count,
+                                       extra=backtop_extra)
                 slide_count = 0       # 新的一轮，回顶次数重新按「本轮」计
                 identical_run = 0
 
-        if remaining:
-            names = "、".join(t["zh"] for t in remaining)
+        if pending:
+            names = "、".join(t["zh"] for t in pending)
             print(f"[SelectPlants] 局外选卡: 连续触底反弹 {max_retry} 次仍没找到，"
-                  f"剩 {len(remaining)} 个未选中: {names}",
+                  f"剩 {len(pending)} 个未选中: {names}",
                   file=sys.stderr, flush=True)
             return False
         print(f"[SelectPlants] 局外选卡: {len(targets)} 个植物全部选中",

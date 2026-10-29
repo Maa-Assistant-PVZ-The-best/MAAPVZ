@@ -133,6 +133,9 @@ static/
 | `无尽挑战_识别开始战斗_清空卡牌` | `next` | `["无尽挑战_切换编队"]`（默认 `["无尽挑战_选取植物"]`） |
 | `无尽_选择编队`（custom 节点） | `custom_action_param` | `{"编队选择": true, "目标编队": N}`（默认目标 0=占位） |
 
+> ⚠️ 2026-10-28 起 `无尽_选择编队.next` 也归运行时管（它是「编队模式下的选卡终点」，
+> 神器链的唯一入口挂在这里 + `选取植物.next`，见 §10.5）。编队注入本身仍然只动上面两个字段。
+
 注入点共 **4 处**：`JobSetLoad`（预计表预热）、`JobSetStage` 首次锁定、`JobSetStage` 换阵容、`_apply_table`（切表辅助）。
 
 > ⚠️⚠️ **2026-10-23 重写：编队选择 = SelectPlants 的「编队选择」custom 模式！**
@@ -918,32 +921,69 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
   手写 JSON 只给 `boss_squad` → 反推 `bossLineupMode='deck'`。
 - 局外选卡锁定集合（32 `jobOuterLockedPlants`）= 普通槽位 ∪ boss 有效槽位。
 
+### ★ 骨架固定、只翻动作（2026-10-28 用户定稿）
+
+**一条固定路线，永不拆节点、永不换识别：**
+
+```
+识别开始战斗(OCR) -> 清空卡牌(OCR) -> 选取植物 -> (选取神器?) -> 开始战斗
+                                      └ 编队模式: 切换编队 -> 无尽_选择编队 ┘
+```
+
+运行时**只翻动作 + 只接一个 next**，其余全交给 pipe 静态值：
+
+| 情形 | 清空卡牌 | 选取植物 / 选择编队 | next 接线 |
+| --- | --- | --- | --- |
+| 阵容变 | `action: Click` | `action: Custom` | 终点 `next → [开始战斗]` |
+| 阵容不变 | `action: DoNothing`（只认不点） | `action: DoNothing`（不真选） | 同上 |
+| 神器要换 | 按阵容（同上两行） | 按阵容（同上两行） | 终点 `next → [选取神器]` |
+
+- **`recognition` 永不覆盖**：`清空卡牌` 的 OCR 就是「确实站在选卡界面」的闸口，
+  认不到就超时 —— 不会瞎点。（旧版阵容不变时改成 `DirectHit`，等于把闸口拆了：
+  任何画面都「识别成功」，然后带着 60s 超时去 OCR「开始战斗」，重开过渡态最易炸。）
+- **神器唯一入口 = 选卡终点**（`选取植物.next` / `无尽_选择编队.next`）：
+  神器不换 → `选取神器` 压根不在链上，节点保持 pipe 原样（OCR 认「神器」）；
+  要换 → 终点接过去，装完靠 `关闭神器界面.next = [开始战斗]`（pipe 静态）开打
+  —— 植物在进神器链**之前**就换完了，所以神器链终点固定回开始战斗。
+- **补给确定/闸门/首关入口一律进骨架**，不再各自塞一条神器分支：
+  `神器补给_确定.next` 永远 `[清空卡牌, 自己]`，`识别开始战斗.next` 永远
+  `[清空卡牌]`，未变闸门平时直跳开始战斗、要换神器时换成 `_JUMP_SAME_ART`
+  （多插一站 清空卡牌）。
+- **为什么这样就「不冲突」**：字段分工 —— `next` 归 `_inject_artifact`
+  （要不要接神器），`action` 归 `_inject_lineup`（要不要真做），两个函数各写
+  各的字段，MAA 按字段合并，谁都不会把对方顶掉。
+
 ### agent 端（engine / runtime）
 
 - `engine.Table`：`boss_plants` / `boss_squad` / `boss_artifact` / `artifact`；
   有效值访问器 `eff_plants(is_boss)` / `eff_squad(is_boss)` / `eff_artifact(is_boss)`；
   **`lineup_sig(is_boss)`** = `("deck", squad, artifact)` 或 `("plants", tuple(plants), artifact)`。
-- **阵容相同跳过**：`_STATE["lineup_sig"]` 记录当前生效阵容。
+- **阵容相同 → 只认不做**：`_STATE["lineup_sig"]` 记录当前生效阵容。
   `_inject_lineup(context, table, is_boss)` 统一所有注入点
   （JobSetFight 首锁/换表、JobSetPlan 换阵）：
-  签名相同 → `无尽挑战_识别开始战斗_清空卡牌` 改 `DirectHit + DoNothing`
-  直跳 `无尽挑战_选取植物_开始战斗`（不清空、不选卡、不切编队）；
-  不同 → 还原清空卡牌节点 + 正常注入。首次进关（签名 None）必走完整选卡。
-- **⚠️ 快照原则（2026-10-24 定稿）**：`_CLEAR_CARDS_ORIG` / `_ARTIFACT_PICK_ORIG`
-  等「还原用快照」**只收 runtime 自己会改的字段**（recognition/action/next）。
-  MAA override 按字段合并，没写的字段永远保持 pipe 现值 —— expected/roi/
-  target_offset 故意不收，pipe 改了也不会被还原顶掉（实锤过：pipe 给
-  「选取神器」expected 加单字兜底，全量快照恢复时把兜底顶掉）。
-  selfcheck §13 断言快照字段集 == {recognition, action, next} 且值与 pipe 一致。
+  签名相同 → `清空卡牌.action = DoNothing` + `选取植物.action = DoNothing`
+  （不清卡、不选卡、不切编队），识别与 next 一概不动；
+  不同 → 两个动作还原 `Click` / `Custom` + 正常注入。首次进关（签名 None）必真选。
+- **⚠️ 快照原则（2026-10-24 定稿）**：「还原用快照」**只收 runtime 自己会改的
+  字段**。MAA override 按字段合并，没写的字段永远保持 pipe 现值 ——
+  expected/roi/template 故意不收，pipe 改了也不会被还原顶掉（实锤过：pipe 给
+  「选取神器」加 OCR 单字兜底「神」「器」，全量快照恢复时把兜底顶掉）。
+  2026-10-28 起进一步收紧：
+  · `_CLEAR_CARDS_ORIG` = `{action, next}`（**recognition 不在里面**，永不写）；
+  · `_ARTIFACT_PICK_ORIG` **整份删除**（选取神器彻底退出 runtime 管辖）；
+  · 新增 `_CHOOSE_PLANTS_ACTION_ORIG`（action）/ `_CHOOSE_PLANTS_NEXT_ORIG`（next）
+    / `_SQUAD_PICK_NEXT_ORIG`（next）—— 动作与 next 分家，各归各的注入函数；
+  · `关闭神器界面.next`、`识别开始战斗.next` 变成 pipe 静态值，runtime 不再碰。
+  selfcheck §13 断言：字段集恰好是上面这些 + 值与 pipe 逐项一致 + 选取神器无快照。
   （闸门 next 清单 `_JUMP_*_ORIG` / `_SUPPLY_CONFIRM_ORIG` 仍是全量照抄 ——
   next 本来就是整表替换、runtime 全权负责，pipe 改了必须同步，同样有断言。）
 - **闸门阵容维度修正**（`lineup_gate_adjust`，纯函数）：表没变但形态阵容不同
   → 翻「变化」重选；表变了但阵容相同 → 翻「未变」跳过。训练模式不修正
   （每关必重选是用户设定）。boss 预判用计数器 `lv % 5 == 0`（与补给预告同口径）。
 - **★ 训练模式双层豁免**（踩过的坑）：闸门修正挡训练只翻了 next 分支，
-  但 `_inject_lineup` 的签名跳过会把「清空卡牌」节点**本身**改成 DirectHit 空跳
+  但 `_inject_lineup` 的签名相同分支会把节点**本身**的动作翻成空动作
   —— 分支走对了、节点被废了。所以 `_inject_lineup` 里还有第二道：
-  `_STATE["training"]` 为真时永不跳过（`JobSetPlan` 每关写入该标记，
+  `_STATE["training"]` 为真时永不 neuter（`JobSetPlan` 每关写入该标记，
   Fight/Stage 的节点参数里没有「训练模式」键，只能走状态；
   `JobSetLoad` 重置/新开局时清空）。
 - 预热（`_prewarm_for_level`）：首关是 5 的倍数时用 boss 阵容预热；
@@ -951,34 +991,115 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
 
 ### 验证
 
-selfcheck §13 全覆盖（解析/签名/快照一致性/跳过行为/闸门修正/补给旁路），全部通过。
+selfcheck §13 全覆盖（解析/签名/快照一致性/只认不做/神器终点接线/闸门修正/补给），
+全部通过。
 
-### ⚠️ 补给屏旁路 bug（2026-10-24 水皮实锤，已修）
+### 补给屏旁路 bug（2026-10-24 水皮实锤 → 2026-10-28 结构性消失）
 
 **症状**：boss 关槽位覆盖的植物永远不进卡组（"不会去修改卡槽"），
 换到哪个槽都一样 —— 与槽位无关。
 
-**机制**：boss 关开局前必弹补给屏；闸门「变化」的 next 里
+**当时的机制**：boss 关开局前必弹补给屏；闸门「变化」的 next 里
 `无尽局内_补给` 排第一，流程被补给接管；补给终点 `神器补给_确定`
-的 pipe 原值 next = `[开始战斗]`。`_inject_artifact` 的
-「神器没变」分支**无条件**把它还原成原值，不看 `lineup_changed`
-—— 于是「阵容变 + 神器没变/没配 + 有补给」的 boss 关，选卡整段被旁路。
-（神器也变时不受影响：那一分支会先进「选取神器」，关闭神器界面时
-`close_next` 已经按 `lineup_changed` 分流。）
+的 pipe 原值 next = `[开始战斗]`，被无条件还原 → 选卡整段旁路。
 
-**修复**（`runtime.py` `_inject_artifact` need=False 分支）：
-`神器补给_确定.next` 按 `lineup_changed` 分流 ——
-变了 = `[清空卡牌, 神器补给_确定]`，没变才还原 `[开始战斗, 自己]`。
+**现在为什么不会再犯**：`神器补给_确定.next` 是**常量** `[清空卡牌, 自己]`，
+不存在「按 lineup_changed 分流」的分支可漏；清不清卡/选不选植物由骨架的
+`action` 决定 —— 图上「补给→开始战斗」的旁路路径已经不存在
+（`check_supply_bypass.py` 场景 A/B/C 的 bypass 计数恒为 0）。
 
-**回归**：selfcheck §13「补给旁路」3 条断言 +
-`agent/jobset/check_supply_bypass.py`（图级枚举：真实 pipe + 真实
-override 序列，枚举「闸门→开始战斗」全路径，断言阵容变时每条都过
-清空卡牌+选取植物；阵容不变时合法直跳必须保留）。
+**回归**：selfcheck §13「补给」2 条断言 + `agent/jobset/check_supply_bypass.py`
+（真实 pipe + 真实 override 序列，枚举「闸门→开始战斗」全路径；阵容变的场景
+每条都过 清空卡牌+选取植物，阵容不变时「未变闸门→开始战斗」的合法直跳保留）。
 
 **教训**：决策层（闸门/注入/sig）全对不代表流程对 —— pipe 里任何
-**终点节点的静态 next**（补给确定、神器界面关闭）都是选卡入口的同层
-节点，改动时必须按「阵容是否变了」同步分流。决策层测试（§13 前半）
-测不到这层，要用图枚举测。
+**终点节点的静态 next**（补给确定、神器界面关闭）都是选卡入口的同层节点。
+后来干脆把所有分支收成一条骨架（只翻动作），这类「漏还原」问题从根上没了。
+
+### ⚠️ 计数器落后 1 格（2026-10-29 追查中；一次错误修复已回退）
+
+**现象**：某一局 bot 说自己在 107 关，游戏里实际是 108 关；真 boss 关（104）被按
+105 处理并出现「已自动偏移」。
+
+**已确认**：
+- 主界面「第 X 关」**就是本关要打的关卡**（2026-10-29 实跑：识别到「第111关」
+  时游戏里确实是 111 关）。❌ 曾经据此加过 `+1` 偏移（以为显示的是「已通过」
+  那一关），实跑立刻多算 1 关，**已回退**，别再给计数器加偏移。
+- `snap_boss()` 的静默对齐是「掩盖现场」的元凶：±2 偏差内它直接把计数器改掉、
+  只写一行「已自动偏移」，于是「104 关被当成 boss 关」看不出根因。
+  **已改**：偏差对齐时额外打一行 `⚠️ 计数器与 boss 关不符（偏差 +1）…`，
+  `selfcheck` 有断言盯着（不许再静默）。
+
+**待查（下次复现看这两行）**：
+1. `📟 自动计数：识别到「第X关」` —— 用户观测「第一关不报数，第二关才报，且报的是
+   上一关的号」＝ **自动计数的触发时机/取帧偏晚**，不是换算口径。
+2. `过关计数：A -> B` 之间有没有缺一次（换了阵容重开 / 收尾重开 / 手动重开任务
+   都可能是漏 tick 的点）。
+
+**2026-10-29 21:58 那次日志（起始关卡=110）**：计数器全程正确 —— 预热按
+`110 % 5 == 0` 判 boss、头像命中 `boss关，当前关卡数：110`、`过关计数：110 -> 111`
+都对得上，**没有偏移行**。所以「落后 1 格」在那一局没有复现。
+同一份日志暴露了另一件事：**`📟 自动计数` 一次都没出现**（节点没被触发，OCR 没认到
+「第」），计数器全程等于 option「起始关卡」，而日志一个字都不提 —— 已于 2026-10-29 补：
+`JobSetAutoCount` 成功时置 `_STATE["autocount_seen"]`，`JobSetPlan` 发现没置位就
+**只提醒一次** `⚠️ 本次任务「自动计数」没跑成…关卡号完全来自 option「起始关卡」= N`。
+
+### ⚠️ 覆盖 action 把自定义动作名冲掉 → `Action is null` → 整局 Task.Failed（2026-10-29 实锤）
+
+**症状**：跑到某关选卡时任务直接失败，agent 侧只看到 `Tasker.Task.Failed`（很像"莫名其妙"）。
+
+**MAA 侧证据**（`agent/debug/maafw.log` / `assets/debug/maafw.log`）：
+```
+22:24:18 Node.Action.Starting   无尽挑战_选取植物
+22:24:18 [WRN] custom action target rect is empty ... [param.name=]
+22:24:18 [ERR] Action is null [node_name=无尽挑战_选取植物] [param.name=]
+22:24:18 Node.Action.Failed → 22:24:19 Tasker.Task.Failed
+```
+即：节点 `action` 还是 `Custom`，但**自定义动作名是空的**，MAA 找不到动作 → 动作失败 → 整局挂。
+
+**根因**：骨架里「阵容不变 -> 只认不做」要翻动作，旧写法只覆盖 `action`
+（`{"action": "DoNothing"}` / `{"action": "Custom"}`）——一旦 MaaFW 把这次覆盖
+当成**整套动作**重建，`custom_action` 就丢成空串，留下「action=Custom + 空动作名」的半截状态。
+
+**修复**：覆盖动作时**永远把 `custom_action` 一起写全**
+（`_CHOOSE_PLANTS_ACTION_ORIG = {"action": "Custom", "custom_action": "SelectPlants"}`，
+关动作时写 `{"action": "DoNothing", "custom_action": "SelectPlants"}`）。
+selfcheck 加 2 条断言：快照必须带 custom_action、关动作时也必须带。
+**规矩**：以后凡是要 override 一个 Custom 节点的 `action`，必须同时写 `custom_action`；
+只覆盖 `custom_action_param` 才是安全的（「无尽_选择编队」就是这种，不动动作）。
+
+### ⚠️ boss 关误用普通关卡组（2026-10-29 用户日志实锤，已修）
+
+**症状**：第一次进 boss 关（计数 5/50/105…）走普通关路线：卡组还是上一关的普通关植物，
+到了局内才靠头像认出「这是 boss 关」，然后才回头换卡。
+
+**日志证据（两条独立 bug，同一个现象）**：
+
+1. 局外闸门判成「未变」——日志里 `📋 当前关卡: 50 本关: boss关`、`⚔️ 第 50 关是 boss 关`
+   后面**没有** `★ 阵容维度修正` 那一行。
+   原因：任务刚起手时 `lineup_sig` 恒为 `None`，`lineup_gate_adjust` 的
+   「签名未知 -> 保守不修正」这条规则对 boss 关是**反的**。
+2. 局内阶段确认注入了普通关——日志里 `boss关，当前关卡数：105` 紧跟
+   `已注入选卡植物（普通关）：[…杜英投手, 复活萝卜]`。
+   原因：`JobSetStage` 调 `JobSetStage._apply_table(context, js, table)` **没传 `is_boss`**，
+   里面回退读 `_STATE["is_boss"]`，而那个 state 只有 `JobSetFight` 写 ——
+   阶段确认先跑（或那关 Fight 走普通关变体）时读到 False，boss 关被按普通关注入+锁定。
+
+**修复**：
+- `lineup_gate_adjust` 加两条规则：`cur_sig is None` + 本关 boss -> **一律重选**；
+  新增 `cur_is_boss`（当前生效卡组的形态，`_STATE["lineup_is_boss"]`）与本关形态
+  不同 -> **一律重选**。`_inject_lineup` 两个分支都记形态，
+  `JobSetLoad` 重置 / `关卡回落` 时清空。
+- `JobSetStage` 的两处 `_apply_table` 改成显式传 `is_boss`；
+  `_apply_table` 回退读 state 时打警告（这坑不许再静默）。
+
+**验证**：selfcheck §13 新增 4 条闸门断言 + 形态记录断言；用真实作业集
+`assets/resource/jobs/pvz_20261029_003417.json` 跑状态机：起始关卡=103 时
+第 105 关现在是 `★ 阵容维度修正：本关形态与当前生效卡组不同（boss 关配置）-> 重新选卡`
++ `清空卡牌 Click` + boss 卡组；`JobSetStage(是boss关=True)` 直接注入 boss 卡组。
+
+**教训**：「签名未知」在普通关是安全方向（沿用），在 boss 关是**危险方向**
+（拿错卡组打 boss）；凡是「保守」分支都要问一句：对另一种形态也保守吗？
 
 ## 10.6 相机神器（特殊类第二种，2026-10-25）
 

@@ -158,7 +158,7 @@
     "无尽挑战_跳转_未变": {
         "enabled": true, //会被覆盖（JobSetPlan 每个 boss 关翻面：未变/变化二选一置 true）
         "timeout": 60000,
-        "next": [ //会被覆盖（换神器分支 runtime 换成 _ART 变体；还原以 runtime _JUMP_SAME_ORIG 快照为准——改这里要同步它，selfcheck §13 有断言）
+        "next": [ //会被覆盖（换神器时换成 _ART 变体：多插一站 清空卡牌 走骨架，神器由骨架终点接；还原以 runtime _JUMP_SAME_ORIG 快照为准——改这里要同步它，selfcheck §13 有断言）
             "无尽局内_补给",
             "无尽挑战_选取植物_开始战斗",
             "无尽挑战_149点击开始挑战",

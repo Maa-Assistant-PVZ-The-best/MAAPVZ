@@ -21,8 +21,15 @@
             "无尽挑战_识别开始战斗_清空卡牌"
         ]
     },
+    //★ 骨架（2026-10-28 定稿「骨架固定、只翻动作」）：
+    //  识别开始战斗 -> 清空卡牌 -> 选取植物 -> (选取神器?) -> 开始战斗
+    //  这条路线永远一样；阵容不变时 runtime 只把 清空卡牌/选取植物 的
+    //  action 翻成 DoNothing（只认不做），识别与 next 一律不动。
     "无尽挑战_识别开始战斗_清空卡牌": {
-        "recognition": "OCR", //会被覆盖（神器没变时改 DirectHit；换神器时按快照还原）
+        // ⚠️ 这行**不被覆盖**：runtime 永不写 recognition（快照里也没它）。
+        //    它就是「确实站在选卡界面」的闸口 —— 认不到就超时，不会瞎点。
+        //    旧版阵容不变时改成 DirectHit，等于把闸口拆了（2026-10-28 已删）。
+        "recognition": "OCR",
         "expected": [
             "清空卡牌"
         ],
@@ -32,16 +39,16 @@
             75,
             27
         ],
-        "action": "Click", //会被覆盖（同上；还原以 runtime 的 _CLEAR_CARDS_ORIG 快照为准——改这三个字段要同步它，selfcheck §13 有断言）
-        "next": [ //会被覆盖（同上）
+        "action": "Click", //会被覆盖（阵容不变 -> DoNothing，只认不点；还原以 runtime _CLEAR_CARDS_ORIG 为准，selfcheck §13 有断言）
+        "next": [ //会被覆盖（永远指向选植物：真清不清卡由 action 决定；还原同上）
             "无尽挑战_选取植物"
         ]
     },
     "无尽挑战_选取植物": {
-        "action": "Custom",
+        "action": "Custom", //会被覆盖（阵容不变 -> DoNothing；还原以 runtime _CHOOSE_PLANTS_ACTION_ORIG 为准，selfcheck §13 有断言）
         "custom_action": "SelectPlants",
         "custom_action_param": "{}",
-        "next": [
+        "next": [ //会被覆盖（**神器链唯一入口**：神器要换 -> [选取神器]，否则 [开始战斗]；还原以 _CHOOSE_PLANTS_NEXT_ORIG 为准）
             "无尽挑战_选取植物_开始战斗"
         ]
     },
@@ -115,7 +122,7 @@
             "编队选择": true,
             "目标编队": 0 //会被覆盖（runtime _squad_param 注入目标编队号 1-6；0 = 占位）
         },
-        "next": [
+        "next": [ //会被覆盖（编队模式下这里是「选卡终点」，神器入口同选取植物：要换神器 -> [选取神器]；还原以 _SQUAD_PICK_NEXT_ORIG 为准）
             "无尽挑战_选取植物_开始战斗"
         ]
     },

@@ -197,8 +197,11 @@ check("未偏移时不输出偏移警告", len(_msgs) == 1, str(_msgs))
 
 _msgs3 = lt3.snap_boss_message(res3)
 print(f"  用户可见日志(偏移): {_msgs3}")
-check("偏移时输出两行", len(_msgs3) == 2, str(_msgs3))
+check("偏移时输出三行（含不许静默的告警）", len(_msgs3) == 3, str(_msgs3))
 check("偏移日志含『已自动偏移』", "已自动偏移" in _msgs3[1], str(_msgs3[1]))
+# ★ 2026-10-29：偏差被静默对齐曾把「计数器落后 1 格」掩盖成「看起来对」
+check("偏移必须显式告警（不许静默对齐）",
+      "⚠️" in _msgs3[2] and "偏差" in _msgs3[2], str(_msgs3[2]))
 
 # 计数器为 0 时不崩
 lt5 = LevelTracker()
@@ -613,8 +616,8 @@ try:
           f"runtime={_rt10b._JUMP_DIFF_ORIG} pipe={_pipe_diff}")
     check("换神器分支清单也带 JumpBack 尾件",
           _rt10b._JUMP_SAME_ART[-1] == _rt10b.JB_CONTINUE
-          and _rt10b._JUMP_DIFF_ART[-1] == _rt10b.JB_CONTINUE,
-          f"{_rt10b._JUMP_SAME_ART} / {_rt10b._JUMP_DIFF_ART}")
+          and _rt10b._JUMP_DIFF_ORIG[-1] == _rt10b.JB_CONTINUE,
+          f"{_rt10b._JUMP_SAME_ART} / {_rt10b._JUMP_DIFF_ORIG}")
     check("pipe: JumpBack 目标节点存在且是 OCR",
           _pj10b[_rt10b.NODE_JUMPBACK_CONTINUE].get("recognition") == "OCR",
           str(_pj10b.get(_rt10b.NODE_JUMPBACK_CONTINUE)))
@@ -704,20 +707,25 @@ try:
     check("全候选全烂 -> 解析不出（走重试/兜底）",
           all(_rt12._parse_level_text(_t) is None
               for _t in _rt12._reco_all_texts(_reco12e)))
+
+    # ★ 2026-10-29：这里曾有 4 条「主界面第X关 -> 计数器 X+1」的断言。
+    #   实跑直接打脸（识别到「第111关」时游戏里确实是 111 关）—— 换算口径
+    #   本来就没问题，已整段删除，别再凭观察给计数器加偏移。
 except Exception as _e12:
     check("自动计数解析", False, f"{type(_e12).__name__}: {_e12}")
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 13. boss 阵容拆分 + 阵容相同跳过选卡 ===")
+print("\n=== 13. boss 阵容拆分 + 骨架固定只翻动作 ===")
 #
 # 设计（2026-10）：
 #   · 每张表可选配 boss_lineup（boss 关独立的植物/编队/神器）；
 #     缺省/未配 -> 完全沿用普通关（boss_lineup 导出的是逐槽沿用后的有效值）。
 #   · 运行时维护「当前生效阵容签名」_STATE["lineup_sig"]：
-#     与目标阵容相同 -> 「清空卡牌」改 DirectHit+DoNothing 直跳「开始战斗」
-#     （不清空、不选卡、不切编队），只换种植链（compiled 注入照旧）；
-#     不同（或首次进关签名未知）-> 还原清空卡牌节点 + 正常注入。
+#     与目标阵容相同 -> 「清空卡牌」「选取植物」的 **action 翻成 DoNothing**
+#     （只认不做：不清卡、不选卡、不切编队），recognition / next 一个都不动
+#     —— 骨架固定（2026-10-28），闸口「认到清空卡牌才往下走」始终有效；
+#     不同（或首次进关签名未知）-> 两个动作还原 Click / Custom + 正常注入。
 try:
     import json as _json13
     from agent.jobset import engine as _eng13
@@ -755,9 +763,13 @@ try:
 
     # --- ★ 快照原则（2026-10-24 定稿）：快照只收 runtime 会动的字段 ---
     #   MAA override 按字段合并，没写的字段永远保持 pipe 现值 ——
-    #   所以 expected/roi/target_offset 一律【不进】快照，pipe 改了也顶不掉。
+    #   所以 expected/roi/template 一律【不进】快照，pipe 改了也顶不掉。
     #   断言两层：①快照字段集恰好是 runtime 会动的那几个（防有人又全量照抄）
-    #            ②这些字段的值与 pipe 一致（还原正确性）。
+    #            ②这些字段的值与 pipe 一致（还原正确性）
+    #   ⚠️ 2026-10-28「骨架固定、只翻动作」后：
+    #      · 清空卡牌 的 recognition 不在快照里（runtime 永不写它 —— 闸口）；
+    #      · 选取神器 整份快照删除（任何字段都不覆盖：不在链上 = 不换神器）；
+    #      · 首关入口/关闭神器界面 的 next 变成 pipe 静态值（runtime 不碰）。
     _root13 = Path(__file__).resolve().parent.parent.parent
 
     def _pipe_node13(rel, name):
@@ -765,30 +777,57 @@ try:
         _p = _root13 / rel
         return _json13.loads(_strip13(_p.read_text(encoding="utf-8")))[name]
 
-    _OWNED = {"recognition", "action", "next"}
-    _cc_pipe = _pipe_node13(
-        "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json",
-        _rt13.NODE_CLEAR_CARDS)
+    _PICK_PIPE = "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
+    _GOD_PIPE = ("assets/resource/pipeline/Endless_ref/"
+                 "06Endless_god_vessel/0601Endless_god_vessel.json")
+    _SUPPLY_PIPE = "assets/resource/pipeline/Endless_ref/04_Endless_Supply.json"
+
+    _cc_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_CLEAR_CARDS)
     _cc_orig = _rt13._CLEAR_CARDS_ORIG
-    check("★快照原则: 清空卡牌快照只含 runtime 会动的字段",
-          set(_cc_orig.keys()) == _OWNED, f"keys={sorted(_cc_orig.keys())}")
+    check("★快照原则: 清空卡牌快照只含 runtime 会动的字段（action/next）",
+          set(_cc_orig.keys()) == {"action", "next"}, f"keys={sorted(_cc_orig.keys())}")
+    check("★不覆盖: 清空卡牌 recognition 永不被改写（选卡界面闸口）",
+          "recognition" not in _cc_orig and _cc_pipe.get("recognition") == "OCR",
+          f"orig={_cc_orig} pipe={_cc_pipe.get('recognition')}")
     check("★同步: 清空卡牌快照字段值与 pipe 一致",
-          all(_cc_orig[k] == _cc_pipe.get(k) for k in _OWNED),
+          all(_cc_orig[k] == _cc_pipe.get(k) for k in ("action", "next")),
           f"runtime={_cc_orig} pipe={_cc_pipe}")
 
-    _ap_pipe = _pipe_node13(
-        "assets/resource/pipeline/Endless_ref/06Endless_god_vessel/0601Endless_god_vessel.json",
-        _rt13.NODE_ARTIFACT_PICK)
-    _ap_orig = _rt13._ARTIFACT_PICK_ORIG
-    check("★快照原则: 选取神器快照只含 runtime 会动的字段",
-          set(_ap_orig.keys()) == _OWNED, f"keys={sorted(_ap_orig.keys())}")
-    check("★同步: 选取神器快照字段值与 pipe 一致",
-          all(_ap_orig[k] == _ap_pipe.get(k) for k in _OWNED),
-          f"runtime={_ap_orig} pipe={_ap_pipe}")
+    _cp_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_CHOOSE_PLANTS)
+    check("★同步: 选取植物动作快照与 pipe 一致（action + custom_action）",
+          _rt13._CHOOSE_PLANTS_ACTION_ORIG == {
+              "action": _cp_pipe.get("action"),
+              "custom_action": _cp_pipe.get("custom_action")},
+          f"runtime={_rt13._CHOOSE_PLANTS_ACTION_ORIG} "
+          f"pipe={_cp_pipe.get('action')}/{_cp_pipe.get('custom_action')}")
+    # ★ 2026-10-29 事故：只写 action 会留下「动作名空」→ MAA `Action is null`
+    check("★不覆盖原则: 动作快照必须带 custom_action（防空名）",
+          _rt13._CHOOSE_PLANTS_ACTION_ORIG.get("custom_action") == "SelectPlants",
+          str(_rt13._CHOOSE_PLANTS_ACTION_ORIG))
+    check("★同步: 选取植物 next 快照与 pipe 一致（神器入口还原值）",
+          _rt13._CHOOSE_PLANTS_NEXT_ORIG == _cp_pipe.get("next"),
+          f"runtime={_rt13._CHOOSE_PLANTS_NEXT_ORIG} pipe={_cp_pipe.get('next')}")
+    _sp_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_SQUAD_PICK)
+    check("★同步: 选择编队 next 快照与 pipe 一致",
+          _rt13._SQUAD_PICK_NEXT_ORIG == _sp_pipe.get("next"),
+          f"runtime={_rt13._SQUAD_PICK_NEXT_ORIG} pipe={_sp_pipe.get('next')}")
 
-    _sc_pipe = _pipe_node13(
-        "assets/resource/pipeline/Endless_ref/04_Endless_Supply.json",
-        _rt13.NODE_SUPPLY_CONFIRM)
+    check("★不覆盖: 选取神器已彻底退出 runtime 管辖（无快照常量）",
+          not hasattr(_rt13, "_ARTIFACT_PICK_ORIG"))
+    _ap_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_PICK)
+    check("pipe: 选取神器 保持 OCR 原样（不再被改成 DirectHit）",
+          _ap_pipe.get("recognition") == "OCR" and _ap_pipe.get("action") == "Click",
+          str(_ap_pipe))
+    _close_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_CLOSE)
+    check("★同步: 关闭神器界面 next 静态回「开始战斗」（runtime 不碰）",
+          _close_pipe.get("next") == [_rt13.NODE_BATTLE_START],
+          str(_close_pipe.get("next")))
+    _start_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_START_OCR)
+    check("★同步: 首关入口 next 静态进骨架「清空卡牌」（runtime 不碰）",
+          _start_pipe.get("next") == [_rt13.NODE_CLEAR_CARDS],
+          str(_start_pipe.get("next")))
+
+    _sc_pipe = _pipe_node13(_SUPPLY_PIPE, _rt13.NODE_SUPPLY_CONFIRM)
     check("★同步: 补给确定快照 next 与 pipe 一致",
           list(_rt13._SUPPLY_CONFIRM_ORIG) == _sc_pipe.get("next"),
           f"runtime={_rt13._SUPPLY_CONFIRM_ORIG} pipe={_sc_pipe.get('next')}")
@@ -798,57 +837,138 @@ try:
         def __init__(self): self.overrides = []
         def override_pipeline(self, patch): self.overrides.append(patch)
 
-    def _last_clear13(ctx):
+    def _merged13(ctx, node):
         # override_pipeline 对同一节点是按字段合并的，测试也要合并后再看
         merged = {}
         for p in ctx.overrides:
-            if _rt13.NODE_CLEAR_CARDS in p:
-                merged.update(p[_rt13.NODE_CLEAR_CARDS])
+            if node in p:
+                merged.update(p[node])
         return merged or None
 
+    def _last_clear13(ctx):
+        return _merged13(ctx, _rt13.NODE_CLEAR_CARDS)
+
+    def _choose13(ctx):
+        return _merged13(ctx, _rt13.NODE_CHOOSE_PLANTS)
+
     _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
     _t13 = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
                          "boss_lineup": {"plants": ["大喷菇", "菜问"]}}, 0)
 
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13, False)
     _cl = _last_clear13(_c13)
-    check("跳过选卡: 首次进关不跳（还原 OCR 点击清空）",
-          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
-          str(_cl))
-    check("跳过选卡: 首次进关注入普通关植物",
+    check("骨架: 首次进关必须真清卡 + 真选卡（不 neuter）",
+          _cl and _cl.get("action") == "Click"
+          and _cl.get("next") == [_rt13.NODE_CHOOSE_PLANTS]
+          and (_choose13(_c13) or {}).get("action") == "Custom",
+          f"clear={_cl} plants={_choose13(_c13)}")
+    check("★骨架: recognition 永不进 override（闸口不许被拆）",
+          "recognition" not in (_cl or {}), str(_cl))
+    check("骨架: 首次进关注入普通关植物",
           any("大喷菇" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides))
 
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, True)     # boss 配置相同 -> 跳
+    _rt13._inject_lineup(_c13, _t13, True)     # boss 配置相同 -> 只认不做
     _cl = _last_clear13(_c13)
-    check("★跳过选卡: boss 与普通关相同 -> DirectHit 直跳开始战斗",
-          _cl and _cl.get("recognition") == "DirectHit" and _cl.get("action") == "DoNothing"
-          and _cl.get("next") == [_rt13.NODE_BATTLE_START], str(_cl))
+    check("★骨架: 阵容相同 -> 清空卡牌只认不点（DoNothing），next 仍指选植物",
+          _cl and _cl.get("action") == "DoNothing"
+          and _cl.get("next") == [_rt13.NODE_CHOOSE_PLANTS], str(_cl))
+    check("★骨架: 阵容相同 -> 选取植物动作关掉（DoNothing）",
+          (_choose13(_c13) or {}).get("action") == "DoNothing", str(_choose13(_c13)))
+    check("★不覆盖原则: 关动作时同时写 custom_action（不留半截动作）",
+          (_choose13(_c13) or {}).get("custom_action") == "SelectPlants",
+          str(_choose13(_c13)))
+    check("★骨架: 阵容相同 + 神器不换 -> 选卡终点回「开始战斗」",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_BATTLE_START],
+          str(_choose13(_c13)))
+    check("★骨架: 阵容相同也不把 recognition 改掉",
+          "recognition" not in (_cl or {}), str(_cl))
 
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, True)     # 再来一次还是跳（签名没变）
-    _cl = _last_clear13(_c13)
-    check("★跳过选卡: 连续同阵容仍然跳",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    _rt13._inject_lineup(_c13, _t13, True)     # 再来一次还是只认不做（签名没变）
+    check("★骨架: 连续同阵容仍然只认不做",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
+    check("★形态闸门: 跳过分支也记录当前卡组形态（boss）",
+          _rt13._STATE.get("lineup_is_boss") is True,
+          str(_rt13._STATE.get("lineup_is_boss")))
 
     _t13b = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
                           "boss_lineup": {"plants": ["大嘴花"]}}, 0)
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13b, True)    # boss 配置不同 -> 正常注入 boss 植物
     _cl = _last_clear13(_c13)
-    check("跳过选卡: boss 不同 -> 还原清空 + 注入 boss 植物",
-          _cl and _cl.get("recognition") == "OCR"
-          and any("大嘴花" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides),
-          str(_cl))
+    check("骨架: 阵容变了 -> 还原清卡 + 选卡，并注入 boss 植物",
+          _cl and _cl.get("action") == "Click"
+          and (_choose13(_c13) or {}).get("action") == "Custom"
+          and any("大嘴花" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, ""))
+                  for p in _c13.overrides),
+          f"clear={_cl} plants={_choose13(_c13)}")
 
-    # 换表但阵容相同（表2 配置 == 当前生效）-> 也跳
+    # 换表但阵容相同（表2 配置 == 当前生效）-> 也只认不做
     _t13c = _eng13.Table({"from_level": 2, "lineup": {"plants": ["大嘴花"]}}, 1)
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13c, False)   # 当前生效 = boss 的 大嘴花
+    check("★骨架: 换表但阵容相同 -> 只认不做",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
+
+    # --- ★ 神器链唯一入口 = 选卡终点（2026-10-28 重构）---
+    _tArt13 = _eng13.Table({"from_level": 1,
+                            "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                            "artifact_en": "artifact_calabash"}, 0)
+    _rt13._STATE["artifact_sig"] = None
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tArt13, False)
+    check("★神器入口: 要换神器 -> 选取植物/选择编队 next 都接 [选取神器]",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_ARTIFACT_PICK]
+          and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_ARTIFACT_PICK],
+          f"plants={_choose13(_c13)} squad={_merged13(_c13, _rt13.NODE_SQUAD_PICK)}")
+    check("★神器入口: 换神器时未变闸门也进骨架（不再直跳开始战斗）",
+          (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
+          == list(_rt13._JUMP_SAME_ART),
+          str(_merged13(_c13, _rt13.NODE_JUMP_SAME)))
+    check("★不覆盖: 换神器也不碰 选取神器 的任何字段",
+          _merged13(_c13, _rt13.NODE_ARTIFACT_PICK) is None,
+          str(_merged13(_c13, _rt13.NODE_ARTIFACT_PICK)))
+    check("★不覆盖: 换神器也不碰 关闭神器界面 / 首关入口",
+          _merged13(_c13, _rt13.NODE_ARTIFACT_CLOSE) is None
+          and _merged13(_c13, _rt13.NODE_START_OCR) is None)
+    check("★神器入口: 模板按当前表神器注入",
+          any("artifact_calabash" in _json13.dumps(p, ensure_ascii=False)
+              for p in _c13.overrides), str(_c13.overrides))
+
+    _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tArt13, False)
+    check("★神器入口: 神器相同 -> 两个选卡终点还原 [开始战斗]",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_BATTLE_START]
+          and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_BATTLE_START],
+          f"plants={_choose13(_c13)}")
+    check("★神器入口: 神器相同 -> 闸门回原值",
+          (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
+          == list(_rt13._JUMP_SAME_ORIG))
+
+    # --- ★ 合体：阵容相同 + 神器要换（只认不做，但终点接神器）---
+    _tBoth13 = _eng13.Table({"from_level": 1,
+                             "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                             "artifact_en": "artifact_calabash",
+                             "boss_lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                             "boss_artifact_en": "artifact_calabash"}, 0)
+    _rt13._STATE["lineup_sig"] = _tBoth13.lineup_sig(False)
+    _rt13._STATE["artifact_sig"] = None            # 神器要换
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _tBoth13, False)
     _cl = _last_clear13(_c13)
-    check("★跳过选卡: 换表但阵容相同 -> 跳",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    check("★合体: 阵容相同+神器要换 -> 清卡只认不点，终点接 选取神器",
+          _cl and _cl.get("action") == "DoNothing"
+          and (_choose13(_c13) or {}).get("action") == "DoNothing"
+          and (_choose13(_c13) or {}).get("next") == [_rt13.NODE_ARTIFACT_PICK],
+          f"clear={_cl} plants={_choose13(_c13)}")
+    _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
 
     # --- lineup_gate_adjust（闸门判断的阵容维度修正，纯函数）---
     _ga = _rt13.lineup_gate_adjust
@@ -878,32 +998,37 @@ try:
     # 训练模式：任何情况都不修正（每关必重选）
     check("闸门修正: 训练模式不修正",
           _ga(True, True, _tSame, False, _sigNormal) == (True, None))
-    # 签名未知（首次进关）：保守，不修正
-    check("闸门修正: 签名未知不修正",
+    # 签名未知 + 普通关：维持原判断
+    check("闸门修正: 签名未知 + 普通关不修正",
           _ga(False, True, _tSame, False, None) == (True, None))
+    # ★ 2026-10-29 日志实锤：签名未知 + boss 关必须重选
+    #   （任务起手第一关就是 boss 关时签名恒为 None，旧版「保守不修正」=
+    #    拿普通关卡组打 boss 关：日志里的「第一次进 boss 关走普通关路线」）
+    _n, _r = _ga(False, False, _tSame, True, None)
+    check("★闸门修正: 签名未知 + boss 关 -> 保守重选",
+          _n is True and _r and "boss" in _r, f"need={_n} reason={_r}")
+    # ★ 形态闸门：当前生效卡组是普通形态，本关是 boss 关 -> 一律重选
+    _n, _r = _ga(False, False, _tSame, True, _sigNormal, False)
+    check("★闸门修正: 卡组形态=普通 + 本关 boss -> 重选",
+          _n is True and _r and "形态" in _r, f"need={_n} reason={_r}")
+    # 形态一致 -> 不额外触发（交回签名判断）
+    check("闸门修正: 卡组形态=boss + 本关 boss -> 不额外触发",
+          _ga(False, False, _tSame, True, _tSame.lineup_sig(True), True) == (False, None))
 
-    # --- ★ 补给屏收尾必须跟随选卡逻辑（2026-10-24 水皮实锤的旁路 bug）---
-    #   boss 关前必弹补给屏，补给终点「神器补给_确定」的 pipe 原值 = [开始战斗]
-    #   —— 阵容变但神器没变时若无条件还原原值，选卡整段被旁路
-    #   （boss 槽位覆盖的植物永远不进卡组，换哪个槽都一样）。
+    # --- ★ 补给屏收尾**永远**回骨架（2026-10-24 水皮旁路 bug 的结构性修复）---
+    #   boss 关前必弹补给屏；补给终点「神器补给_确定」一律回「清空卡牌」，
+    #   清不清卡/选不选植物/接不接神器全交给骨架自己判断 ——
+    #   不再按 lineup_changed 分流，旁路选卡的路径从图上消失。
     def _supply_next(ctx):
-        _m = {}
-        for _p in ctx.overrides:
-            if _rt13.NODE_SUPPLY_CONFIRM in _p:
-                _m.update(_p[_rt13.NODE_SUPPLY_CONFIRM])
-        return _m.get("next")
+        return (_merged13(ctx, _rt13.NODE_SUPPLY_CONFIRM) or {}).get("next")
 
     _tNoArt = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
                             "boss_lineup": {"plants": ["菜问"]}}, 0)  # 不配神器
+    _rt13._STATE["artifact_sig"] = None
     _c13 = _FakeCtx13()
-    _rt13._inject_artifact(_c13, _tNoArt, True, lineup_changed=True)
-    check("★补给旁路: 神器没变+阵容变 -> 补给确定回「清空卡牌」",
+    _rt13._inject_artifact(_c13, _tNoArt, True)
+    check("★补给旁路: 神器没变 -> 补给确定回「清空卡牌」走骨架",
           _supply_next(_c13) == [_rt13.NODE_CLEAR_CARDS, _rt13.NODE_SUPPLY_CONFIRM],
-          str(_supply_next(_c13)))
-    _c13 = _FakeCtx13()
-    _rt13._inject_artifact(_c13, _tNoArt, True, lineup_changed=False)
-    check("补给旁路: 神器没变+阵容没变 -> 补给确定保持原值直跳开打",
-          _supply_next(_c13) == list(_rt13._SUPPLY_CONFIRM_ORIG),
           str(_supply_next(_c13)))
     _tArt = _eng13.Table({"from_level": 1,
                           "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
@@ -912,30 +1037,31 @@ try:
                           "boss_artifact_en": "artifact_calabash"}, 0)
     _rt13._STATE["artifact_sig"] = None
     _c13 = _FakeCtx13()
-    _rt13._inject_artifact(_c13, _tArt, True, lineup_changed=True)
-    check("补给旁路: 神器也变 -> 补给确定先进「选取神器」",
-          _supply_next(_c13) == [_rt13.NODE_ARTIFACT_PICK, _rt13.NODE_SUPPLY_CONFIRM],
+    _rt13._inject_artifact(_c13, _tArt, True)
+    check("★补给旁路: 神器也变 -> 补给确定同样回骨架（神器由终点接）",
+          _supply_next(_c13) == [_rt13.NODE_CLEAR_CARDS, _rt13.NODE_SUPPLY_CONFIRM],
           str(_supply_next(_c13)))
     _rt13._STATE["artifact_sig"] = None
 
-    # --- ★ 训练模式下 _inject_lineup 永不跳过清空/选卡 ---
-    # （闸门只翻 next 分支，清空卡牌节点会不会被改成空跳是 _inject_lineup 说了算）
+    # --- ★ 训练模式下 _inject_lineup 永不 neuter ---
+    # （闸门只翻 next 分支，两个节点的 action 会不会变成空动作是 _inject_lineup 说了算）
     _rt13._STATE["training"] = True
     _rt13._STATE["lineup_sig"] = _t13.lineup_sig(False)
+    _rt13._STATE["artifact_sig"] = None
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, False)    # 签名相同但训练模式 -> 不跳
+    _rt13._inject_lineup(_c13, _t13, False)    # 签名相同但训练模式 -> 不 neuter
     _cl = _last_clear13(_c13)
-    check("★训练模式: 阵容相同也不跳（清空卡牌保持 OCR 点击）",
-          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
-          str(_cl))
+    check("★训练模式: 阵容相同也不 neuter（清空卡牌保持 Click）",
+          _cl and _cl.get("action") == "Click"
+          and (_choose13(_c13) or {}).get("action") == "Custom", str(_cl))
     _rt13._STATE["training"] = False
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, False)    # 回正赛 -> 恢复跳过
-    _cl = _last_clear13(_c13)
-    check("★回到正赛: 跳过恢复",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    _rt13._inject_lineup(_c13, _t13, False)    # 回正赛 -> 恢复只认不做
+    check("★回到正赛: neuter 恢复",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
     _rt13._STATE["training"] = None
     _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
 except Exception as _e13:
     check("boss阵容/跳过选卡", False, f"{type(_e13).__name__}: {_e13}")
 
