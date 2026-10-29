@@ -2544,7 +2544,14 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 }
 #tagPicker .tp-close:hover { background: #e2e8f0; }
 #tagPicker .tp-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
-#tagPicker .tp-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+/* 分组（2026-10-27）：一批小标题 + 一行 chip；数据层仍是平铺字符串 */
+#tagPicker .tp-grid { display: flex; flex-direction: column; gap: 14px; }
+#tagPicker .tp-group { display: flex; flex-direction: column; gap: 8px; }
+#tagPicker .tp-group-title {
+    font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 1px;
+    padding-left: 2px;
+}
+#tagPicker .tp-items { display: flex; flex-wrap: wrap; gap: 8px; }
 #tagPicker .tp-item {
     border: 1px solid #e2e8f0; background: #f8fafc; color: #334155;
     border-radius: 999px; padding: 6px 16px; font-size: 13px; cursor: pointer;
