@@ -46,7 +46,9 @@ def patch_rid() -> None:
     s = p.read_text(encoding="utf-8")
     n = s.count(OLD_RID)
     if n != 1:
-        raise SystemExit(f"interface.json 里目标串出现 {n} 次（应为 1 次），拒绝继续：{OLD_RID}")
+        raise SystemExit(
+            f"interface.json 里目标串出现 {n} 次（应为 1 次），拒绝继续：{OLD_RID}"
+        )
     p.write_text(s.replace(OLD_RID, NEW_RID, 1), encoding="utf-8")
     print("rid 补丁：MaaPVZ -> MaaPVZ_exec（仅 pi-root 拷贝）")
 
@@ -106,6 +108,20 @@ def main() -> int:
     shutil.rmtree(DEST / "resource" / "jobs", ignore_errors=True)
 
     copy_tree(REPO / "agent", DEST / "agent")
+
+    endless_src = REPO / "game_assist_tools" / "endless_setup"
+    if endless_src.is_dir():
+        endless_dest = DEST / "game_assist_tools" / "endless_setup"
+        endless_dest.mkdir(parents=True, exist_ok=True)
+
+        for name in ("pvz_android.py", "config.json"):
+            src = endless_src / name
+            if src.is_file():
+                shutil.copy2(src, endless_dest / name)
+
+        static_src = endless_src / "static"
+        if static_src.is_dir():
+            copy_tree(static_src, endless_dest / "static")
 
     for name in ("LICENSE", "CONTACT"):
         src = REPO / name

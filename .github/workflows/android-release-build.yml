@@ -101,6 +101,9 @@ jobs:
             --requirements requirements.txt \
             --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
 
+      - name: Patch pure.zip namespace packages
+        run: python tools/patch_pure_zip.py Android/agent-dist
+
       - name: Decode keystore
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

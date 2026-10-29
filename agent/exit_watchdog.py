@@ -36,7 +36,38 @@ import os
 import sys
 import threading
 import time
-from ctypes import wintypes
+
+# ===========================================================================
+# 平台检测
+# ===========================================================================
+_IS_WINDOWS = sys.platform == "win32"
+
+if _IS_WINDOWS:
+    from ctypes import wintypes
+
+    _TH32CS_SNAPPROCESS = 0x2
+    _INVALID_HANDLE = ctypes.c_void_p(-1).value
+
+    class _PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [
+            ("dwSize", wintypes.DWORD),
+            ("cntUsage", wintypes.DWORD),
+            ("th32ProcessID", wintypes.DWORD),
+            ("th32DefaultHeapID", ctypes.c_void_p),
+            ("th32ModuleID", wintypes.DWORD),
+            ("cntThreads", wintypes.DWORD),
+            ("th32ParentProcessID", wintypes.DWORD),
+            ("pcPriClassBase", wintypes.LONG),
+            ("dwFlags", wintypes.DWORD),
+            ("szExeFile", wintypes.WCHAR * wintypes.MAX_PATH),
+        ]
+
+else:
+    # 非 Windows 下这些符号用不到，但为了代码可读性保留占位
+    _TH32CS_SNAPPROCESS = None
+    _INVALID_HANDLE = None
+    _PROCESSENTRY32W = None
+
 
 _exit_armed = False
 _arm_lock = threading.Lock()
@@ -53,8 +84,11 @@ def _schedule_exit(reason: str, grace: float = 2.0) -> None:
 
     def _boom():
         try:
-            print(f"[exit_watchdog] {reason}，{grace:.0f}s 后退出进程",
-                  file=sys.stderr, flush=True)
+            print(
+                f"[exit_watchdog] {reason}，{grace:.0f}s 后退出进程",
+                file=sys.stderr,
+                flush=True,
+            )
             sys.stdout.flush()
             sys.stderr.flush()
         except Exception:
@@ -66,30 +100,12 @@ def _schedule_exit(reason: str, grace: float = 2.0) -> None:
 
 
 # ===========================================================================
-# 祖先进程监控（toolhelp32 快照，同用户无权限要求）
+# 进程表：Windows / POSIX 实现
 # ===========================================================================
 
-_TH32CS_SNAPPROCESS = 0x2
-_INVALID_HANDLE = ctypes.c_void_p(-1).value
 
-
-class _PROCESSENTRY32W(ctypes.Structure):
-    _fields_ = [
-        ("dwSize", wintypes.DWORD),
-        ("cntUsage", wintypes.DWORD),
-        ("th32ProcessID", wintypes.DWORD),
-        ("th32DefaultHeapID", ctypes.c_void_p),
-        ("th32ModuleID", wintypes.DWORD),
-        ("cntThreads", wintypes.DWORD),
-        ("th32ParentProcessID", wintypes.DWORD),
-        ("pcPriClassBase", wintypes.LONG),
-        ("dwFlags", wintypes.DWORD),
-        ("szExeFile", wintypes.WCHAR * wintypes.MAX_PATH),
-    ]
-
-
-def _process_map() -> dict:
-    """{pid: (ppid, exe_name)} 快照。"""
+def _process_map_windows() -> dict:
+    """{pid: (ppid, exe_name)} 快照（toolhelp32）。"""
     k32 = ctypes.windll.kernel32
     snap = k32.CreateToolhelp32Snapshot(_TH32CS_SNAPPROCESS, 0)
     if not snap or snap == _INVALID_HANDLE:
@@ -105,6 +121,51 @@ def _process_map() -> dict:
     finally:
         k32.CloseHandle(snap)
     return m
+
+
+def _process_map_posix() -> dict:
+    """Linux/Android：扫 /proc 拿 {pid: (ppid, comm)}。
+
+    ⚠️ Android 上 SELinux 可能限制跨 uid 进程可见性：
+      - 自己 uid 的进程通常能读 /proc/<pid>/comm 和 /proc/<pid>/status
+      - 系统进程 / 其他 app 可能读不到，这些 pid 会被跳过
+    拿不全时 _ancestor_chain 会返回空链，_start_ancestor_watch 自动跳过监控。
+    """
+    m = {}
+    try:
+        entries = os.listdir("/proc")
+    except OSError:
+        return m
+    for entry in entries:
+        if not entry.isdigit():
+            continue
+        pid = int(entry)
+        try:
+            with open(
+                f"/proc/{pid}/comm", "r", encoding="utf-8", errors="replace"
+            ) as f:
+                comm = f.read().strip()
+            ppid = 0
+            with open(
+                f"/proc/{pid}/status", "r", encoding="utf-8", errors="replace"
+            ) as f:
+                for line in f:
+                    if line.startswith("PPid:"):
+                        try:
+                            ppid = int(line.split()[1])
+                        except (IndexError, ValueError):
+                            ppid = 0
+                        break
+            m[pid] = (ppid, comm)
+        except (OSError, ValueError):
+            continue
+    return m
+
+
+def _process_map() -> dict:
+    if _IS_WINDOWS:
+        return _process_map_windows()
+    return _process_map_posix()
 
 
 def _ancestor_chain(levels: int = 6):
@@ -139,27 +200,38 @@ def _register_tasker_sink(AgentServer) -> None:
     class _ExitSink(TaskerEventSink):
         def on_raw_notification(self, tasker, msg, details):
             try:
-                if (isinstance(msg, str)
-                        and msg.startswith("Tasker.Task.")
-                        and not msg.endswith(".Starting")):
+                if (
+                    isinstance(msg, str)
+                    and msg.startswith("Tasker.Task.")
+                    and not msg.endswith(".Starting")
+                ):
                     _schedule_exit(f"收到任务终态事件 {msg}", grace=3.0)
             except Exception:
                 pass
 
     try:
         AgentServer.add_tasker_sink(sink=_ExitSink())
-        print("[exit_watchdog] 已注册 tasker sink（任务结束即退出进程）",
-              file=sys.stderr, flush=True)
+        print(
+            "[exit_watchdog] 已注册 tasker sink（任务结束即退出进程）",
+            file=sys.stderr,
+            flush=True,
+        )
     except Exception as e:
-        print(f"[exit_watchdog] tasker sink 注册失败：{type(e).__name__}: {e}",
-              file=sys.stderr, flush=True)
+        print(
+            f"[exit_watchdog] tasker sink 注册失败：{type(e).__name__}: {e}",
+            file=sys.stderr,
+            flush=True,
+        )
 
 
 def _start_ancestor_watch(chain) -> None:
     """启动祖先监控线程：任一祖先进程死亡 -> 退出本进程。"""
     if not chain:
-        print("[exit_watchdog] 未能获取祖先进程链，跳过祖先监控",
-              file=sys.stderr, flush=True)
+        print(
+            "[exit_watchdog] 未能获取祖先进程链，跳过祖先监控",
+            file=sys.stderr,
+            flush=True,
+        )
         return
     desc = " <- ".join(f"{name}({pid})" for pid, name in chain)
     print(f"[exit_watchdog] 祖先监控：{desc}", file=sys.stderr, flush=True)
@@ -173,8 +245,7 @@ def _start_ancestor_watch(chain) -> None:
                     cur = m.get(pid)
                     # 进程消失，或 PID 被复用（exe 名变了）都算祖先已死
                     if cur is None or cur[1].lower() != name.lower():
-                        _schedule_exit(
-                            f"祖先进程 {name}({pid}) 已退出（MFA 已关闭？）")
+                        _schedule_exit(f"祖先进程 {name}({pid}) 已退出（MFA 已关闭？）")
                         return
             except Exception:
                 pass  # 快照失败不致命，下轮再查
@@ -201,12 +272,18 @@ def arm(AgentServer=None) -> None:
       （Code.exe）下才武装——扩展每次 startTask 都会重拉死掉的 agent，
       停任务即退出 = dev 改代码即刻生效；桌面端 MFAAvalonia 复用进程，
       绝不能武装（否则停一次任务后续全废）。
+      Android 上没有 VSCode 扩展宿主,不装
     """
     global _dev_mode
     chain = _ancestor_chain()
     _start_ancestor_watch(chain)
-    if any("code" in name.lower() for _pid, name in chain):
+
+    if _IS_WINDOWS and any("code" in name.lower() for _pid, name in chain):
         _dev_mode = True
         _register_tasker_sink(AgentServer)
-        print("[exit_watchdog] 检测到 VSCode 扩展宿主：停任务即退出进程"
-              "（重跑自动加载新代码）", file=sys.stderr, flush=True)
+        print(
+            "[exit_watchdog] 检测到 VSCode 扩展宿主：停任务即退出进程"
+            "（重跑自动加载新代码）",
+            file=sys.stderr,
+            flush=True,
+        )
