@@ -101,6 +101,9 @@ jobs:
             --requirements requirements.txt \
             --exclude onnxruntime --extra-index-url https://chaquo.com/pypi-13.1/
 
+      - name: Patch pure.zip namespace packages
+        run: python tools/ci/patch_pure_zip.py Android/agent-dist
+
       # 未签名 APK 在真机上根本装不上（INSTALL_PARSE_FAILED_NO_CERTIFICATES：
       # 没有任何 v1/v2 签名 → 解析期就失败），所以这里不能"告警一下继续"：
       # 公开发版缺材料直接失败，内部包降级成一次性 debug key 签名，保证产物可安装。
