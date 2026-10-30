@@ -60,15 +60,14 @@ function placeOp(board, opId, r, c) {
 
     // 记录修改前状态（在确定操作成功前）
     saveBoardState();
-
     if (opItem.single) {
         const existing = findOpInBoard(board, opId);
         if (existing) board[existing.r][existing.c].splice(existing.idx, 1);
     } else {
         if (countOpInBoard(board, opId) >= opItem.maxCount) {
             alert(`“${opItem.label}”已达最大次数 ${opItem.maxCount}`);
-            // 撤销刚才保存的状态，因为操作未成功
-            undoStack.pop();
+            // 操作未成功 -> 把刚记的那笔（内容没变的）撤掉
+            if (typeof jobUndoDiscard === 'function') jobUndoDiscard();
             return false;
         }
     }
@@ -79,7 +78,7 @@ function placeOp(board, opId, r, c) {
         while (used.includes(pos)) pos++;
         if (pos > opItem.maxCount) {
             alert(`位置已满`);
-            undoStack.pop();
+            if (typeof jobUndoDiscard === 'function') jobUndoDiscard();
             return false;
         }
         itemData.slotPos = pos;
@@ -257,7 +256,7 @@ function renderBoard(gridId, boardData, isLate) {
             d.addEventListener('mouseenter', function () { jobScheduleCellDetail(d, cellItems); });
             d.addEventListener('mouseleave', jobHideCellDetailSoon);
         } else {
-            d.setAttribute('data-tooltip', '点击放置选中的操作，右键清空该格');
+            d.setAttribute('data-tooltip', '点击放置选中的操作；右键有多个落子时打开「格内顺序」方块窗，Ctrl+右键直接清空该格');
             d.setAttribute('data-tooltip-delay', '1000');
         }
         const cl = document.createElement('span');
@@ -309,8 +308,16 @@ function renderBoard(gridId, boardData, isLate) {
             const cellItems = (boardData[tr] && boardData[tr][tc]) || [];
             if (!cellItems.length) return;
 
-            // ★ 一格只有 1 个 -> 直接清掉
-            if (cellItems.length === 1) {
+            // ★ 2026-10-31 右键语义改版（用户要求）：
+            //   · **Ctrl+右键** = 直接清空整格（老「右键多选取消」搬到方块窗里）
+            //   · **右键**（多落点）= 打开「方块」弹窗：按链条顺序铺开、可拖拽改本格顺序
+            //   · 右键（只有 1 个）= 老行为：直接清掉
+            //   ⚠️ 清空/删除一律走 43-jobset-cell-queue.js 的 jobCellQueueClear /
+            //     jobCellQueueDeleteItems —— 它们会先把链条步骤「钉住引用」再删，
+            //     否则同槽 gidx 前移会让链条指向别的落点（§9.2 那个坑）。
+            const _cqReady = (typeof jobCellQueueClear === 'function');
+            if (e.ctrlKey || e.metaKey) {
+                if (_cqReady) { jobCellQueueClear(tr, tc); return; }
                 saveBoardState();
                 boardData[tr][tc] = [];
                 renderAllBoards();
@@ -320,19 +327,20 @@ function renderBoard(gridId, boardData, isLate) {
                 return;
             }
 
-            // ★ 一格有多个 -> 弹窗让用户勾选要取消哪几个
-            jobPickItemsToCancel(tr, tc, cellItems, function (chosen) {
-                if (!chosen.length) return;
-                saveBoardState();
-                // 保留没被勾选的那些（保持原有先后）
-                boardData[tr][tc] = cellItems.filter(function (it) {
-                    return chosen.indexOf(it) === -1;
-                });
-                renderAllBoards();
-                updatePreview();
-                jobSaveLocal();
-                setStatus(`🗑️ 已从 (${tc+1}, ${tr+1}) 移除 ${chosen.length} 项`);
-            });
+            // 多落点 -> 方块弹窗（拖拽调顺序 / 单个 ✕ / 多选删除 都在里面）
+            if (cellItems.length > 1 && typeof jobOpenCellQueue === 'function'
+                && jobOpenCellQueue(tr, tc)) {
+                return;
+            }
+
+            // 只有 1 个（或方块窗不可用）-> 直接清掉
+            if (_cqReady) { jobCellQueueClear(tr, tc); return; }
+            saveBoardState();
+            boardData[tr][tc] = [];
+            renderAllBoards();
+            updatePreview();
+            jobSaveLocal();
+            setStatus(`🗑️ 已清空 (${tc+1}, ${tr+1})：${cellItems[0].label || cellItems[0].id}`);
         });
         gridEl.appendChild(d);
         enableTooltip(d);
@@ -559,6 +567,8 @@ function initTabs() {
             safe(clearSelected);
             safe(updateSelectedUI);
             safe(renderAllBoards);
+            // ★ 切关 = 换棋盘：格内落子方块窗（43）的上下文失效，直接关掉
+            safe(jobCloseCellQueue);
             // ★ 槽位栏/链标签随语境切换：boss tab 显示 boss 有效槽位（覆盖层 + 沿用）
             safe(jobRenderSlots);
             safe(jobRenderSeqChains);

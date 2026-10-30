@@ -2382,10 +2382,12 @@ function jobRenderSlots() {
         //             已删除槽 ↩ = 恢复沿用
         const clr = document.createElement('span');
         clr.textContent = _blocked ? '↩' : '✕';
-        clr.title = !_bossCtx ? '清空该槽位（同时清掉棋盘上该槽的落点）'
-            : _inherited ? '删除沿用：boss 关不再使用这个槽（普通关不受影响）'
+        clr.title = !_bossCtx ? '清空该槽位（同时清掉棋盘上该槽的落点；后面的槽会自动左移补位）'
+                + '\n★ Ctrl+点击 = 不问「只删本表 / 删所有表」，直接删掉本表这一槽'
+            : _inherited ? '删除沿用：boss 关不再使用这个槽（普通关不受影响；后面的槽会左移补位）'
             : _blocked ? '恢复沿用普通关该槽'
-            : '取消 boss 覆盖，回到沿用普通关';
+            : '取消 boss 覆盖，回到沿用普通关'
+                + '\n★ Ctrl+点击 = 直接删掉本表 boss 关这一槽（不弹窗）';
         clr.style.cssText = 'font-size:11px;padding:0 2px;flex:0 0 auto;color:' + (_blocked ? '#2d7aff' : '#ef4444') + ';';
         clr.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -2398,31 +2400,57 @@ function jobRenderSlots() {
                     t.bossSlots[i] = null;
                     if (jobArmedSlot === i) jobArmedSlot = 0;
                     const removedB = jobPurgeSlotOnBoard(boardLate, i);
-                    if (removedB) {
-                        try { renderAllBoards(); } catch (err) { }
-                        try { updatePreview(); } catch (err) { }
+                    // ★ 删除后把 boss 侧压实（中间不能留空槽，2026-10-30）
+                    let shiftB = 0;
+                    if (typeof jobCompactSlots === 'function') {
+                        try { shiftB = jobCompactSlots(t, true); } catch (err) { console.warn('[slot] compact boss', err); }
                     }
+                    try { renderAllBoards(); } catch (err) { }
+                    try { updatePreview(); } catch (err) { }
                     jobRenderSlots();
                     jobRenderSeqChains();
                     jobSaveLocal();
                     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
                     setStatus('已在 boss 关删除 槽' + i + (hadB ? '（' + hadB + '）' : '')
                         + '，普通关不受影响（点 ↩ 可恢复沿用）'
-                        + (removedB ? '；boss 棋盘 ' + removedB + ' 个落点已移除' : ''));
+                        + (removedB ? '；boss 棋盘 ' + removedB + ' 个落点已移除' : '')
+                        + (shiftB ? '；后面 ' + shiftB + ' 个槽已左移补位' : ''));
                     return;
                 }
                 if (_blocked) {
                     // 已删除 -> 恢复沿用（删除标记去掉）
                     delete t.bossSlots[i];
+                    // 恢复沿用后若该槽仍是空的（普通关该槽也没植物），同样压实
+                    let shiftB = 0;
+                    if (typeof jobCompactSlots === 'function') {
+                        try { shiftB = jobCompactSlots(t, true); } catch (err) { }
+                    }
                     jobRenderSlots();
                     jobRenderSeqChains();
                     jobSaveLocal();
                     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
                     setStatus('槽' + i + ' 已恢复沿用普通关'
-                        + (t.slots[i] ? '「' + t.slots[i] + '」' : ''));
+                        + (t.slots[i] ? '「' + t.slots[i] + '」' : '')
+                        + (shiftB ? '；boss 侧已左移补位 ' + shiftB + ' 个槽' : ''));
                     return;
                 }
-                // 覆盖 -> 取消覆盖回沿用；boss 棋盘落点同步回普通关植物
+                // 覆盖 -> 删除这一株：先弹「只删本表 boss 关 / 删所有表」（2026-10-30 用户要求）
+                //   （老行为 = 只取消覆盖回沿用，现在归到"只删这张表"那一项里）
+                // ★ Ctrl+左键 = 直接删掉本表这一槽（用户要求 2026-10-31：不想每次都点弹窗）
+                if ((e.ctrlKey || e.metaKey) && typeof jobDeleteSlotHere === 'function') {
+                    const rr = jobDeleteSlotHere({ name: name, side: 'boss', slot: i });
+                    if (typeof jobAfterPlantChange === 'function') {
+                        jobAfterPlantChange('🗑️ 已删掉 boss 关 槽' + i + '（' + name + '）'
+                            + (rr.removed ? '，boss 棋盘 ' + rr.removed + ' 个落点已移除' : '')
+                            + (rr.shifted ? '；后面 ' + rr.shifted + ' 个槽已左移补位' : '')
+                            + '　（Ctrl+Z 可撤销）');
+                    }
+                    return;
+                }
+                if (typeof jobOpenPlantDelete === 'function') {
+                    jobOpenPlantDelete(name, 'boss', i);
+                    return;
+                }
                 const hadB = name;
                 delete t.bossSlots[i];
                 const inh = t.slots[i] || '';
@@ -2433,6 +2461,10 @@ function jobRenderSlots() {
                     jobPurgeSlotOnBoard(boardLate, i);
                 }
                 if (jobArmedSlot === i) jobArmedSlot = 0;
+                let shiftB = 0;
+                if (typeof jobCompactSlots === 'function') {
+                    try { shiftB = jobCompactSlots(t, true); } catch (err) { }
+                }
                 try { renderAllBoards(); } catch (err) { }
                 try { updatePreview(); } catch (err) { }
                 jobRenderSlots();
@@ -2440,37 +2472,64 @@ function jobRenderSlots() {
                 jobSaveLocal();
                 if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
                 setStatus('已取消 槽' + i + '（' + hadB + '）的 boss 覆盖'
-                    + (inh ? '，回到沿用普通关「' + inh + '」' : ''));
+                    + (inh ? '，回到沿用普通关「' + inh + '」' : '')
+                    + (shiftB ? '；boss 侧已左移补位 ' + shiftB + ' 个槽' : ''));
                 return;
             }
             const had = t.slots[i];
-            // ★ 连续卡槽规则（2026-10-25）：只能卸最右边的已用槽 ——
-            //   中间卸掉会产生空格，游戏内卡条是紧排的，槽号会对不上。
-            //   （不自动左移：落点和链条都记槽号，静默搬槽会把它们全打乱。
-            //     想换中间的植物 = 直接点该槽选别的；想少一张 = 从最右开始卸。）
-            for (let j = i + 1; j <= 8; j++) {
-                if (t.slots[j]) {
-                    setStatus('⚠️ 不能卸 槽' + i + '：槽' + j + ' 还有植物（'
-                        + '游戏不允许中间空槽）。请从最右边开始卸，或直接点 槽' + i + ' 换植物');
-                    return;
-                }
+            // ★ 连续卡槽（2026-10-30 改为**自动左移压实**）：
+            //   以前为了保持连续，禁止卸中间槽（"槽8 有植物时不能卸 槽7"）——
+            //   用户明确要求反过来：卸掉 槽7 后，槽8 的植物应该变成 槽7。
+            //   ★ 现在再加一层：先弹「只删本表 / 删所有表」二选一（42-jobset-batch.js），
+            //     选完才真正删，删完 jobCompactSlots 自动左移补位。
+            if (!had) {
+                setStatus('槽' + i + ' 还没有植物，没什么可删的');
+                return;
             }
+            // ★ Ctrl+左键 = 直接删掉本表这一槽（= 删除窗里的「只删这张表的这一株」）
+            //   用户要求 2026-10-31：常用操作别每次都点一遍弹窗。
+            if ((e.ctrlKey || e.metaKey) && typeof jobDeleteSlotHere === 'function') {
+                const rr = jobDeleteSlotHere({ name: had, side: 'normal', slot: i });
+                if (typeof jobAfterPlantChange === 'function') {
+                    jobAfterPlantChange('🗑️ 已删掉 槽' + i + '（' + had + '）'
+                        + (rr.removed ? '，普通关棋盘 ' + rr.removed + ' 个落点已移除' : '')
+                        + (rr.shifted ? '；后面 ' + rr.shifted + ' 个槽已左移补位' : '')
+                        + '　（Ctrl+Z 可撤销）');
+                }
+                return;
+            }
+            if (typeof jobOpenPlantDelete === 'function') {
+                jobOpenPlantDelete(had, 'normal', i);
+                return;
+            }
+            // 兜底（42 未加载时）——老行为：清槽位 + 清普通关棋盘落点 + 压实
             t.slots[i] = '';
             if (jobArmedSlot === i) jobArmedSlot = 0;
-            // ★ 槽位清空了，棋盘上这个槽的落点也必须清掉 ——
+            // ★ 槽位清空了，普通关棋盘上这个槽的落点也必须清掉 ——
             //   否则会留下「没有槽位却还在棋盘上」的孤儿植物
             //   （和「改槽位不同步」是同一类问题的另一面）。
-            const removed = jobPurgeSlotFromBoard(i);
-            if (removed) {
-                try { renderAllBoards(); } catch (err) { }
-                try { updatePreview(); } catch (err) { }
+            // ★ 只清普通关棋盘：boss 关是独立配置，普通关清槽不该带走它
+            //   （boss 该槽若还在「沿用」，就地固化成显式覆盖，见 21 的注释）。
+            const removed = (typeof jobClearNormalSlot === 'function')
+                ? jobClearNormalSlot(i) : jobPurgeSlotFromBoard(i);
+            // ★ 左移压实（把中间的空位顶掉，卡槽永远从槽1 起连续）
+            let shifted = 0;
+            if (typeof jobCompactSlots === 'function') {
+                try { shifted = jobCompactSlots(t, false); } catch (err) { console.warn('[slot] compact', err); }
+                // boss 侧顺手做一次"查漏"压实：纯沿用（没有覆盖）时它是恒等的，
+                // 只有历史数据里已经留下空洞才会真的搬（这就是"槽6 到槽8 中间空着"的清理）
+                try { jobCompactSlots(t, true); } catch (err) { }
             }
+            try { renderAllBoards(); } catch (err) { }
+            try { updatePreview(); } catch (err) { }
             jobRenderSlots();
             jobRenderSeqChains();
             jobSaveLocal();
             if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();   // 局外选卡角标实时刷新
             if (had) setStatus('已清空 槽' + i + '（' + had + '）'
-                + (removed ? '，棋盘上 ' + removed + ' 个落点也已移除' : ''));
+                + (removed ? '，普通关棋盘上 ' + removed + ' 个落点也已移除' : '')
+                + (shifted ? '；后面 ' + shifted + ' 个槽已左移补位（卡槽保持连续）' : '')
+                + '（boss 关配置不受影响）');
         });
         chip.appendChild(clr);
 
@@ -2860,25 +2919,61 @@ function jobIsTypingTarget(el) {
     return el.isContentEditable === true;
 }
 
+// ★ 有没有「一层弹窗」开着（2026-10-30 抽出公共判据）
+//   以前这份清单只写在 jobInstallSlotHotkeys 里，别的键盘处理（04-cards 的
+//   Ctrl+Z 等）各写各的、大半没写 —— 于是在「布局配置」里按 Ctrl+Z 会
+//   **同时**撤销布局和主棋盘。现在统一走这里。
+//   ★ 新增弹窗时只改这一处（弹窗根元素 id + 打开时挂的 class，逐个核对过）
+const JOB_MODAL_SELECTORS = [
+    '#plantPicker.job-open',          // 植物选择器（27）
+    '#supplyPicker.sp-open',          // 补给选取（26）
+    '#genPicker.gp-open',             // 通用动作：选目标链（30）
+    '#moreList.ml-open',              // 通用动作：一级「更多」列表（30）
+    '#morePicker.mp-open',            // 通用动作：二级动作选择（30）
+    '#customPicker.cp-open',          // 自定义动作（33）
+    '#stepCfgModal.sc-open',          // 步骤设置（27）
+    '#cellCancelPicker.cc-open',      // 取消格内项目（27）
+    '#cellQueueModal.cq-open',        // 格内落子顺序方块窗（43）
+    '#boardMoreList.bml-open',        // 落子动作「更多」（27）
+    '#jobPickModal.jp-open',          // 作业集选择（28）
+    '#tableCopyModal.jp-open',        // 复制阵容（21）
+    '#plantDeleteModal.jp-open',      // 删除植物二选一（42）
+    '#jobAdvModal.ja-open',           // 高级设置（31）
+    '#layoutModal.lz-open',           // 布局配置（34）
+    '#lzFormulaModal.lz-open',        // 布局配置：指定覆盖公式（34）
+    '#artifactPicker.artp-open',      // 神器选择（35）
+    '#worldPicker.sp-open',           // 选择世界（37）
+    '#notesPicker.sp-open',           // 植物/神器备注（38）
+    '#refPicker.sp-open',             // 对照（39）
+    '#tagPicker.sp-open'              // 标签（41）
+];
+
+function jobAnyModalOpen() {
+    for (let i = 0; i < JOB_MODAL_SELECTORS.length; i++) {
+        try {
+            if (document.querySelector(JOB_MODAL_SELECTORS[i])) return true;
+        } catch (e) { }
+    }
+    // 局外选卡弹窗是内联 display 控制的（没有 class），单独判
+    try {
+        const op = document.getElementById('outerPicker');
+        if (op && op.style && op.style.display && op.style.display !== 'none') return true;
+    } catch (e) { }
+    return false;
+}
+
+// 全局快捷键的统一闸口：打字中 / 弹窗开着 -> 一律不抢键
+function jobHotkeyBlocked(e) {
+    if (e && jobIsTypingTarget(e.target)) return true;
+    return jobAnyModalOpen();
+}
+
 function jobInstallSlotHotkeys() {
     document.addEventListener('keydown', function (e) {
         // 带修饰键的不抢（Ctrl+F 之类留给浏览器）
         if (e.ctrlKey || e.metaKey || e.altKey) return;
-        // 正在输入框里打字 -> 不响应
-        if (jobIsTypingTarget(e.target)) return;
-        // 有弹层打开时 -> 不响应，避免和弹窗里的操作冲突
-        try {
-            const open = document.querySelector('#plantPicker.job-open')
-                || document.querySelector('#supplyPicker.sp-open')
-                || document.querySelector('#genPicker.gp-open')
-                || document.querySelector('#customPicker.cp-open')
-                || document.querySelector('#stepCfgModal.sc-open')
-                || document.querySelector('#jobPickModal.jp-open')
-                || document.querySelector('#tableCopyModal.jp-open')
-                || document.querySelector('#layoutModal.lz-open')
-                || document.querySelector('#lzFormulaModal.lz-open');
-            if (open) return;
-        } catch (err) { }
+        // 打字中 / 有弹层打开时 -> 不响应（统一判据，见 jobHotkeyBlocked）
+        if (jobHotkeyBlocked(e)) return;
 
         const k = String(e.key || '').toLowerCase();
         if (k === 'w') { e.preventDefault(); jobCycleSlot(-1); }
@@ -2940,6 +3035,9 @@ function jobOpenPicker(slot) {
     const modal = document.getElementById('plantPicker');
     document.getElementById('plantSearch').value = '';
     plantPickIndex = 0;
+    // 每次打开都重置「替换指定表」：清掉上次的目标 + boss 追问，
+    // 并把「正在编辑」这一处重新默认勾上（42-jobset-batch.js）
+    if (typeof jobResetReplaceSel === 'function') { try { jobResetReplaceSel(); } catch (e) { } }
     jobRenderRarityFilter();
     jobRenderPlantGrid();
     // 入场动画：先加类再显示（重排一次确保动画重新触发）
@@ -3119,10 +3217,14 @@ function jobConfirmPick() {
     // ★ 关键：把棋盘上该槽已有的落点同步成新植物。
     //   落点里存的是「下子那一刻的植物快照」，不跟着槽位走 ——
     //   不同步的话，改了槽位棋盘却还是旧植物（看起来像能放好几种植物）。
-    //   boss 语境只同步 boss 棋盘（boardLate）—— 普通棋盘的该槽仍用普通关植物。
+    //   boss 语境只同步 boss 棋盘（boardLate）；
+    //   普通关语境**也只同步普通关棋盘** —— boss 关要独立（2026-10-30 修正，
+    //   旧版连 boss 棋盘一起改，普通关换植物会把 boss 关的植物一起换掉）。
     const synced = _bossCtx
         ? (function () { try { return jobSyncSlotPlantOnBoard(boardLate, targetSlot, p.name); } catch (e) { return false; } })()
-        : jobSyncSlotPlantEverywhere(targetSlot, p.name);
+        : ((typeof jobSyncNormalSlotPlant === 'function')
+            ? jobSyncNormalSlotPlant(targetSlot, p.name)
+            : jobSyncSlotPlantEverywhere(targetSlot, p.name));
     if (synced) {
         try { renderAllBoards(); } catch (e) { }
         try { updatePreview(); } catch (e) { }
@@ -3195,6 +3297,9 @@ function jobRenderPlantGrid() {
         + (plantPickAvailable.length ? '（W/S 或 ↑↓ 切换，A/D 跳 5 个，回车确认）' : '');
     if (!list.length) {
         grid.innerHTML = '<span style="grid-column:1/-1;color:#888;padding:20px;">没有匹配的植物</span>';
+        if (typeof jobRenderReplacePanel === 'function') {
+            try { jobRenderReplacePanel(); } catch (e) { }
+        }
         return;
     }
     list.forEach((p, idx) => {
@@ -3269,6 +3374,9 @@ function jobRenderPlantGrid() {
                 return;
             }
             plantPickIndex = idx;
+            // ★ 右侧「替换指定表」里已经选中目标表时，这次点击 = 把那张表的植物换成它
+            //   （42-jobset-batch.js；返回 true 表示这次点击被替换流程吃掉了）
+            if (typeof jobTryApplyReplaceFlow === 'function' && jobTryApplyReplaceFlow(p)) return;
             jobConfirmPick();
         });
         // 右键收藏 / 取消收藏
@@ -3278,6 +3386,10 @@ function jobRenderPlantGrid() {
         });
         grid.appendChild(cell);
     });
+    // ★ 右侧「替换指定表」面板（42-jobset-batch.js）：跟着选择器一起刷新
+    if (typeof jobRenderReplacePanel === 'function') {
+        try { jobRenderReplacePanel(); } catch (e) { console.warn('[replace] panel', e); }
+    }
 }
 
 // 导出种植顺序：**以链条（slotOrder / loopOrder）为唯一权威**。

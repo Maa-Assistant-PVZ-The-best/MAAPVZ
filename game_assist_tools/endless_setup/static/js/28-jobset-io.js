@@ -309,6 +309,8 @@ function jobResetEditor(quiet) {
     jobRenderSeqChains();
     jobHideCellDetail();
 
+    // ★ 清空编辑器 = 换上下文：撤销栈作废（否则撤销会把上一个作业集的棋盘灌回来）
+    if (typeof jobUndoReset === 'function') jobUndoReset();
     if (!quiet) jobSaveLocal();        // 把「空白配置」写进缓存
 }
 
@@ -462,11 +464,22 @@ function jobApplyLoaded(job, code) {
     jobOuterPick.order = (_opm === 'auto' && Array.isArray(_op.order))
         ? _op.order.filter(function (x) { return typeof x === 'string' && x; }) : [];
     jobOuterRefreshBadge();
+    // ★ 旧作业集里可能带着"中间空槽"（老版本允许卸中间槽 / 手写 JSON）——
+    //   卡槽必须从槽1 起连续（游戏卡条紧排），所以载入即压实（42-jobset-batch.js）。
+    //   ★ 必须在 jobLoadTable 之前：压实要改各表自己的 boardEarly/boardLate。
+    if (typeof jobCompactAllTables === 'function') {
+        try {
+            const _cp = jobCompactAllTables();
+            if (_cp.tables) console.info('[compact] 载入时压实了 ' + _cp.tables + ' 张表（普通关 ' + _cp.normal + ' / boss ' + _cp.boss + ' 个槽）');
+        } catch (e) { console.warn('[compact] 载入压实失败', e); }
+    }
     jobLoadTable(0, true);
     jobRenderTabs();
     jobFillForm();
     jobRenderSlots();
     jobRenderSeqChains();
+    // ★ 载入新的作业集 = 换上下文：撤销栈整体作废（绝不跨作业集撤销）
+    if (typeof jobUndoReset === 'function') jobUndoReset();
     jobSaveLocal();
     // 「是否查看配置」提示条（38-jobset-notes.js；三个载入入口共用本函数，一处挂即可）
     if (typeof jobPromptViewNotes === 'function') jobPromptViewNotes(job.name || code);

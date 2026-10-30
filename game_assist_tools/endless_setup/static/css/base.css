@@ -843,6 +843,116 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 }
 .supply-add:hover { background: #f1f5f9; border-color: #94a3b8; }
 
+/* ============ 格内落子队列（方块格式）弹窗 ============
+   右键一个「有多个落子」的格子打开（08-board-data.js 的 contextmenu →
+   43-jobset-cell-queue.js）。方块按链条执行顺序排，最左上 = 最先执行，
+   可拖拽改顺序（只在本形态分组内拖）。 */
+#cellQueueModal {
+    position: fixed; inset: 0; z-index: 10075;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#cellQueueModal.cq-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#cellQueueModal .cq-panel {
+    width: min(680px, 94vw); max-height: 84vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column; overflow: hidden;
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#cellQueueModal .cq-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#cellQueueModal .cq-dot { width: 6px; height: 6px; border-radius: 50%; background: #2d7aff; }
+#cellQueueModal .cq-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#cellQueueModal .cq-sub { font-size: 11px; color: #94a3b8; }
+#cellQueueModal .cq-close {
+    margin-left: auto; width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#cellQueueModal .cq-close:hover { background: #e2e8f0; }
+#cellQueueModal .cq-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+#cellQueueModal .cq-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 18px 0; }
+
+/* 一条链一组（单次 / 循环 / 收尾） */
+#cellQueueModal .cq-group { margin-bottom: 14px; }
+#cellQueueModal .cq-group:last-child { margin-bottom: 0; }
+#cellQueueModal .cq-ghead { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+#cellQueueModal .cq-gtag {
+    font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 5px;
+    background: #e0f2fe; color: #0369a1;
+}
+#cellQueueModal .cq-gtag.k-once { background: #e2e8f0; color: #475569; }
+#cellQueueModal .cq-gtag.k-end { background: #fee2e2; color: #b91c1c; }
+#cellQueueModal .cq-gcount { font-size: 10px; color: #94a3b8; }
+#cellQueueModal .cq-ghint { font-size: 10px; color: #cbd5e1; margin-left: auto; }
+#cellQueueModal .cq-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    min-height: 62px; padding: 8px;
+    background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 10px;
+}
+
+/* 一个方块：和棋盘落子标记同源（品质底图 + 立绘/动作图标 + 角标） */
+#cellQueueModal .cq-block {
+    width: 68px; flex: 0 0 auto; cursor: grab;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+#cellQueueModal .cq-block.cq-dragging { opacity: .45; }
+#cellQueueModal .cq-frame {
+    position: relative; width: 68px; height: 44px; border-radius: 7px;
+    background: #eef2f7 center/100% 100% no-repeat;
+    box-shadow: 0 1px 3px rgba(15,23,42,.14);
+    overflow: visible;
+}
+#cellQueueModal .cq-img {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 86%; height: 86%; object-fit: contain; pointer-events: none;
+}
+#cellQueueModal .cq-img-act { width: 66%; height: 66%; }
+#cellQueueModal .cq-fallback {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #475569; padding: 2px; text-align: center; overflow: hidden;
+}
+#cellQueueModal .cq-seq {
+    position: absolute; right: -3px; bottom: -3px;
+    min-width: 15px; height: 15px; padding: 0 3px; box-sizing: border-box;
+    border-radius: 5px; background: #2d7aff; color: #fff;
+    font-size: 9px; line-height: 15px; text-align: center; font-weight: 700;
+    box-shadow: 0 1px 2px rgba(15,23,42,.3);
+}
+#cellQueueModal .cq-seq.k-once { background: #64748b; }
+#cellQueueModal .cq-seq.k-end { background: #dc2626; }
+#cellQueueModal .cq-x {
+    position: absolute; right: -4px; top: -4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #ef4444; color: #fff; font-size: 9px; line-height: 14px; text-align: center;
+    cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.3); opacity: 0;
+    transition: opacity .12s;
+}
+#cellQueueModal .cq-block:hover .cq-x { opacity: 1; }
+#cellQueueModal .cq-x:hover { background: #b91c1c; }
+#cellQueueModal .cq-name {
+    font-size: 9px; color: #64748b; line-height: 1.2; max-width: 68px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 拖拽落点提示（左/右半区） */
+#cellQueueModal .cq-block.cq-over-before .cq-frame { box-shadow: -3px 0 0 0 #2d7aff, 0 1px 3px rgba(15,23,42,.14); }
+#cellQueueModal .cq-block.cq-over-after  .cq-frame { box-shadow:  3px 0 0 0 #2d7aff, 0 1px 3px rgba(15,23,42,.14); }
+
+#cellQueueModal .cq-foot {
+    padding: 10px 18px; border-top: 1px solid #e2e8f0;
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+}
+#cellQueueModal .cq-btn {
+    padding: 6px 14px; cursor: pointer; font-size: 12px;
+    border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #475569;
+}
+#cellQueueModal .cq-btn:hover { background: #f1f5f9; }
+#cellQueueModal .cq-btn.cq-danger { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+#cellQueueModal .cq-btn.cq-danger:hover { background: #fee2e2; }
+#cellQueueModal .cq-hint { font-size: 10px; color: #94a3b8; margin-left: auto; text-align: right; }
+
 /* ============ 取消格内项目（多选）弹窗 ============ */
 #cellCancelPicker {
     position: fixed; inset: 0; z-index: 10070;
@@ -1387,32 +1497,36 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 /* 高级设置：识别结算速率输入框右侧的说明文字（原「?」气泡改为直述） */
 .ja-help-text { font-size: 10px; color: #94a3b8; flex: 1; }
 
-/* ============ 作业集选择弹窗（替代原下拉栏） / 复制阵容弹窗（同一套壳） ============ */
-#jobPickModal, #tableCopyModal {
+/* ============ 作业集选择弹窗（替代原下拉栏） / 复制阵容弹窗 / 删除植物弹窗（同一套壳） ============ */
+#jobPickModal, #tableCopyModal, #plantDeleteModal {
     position: fixed; inset: 0; z-index: 10095;
     display: none; align-items: center; justify-content: center;
     background: rgba(15,23,42,.50);
 }
-#jobPickModal.jp-open, #tableCopyModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
-#jobPickModal .jp-panel, #tableCopyModal .jp-panel {
+#jobPickModal.jp-open, #tableCopyModal.jp-open, #plantDeleteModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobPickModal .jp-panel, #tableCopyModal .jp-panel, #plantDeleteModal .jp-panel {
     width: min(360px, 90vw); max-height: 78vh;
     background: #fff; border-radius: 14px; overflow: hidden;
     display: flex; flex-direction: column;
     box-shadow: 0 20px 60px rgba(15,23,42,.34);
     animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
 }
-#jobPickModal .jp-head, #tableCopyModal .jp-head {
+/* 复制阵容现在是「每张表一张卡片 + 普通关/boss 关两个复选框」，需要更宽 */
+#tableCopyModal .jp-panel { width: min(460px, 94vw); max-height: 84vh; }
+/* 删除植物要放两个选项 + 分布说明，单独放宽 */
+#plantDeleteModal .jp-panel { width: min(520px, 94vw); max-height: 84vh; }
+#jobPickModal .jp-head, #tableCopyModal .jp-head, #plantDeleteModal .jp-head {
     display: flex; align-items: center; gap: 8px;
     padding: 13px 16px 10px; border-bottom: 1px solid #e2e8f0;
 }
-#jobPickModal .jp-dot, #tableCopyModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
-#jobPickModal .jp-title, #tableCopyModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
-#jobPickModal .jp-close, #tableCopyModal .jp-close {
+#jobPickModal .jp-dot, #tableCopyModal .jp-dot, #plantDeleteModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+#jobPickModal .jp-title, #tableCopyModal .jp-title, #plantDeleteModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#jobPickModal .jp-close, #tableCopyModal .jp-close, #plantDeleteModal .jp-close {
     width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
     background: #f1f5f9; color: #475569; cursor: pointer; font-size: 13px; line-height: 1;
 }
-#jobPickModal .jp-close:hover, #tableCopyModal .jp-close:hover { background: #e2e8f0; }
-#jobPickModal .jp-body, #tableCopyModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
+#jobPickModal .jp-close:hover, #tableCopyModal .jp-close:hover, #plantDeleteModal .jp-close:hover { background: #e2e8f0; }
+#jobPickModal .jp-body, #tableCopyModal .jp-body, #plantDeleteModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
 #jobPickModal .jp-item, #tableCopyModal .jp-item {
     display: flex; align-items: center; gap: 10px; width: 100%;
     padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;

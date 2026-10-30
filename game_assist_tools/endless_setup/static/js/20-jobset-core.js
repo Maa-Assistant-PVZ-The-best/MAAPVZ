@@ -173,6 +173,7 @@ function jobSaveCurrentBoard() {
 
 function jobLoadTable(idx, skipSave) {
     if (!skipSave) jobSaveCurrentBoard();        // 先把旧表棋盘存回去
+    const _prevTable = currentTable;
     currentTable = idx;
     const t = jobTables[idx];
     boardEarly = jobBoardOrBlank(t.boardEarly);
@@ -181,6 +182,18 @@ function jobLoadTable(idx, skipSave) {
     jobFillForm();
     jobRenderTabs();
     jobRenderSlots();
+    // ★ 换表 = 换棋盘：格内落子方块窗（43）的上下文失效，直接关掉
+    //   （它的 _cqCtx 存的是当时那块棋盘的**数组引用**，换表后就指向旧数组了）
+    if (typeof jobCloseCellQueue === 'function') {
+        try { jobCloseCellQueue(); } catch (e) { console.warn('[cellqueue] close', e); }
+    }
+    // ★ 换表 = 换上下文：撤销栈必须重置（否则 Ctrl+Z 会把上一张表的棋盘灌进来）。
+    //   同一个表号重载（复制阵容等）不算换上下文 —— 那时**记一笔**就好，
+    //   这样"复制阵容"也能被 Ctrl+Z 撤销。
+    if (typeof jobUndoReset === 'function') {
+        if (_prevTable !== idx) jobUndoReset();
+        else if (typeof jobUndoRecord === 'function') jobUndoRecord();
+    }
 }
 
 // 用存档棋盘，结构不对时退化为空白棋盘（不能只看 .length：空棋盘也是合法数据）

@@ -158,6 +158,24 @@ function placePlantOnBoard(board, slot, r, c) {
         ? jobSlotNameCtx(t0, slot, _bossCtx) : t0.slots[slot]);
     if (!name) return false;
 
+    // ★★ boss 关「落子即固化」（2026-10-30 用户要求）：
+    //   boss 棋盘上用植物 A 落了子之后，普通关把槽位换成 B，
+    //   boss 关**必须仍然是 A** —— 不能被普通关带着变。
+    //
+    //   做法：落子这一刻把「沿用」升级成「显式覆盖」（值就是当下这株植物）。
+    //   覆盖层的值先于普通关槽位，所以之后普通关怎么改都不影响这里。
+    //   同一个槽后续再落子不会重复升级（已经是 override 就跳过）。
+    if (_bossCtx && t0 && typeof jobBossSlotState === 'function'
+            && jobBossSlotState(t0, slot) === 'inherit') {
+        t0.bossSlots = t0.bossSlots || {};
+        t0.bossSlots[slot] = name;
+        // 语义变了要让人看得见（否则用户会以为还是"跟着普通关"）
+        if (typeof setStatus === 'function') {
+            setStatus('🔒 boss 关 槽' + slot + ' 已固化为「' + name + '」'
+                + '：以后普通关换植物，boss 关不受影响');
+        }
+    }
+
     const info = jobFindPlant(name) || {};
     saveBoardState();
     cellArr.push({
@@ -241,17 +259,85 @@ function jobSyncSlotPlantOnBoard(board, slot, name) {
     return changed;
 }
 
-// 把「当前正在编辑的关卡」和 boss 关两块棋盘一起同步。
-// 返回是否有改动。
-function jobSyncSlotPlantEverywhere(slot, name) {
+// ============================================================
+// ★★ 改【普通关】槽位植物后的同步（2026-10-30 修正：只同步普通关棋盘）
+//
+//   旧做法把 boardEarly / boardLate **两块棋盘都改**，于是：
+//     普通关槽3 用「豌豆」→ boss 关也用「豌豆」落了子
+//     → 普通关把槽3 换成「坚果」→ **boss 关棋盘上的豌豆也被改成坚果**
+//   这就是用户反馈的「boss 关植物和普通关分离不彻底」。
+//
+//   现在：
+//     · boardEarly：正常同步（普通关就该跟着槽位走）；
+//     · boardLate：**不动落点**。如果该槽在 boss 关还是「沿用」状态
+//       且 boss 棋盘上已经有这个槽的落点，就把当下那株植物**固化成显式覆盖**，
+//       这样 boss 关保持自己的植物，普通关怎么改都不影响它。
+//       （已删除的槽 blocked 本来就没有落点，覆盖槽有自己的植物，都不用管。）
+// ============================================================
+function jobSyncNormalSlotPlant(slot, name) {
     let changed = false;
     try {
         if (typeof boardEarly !== 'undefined' && jobSyncSlotPlantOnBoard(boardEarly, slot, name)) changed = true;
     } catch (e) { }
+    // boss 侧：固化成显式覆盖（值 = boss 棋盘上真正用的那株）
     try {
-        if (typeof boardLate !== 'undefined' && jobSyncSlotPlantOnBoard(boardLate, slot, name)) changed = true;
+        const t = jobTables[currentTable];
+        if (t && typeof jobBossSlotState === 'function' && jobBossSlotState(t, slot) === 'inherit'
+                && typeof boardLate !== 'undefined' && boardLate) {
+            const used = jobBossBoardPlantName(slot);
+            if (used) {
+                t.bossSlots = t.bossSlots || {};
+                t.bossSlots[slot] = used;
+                changed = true;
+            }
+        }
     } catch (e) { }
     return changed;
+}
+
+// boss 棋盘上某槽真正落着的植物名（取第一个落点的快照；没有落点返回 ''）
+//   board 缺省 = 当前编辑的 boss 棋盘。复制阵容读的是「来源表的 boardLate」，
+//   所以必须能显式传盘进来。
+function jobBossBoardPlantName(slot, board) {
+    const b = (board !== undefined && board !== null) ? board
+        : ((typeof boardLate !== 'undefined') ? boardLate : null);
+    if (!b) return '';
+    const key = 'card' + slot;
+    const modes = (typeof JOB_SLOT_MODES !== 'undefined') ? JOB_SLOT_MODES : ['once', 'loop', 'end'];
+    for (let i = 0; i < modes.length; i++) {
+        const list = jobPlacementsOf(b, key, modes[i]);
+        for (let j = 0; j < list.length; j++) {
+            const it = list[j].item;
+            const n = (it && it.plant && it.plant.name) || (it && it.label) || '';
+            if (n) return n;
+        }
+    }
+    return '';
+}
+
+// ★ 把 boss 侧还处于「沿用」、但棋盘上已经有落点的槽，固化成显式覆盖。
+//   用途：任何会让"普通关槽位"和"boss 棋盘落点"脱钩的操作（复制阵容 / 改名 / 清槽），
+//   都先固化一下，boss 关就不会因为普通关变化而变成孤儿植物。
+function jobFreezeBossInheritedSlots(t, board) {
+    if (!t || typeof jobBossSlotState !== 'function') return 0;
+    const b = (board !== undefined && board !== null) ? board
+        : ((typeof boardLate !== 'undefined') ? boardLate : null);
+    if (!b) return 0;
+    let n = 0;
+    for (let i = 1; i <= 8; i++) {
+        if (jobBossSlotState(t, i) !== 'inherit') continue;
+        const used = jobBossBoardPlantName(i, b);
+        if (!used) continue;
+        t.bossSlots = t.bossSlots || {};
+        t.bossSlots[i] = used;
+        n++;
+    }
+    return n;
+}
+
+// 兼容旧名（其它地方可能还会调）：语义已改成「普通关槽位改名」
+function jobSyncSlotPlantEverywhere(slot, name) {
+    return jobSyncNormalSlotPlant(slot, name);
 }
 
 // ============================================================
@@ -285,6 +371,27 @@ function jobPurgeSlotFromBoard(slot) {
     let removed = 0;
     try { removed += jobPurgeSlotOnBoard(typeof boardEarly !== 'undefined' ? boardEarly : null, slot); } catch (e) { }
     try { removed += jobPurgeSlotOnBoard(typeof boardLate !== 'undefined' ? boardLate : null, slot); } catch (e) { }
+    return removed;
+}
+
+// ============================================================
+// ★ 清空【普通关】槽位时该做什么（2026-10-30 分离修正 + 压实）
+//   · 普通关棋盘上该槽的落点：删掉（槽位空了，孤儿落点没有意义）；
+//   · boss 关棋盘：**不删**。boss 是独立配置，普通关清空不该带走它。
+//     boss 侧凡是「沿用」且有落点的槽，一律就地固化成显式覆盖 ——
+//     注意是**所有**这种槽，不只是被清的那个：清空会让后面的槽左移（压实），
+//     槽号一变，"沿用"就会指到别的植物上，只有全部固化才能保证 boss 关一株不少。
+//   返回普通关棋盘上删除的落点数。
+// ============================================================
+function jobClearNormalSlot(slot) {
+    let removed = 0;
+    try {
+        removed = jobPurgeSlotOnBoard(typeof boardEarly !== 'undefined' ? boardEarly : null, slot);
+    } catch (e) { }
+    try {
+        const t = jobTables[currentTable];
+        if (t && typeof jobFreezeBossInheritedSlots === 'function') jobFreezeBossInheritedSlots(t);
+    } catch (e) { }
     return removed;
 }
 
@@ -347,53 +454,140 @@ function jobEnsureOrd(board) {
 //   不拷：覆盖关系（cover/levels）与表名 —— 它们是「这张表自己的身份」
 // ============================================================
 
-// 阵容表摘要（弹窗列表里的一行小字）
-function jobTableCopySummary(i) {
-    const t = jobTables[i];
-    let slotN = 0;
-    for (let s = 1; s <= 8; s++) if (t && t.slots && t.slots[s]) slotN++;
-    const cnt = function (b) {
-        let n = 0;
-        (b || []).forEach(function (row) {
-            (row || []).forEach(function (cell) { if (Array.isArray(cell)) n += cell.length; });
-        });
-        return n;
-    };
-    return jobCoverText(t) + ' · 槽位 ' + slotN + '/8'
-        + ' · 普通 ' + cnt(t.boardEarly) + ' 株 · boss ' + cnt(t.boardLate) + ' 株';
+// 阵容表摘要 —— 现在按「侧」分别显示，见下面的 jobCopySideSummary()。
+
+// ============================================================
+// 复制阵容：每张来源表两个复选框（普通关 / boss 关），可单勾可双勾
+//
+//   「普通关」= 槽位 / 三条链 / 普通关棋盘 / 收尾参数那一套
+//   「boss 关」= boss 槽位覆盖层 / boss 两条链 / boss 棋盘 / 补给顺序
+//   两个都勾 = 整表（内容全拷，表身份字段不拷）。
+//   只勾一个 = 只拷该侧自己的字段，另一侧原样保留。
+//
+//   字段怎么切的（对着 jobNewTable 的字段表逐个归类）：
+//     普通关：槽位/阵容下拉/编队号/普通关神器/三条链顺序/形态/动作后等待/
+//             收尾参数/普通关棋盘/点波·单次·循环开关
+//     boss 关：boss 槽位覆盖层/boss 阵容下拉/boss 编队号/boss 神器/
+//             boss 两条链顺序/boss 形态/boss 等待/boss 棋盘/补给顺序
+//
+//   ★ 两个细节（不处理就会出"孤儿植物"）：
+//     ① 只拷普通关：拷之前先把"boss 侧仍沿用、但棋盘上已有落点"的槽固化成覆盖，
+//        否则目标表 boss 关的植物会跟着普通关槽位一起变。
+//     ② 只拷 boss 关：来源表的 boss 侧可能是"沿用"（bossSlots 里没键），
+//        拷完必须用**来源 boss 棋盘上的植物**把它固化成覆盖，
+//        否则会按目标表的普通关槽位去解释这些落点（植物名对不上）。
+// ============================================================
+const JOB_COPY_NORMAL_FIELDS = [
+    'lineupMode', 'deckNo', 'slots', 'artifact',
+    'slotOrder', 'loopOrder', 'endOrder', 'slotModes', 'waitAfter',
+    'endType', 'endPostDelay', 'endLoopCount', 'endAfterAction', 'endSettleMs', 'endSubAction',
+    'boardEarly',
+    'waveEnabled', 'loopPlant', 'oncePlant'
+];
+const JOB_COPY_BOSS_FIELDS = [
+    'bossLineupMode', 'bossDeckNo', 'bossSlots', 'bossArtifact',
+    'bossSlotOrder', 'bossLoopOrder', 'bossSlotModes', 'bossWaitAfter',
+    'boardLate', 'supplyPicks'
+];
+
+// ★ 复制哪一侧 = **每张来源表各自两个复选框**（2026-10-30 用户要求改成多选框：
+//   「选择表后再选择复制 boss 关 / 普通关，或者都复制」）。
+//   两步走：① 点一张来源表（_jobCopyTarget）→ ② 勾选普通关 / boss 关 → 复制。
+//   勾选状态按「来源表序号」分别记，互不影响；默认两个都勾。
+const _jobCopySidesByTable = {};
+let _jobCopyTarget = null;      // 第一步选中的来源表序号（null = 还在第一步）
+function jobCopySidesOf(i) {
+    if (!_jobCopySidesByTable[i]) _jobCopySidesByTable[i] = { normal: true, boss: true };
+    return _jobCopySidesByTable[i];
 }
 
-function jobCopyTableFrom(srcIdx) {
+// 复制过去：先深拷贝，再把 undefined 的键丢掉（保持"字段不存在"的语义）
+function jobCopyFields(dst, src, fields) {
+    (fields || []).forEach(function (k) {
+        if (src[k] === undefined) { delete dst[k]; return; }
+        dst[k] = JSON.parse(JSON.stringify(src[k]));
+    });
+}
+
+// sides 支持三种写法：
+//   {normal:true,boss:false} / 'normal' | 'boss' | 'all' / 不传（= 两侧都复制）
+function jobCopyTableFrom(srcIdx, sides) {
     const cur = jobTables[currentTable];
     const src = jobTables[srcIdx];
     if (!cur || !src || srcIdx === currentTable) return;
-    // 当前棋盘正在编辑，先存回它所属的表（马上就要被覆盖，只是保持数据惯例干净）
+    let sn = true, sb = true;
+    if (sides === 'normal') { sn = true; sb = false; }
+    else if (sides === 'boss') { sn = false; sb = true; }
+    else if (sides === 'all') { sn = true; sb = true; }
+    else if (sides && typeof sides === 'object') {
+        sn = sides.normal !== false;
+        sb = sides.boss !== false;
+    }
+    if (!sn && !sb) {
+        setStatus('⚠️ 没有勾选要复制的内容（普通关 / boss 关 至少勾一个）');
+        return;
+    }
+    // 当前棋盘正在编辑，先存回它所属的表（马上就要动它，只是保持数据惯例干净）
     jobSaveCurrentBoard();
-    const keepLabel = cur.label, keepCover = cur.cover, keepLevels = cur.levels;
-    const keepColor = cur.colorIdx;          // ★ 颜色是表的身份，复制内容不复制色
-    const keepColorHex = cur.color;          //   自定义调色盘颜色同理
-    const keepIconP = cur.iconPlant, keepIconM = cur.iconMode;  // 头像同理
-    const copy = JSON.parse(JSON.stringify(src));
-    copy.label = keepLabel;
-    copy.cover = keepCover;
-    copy.levels = keepLevels;
-    copy.colorIdx = keepColor;
-    copy.color = keepColorHex;
-    copy.iconPlant = keepIconP;
-    copy.iconMode = keepIconM;
-    jobTables[currentTable] = copy;
-    jobLoadTable(currentTable, true);      // currentTable 没变但内容换了，skipSave 重载
+
+    if (sn && sb) {
+        // ---- 两侧都勾 = 整表（老行为）：内容全拷，表身份字段保留 ----
+        const keepLabel = cur.label, keepCover = cur.cover, keepLevels = cur.levels;
+        const keepColor = cur.colorIdx;          // ★ 颜色是表的身份，复制内容不复制色
+        const keepColorHex = cur.color;          //   自定义调色盘颜色同理
+        const keepIconP = cur.iconPlant, keepIconM = cur.iconMode;  // 头像同理
+        const copy = JSON.parse(JSON.stringify(src));
+        copy.label = keepLabel;
+        copy.cover = keepCover;
+        copy.levels = keepLevels;
+        copy.colorIdx = keepColor;
+        copy.color = keepColorHex;
+        copy.iconPlant = keepIconP;
+        copy.iconMode = keepIconM;
+        jobTables[currentTable] = copy;
+        jobLoadTable(currentTable, true);      // currentTable 没变但内容换了，skipSave 重载
+        jobAfterCopyRender('📋 已把 ' + jobTableName(srcIdx) + ' 整表内容复制到当前表（覆盖关系与表名不变）');
+        return;
+    }
+
+    let frozen = 0;
+    if (sn) {
+        // ① 先把目标表 boss 侧"沿用中的落点"固化（boss 不该被普通关带着变）
+        frozen += jobFreezeBossInheritedSlots(cur);
+        jobCopyFields(cur, src, JOB_COPY_NORMAL_FIELDS);
+        if (!cur.slots) cur.slots = {};
+        for (let i = 1; i <= 8; i++) if (cur.slots[i] === undefined) cur.slots[i] = '';
+    }
+    if (sb) {
+        jobCopyFields(cur, src, JOB_COPY_BOSS_FIELDS);
+        if (!cur.bossSlots || typeof cur.bossSlots !== 'object') cur.bossSlots = {};
+        // ② 来源的"沿用"没有名字信息 —— 用来源 boss 棋盘上的植物固化
+        frozen += jobFreezeBossInheritedSlots(cur, cur.boardLate);
+    }
+
+    jobLoadTable(currentTable, true);
+    jobAfterCopyRender('📋 已把 ' + jobTableName(srcIdx) + ' 的「'
+        + (sn && sb ? '普通关 + boss 关' : (sn ? '普通关' : 'boss 关')) + '」复制到当前表'
+        + (frozen ? '（boss 槽位已独立固化 ' + frozen + ' 个，不会被另一侧带走）' : ''));
+}
+
+// 复制后的统一重绘 + 状态提示
+function jobAfterCopyRender(msg) {
     jobRenderTabs();
     jobFillForm();
+    jobRenderSlots();
     if (typeof jobRenderSeqChains === 'function') jobRenderSeqChains();
+    if (typeof jobRenderEndParams === 'function') jobRenderEndParams();
+    if (typeof jobRefreshBossLineupUI === 'function') jobRefreshBossLineupUI();
     if (typeof jobOuterRefreshBadge === 'function') jobOuterRefreshBadge();
     jobSaveLocal();
-    setStatus('📋 已把 ' + jobTableName(srcIdx) + ' 的内容复制到当前表（覆盖关系与表名不变）');
+    if (msg) setStatus(msg);
 }
 
 function jobOpenTableCopy() {
     const modal = document.getElementById('tableCopyModal');
     if (!modal) return;
+    _jobCopyTarget = null;          // 每次打开都从「第 1 步：选表」开始
     jobRenderTableCopy();
     modal.classList.add('jp-open');
 }
@@ -401,25 +595,158 @@ function jobCloseTableCopy() {
     const modal = document.getElementById('tableCopyModal');
     if (modal) modal.classList.remove('jp-open');
 }
+
+// 某一侧的摘要（复选框中显示，让用户看清会搬什么）
+function jobCopySideSummary(t, side) {
+    const cnt = function (b) {
+        let n = 0;
+        (b || []).forEach(function (row) {
+            (row || []).forEach(function (cell) { if (Array.isArray(cell)) n += cell.length; });
+        });
+        return n;
+    };
+    if (side === 'boss') {
+        let bSlotN = 0;
+        if (t && typeof jobBossSlotState === 'function') {
+            for (let s = 1; s <= 8; s++) if (jobBossSlotState(t, s) === 'override') bSlotN++;
+        }
+        const supplyN = (t && Array.isArray(t.supplyPicks)) ? t.supplyPicks.length : 0;
+        return '独立槽位 ' + bSlotN + ' 个 · 棋盘 ' + cnt(t && t.boardLate) + ' 株 · 补给 '
+            + supplyN + ' 项 · 神器 ' + ((t && t.bossArtifact) || '无');
+    }
+    let slotN = 0;
+    for (let s = 1; s <= 8; s++) if (t && t.slots && t.slots[s]) slotN++;
+    return '槽位 ' + slotN + '/8 · 棋盘 ' + cnt(t && t.boardEarly) + ' 株 · 神器 '
+        + ((t && t.artifact) || '无');
+}
+
+// 一张来源表的卡片（第一步：只负责"选中这张表"，点了才进第二步）
+function jobBuildCopyCard(i) {
+    const t = jobTables[i];
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'jp-item';
+    card.style.cssText = 'width:100%;display:block;text-align:left;cursor:pointer;'
+        + 'border:1px solid #e2e8f0;border-radius:10px;padding:9px 11px;margin-bottom:8px;background:#fff;';
+    card.innerHTML = '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">'
+        + '<span style="font-size:13px;font-weight:700;color:#1e293b;">🌿 ' + jobTableName(i) + '</span>'
+        + '<span style="font-size:10px;color:#94a3b8;">' + jobCoverText(t) + '</span>'
+        + '<span style="margin-left:auto;font-size:11px;color:#2d7aff;">选这张 →</span>'
+        + '</div>'
+        + '<div style="font-size:10px;color:#64748b;margin-top:3px;line-height:1.5;">'
+        + '普通关：' + jobCopySideSummary(t, 'normal')
+        + '<br>boss 关：' + jobCopySideSummary(t, 'boss')
+        + '</div>';
+    card.addEventListener('click', function () {
+        _jobCopyTarget = i;
+        jobRenderTableCopy();          // 进第二步：选复制哪一侧
+    });
+    return card;
+}
+
+// 第二步：对选中的表勾选「普通关 / boss 关」（多选框），再点复制
+function jobBuildCopySidesStep(i) {
+    const t = jobTables[i];
+    const st = jobCopySidesOf(i);
+    const box = document.createElement('div');
+
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.textContent = '↩ 重选表';
+    back.style.cssText = 'font-size:11px;padding:3px 10px;border:1px solid #cbd5e1;border-radius:7px;'
+        + 'background:#fff;color:#475569;cursor:pointer;margin-bottom:8px;';
+    back.addEventListener('click', function () {
+        _jobCopyTarget = null;
+        jobRenderTableCopy();
+    });
+    box.appendChild(back);
+
+    const ttl = document.createElement('div');
+    ttl.style.cssText = 'font-size:13px;font-weight:700;color:#1e293b;margin-bottom:2px;';
+    ttl.textContent = '从「' + jobTableName(i) + '」复制什么到当前表';
+    box.appendChild(ttl);
+
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:10px;color:#94a3b8;margin-bottom:8px;line-height:1.5;';
+    sub.textContent = '表的身份（覆盖关系、表名、色块、头像）永远不复制。';
+    box.appendChild(sub);
+
+    const mkRow = function (side, label, text) {
+        const row = document.createElement('label');
+        row.style.cssText = 'display:flex;align-items:flex-start;gap:6px;font-size:11px;color:#334155;'
+            + 'line-height:1.55;cursor:pointer;margin-bottom:5px;border:1px solid '
+            + (st[side] ? '#2d7aff' : '#e2e8f0') + ';border-radius:8px;padding:7px 9px;'
+            + 'background:' + (st[side] ? '#eff6ff' : '#fff') + ';';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = !!st[side];
+        cb.style.cssText = 'margin:2px 0 0 0;flex:0 0 auto;';
+        cb.addEventListener('change', function () {
+            st[side] = cb.checked;
+            jobRenderTableCopy();      // 重画：勾选框边框/底色跟着变
+        });
+        const span = document.createElement('span');
+        span.innerHTML = '<b>' + label + '</b>　' + text;
+        row.appendChild(cb);
+        row.appendChild(span);
+        return row;
+    };
+    box.appendChild(mkRow('normal', '普通关', jobCopySideSummary(t, 'normal')));
+    box.appendChild(mkRow('boss', 'boss 关', jobCopySideSummary(t, 'boss')));
+
+    const foot = document.createElement('div');
+    foot.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:10px;';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.textContent = '取消';
+    cancel.style.cssText = 'font-size:12px;padding:6px 14px;border:1px solid #cbd5e1;border-radius:8px;'
+        + 'background:#fff;color:#475569;cursor:pointer;';
+    cancel.addEventListener('click', jobCloseTableCopy);
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.textContent = '📋 复制到当前表';
+    go.style.cssText = 'font-size:12px;padding:6px 16px;border:none;border-radius:8px;'
+        + 'background:#1d4ed8;color:#fff;cursor:pointer;font-weight:600;';
+    go.addEventListener('click', function () {
+        const sides = { normal: !!st.normal, boss: !!st.boss };
+        if (!sides.normal && !sides.boss) {
+            setStatus('⚠️ 两样都没勾 —— 先勾「普通关」或「boss 关」');
+            return;
+        }
+        jobCloseTableCopy();
+        jobCopyTableFrom(i, sides);
+    });
+    foot.appendChild(cancel);
+    foot.appendChild(go);
+    box.appendChild(foot);
+    return box;
+}
+
 function jobRenderTableCopy() {
     const body = document.getElementById('tcBody');
     if (!body) return;
     body.innerHTML = '';
+
+    // ---- 第二步：已经选好表 -> 选复制哪一侧 ----
+    if (typeof _jobCopyTarget === 'number' && jobTables[_jobCopyTarget]
+            && _jobCopyTarget !== currentTable) {
+        body.appendChild(jobBuildCopySidesStep(_jobCopyTarget));
+        return;
+    }
+    _jobCopyTarget = null;
+
+    // ---- 第一步：选一张来源表 ----
+    const hint = document.createElement('div');
+    hint.style.cssText = 'font-size:11px;color:#475569;line-height:1.6;background:#f8fafc;'
+        + 'border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:8px;';
+    hint.innerHTML = '第 1 步：<b>选一张要复制的表</b> → 第 2 步再勾选复制<b>普通关</b>还是<b>boss 关</b>（可都勾）。';
+    body.appendChild(hint);
+
     let n = 0;
     (jobTables || []).forEach(function (t, i) {
         if (i === currentTable) return;      // 自己拷自己没意义
         n++;
-        const item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'jp-item';
-        item.innerHTML = '<span class="jp-item-ico">🌿</span><span>'
-            + '<div class="jp-item-name">' + jobTableName(i) + '</div>'
-            + '<div class="jp-item-code">' + jobTableCopySummary(i) + '</div></span>';
-        item.addEventListener('click', function () {
-            jobCloseTableCopy();
-            jobCopyTableFrom(i);
-        });
-        body.appendChild(item);
+        body.appendChild(jobBuildCopyCard(i));
     });
     if (!n) {
         const empty = document.createElement('div');
@@ -440,6 +767,14 @@ function jobBindTableCopy() {
         if (e.target === modal) jobCloseTableCopy();
     });
     document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && modal.classList.contains('jp-open')) jobCloseTableCopy();
+        if (e.key !== 'Escape') return;
+        if (!modal.classList.contains('jp-open')) return;
+        // 第二步（选复制哪一侧）按 Esc 先退回选表，再按一次才关弹窗
+        if (typeof _jobCopyTarget === 'number' && _jobCopyTarget !== null) {
+            _jobCopyTarget = null;
+            jobRenderTableCopy();
+            return;
+        }
+        jobCloseTableCopy();
     });
 }

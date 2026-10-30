@@ -70,6 +70,7 @@
 
   ── 页面内主要区块（自上而下）──────────────────────────────
   #tooltip / #cellCancelPicker / #genPicker / #supplyPicker  全局弹层（由 JS 控制显隐）
+  #cellQueueModal                           右键棋盘格 = 格内落子顺序方块窗（43）
   .toolbar                                  撤销 / 重做按钮
   #jobsetPanel                              作业集选择、保存、删除、阵容标签、关卡区间、换阵
   #plantPicker                              植物选择器弹层（搜索 / 品质过滤 / 网格）
@@ -82,11 +83,32 @@
   #exportNoteModal                          导出卡槽备注询问弹窗
   ============================================================================ -->
 <!-- 样式：主样式 + 第三方 Fluent UI 样式（保持原层叠顺序） -->
-<link rel="stylesheet" href="/static/css/base.css?v=2">
+<link rel="stylesheet" href="/static/css/base.css?v=3">
 <link rel="stylesheet" href="/static/css/vendor-fluent.css">
 </head>
 <body>
 <div id="tooltip" class="tooltip-box"></div>
+
+<!-- ============ 格内落子队列（方块格式）弹窗 ============
+     由 43-jobset-cell-queue.js 渲染：右键一个多落点的格子打开，
+     方块按链条执行顺序排（角标 = 棋盘上的 #N），可拖拽改本格顺序。
+     ★ 样式在 base.css 的 #cellQueueModal 块里（本仓弹窗样式按 id 逐条写） -->
+<div id="cellQueueModal">
+    <div class="cq-panel">
+        <div class="cq-head">
+            <span class="cq-dot"></span>
+            <span class="cq-title">格内落子顺序</span>
+            <span class="cq-sub" id="cqSub"></span>
+            <button class="cq-close" id="cqClose" title="关闭">✕</button>
+        </div>
+        <div class="cq-body" id="cqBody"><!-- 由 JS 渲染 --></div>
+        <div class="cq-foot">
+            <button class="cq-btn" id="cqMulti" title="勾选要删掉的落点">☑ 多选删除</button>
+            <button class="cq-btn cq-danger" id="cqClear" title="清空这一格的全部落子（等同 Ctrl+右键）">🗑 清空整格</button>
+            <span class="cq-hint" id="cqHint"></span>
+        </div>
+    </div>
+</div>
 
 <!-- ============ 取消格内项目（多选）弹窗 ============ -->
 <div id="cellCancelPicker">
@@ -154,6 +176,18 @@
             <button class="jp-close" id="tcClose" title="关闭">✕</button>
         </div>
         <div class="jp-body" id="tcBody"><!-- JS 渲染：其它阵容表列表 --></div>
+    </div>
+</div>
+
+<!-- ============ 删除植物弹窗（42-jobset-batch.js；槽位胶囊的 ✕ 触发） ============ -->
+<div id="plantDeleteModal">
+    <div class="jp-panel">
+        <div class="jp-head">
+            <span class="jp-dot"></span>
+            <span class="jp-title">🗑 删除植物</span>
+            <button class="jp-close" id="pdClose" title="关闭">✕</button>
+        </div>
+        <div class="jp-body" id="pdBody"><!-- JS 渲染 --></div>
     </div>
 </div>
 
@@ -562,8 +596,8 @@
 <div class="app">
     <h1><img src="/static/favicon.png" alt="软件图标" style="height:1.05em; width:1.05em; vertical-align:-0.14em; border-radius:6px;"> 无尽挑战-作业集编辑工具 <button class="btn" id="jobGuideBtn" onclick="jobGuideOpen()" title="重开新手引导" style="font-size:13px; vertical-align:middle;">🌱 新手教程</button></h1>
     <div class="toolbar">
-        <button class="btn" id="undoBtn" data-tooltip="'ctrl+z'撤销上一步棋盘操作">↩ 撤销</button>
-        <button class="btn" id="redoBtn" data-tooltip="'ctrl+y'重做棋盘操作">↪ 重做</button>
+        <button class="btn" id="undoBtn" data-tooltip="'ctrl+z'撤销上一步操作（棋盘落点 / 链条顺序 / 槽位形态 / 等待 / 补给 一起回滚；换表或换作业集会重置撤销栈）">↩ 撤销</button>
+        <button class="btn" id="redoBtn" data-tooltip="'ctrl+y'重做上一步被撤销的操作">↪ 重做</button>
     </div>
 
     <!-- ====== 作业集编辑器（JobSet）====== -->
@@ -597,7 +631,7 @@
             <b style="font-size:13px;">阵容表：</b>
             <span id="jobTableLabel" style="font-size:12px;color:#334155;"></span>
             <button class="btn" id="jobLayoutBtn" title="配置每张表覆盖哪些关（1-149 图层模式）">🧩 布局配置</button>
-            <button class="btn" id="jobCopyTable" title="把其它阵容表的内容复制到当前阵容">📋 复制阵容</button>
+            <button class="btn" id="jobCopyTable" title="把其它阵容表的内容复制到当前阵容：每张表都有「普通关 / boss 关」两个复选框，想复制哪侧就勾哪侧">📋 复制阵容</button>
             <button class="btn" id="refToggle" title="把别的作业集的普通关/boss关棋盘叠加到当前棋盘做对照（纯显示，不影响数据）">🔍 对照</button>
             <span id="refBadge" class="ref-badge" style="display:none" title="点击清除对照"></span>
         </div>
@@ -652,7 +686,7 @@
     </div>
     <!-- 植物选择器弹层 -->
     <div id="plantPicker" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-        <div style="background:#fff;border-radius:12px;width:900px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+        <div style="background:#fff;border-radius:12px;width:1140px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
             <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
                 <b>选择植物</b>
                 <input type="text" id="plantSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
@@ -663,7 +697,13 @@
                 <span id="plantRarityFilter" style="display:flex;flex-wrap:wrap;gap:6px;"></span>
                 <span id="plantPickerCount" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
             </div>
-            <div id="plantGrid" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-content:start;"></div>
+            <div id="plantPickerBody" style="flex:1;display:flex;min-height:0;">
+                <div id="plantGrid" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-content:start;"></div>
+                <!-- 替换指定表（42-jobset-batch.js 渲染；没有植物时是提示态）
+                     ★ 宽度从 236px 放宽到 256px：一张表一个大块，里面「普通关 / boss 关」
+                       两个小块**左右并排**，各占一半 —— 太窄就点不准了。 -->
+                <div id="plantReplacePanel" style="width:256px;flex:0 0 256px;border-left:1px solid #e5e7eb;background:#fafbfc;overflow-y:auto;padding:10px 10px 14px;"></div>
+            </div>
         </div>
     </div>
 
@@ -932,4 +972,9 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
 <script src="/static/js/39-jobset-ref.js"></script>
 <script src="/static/js/40-jobset-mech.js"></script>
 <script src="/static/js/41-jobset-tags.js"></script>
+<script src="/static/js/42-jobset-batch.js"></script>
+<!-- 43 = 格内落子队列（右键格子 = 方块弹窗：拖拽改本格执行顺序）
+     ★ 排在 42 之后：它是「落子动作注册表 / 链条内核」的消费者，
+       只依赖运行期函数，不依赖加载顺序。 -->
+<script src="/static/js/43-jobset-cell-queue.js"></script>
 </body></html>

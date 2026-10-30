@@ -28,6 +28,90 @@
 > 「Maa Pipeline Support」的预期版本一致，否则报
 > `Protocol version mismatch`。详见 §12。
 
+**2026-10-30 新增/改动（编辑器，见 §10.7）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **撤销/重做重构** | 快照从「两块棋盘」升级成「棋盘 + 链条 + 槽位形态 + 等待 + 补给」整表快照，带上下文键（不跨表/不跨作业集）；记录点统一挂 `jobSaveLocal()` |
+| **快捷键闸口** | `jobHotkeyBlocked()` + `JOB_MODAL_SELECTORS`，弹窗开着时 Ctrl+Z/Y、W/S/Q/E 一律让开（修「布局配置里 Ctrl+Z 同时撤销主棋盘」） |
+| **boss 落子即固化** | boss 棋盘落子把该槽从「沿用」升级成「显式覆盖」；普通关改植物/清槽只动普通关棋盘 |
+| **复制阵容** | **两步**：先点来源表 → 再勾「普通关 / boss 关」（两个复选框，可单勾可双勾）（§10.7-D） |
+| **替换指定表** | 植物选择器右侧「替换指定表」：点表再点植物 = 把那张表（普通关/boss 关分开）的该植物换掉（§10.7-E） |
+| **删除植物** | 槽位 ✕ 弹二选一：只删本表这一株 / 删掉所有表里的这一株（普通关 + boss 关，含棋盘落点）（§10.7-E） |
+| **槽位自动左移** | 删中间槽不再报错，后面的槽顶上来；boss 覆盖层压实后显式封尾，不再出现中间空槽；**旧作业集载入时自动压实**（不留手动按钮）（§10.7-E） |
+
+**2026-10-31 改动（编辑器）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **替换指定表 → 多选** | 右栏 **一张表一个大块，里面普通关 / boss 关两个小块左右并排**（`_jobReplaceCard`）；可同时勾多张表 / 多个关别，点一株植物就把这些地方的 A 全部换掉（§10.7-E ①） |
+| **正在编辑默认打勾** | 打开选择器时「正在编辑」那一小块默认勾上（`jobResetReplaceSel`）；只勾这一处时点植物 = 老选卡流程，勾了别的表就一并改当前槽 |
+| **boss 关小块灰掉** | boss 侧没有**显式覆盖**这株（纯沿用）时，那个小块灰色不可点，写「没用·沿用」 |
+| **boss 关追问** | 要改的普通关里，若同一张表 **boss 关也在用 A** 且没勾，面板停下问「一起替换 / boss 关不动」（`_jobReplacePending`）（§10.7-E ①） |
+| **格内落子顺序（方块窗）** | 右键一个多落点的格子 → `#cellQueueModal`：按链条顺序铺成方块（角标 = 棋盘 `#N`），**跨植物/跨动作拖拽**可改本格执行顺序，单次/循环/收尾分组建模各自排序（§10.8） |
+| **Ctrl+右键 = 清空整格** | 右键不再直接清多落点格；清空整格改成 Ctrl+右键（单落点格右键仍直接清空）（§10.8） |
+| **Ctrl+左键 = 直接删槽** | 左侧槽位胶囊 ✕：直接点是「只删本表 / 删所有表」二选一，**Ctrl+点直接删本表这一槽**（§10.8） |
+
+---
+
+## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
+
+**改动前必读顺序**（只读这三处，别通读全仓）：
+
+1. 本节 + **§10.7**（2026-10-30 那一轮的全部坑与约定）；
+2. 要改的那个文件的**顶部注释块**（`42-jobset-batch.js` / `04-cards.js` 撤销段 /
+   `27-jobset-board.js` 链条段 / `24-jobset-fields.js` 的 `jobSegPlacements` 都写了"为什么"）；
+3. `AGENTS.md` 七条铁律 + 门禁表。
+
+**编辑器高频定位（编辑器 = `static/js/*`，38 个文件、共享全局作用域、数字前缀=加载顺序）**：
+
+| 想改什么 | 去哪 |
+| --- | --- |
+| 数据模型 / 表字段 / 关卡覆盖 | `20-jobset-core.js`（`jobNewTable` 是字段总表） |
+| 槽位、棋盘落子、槽号搬迁 | `21-jobset-levels.js`（`placePlantOnBoard` / `jobSyncSlotPlantOnBoard` / `jobClearNormalSlot`） |
+| 链条顺序、槽位键 | `22-jobset-chain.js` + `27-jobset-board.js`（`jobResolveSteps` / `jobStoreSteps`） |
+| 撤销 / 重做 | `04-cards.js`（引擎）＋ 记录点挂 `29-jobset-init.js` 的 `jobSaveLocal()` |
+| 快捷键 | `27-jobset-board.js` 的 `jobHotkeyBlocked` / `JOB_MODAL_SELECTORS` |
+| 落子动作（喂豆/铲子/点击格子…） | `15-board-actions.js`（注册表，唯一入口，见 §10.3） |
+| 棋盘右键 / Ctrl+右键 / 格内顺序方块窗 | `08-board-data.js`（右键分支）＋ `43-jobset-cell-queue.js`（§10.8） |
+| 槽位 ✕（含 Ctrl+左键直接删） | `27-jobset-board.js` 的槽位胶囊 ＋ `42` 的 `jobDeleteSlotHere` |
+| 通用动作（点波/捡豆/切换形态…） | `24-jobset-fields.js` 定义 + `agent/jobset/dsl.py` 编译（见 §10.2） |
+| 槽位连续化 / 替换 / 删除植物 | `42-jobset-batch.js` |
+| 布局（1-149 关图层） | `34-jobset-layout.js` |
+| 存/取作业集、作业集列表 | `28-jobset-io.js` |
+
+**门禁（编辑器改动只需要这两条，不需要跑 Python）**：
+
+```powershell
+cd game_assist_tools\endless_setup
+node --check static\js\<改过的文件>.js          # 每个改过的文件都要
+node tests\repro_undo_boss.js ; node tests\repro_copy_scope.js ;
+node tests\repro_slot_compact.js ; node tests\repro_cell_queue.js ;
+node tests\repro_shuipi.js ;
+node tests\fuzz_drag.js 200 100                 # 链条相关必跑
+```
+
+**当前基线（2026-10-31，全绿）**：39 个 JS `node --check` 通过；上述 5 套回归全过；
+`fuzz_drag 200×100 → 0 会话首错`；临时脚本（`zz*` / `_*`）为空。
+
+**三条最容易踩的坑**（都踩过）：
+
+1. **新弹窗必须两处登记**：`base.css` 那组 `#jobPickModal, #tableCopyModal {...}` 的
+   id 选择器（样式是**按 id 逐条写的**，只加 HTML 会"点了没反应"）＋
+   `27-jobset-board.js` 的 `JOB_MODAL_SELECTORS`（键盘闸口）。
+2. **槽号被五处数据引用**（槽位表 / boss 覆盖层 / 形态 / 动作后等待 / 棋盘落点+链条段），
+   任何"挪槽"必须走 `jobCompactSlots()`，禁止就地改号。
+3. **boss 槽位是稀疏覆盖层**："没写键 = 沿用普通关同槽"。所以
+   ① boss 落子即固化成显式覆盖；② 普通关改植物/清槽只动普通关棋盘；
+   ③ 压实后尾部要显式置 `null`，否则删掉的槽会"自己长回来"。
+4. **跑不了无头浏览器**（§7）：一切布局/CSS 类改动只能靠用户 Ctrl+F5 眼看，
+   逻辑用 `node tests\*.js` 兜底。
+5. **撤销记录点必须放在渲染之后**（§10.8-H，2026-10-31 用户实锤）：
+   渲染会改数据（`jobEnsureSeq` 补 seq/ord、`jobGetChainOrder` 写回覆盖率段），
+   先把 `jobSaveLocal()` 存了就等于记了个"渲染前"的旧快照 ——
+   用户按 Ctrl+Z 第一下**看起来没反应**（状态栏还说已撤销），得按第二下。
+   正确顺序永远是：**改数据 → 重绘 → 最后 `jobSaveLocal()`**。
+
 ---
 
 ## 1. 三层架构
@@ -63,6 +147,10 @@ static/
     ├── 15-board-actions.js ★                     # 落子动作注册表（扩展入口）
     └── 20-jobset-core.js … 41-jobset-tags.js     # 作业集编辑器
                                                   # （37 世界 / 38 备注 / 41 标签 …）
+    └── 42-jobset-batch.js ★                      # 批量替换植物 + 槽位连续化（压实）
+                                                  # 必须最后加载（Ctrl 不到的扩展点）
+    └── 43-jobset-cell-queue.js ★                 # 格内落子顺序方块窗（右键棋盘格）+ Ctrl 右键清空
+                                                  # 见 §10.8；排在 42 之后
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -397,6 +485,12 @@ cd D:\maapvz\MAAPVZ
 2. **不要动 `tools\` 目录**（`tools\AGENTS.md` 明令禁止，那是构建产物）。
 
 3. 改 pipeline 后跑 `check_resource.py`；改 Python 后跑 `selfcheck.py`。
+4. **改编辑器 JS 后**：每个改过的文件 `node --check`，再跑 `tests\*.js`（5 套，
+   见 §11）；碰链条/拖拽/撤销/落点顺序必须加跑 `node tests\fuzz_drag.js 200 100`。
+5. **交给你的是「用户实测过的编辑器」**：任何布局 / CSS / 弹窗改动都无法在本环境
+   自动验证（§7 跑不了无头浏览器），改完必须让用户 Ctrl+F5 看一眼再说"完成"。
+6. **新功能优先"长在现有交互上"**：用户明确讨厌多出来的独立按钮/独立弹窗
+   （"批量替换"按钮就是被要求撤掉的）——替换挂植物选择器右栏、删除挂槽位 ✕ 上就是范例。
 
 ---
 
@@ -1128,8 +1222,423 @@ selfcheck 加 2 条断言：快照必须带 custom_action、关动作时也必�
 + static/artifact/<en>/bodytype/<key>.webp → artifacts.json type=special →
 35/24 加中文名 → dsl.py special 分支加点击序列 → selfcheck 断言。
 
+## 10.7 ★★ 撤销重构 + boss 关 / 普通关植物彻底分离（2026-10-30，用户实报）
+
+> 用户原话：「落子撤销后重新落子，顺序链结构会不一致」「boss 关植物和普通关分离不彻底：
+> boss 关选取了植物 a 落子后，普通关换植物 b，那 boss 关也不会把植物 a 变成植物 b」
+
+### A. 撤销不可靠（两个独立根因）
+
+| # | 根因 | 现象 |
+| --- | --- | --- |
+| 1 | 撤销快照**只存 boardEarly/boardLate 两块棋盘数组**，而链条顺序活在表的 `slotOrder/loopOrder/endOrder/boss*Order` 上 | 拖 chip 后 Ctrl+Z：撤掉的是**上一次落子**，链顺序没回退 → 链段里的 `picked` 下标按落点位置算，落点少一个就整体滑位 → **同一条链被拆成两段、顺序乱掉** |
+| 2 | 快照**不认上下文**（不存表号/作业集），`jobLoadTable()` 换掉全局棋盘却不做任何处理 | 切表/换作业集后 Ctrl+Z → **上一张表的棋盘被灌进当前表** |
+
+**现在的模型**（`04-cards.js` 顶部已写清楚，改代码前必读）：
+
+- 快照 = `{ ctx, boardEarly, boardLate, t }`；`t` 是当前表除「身份字段」外的全部内容
+  （`JOB_UNDO_TABLE_IDENTITY`：表名/覆盖关系/色块/头像 —— 它们归布局配置弹窗自己的 Ctrl+Z）。
+- **栈顶 == 当前状态**（记录即所见）：`jobUndoRecord()` 内容不变就自动去重；
+  撤销 = 回退到「上一份快照」，重做 = 反向。
+- 快照带 `ctx = 作业集 code + 表序号`，**上下文一变就清栈**（`jobUndoReset()`：
+  `jobLoadTable` / `jobApplyLoaded` / `jobResetEditor` 三处）；撤销时若上下文对不上
+  直接拒绝并提示，绝不撤错表。
+- **统一记录点 = `jobSaveLocal()`**（29-jobset-init.js 顶部）。全仓所有改数据的入口
+  都会调它，所以落子 / 拖链条 / 切形态 / 改等待 / 补给 / 收尾参数一次全覆盖。
+  老的 `saveBoardState()` 保留成 `jobUndoRecord()` 的同义别名（老调用点不用改）。
+- 还原走 `jobUndoApply()`：棋盘 + 表字段**一起**换，然后统一重绘
+  （`renderAllBoards / jobRenderTabs / jobFillForm / jobRenderSlots /
+  jobRenderSeqChains / updatePreview`），最后 `jobSaveLocal()` 保证
+  **视图 == 引擎导出 == 本地缓存**。
+- 还原时清 `_jobLastSteps`（uid 配对缓存）、`jobSeqSel`（勾选）、`jobLastDrop`，
+  否则勾选/uid 会指向旧对象。
+- `08-board-data.js` 里旧的两处 `undoStack.pop()`（"操作失败就撤销刚记的那笔"）
+  改成 `jobUndoDiscard()` —— 新模型是「记录当前状态 + 去重」，
+  直接 pop 会误删一笔合法历史。
+
+### B. Ctrl+Z 跨面板串扰（同族）
+
+`04-cards.js` 的 document 级 keydown 以前只挡 `INPUT/TEXTAREA`，
+所以在「🧩 布局配置」里按 Ctrl+Z 会**同时**撤销布局和主棋盘。
+
+修法：把「打字中 / 有没有弹层开着」抽成**唯一判据**
+`jobHotkeyBlocked(e)` + `JOB_MODAL_SELECTORS`（都在 `27-jobset-board.js`），
+`jobInstallSlotHotkeys` 与 `04-cards.js` 的快捷键共用它；弹窗开着时
+Ctrl+Z/Y 和 W/S/A/D 一律让开，弹窗自己的撤销（`34` 的 `jobLayoutUndo`）照常工作。
+
+> ⚠️ **新增弹窗必须往 `JOB_MODAL_SELECTORS` 加一行**（根元素 id + 打开时挂的
+> class），否则那个弹窗里按 W/S/Q/E/Ctrl+Z 会漏到主界面。
+
+### C. boss 关 / 普通关植物分离（三处）
+
+模型没变（`bossSlots` 三态：不存在=沿用 / `null`=已删除 / 名字=覆盖），
+**变的是"什么时候从沿用变成覆盖"**：
+
+1. **boss 棋盘落子 = 立即固化为显式覆盖**（`21-jobset-levels.js` 的 `placePlantOnBoard`）。
+   在 boss 棋盘上放植物 a 的那一刻，若该槽还是「沿用」，就写
+   `t.bossSlots[slot] = a`（值相同、语义变成"独立"），并给一行状态提示。
+   之后普通关怎么改都不影响 boss。
+2. **改普通关槽位植物只同步普通关棋盘**（`jobSyncNormalSlotPlant`）。
+   旧 `jobSyncSlotPlantEverywhere` 把 boardEarly / boardLate **两块都改**，
+   这正是"普通关换 b，boss 关的 a 跟着变 b"的直接原因。
+   现在 boardLate 不动；若该槽仍「沿用」且 boss 棋盘上有落点，就地固化成覆盖
+   （`jobBossBoardPlantName()` 取那株植物）。
+3. **清空普通关槽位只清普通关棋盘**（`jobClearNormalSlot`）。
+   旧 `jobPurgeSlotFromBoard` 两块都清。现在 boss 侧同理先固化再保留。
+
+配套语义：一旦 boss 与普通关真的不一致，`jobBossSlotsDiffer()` 自然为真 →
+「boss 关阵容」下拉自动变成「单独选卡」（原逻辑，未改）。
+如果 boss 落的是**同一株**植物，覆盖值相同 → 仍算一致 → 继续「沿用普通关」，
+不会平白给用户多出一套阵容配置。
+
+> boss 关的植物选择器本来就是全植物列表（普通关在用的植物当然也在候选里），
+> 这一点没动；改的只是"选中之后会不会被普通关带着走"。
+
+### D. 复制阵容支持「勾选复制哪一侧」（2026-10-30，用户要求）
+
+> 用户原话：「复制阵容会直接复制一整个表，可以选择只复制 boss，或者只复制普通关」
+> 后续：「选择表后再选择复制 boss 关 / 普通关，或者都复制，你改成多选框好了」
+
+`#tableCopyModal` 现在是**两步**（用户要求「点击那个表后再选择复制哪个阵容」）：
+
+1. **第 1 步：选表** —— 每张来源表一行卡片，点一下选中（`_jobCopyTarget = i`）。
+   卡片上已经写着两侧各会搬什么（`jobCopySideSummary`），但**还没有复选框**。
+2. **第 2 步：选复制哪一侧** —— 两个复选框 `☑ 普通关` `☑ boss 关`（可只勾一个、可都勾），
+   下面是「取消 / 📋 复制到当前表」，左上角「↩ 重选表」退回第 1 步。
+   勾选状态**按来源表序号分别记**（`_jobCopySidesByTable` + `jobCopySidesOf(i)`），默认两个都勾。
+   Esc 在第二步先退回选表，再按一次才关弹窗。
+
+两个都勾 = 整表（走老的全量拷贝分支）；只勾一个 = 只搬那一侧；
+两个都不勾 = 直接拒绝并提示，一个字段都不改。
+- 老的那行「整表 / 只普通关 / 只 boss 关」胶囊按钮已删除（`jobBuildCopyScopeRow` /
+  `jobCopyScope` 都没了）。`jobCopyTableFrom(srcIdx, sides)` 现在接受
+  `{normal,boss}` 对象，同时**保留** `'normal' | 'boss' | 'all'` 字符串写法（回归测试在用）。
+- 卡片比原来的列表宽，`#tableCopyModal .jp-panel` 在 `base.css` 里单独放宽到 460px。
+
+字段切分（`JOB_COPY_NORMAL_FIELDS` / `JOB_COPY_BOSS_FIELDS`，对着 `jobNewTable` 逐个归类）：
+
+| 范围 | 拷什么 |
+| --- | --- |
+| 只普通关 | `lineupMode/deckNo/slots/artifact`、三条链（`slotOrder/loopOrder/endOrder`）、`slotModes/waitAfter`、收尾参数（`end*`）、`boardEarly`、`waveEnabled/loopPlant/oncePlant` |
+| 只 boss 关 | `bossLineupMode/bossDeckNo/bossSlots/bossArtifact`、`bossSlotOrder/bossLoopOrder/bossSlotModes/bossWaitAfter`、`boardLate`、`supplyPicks`（补给是 boss 专属） |
+| 整表 | 老行为：内容全拷，表的身份字段（表名/覆盖/levels/色块/头像）不拷 |
+
+**两个必须的固化步骤**（不做就会出现"孤儿植物"，写在这里防回退）：
+
+1. **只拷普通关**：拷之前先 `jobFreezeBossInheritedSlots(cur)` —— 目标表 boss 侧
+   "还在沿用、但棋盘上已有落点"的槽就地固化成显式覆盖。否则 boss 关的植物会跟着
+   新槽位一起变（就是 §10.7-C 那个"分离不彻底"的翻版，只是入口换了）。
+2. **只拷 boss 关**：拷完用 `jobFreezeBossInheritedSlots(cur, cur.boardLate)` ——
+   来源表 boss 侧可能整片是"沿用"（`bossSlots` 里没键），拷过来后若保持沿用，
+   这些落点会被**目标表的普通关槽位**解释 → 植物名对不上。必须用来源 boss 棋盘上
+   的植物固化成覆盖。
+
+> 复制后统一走 `jobAfterCopyRender()`（重绘 + 刷新 boss 阵容下拉 + 存本地缓存 + 状态提示）；
+> 状态提示里会带「已固化 N 个」。
+> 现在有撤销兜底（§10.7-A），复制错了可以直接 Ctrl+Z。
+
+### E. 指定表替换 / 删除植物 + 槽位连续化（2026-10-30，`42-jobset-batch.js`）
+
+> 用户原话：「槽8有植物的时候不能把槽7的植物去掉，期望应该是7植物去掉后
+> 槽8植物变成槽7植物」「boss关的槽位配置还是有槽6到槽9中间会有空着的情况」
+> 「点击编辑替换这个植物的时候，右边有一个替换指定表，然后点击后跳出包含有
+> 这个植物的表（boss和普通关分离），点击后可以进行替换」
+> 「点击删除也是同理，会跳出删除所有表的这个植物还是删除这个表普通关的植物」
+
+> ⚠️ **没有独立按钮**：先做过一版"🔄 批量替换"按钮 + 独立弹窗，用户要求撤掉
+> —— 功能要长在**原本就在用的交互**上：替换挂在植物选择器右侧，删除挂在槽位 ✕ 上。
+
+**① 「替换指定表」= 植物选择器的右栏（`#plantReplacePanel`）**
+
+- 点槽位胶囊的 ✎ 打开选择器，**右栏**列出"这个槽现在用的植物 A"在**所有表**里的分布。
+- **版式（2026-10-31 用户定稿）**：**一张表 = 一个大块，里面「普通关 / boss 关」两个小块左右并排**
+  （早期是"每处一行"的竖向列表，用户明确要求改成左右，理由「方便点击」）。
+  每个小块两行：`☑/☐ + 关别` / `槽 1/3 · 5 株`；右上角 8px 小字标 `编辑`（正在编辑）/ `也在用`（boss 追问候选）。
+  面板 `#plantReplacePanel` 宽度相应从 236px 放宽到 **256px**（`index.html`）。
+  - **boss 小块有没有这株决定能不能勾**（用户要求）：boss 侧只认**显式覆盖**
+    （`jobReplaceSideInfo` / `jobSideUsesPlant(t,'boss',A)`），没有就 `opacity:.45` **灰掉且不挂点击事件**，
+    副标题写「没用·沿用」；有才可勾。纯沿用的不用勾：改普通关它自己会跟着变。
+  - **「正在编辑」那一处默认打勾**（用户要求）：打开选择器 `jobResetReplaceSel()` 就种上这个勾
+    （执行完 `jobApplyReplaceNow` 也会回到这个默认态）。它是 A 的来源，永远**可以**取消勾选。
+- 交互（2026-10-31 起**多选**）：**勾若干处 → 再点左边的植物 = 把这些地方的 A 一起换成它**
+  （勾几处就换几处，不用一张表来一遍）。点小块只 toggle 勾选（`jobToggleReplaceTarget`）。
+  - 状态：`_jobReplaceSel = { '表序号|normal'|'表序号|boss': true }`（对象而非数组，toggle 是 O(1) 且天然去重）。
+    底部按钮 `✕ 只保留正在编辑这一处 / ✕ 全部取消勾选` = `jobCancelReplaceArm()`（一键清空）。
+  - **勾选集合跟着数据走**：`jobRenderReplacePanel` 每次渲染都拿 `jobReplaceCards(A)` 做一次交集，
+    换完/删掉/切槽位之后已经不含 A 的地方自动退出勾选（不会留下指向空处的幽灵目标）；
+    「正在编辑」那一个键永远保留。
+  - 老的单选入口 `jobArmReplaceTarget(table, side)` 保留（只选一处），内部/回归在用。
+- ★ **谁改当前槽**：只勾「正在编辑」这一处时 `jobTryApplyReplaceFlow` **直接返回 false**，
+  点植物照老样子走 `jobConfirmPick`（去重 / 卡条连排 / 落子态 / 关选择器 / boss 固化全在它里面）。
+  一旦还勾了别的表，就先 `jobTryPickCurrentSlot(dst)`（内部再调 `jobConfirmPick`，同样的老流程）
+  再批量替换其它表 —— **两边都不丢语义**。换句话说：勾着它就是"连当前槽一起换"。
+- ★ **boss 关追问**（用户要求「如果 boss 关有就询问 boss 关需不需要替换」）：
+  会被改动的普通关（**含「正在编辑」那一处**）里，同一张表的 boss 关**也在用 A**（显式覆盖）
+  且没被勾时，**不立刻执行**，而是把这次操作挂进 `_jobReplacePending`
+  （`{src, dst, targets, bossExtra, blocked, pickCurrent}`），面板顶部弹一块黄色追问：
+  `✅ 一起替换（含 boss 关 N 处）` / `➡️ boss 关不动（只换普通关）` / `✕ 取消`。
+  - 追问阶段**一个字段都不改**（回归断言盯着），点按钮才落 `jobApplyReplaceNow`。
+  - **只有显式覆盖才算"boss 关自己用了它"**：纯沿用的不用问 —— 换普通关它自动跟着变（问了反而是噪音）。
+  - **反方向不问**（勾 boss 关不动普通关）：用户只要求 boss 侧这一句。
+  - 追问期间点植物 = 重新算一遍（先清 pending）；点任意小块 toggle 也会清 pending。
+- 执行 `jobApplyReplaceNow(src, dst, list, blocked, pickedCurrent)` → 逐处 `jobReplacePlantInTable(t, side, src, dst)`：
+  改该侧槽位 + 同步该侧棋盘落点（非当前表用它自己的 `t.boardEarly/t.boardLate`，见 `jobSideBoardOf`）；
+  汇总成一条状态提示（列出换了哪几处、共几个槽），然后统一走 `jobAfterPlantChange`（重绘 + 存本地 + Ctrl+Z 可撤销）。
+  - ★ 普通关分支会先 `jobFreezeBossInheritedSlots(t, 该表 boss 棋盘)`：普通关槽位一变，
+    纯沿用的 boss 槽会跟着变（§10.7-C 同族），必须先把"沿用 + 已有落点"的槽固化成覆盖。
+- **同一植物不能占两个槽**：`jobSideUsesPlant` 命中的**那一处**跳过（进 `blocked`），其余照换，
+  状态提示里写明「跳过 X（已经在用 Y）」—— 早期是整次拒绝，多选下那样会让人以为全没生效。
+- 数据源：`jobReplaceCards(name)` → `[{table, normal:{uses,slots,placements}, boss:{...}}]`；
+  某类落点计数 `jobCountPlantOnBoard`。（老的 `jobListPlantLocations` 还在，删除弹窗在用。）
+
+**② 「删除这个植物」= 槽位胶囊 ✕ 的二选一（`#plantDeleteModal`）**
+
+- 弹窗里固定两项：
+  1. **只删这张表的这一株（当前关别）** → `jobDeleteSlotHere(ctx)`：
+     清槽位 + 清**该侧**落点 + 压实（普通关清完还会给 boss 侧做一次查漏压实）。
+  2. **删掉所有表里的这一株** → `jobDeletePlantEverywhere(name)`：
+     所有表的普通关槽位 + boss 覆盖槽全清，两侧棋盘按**植物名**清落点
+     （`jobPurgePlantOnBoard`，能顺带清历史孤儿），各表各自压实。
+- 弹窗顶部会列出"这株植物在全部表里的分布"，让用户看清影响面。
+- boss 胶囊的三种状态里，只有**覆盖槽**的 ✕ 走这个弹窗（"删除沿用 / 恢复沿用"
+  是槽位配置操作，不是删植物，保持原样）。
+
+> 🚨 **弹窗必须有 CSS**：本项目的弹窗样式是**按 id 逐条写的**
+> （`#jobPickModal, #tableCopyModal { ... }` 那一大段），新建弹窗只加 HTML
+> 不会自动套上遮罩/面板 —— 表现是"点了没反应"（内容其实渲染在页面最底部）。
+> 新增弹窗时**必须把 id 追加到 `base.css` 那组选择器**里，
+> 并加进 `27-jobset-board.js` 的 `JOB_MODAL_SELECTORS`（键盘闸口）。
+> `#batchReplaceModal` 就是这么漏过一次的（2026-10-30 实锤，现已撤掉）。
+
+**③ 槽位连续化 `jobCompactSlots(t, isBoss, boardArg)`（本文件最重要的函数）**
+
+把"占用中的槽"按原顺序压到 1..n，中间的空槽 / boss 已删除槽被顶掉。
+**槽号被五处数据引用，必须一起搬，漏一处就是孤儿数据**：
+
+| 处 | 普通关 | boss 关 |
+| --- | --- | --- |
+| 槽位 | `t.slots` | `t.bossSlots`（压实后**一律写成显式覆盖**） |
+| 棋盘 | `boardEarly` 里 `it.id='cardN'` | `boardLate` 同理 |
+| 三条链 | `slotOrder/loopOrder/endOrder` 的 `seg.key` | `bossSlotOrder/bossLoopOrder` |
+| 形态 | `slotModes` 的键 `cardN` | `bossSlotModes` |
+| 动作后等待 | `waitAfter` 的键 `once\|cardN\|r,c\|seq` | `bossWaitAfter` |
+
+> 链条段里的 `picked/from,to/order` 是**该槽内部**的落点下标 —— 整槽一起搬，
+> 所以这些下标不用改。被删除槽的段整段丢弃。
+> 压实后清 `jobArmedSlot / jobSeqSel / _jobLastSteps`（都指向旧槽号）。
+
+**④ 四处调用点**
+
+1. 普通关槽位 ✕ → 弹「只删本表 / 删所有表」（见 ②）→ 选"只删本表"时走
+   `清空 → jobClearNormalSlot → 压实`，也就是**槽8 的植物会顶到槽7**（用户要求的行为）。
+   之后顺手给 boss 侧做一次查漏压实（纯沿用时恒等，只有历史空洞会被清理）。
+2. boss 槽位 ✕ 的"覆盖"分支改为弹同一个删除弹窗；"删除沿用 / 恢复沿用"两个分支
+   仍各自补了 `jobCompactSlots(t,true)`。
+3. 删除所有表里的这株（`jobDeletePlantEverywhere`）。
+4. **载入即压实（用户明确要求：不留"压实"按钮）** —— `jobCompactAllTables()`：
+   - `28-jobset-io.js` 的 `jobApplyLoaded`（服务端载入作业集）在 `jobLoadTable(0,true)`
+     **之前**调一次；
+   - `29-jobset-init.js` 的 `jobInit`（刷新恢复本地缓存）在 `jobLoadTable` **之前**调一次。
+   - 它压**所有表**，并显式传各表自己的 `t.boardEarly / t.boardLate`
+     （此刻全局棋盘只是当前表的拷贝，所以 `jobCompactSlots` 才有 `boardArg` 这个参数）。
+   - 旧数据里"中间空槽"因此再也不会进到界面上。
+
+> ⚠️ **boss 覆盖层的坑**：boss 槽位"没写键 = 沿用普通关同槽"。所以压实后
+> **尾部多出来的槽必须显式置 `null`（已删除）**，否则第 n+1 号槽会重新沿用普通关
+> 那一槽的植物 —— 等于删掉的槽自己长回来。这就是"boss 槽位中间空着/乱长"的根因之一。
+>
+> ⚠️ **普通关清槽会牵动 boss**：`jobClearNormalSlot` 会把 boss 侧**所有**
+> "沿用 + 有落点"的槽一次性固化（不只是被清的那一槽）。因为普通关压实时槽号会变，
+> 只固化一槽会让其它沿用槽指到别的植物上 → boss 关静默丢株。
+
+### F. 回归测试（新增，别再删）
+
+```powershell
+node game_assist_tools\endless_setup\tests\repro_undo_boss.js     # 撤销/链条 + boss 分离
+node game_assist_tools\endless_setup\tests\repro_copy_scope.js    # 复制阵容的三种范围
+node game_assist_tools\endless_setup\tests\repro_slot_compact.js  # 槽位压实 + 替换指定表（多选/boss 追问/面板结构） + 删除这株
+```
+
+另外三套回归（`tests/fuzz_drag.js`、`tests/repro_shuipi.js`、`tests/repro_cell_queue.js`）必须一起保持全绿。
+
+### G. 已和用户对齐、但**尚未开工**的优化（下一轮挑着做）
+
+> 2026-10-30 审计结论，按「风险 / 价值」排的，用户已认可这个顺序。
+> ⚠️ 动手前先问一句用户现在要做哪个，别自己全做。
+
+| 级别 | 事项 | 关键位置 | 风险 | 说明 |
+| --- | --- | --- | --- | --- |
+| P0 | **链条段身份从"位置下标"改成"稳定 id"** | `24-jobset-fields.js` 的 `jobSegPlacements`、`27` 的 `jobStepsToSegs/jobSegsToSteps` | **高**（§9.2 修过 6 个同族 bug） | `picked/gidx` 是**该槽内部**的位置下标，任何落点增减都会滑位；这是"拖拽串位/撤销错乱"整族的根。必须用 `tests/fuzz_drag.js` 兜 |
+| P1 | **触摸端可用**（安卓 Web 已适配，但拖拽全废） | 链条块 / 补给卡 / 布局涂抹走 HTML5 `draggable`；全仓零 pointer 事件 | 中 | 轻量版：链条 chip 与补给卡加「↑/↓ 移一位、移到首/尾」（约 80 行，手机立刻能用）。彻底版：改 Pointer Events（约 300 行，跑 fuzz） |
+| P2 | **未保存改动防护** | 全仓无 dirty 标记、无 `beforeunload` | 低 | 本地缓存 300ms 自动存，但**写回作业集文件必须手点 💾**；切作业集/新建/删除前该做 confirm，顶部该显示「● 有未保存改动」 |
+| P3 | **拆分 `27-jobset-board.js`**（183KB / 3800+ 行） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器全在一个文件 | 中 | 纯搬移，只减未来 bug；放 P0 之后做，避免在巨型文件里二次改结构 |
+| P4 | boss 关交互小优化 | `27` 的槽位胶囊 | 低 | 给"已独立化的 boss 槽"加个 🔒 角标，让「落子即固化」这件事看得见 |
+
+---
+
+## 10.8 ★★ 格内落子顺序方块窗 + 右键/ Ctrl 键语义（2026-10-31，`43-jobset-cell-queue.js`）
+
+> 用户原话：
+> 「ctrl+左键点击 x 可以直接去除整个多个植物挤占的槽位」
+> 「直接右键点击这个多个格子覆盖的落子位置时，显示的是方块格式的样子，
+> （长得和棋盘差不多，角标保留，按照放置顺序排序，不同链不影响，
+>  可以拖拽修改这个格子的放置顺序，最左上角就是最先放）
+>  **右键去除整个格子则是 ctrl+右键**」
+> 追问后补充：「不同链条做区分，支持跨植物修改，右键点击清空的特性保留」；
+> Ctrl+左键那条是**左侧槽位胶囊的 ✕**（不是棋盘格子）。
+
+### A. 三个新手势（都在现有交互上长出来，没有新增独立按钮）
+
+| 手势 | 位置 | 行为 |
+| --- | --- | --- |
+| **右键**（格内 ≥2 个落子） | 棋盘格子 | 打开「格内落子顺序」方块窗（`#cellQueueModal`） |
+| **右键**（格内 1 个落子） | 棋盘格子 | 直接清空这一格（老行为保留；内部改走安全删除） |
+| **Ctrl+右键** | 棋盘格子 | **直接清空整格**（不弹窗） |
+| **Ctrl+左键** | 左侧槽位胶囊 ✕ | 不问「只删本表 / 删所有表」，**直接删掉本表这一槽**（= 弹窗第一项） |
+
+- 棋盘右键分支在 `08-board-data.js` 的 `contextmenu` 里，改完的判定顺序：
+  `Ctrl → 清空` / `多落点 → 方块窗` / `其余 → 直接清空`。
+- 槽位 ✕ 的 Ctrl 分支在 `27-jobset-board.js`（普通关一处 + boss 覆盖一处），
+  走 `jobDeleteSlotHere({name, side, slot})` + `jobAfterPlantChange()`（42），
+  语义与删除弹窗里的「只删这张表的这一株」完全一致。
+
+### B. 方块窗长什么样（`43-jobset-cell-queue.js` 渲染）
+
+```
+┌ 格内落子顺序   第 (3, 4) 格 · 共 5 项                     ✕ ┐
+│ ［单次］2 项                                        ← 左上最先 │
+│  ┌──────┐ ┌──────┐                                          │
+│  │🫘 ①✕ │ │🌱 ③✕ │   ← 拖拽换顺序；右上角 ✕ 只删这一个        │
+│  └──────┘ └──────┘                                          │
+│ ［循环］1 项                                                 │
+│  ┌──────┐                                                   │
+│  │🌱 ④✕ │                                                   │
+│  └──────┘                                                   │
+│ [☑ 多选删除] [🗑 清空整格]              拖动方块调整顺序…    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- **按链条顺序排**（不是按棋盘格子数组的"放置先后"）：排序键 = `jobBuildGlobalSeq`
+  的全局序号，跟棋盘上的 `#N` 角标**同源**，所以两边永远一致；拖完一起重编号。
+- **不同链做区分**：单次 / 循环 / 收尾分组（boss 关只有前两组），
+  **拖拽只允许同组内**（跨形态是两条独立的链，先后没有可比性）。
+- 方块样式复用棋盘那套味道：品质底图 `card_bg/rare_N.webp` + 立绘/动作图标 + 角标，
+  动作图标走 `15-board-actions.js` 注册表（`jobBoardActionImg`），新动作自动支持。
+
+### C. 拖拽到底改了什么（★ 最容易搞错的一点）
+
+**执行顺序不存在棋盘格子的数组顺序里**，而在**链条的步骤列表**里
+（`jobResolveSteps`：一株一步，`{kind:'plant', key, gidx}`）。
+所以重排 = 把「本格那几个落点对应的步骤」在步骤列表里换位，再 `jobStoreSteps` 压回段格式：
+
+```js
+// jobCellQueueReorder(which, orderedItems)
+positions = 本格这些步骤在 steps 里的下标（升序，**位置集合不变**）
+want      = 期望顺序对应的步骤对象
+out[positions[i]] = want[i]        // 只换内容，不挪位置
+jobStoreSteps(t, which, board, out)
+```
+
+这样保证：**别的步骤的相对顺序一个都不动**（回归第 1 节断言了
+`['card1#0','card1#1','feed#0','feed#1']` → `['feed#0','card1#1','card1#0','feed#1']`）。
+相邻同槽会自动并回一段，中间被别的槽插开就自动拆段 —— 完全交给 `jobStepsToSegs`，
+**不要去改 `seq` / `picked`**（那是 §9.2 那一族 bug 的入口）。
+
+### D. 删除必须「先钉引用再删」
+
+`jobCellQueueDeleteItems(items)`（单个 ✕ / 多选删除 / 清空整格 都走它）：
+
+1. 三条链各自 `jobResolveSteps` + `jobPinSteps`（把每个步骤钉到**落点对象引用**上）；
+2. 用**删除前**的 `jobPlacementsOf` 把「要删的 item」翻译成 `key#gidx`，标成 victims；
+3. 从棋盘删（按对象身份 `indexOf(item)`，不按 gidx）；
+4. `unpin()` 把 gidx 按引用刷成删除后的编号，恰好 `alive && !victims` 的留下 → `jobStoreSteps`。
+
+顺序反了就会删错下一步（§9.2 fuzz 实锤过），回归第 2 节专门断言
+「两颗豌豆的落点对象没串位、gidx 重排后仍指向原来那两个」。
+
+### E. 上下文失效保护
+
+`_cqCtx = { r, c, board }` 存的是**当时那块棋盘的数组引用**。`jobLoadTable`
+（换表）和 `initTabs`（切普通关/boss 关）都会把全局棋盘换成新数组，所以两处都补了
+`jobCloseCellQueue()`；`jobCellQueueAlive()` 还会现算一次
+`jobCurrentBoard() === _cqCtx.board`，对不上就拒绝一切拖拽（回归第 5 节）。
+
+> ★ 例外：`jobCellQueueClear(r, c)` 是给**棋盘右键**用的，它**不看**弹窗上下文，
+> 按当前棋盘来（临时借一个上下文，做完原样还回去）。
+
+### F. 弹窗登记（踩过的坑，别漏）
+
+新弹窗两处必登记 —— 都做了：
+`base.css` 里独立一块 `#cellQueueModal` 样式（本仓弹窗样式**按 id 逐条写**，没有公共类）＋
+`27-jobset-board.js` 的 `JOB_MODAL_SELECTORS` 补一行 `#cellQueueModal.cq-open`（键盘闸口，
+否则在方块窗里按 W/S/Ctrl+Z 会漏到主界面）。按钮绑定在 `29-jobset-init.js` 的 `jobInit`（`jobBindCellQueue`）。
+
+### G. 回归
+
+```powershell
+node game_assist_tools\endless_setup\tests\repro_cell_queue.js
+```
+
+7 节 51 条断言：本格重排（跨植物/跨动作、别的步骤不动、角标同源、自动拆并段）
+/ 单个删除（gidx 不串位）/ Ctrl+右键清空整格 / 单次循环分组隔离 + 跨链拖拽拒绝 /
+上下文失效保护 / **弹窗 DOM 结构**（分组、方块数、角标、✕ 只删一个、删完自动刷新）/
+**Ctrl+Z 一次就能撤回**（见下面的 H）。
+
+### H. ⚠️ 踩坑实录：Ctrl+右键清空后 Ctrl+Z「按一下没反应」（2026-10-31 用户实锤）
+
+**症状**：Ctrl+右键清空一格 → 按一次 Ctrl+Z，状态栏照常报「↩ 已撤销」，
+**但格子还是空的**；再按一次才真的回来。
+
+**根因**：`jobAfterCellQueueChange` 里把 `jobSaveLocal()`（撤销记录点）写在了
+**渲染之前**。而**渲染不是只读的**：
+
+| 渲染函数 | 它干了什么（会改数据） |
+| --- | --- |
+| `renderBoard`（08） | `jobEnsureSeq` / `jobEnsureOrd` 给落点补 `seq` / `ord` |
+| `jobRenderSeqChains` / `jobBuildGlobalSeq` | `jobGetChainOrder`（23 末尾）会把「覆盖率修复」补出来的段**写回** `t[field]` |
+
+撤销快照（`04-cards.js` 的 `jobUndoSnapshot`）的 sig 是「棋盘 + 整表」算的，
+所以「先存快照 → 再渲染」记下的是**渲染前**的旧状态；等用户按 Ctrl+Z，
+`undoBoard()` 开头那次 `jobUndoRecord()` 发现 sig 变了、又压一条 ——
+于是第一次撤销只是回到"看起来一模一样"的那份旧状态，白按一下。
+
+**规矩（全仓通用，别再犯）**：
+> **改数据 → 重绘 → 最后再 `jobSaveLocal()`。**
+> 撤销记录点必须排在所有「会写盘/写表/写棋盘」的动作**之后**。
+> 参考既有路径：`renderAllBoards(); updatePreview(); jobSaveLocal();`（落子/清盘）、
+> `jobAfterChainChange()`（拖链/删步）、`jobAfterPlantChange()`（替换/删植物）。
+
+**现在**：`jobAfterCellQueueChange()` 的顺序是
+`jobSaveCurrentBoard() → 渲染(jobRenderSeqChains/CurrentBoard/updatePreview/弹窗) → jobSaveLocal()`；
+另外 `jobCellQueueDeleteItems()` 动手**前**还会记一笔（同 `placeOp` 里的 `saveBoardState()`，
+内容没变会被 `jobUndoRecord` 去重，零成本）当保险。
+
+**回归**：`repro_cell_queue.js` 第 7 节用「渲染桩会补 `ord`」模拟这个副作用，
+断言「撤销栈只长一条 + 按一次 Ctrl+Z 就撤回」。
+反向验证过：把记录点挪回渲染之前，这两条立刻红（栈变成 3、格子仍是 0）。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
 
+**编辑器（2026-10-31 收工时实测）**：
+
+```
+node --check static\js\*.js            → 39 个文件，0 失败
+node tests\repro_undo_boss.js          → 撤销/链条一致性 + boss 分离（25 条）
+node tests\repro_copy_scope.js         → 复制阵容两侧复选框（含"都不勾=拒绝"）
+node tests\repro_slot_compact.js       → 槽位压实 + 替换指定表 + 删除这株 + 载入压实
+                                          （第 7/7b/8/9a/9b/9c/10 节 = 多选目标 / 正在编辑默认勾
+                                           / boss 追问两分支 / 同植物跳过 / 面板左右并排结构）
+node tests\repro_cell_queue.js         → 格内落子方块窗（§10.8）：本格重排 / 单个删除 /
+                                          Ctrl+右键清空整格 / 单次循环分组隔离 / 上下文失效保护
+                                          / 弹窗 DOM 结构（46 条）
+node tests\repro_shuipi.js             → 水皮场景回归
+node tests\fuzz_drag.js 200 100        → 200 会话 × 100 操作，0 个会话有首错
+Get-ChildItem -File . -Filter zz*      → 空（临时脚本必须删干净，见 §8）
+```
+
+**运行时（Python，编辑器改动不影响，此处为历史基线）**：
 
 ```
 selfcheck.py                       →  全部通过
@@ -1137,7 +1646,6 @@ selfcheck.py                       →  全部通过
                                      第 10 节 squad 14 条（含与真实 pipe 对照）
 check_resource.py assets/resource  →  All directories checked
 check_graph.py                     →  仅预存在空壳告警，无悬挂引用（见下方更正）
-JS 语法                            →  27 个拆分文件 node --check 全部通过
 ```
 
 > **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」。**实测是 6 个**，

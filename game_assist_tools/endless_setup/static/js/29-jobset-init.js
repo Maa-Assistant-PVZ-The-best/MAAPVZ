@@ -6,6 +6,11 @@ const JOBSET_LS_KEY = 'maapvz_jobset_v1';
 let _jobSaveTimer = null;
 
 function jobSaveLocal() {
+    // ★ 撤销栈的统一记录点（2026-10-30）：
+    //   全仓所有「改数据」的入口最后都会调 jobSaveLocal()，所以在这里拍快照
+    //   能一次覆盖落子 / 拖链条 / 切形态 / 改等待 / 补给 / 收尾参数 …
+    //   内容没变会被 jobUndoRecord 自动去重，不会灌一堆无意义条目。
+    if (typeof jobUndoRecord === 'function') { try { jobUndoRecord(); } catch (e) { console.warn('[undo] record', e); } }
     if (_jobSaveTimer) clearTimeout(_jobSaveTimer);
     _jobSaveTimer = setTimeout(function () {
         try {
@@ -157,6 +162,11 @@ function jobInit() {
     // 优先恢复本地缓存（刷新网页不丢配置），否则新建一张表
     const restored = jobLoadLocal();
     if (!restored) jobNewTable();
+    // ★ 从本地缓存恢复的旧数据同样可能有"中间空槽" -> 载入即压实
+    //   （必须早于 jobLoadTable：压实改的是各表自己的 boardEarly/boardLate）
+    if (typeof jobCompactAllTables === 'function') {
+        try { jobCompactAllTables(); } catch (e) { console.warn('[compact] 本地缓存压实失败', e); }
+    }
     jobLoadTable(currentTable, true);   // skipSave：避免用空棋盘覆盖已恢复的数据
     jobLoadFavs();                      // 恢复右键收藏（localStorage）
     if (typeof jobOuterLoadFavs === 'function') jobOuterLoadFavs();   // 局外选卡收藏（与局内分开）
@@ -248,6 +258,12 @@ function jobInit() {
 
     // 复制阵容弹窗（📋 按钮 -> 把其它阵容表的内容拷进当前表）
     if (typeof jobBindTableCopy === 'function') jobBindTableCopy();
+
+    // 删除植物弹窗（槽位胶囊 ✕ -> 「只删本表 / 删所有表」二选一；42-jobset-batch.js）
+    if (typeof jobBindPlantDelete === 'function') jobBindPlantDelete();
+
+    // 格内落子顺序方块窗（右键多落点格子 -> 拖拽改本格顺序；43-jobset-cell-queue.js）
+    if (typeof jobBindCellQueue === 'function') jobBindCellQueue();
 
     // 布局配置弹窗（🗺 按钮 -> 1-149 关图层覆盖）
     if (typeof jobBindLayout === 'function') jobBindLayout();
