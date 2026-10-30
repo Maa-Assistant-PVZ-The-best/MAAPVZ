@@ -1,0 +1,472 @@
+{
+
+    "创意庭院_分享_前置检查": {
+        // 分享选项关闭时禁用本节点；max_hit 限制同一任务内重复创建关卡。
+        "recognition": "OCR",
+        "expected": ["创作关卡"],
+        "roi": [516, 37, 226, 69],
+        "post_wait_freezes": 500,
+        "action": "DoNothing",
+        "enabled": true,
+        "max_hit": 1,
+        "next": [
+            "创意庭院_分享_创建关卡",
+            "创意庭院_分享_创建关卡_滑动"
+        ]
+    },
+
+    "创意庭院_分享_创建关卡_滑动": {
+        // 沿用普通创建的滑动参数，滑动后仍进入分享链，避免跳到刷币或刷赞流程。
+        "action": "Swipe",
+        "begin": [660, 557, 7, 1],
+        "end": [634, 205, 7, 4],
+        "repeat": 10,
+        "duration": 10,
+        "post_wait_freezes": 500,
+        "max_hit": 1,
+        "next": ["创意庭院_分享_创建关卡"]
+    },
+
+    "创意庭院_分享_创建关卡": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/创建关卡.png"],
+        "action": "Click",
+        "post_delay": 1000,
+        "next": ["创意庭院_分享_选择砸罐子"]
+    },
+
+    "创意庭院_分享_选择砸罐子": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/砸罐子.png"],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 1000,
+        "next": ["创意庭院_分享_选择砸罐子_确定"]
+    },
+
+    "创意庭院_分享_选择砸罐子_确定": {
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [590, 523, 129, 48],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 800,
+        "next": ["创意庭院_分享_选择植物"]
+    },
+
+    "创意庭院_分享_选择植物": {
+        "action": "Click",
+        "target": [209, 97, 9, 13],
+        "post_delay": 800,
+        "next": ["创意庭院_分享_选择植物_植物"]
+    },
+
+    "创意庭院_分享_选择植物_植物": {
+        "action": "Click",
+        "target": [632, 396, 16, 14],
+        "post_delay": 800,
+        "next": ["创意庭院_分享_选择植物_坚果"]
+    },
+
+    "创意庭院_分享_选择植物_坚果": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/植物_坚果_新版.png"],
+        "roi": [381, 328, 539, 273],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 800,
+        "next": ["创意庭院_分享_选择植物_坚果_确定"]
+    },
+
+    "创意庭院_分享_选择植物_坚果_确定": {
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [567, 547, 152, 75],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 800,
+        "next": ["创意庭院_分享_设置名字"]
+    },
+
+    "创意庭院_分享_设置名字": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/设置名字.png"],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 800,
+        "next": ["创意庭院_分享_点击名字白框"]
+    },
+
+    "创意庭院_分享_点击名字白框": {
+        // 限制重复输入，避免回跳后把关卡名追加到已有文字后面。
+        "recognition": "OCR",
+        "expected": ["关卡名称设置"],
+        "roi": [525, 165, 230, 50],
+        "action": "Click",
+        "target": [523, 342, 3, 8],
+        "timeout": 8000,
+        "max_hit": 1,
+        "post_delay": 800,
+        "next": ["创意庭院_分享_输入名字"]
+    },
+
+    "创意庭院_分享_输入名字": {
+        // 使用英文关卡名以兼容 Android input text；保留键盘确认的回跳分支。
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "input text share"
+            }
+        },
+        "post_delay": 800,
+        "next": [
+            "创意庭院_分享_输入名字_确认",
+            "创意庭院_分享_点击名字白框",
+            "[JumpBack]创意庭院_Input_AndroidConfirm"
+        ]
+    },
+
+    "创意庭院_分享_输入名字_确认": {
+        // 输入成功后直接进入确认链，避免回跳再次输入。
+        "recognition": "OCR",
+        "expected": ["share"],
+        "roi": [425, 281, 441, 123],
+        "post_delay": 500,
+        "next": ["创意庭院_分享_输入名字_点确定"]
+    },
+
+    "创意庭院_分享_输入名字_点确定": {
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [416, 447, 140, 66],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 1200,
+        "next": ["创意庭院_分享_关闭设置窗"]
+    },
+
+    "创意庭院_分享_系统提示_自动配置": {
+        // 处理结束后进入列表页识别，避免与关闭设置窗互相跳转。
+        "recognition": "OCR",
+        "expected": ["自动配置"],
+        "roi": [470, 495, 170, 60],
+        "action": "Click",
+        "max_hit": 1,
+        "timeout": 8000,
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_卡片_点分享_挑战"]
+    },
+
+    "创意庭院_分享_回到列表页": {
+        "recognition": "OCR",
+        "expected": ["创作关卡"],
+        "roi": [400, 30, 480, 80],
+        "action": "DoNothing",
+        "timeout": 8000,
+        "post_delay": 1000,
+        "next": ["创意庭院_分享_卡片_点分享_挑战"]
+    },
+
+    "创意庭院_分享_卡片_点分享_挑战": {
+        // 卡片需依次进入挑战、发布和刷新阶段，分开节点以保持各自出口。
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/share.png"],
+        "roi": [390, 158, 115, 100],
+        "threshold": 0.8,
+        "action": "Click",
+        "target": [444, 235],
+        "timeout": 10000,
+        "max_hit": 1,
+        "post_delay": 2500,
+        "next": ["创意庭院_分享_挑战_进入"]
+    },
+
+    "创意庭院_分享_点关卡并发布": {
+        // 卡片位置可能变化，由自定义动作定位并区分发布状态。
+        "action": {
+            "type": "Custom",
+            "param": {
+                "custom_action": "ShareClickLevelPublish",
+                "custom_action_param": {
+                    "template": "create_yard/share.png",
+                    "card_roi": [340, 140, 740, 220],
+                    "publish_roi": [330, 540, 180, 100],
+                    "confirm_roi": [480, 450, 340, 130],
+                    "threshold": 0.8
+                }
+            }
+        },
+        "timeout": 30000,
+        "next": ["创意庭院_分享_发布_关闭"]
+    },
+
+    "创意庭院_分享_卡片_点分享_刷新": {
+        // 发布后重新进入详情页，刷新分享入口。
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/share.png"],
+        "roi": [390, 158, 115, 100],
+        "threshold": 0.8,
+        "action": "Click",
+        "target": [444, 235],
+        "timeout": 10000,
+        "max_hit": 1,
+        "post_delay": 2500,
+        "next": ["创意庭院_分享_点分享"]
+    },
+
+    "创意庭院_分享_挑战_进入": {
+        "recognition": "OCR",
+        "expected": ["挑战"],
+        "roi": [584, 569, 127, 57],
+        "action": "Click",
+        "timeout": 10000,
+        "post_delay": 2000,
+        "next": ["创意庭院_分享_挑战_识别二倍速"]
+    },
+
+    "创意庭院_分享_挑战_识别二倍速": {
+        "recognition": "TemplateMatch",
+        "template": ["General/加速.png"],
+        "roi": [1144, 8, 62, 64],
+        "timeout": 8000,
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_挑战_点罐子"]
+    },
+
+    "创意庭院_分享_挑战_点罐子": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/罐子.png"],
+        "roi": [1126, 79, 136, 586],
+        "action": "Click",
+        "timeout": 15000,
+        "max_hit": 6,
+        "post_delay": 1200,
+        "next": [
+            "创意庭院_分享_挑战_点罐子",
+            "创意庭院_分享_挑战_等待结算"
+        ]
+    },
+
+    "创意庭院_分享_挑战_等待结算": {
+        "recognition": "OCR",
+        "expected": ["继续"],
+        "roi": [547, 586, 194, 98],
+        "timeout": 30000,
+        "post_delay": 1000,
+        "next": ["创意庭院_分享_挑战_结算"]
+    },
+
+    "创意庭院_分享_挑战_结算": {
+        // 每次点击后重新识别，避免退出关卡后继续点击列表页。
+        "recognition": "OCR",
+        "expected": ["继续"],
+        "roi": [547, 586, 194, 98],
+        "action": "Click",
+        "repeat": 1,
+        "timeout": 20000,
+        "max_hit": 12,
+        "post_delay": 1200,
+        "next": [
+            "创意庭院_分享_挑战_结算",
+            "创意庭院_分享_点关卡并发布"
+        ]
+    },
+
+    "创意庭院_分享_关闭设置窗": {
+        "recognition": "OCR",
+        "expected": ["当前配置"],
+        "roi": [300, 120, 680, 60],
+        "action": "Click",
+        "target": [1066, 30, 24, 16],
+        "timeout": 8000,
+        "max_hit": 2,
+        "post_delay": 1500,
+        "next": [
+            "创意庭院_分享_卡片_点分享_挑战",
+            "创意庭院_分享_回到列表页",
+            "创意庭院_分享_系统提示_自动配置"
+        ]
+    },
+
+    "创意庭院_分享_发布_关闭": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/叉叉.png"],
+        "roi": [946, 40, 83, 88],
+        "action": "Click",
+        "timeout": 8000,
+        "max_hit": 4,
+        "post_delay": 2000,
+        "next": [
+            "创意庭院_分享_卡片_点分享_刷新",
+            "创意庭院_分享_发布_关闭"
+        ]
+    },
+
+    "创意庭院_分享_点分享": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/分享.png"],
+        "roi": [895, 255, 62, 48],
+        "action": "Click",
+        "timeout": 10000,
+        "max_hit": 2,
+        "pre_delay": 1000,
+        "post_delay": 2000,
+        "next": [
+            "创意庭院_分享_面板_点分享",
+            "创意庭院_分享_点分享"
+        ]
+    },
+
+    "创意庭院_分享_面板_点分享": {
+        "recognition": "OCR",
+        "expected": ["分享"],
+        "roi": [587, 639, 117, 48],
+        "action": "Click",
+        "timeout": 8000,
+        "max_hit": 2,
+        "post_delay": 2000,
+        "next": [
+            "创意庭院_分享_渠道_抖音",
+            "创意庭院_分享_渠道_QQ",
+            "创意庭院_分享_面板_点分享"
+        ]
+    },
+
+    "创意庭院_分享_渠道_抖音": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/tiktokshare.png"],
+        "threshold": 0.8,
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 3000,
+        "next": ["创意庭院_分享_关闭抖音"]
+    },
+
+    "创意庭院_分享_关闭抖音": {
+        // Shell 动作没有识别框，不使用依赖识别框的 post_wait_freezes。
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "am force-stop com.ss.android.ugc.aweme"
+            }
+        },
+        "pre_delay": 500,
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_成功_确定", "创意庭院_分享_回到预览层"]
+    },
+
+    "创意庭院_分享_渠道_QQ": {
+        // QQ 与抖音图标同时存在；由分享渠道选项禁用另一节点来选择渠道。
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/qqshare.png"],
+        "threshold": 0.8,
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 3000,
+        "next": ["创意庭院_分享_关闭QQ"]
+    },
+
+    "创意庭院_分享_关闭QQ": {
+        // Shell 动作没有识别框，不使用依赖识别框的 post_wait_freezes。
+        "action": {
+            "type": "Shell",
+            "param": {
+                "cmd": "am force-stop com.tencent.mobileqq"
+            }
+        },
+        "pre_delay": 500,
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_成功_确定", "创意庭院_分享_回到预览层"]
+    },
+
+    "创意庭院_分享_回到预览层": {
+        // 等待游戏预览层恢复，再识别分享成功弹窗。
+        "recognition": "OCR",
+        "expected": ["返回"],
+        "roi": [821, 639, 117, 48],
+        "action": "DoNothing",
+        "rate_limit": 0,
+        "timeout": 15000,
+        "next": ["创意庭院_分享_成功_确定"]
+    },
+
+    "创意庭院_分享_成功_确定": {
+        // 分享成功与奖励统计的确定按钮位置不同，分别识别并处理。
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [560, 478, 200, 66],
+        "action": "Click",
+        "pre_wait_freezes": 800,
+        "timeout": 8000,
+        "max_hit": 5,
+        "post_wait_freezes": 800,
+        "post_delay": 5000,
+        "next": [
+            "创意庭院_分享_成功_确定",
+            "创意庭院_分享_奖励_确定",
+            "创意庭院_分享_返回"
+        ]
+    },
+
+    "创意庭院_分享_奖励_确定": {
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [535, 545, 210, 55],
+        "action": "Click",
+        "pre_wait_freezes": 800,
+        "timeout": 8000,
+        "max_hit": 2,
+        "post_wait_freezes": 800,
+        "post_delay": 800,
+        "next": [
+            "创意庭院_分享_奖励_确定",
+            "创意庭院_分享_返回"
+        ]
+    },
+
+    "创意庭院_分享_返回": {
+        // 先处理完成功和奖励弹窗，再点击预览层返回按钮。
+        "recognition": "OCR",
+        "expected": ["返回"],
+        "roi": [821, 639, 117, 48],
+        "action": "Click",
+        "timeout": 8000,
+        "post_wait_freezes": 800,
+        "post_delay": 1000,
+        "max_hit": 3,
+        "next": [
+            "创意庭院_分享_返回",
+            "创意庭院_分享_删除关卡"
+        ]
+    },
+
+    "创意庭院_分享_删除关卡": {
+        "recognition": "TemplateMatch",
+        "template": ["create_yard/创意庭院_删除.png"],
+        "roi": [516, 337, 74, 73],
+        "threshold": 0.7,
+        "action": "Click",
+        "timeout": 8000,
+        "max_hit": 3,
+        "post_delay": 1200,
+        "next": [
+            "创意庭院_分享_删除关卡",
+            "创意庭院_分享_删除关卡_确定"
+        ]
+    },
+
+    "创意庭院_分享_删除关卡_确定": {
+        "recognition": "OCR",
+        "expected": ["确定"],
+        "roi": [507, 490, 107, 48],
+        "action": "Click",
+        "timeout": 8000,
+        "post_delay": 1500,
+        "next": ["创意庭院_分享_完成"]
+    },
+
+    "创意庭院_分享_完成": {
+        "action": "DoNothing",
+        "next": ["创意庭院_确认自己在创意庭院"]
+    }
+}
