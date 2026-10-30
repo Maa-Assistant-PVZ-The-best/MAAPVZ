@@ -526,12 +526,19 @@ _SQUAD_PICK_NEXT_ORIG = [NODE_BATTLE_START]
 # ---------------------------------------------------------------------------
 # 用户可见 focus 播报（MFAAvalonia 日志面板上用户实际看到的消息）
 #   focus 是普通节点字段（override_pipeline 深合并，不碰 next），
-#   节点完成时由 MAA 弹出。三种播报：
-#     1. 加载作业集：「已加载作业集：xx」+ 当前使用块（JobSetLoad 写在本节点上）
-#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上；骨架会跑它，
+#   节点完成时由 MAA 弹出。四种播报：
+#     1. 加载作业集：「已加载作业集：xx」+ **当前关卡** + 当前使用块
+#        （JobSetLoad 写在本节点上）
+#     2. 自动计数校准后：「当前关卡：N」（JobSetAutoCount 写在本节点上；
+#        本地作业集的 option 不带「起始关卡」，关卡号只能等这次 OCR）
+#     3. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上；骨架会跑它，
 #        但阵容未变时闸门可能直跳开始战斗 -> 没跑到就并进关卡号消息）
-#     3. 每关：「当前关卡：N」（JobSetPlan 写在两个「开始战斗」节点上，
-#        替代 pipe 里静态的「boss关」focus）
+#     4. 每关：「第N关已过 → 当前关卡：N+1」（JobSetPlan 写在两个「过关」
+#        节点上，替代 pipe 里静态的「boss关」focus）
+#
+#   ★ 2026-10-31 用户实报「关卡数只有点继续挑战才播报」：
+#     原来只有第 4 种播报，而它发生在**已经进入下一关之后** ——
+#     开局的第一关完全没有播报。现在 1、2 把开局这一次补上（见 §10.9 交接）。
 # ---------------------------------------------------------------------------
 NODE_LOAD = "无尽挑战_加载作业集代码"
 
@@ -566,6 +573,32 @@ def _focus_lineup_block(table, is_boss: bool) -> str:
     if art:
         lines.append(f"神器：{art}")
     return "\n".join(lines)
+
+
+def _focus_level_line(lv: int, known: bool = True) -> str:
+    """「当前关卡：N」播报行（开局 / 自动计数校准后用）。
+
+    ★ known=False 的由来（2026-10-31 用户实报「只有点继续挑战才播报关卡数」）：
+      使用**本地作业集**时，option「使用本地作业集」case 只挂了
+      `无尽模式_重构` / `无尽挑战_选择世界`，**没有**「无尽_起始关卡」
+      （见 assets/resource/task/Endless_ref/Endless_ref.json）——
+      于是 JobSetLoad 拿到的计数器是 0，关卡号要等「无尽挑战_自动计数」
+      OCR 主界面「第X关」才知道。这种情况下不能硬播「当前关卡：1」，
+      否则用户会以为要打第 1 关，必须明说是「待识别」。
+    """
+    return f"当前关卡：{lv}" if known else "当前关卡：待识别（等主界面「第X关」自动计数校准）"
+
+
+def _plan_level_msg(lv: int, before: Optional[int], counted: bool) -> str:
+    """JobSetPlan 的关卡播报文本。
+
+    counted=True（本节点顺手计数，即刚点完「继续挑战/继续训练」）时，
+    把「哪一关已过」也带上 —— 用户原话是「点继续挑战时告诉我处于第几关」，
+    只写「当前关卡：N」看不出上一关是多少（§10.9）。
+    """
+    if counted and before is not None and before != lv:
+        return f"第{before}关已过 → 当前关卡：{lv}"
+    return f"当前关卡：{lv}"
 
 
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
@@ -1027,7 +1060,8 @@ class JobSetPlan(CustomAction):
             _set_focus(context, NODE_CLEAR_CARDS, block)
         else:
             block = None
-        lv_msg = f"当前关卡：{lv}"
+        lv_msg = _plan_level_msg(lv, tr.state.last_before_tick,
+                                 bool(param.get("计数")))
         if block and not need:
             lv_msg = block + "\n" + lv_msg
         _set_focus(context, NODE_PLAN_NORMAL, lv_msg)
@@ -1208,13 +1242,23 @@ class JobSetLoad(CustomAction):
         # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
         _apply_outer_pick(context, js)
 
-        # ---- 用户可见 focus：已加载作业集 + 当前使用阵容 ----
+        # ---- 用户可见 focus：已加载作业集 + 当前关卡 + 当前使用阵容 ----
         #   写在本节点（无尽挑战_加载作业集代码）上，节点完成时弹出；
         #   阵容块按预估表（与预热同口径）生成。
+        #
+        #   ★ 2026-10-31：**关卡号提前到这里播报**（用户要求「加载作业集时
+        #     先播一遍，别等点了继续挑战才说」）。原来只有 JobSetPlan 在过关
+        #     时播，而那时**已经是下一关**了 —— 开局的第一关永远没有播报。
+        #     计数器为 0（本地作业集没配「起始关卡」）时如实播「待识别」，
+        #     真正的关卡号由 JobSetAutoCount 识别后补报。
         table0 = js.pick_table(lv)
+        lv_line = _focus_level_line(lv, tr.count > 0)
         _set_focus(context, NODE_LOAD,
                    f"已加载作业集：{js.name}\n"
+                   + lv_line + "\n"
                    + _focus_lineup_block(table0, lv > 0 and lv % _BOSS_SNAP == 0))
+        _log(f"📋 开局播报：{lv_line}"
+             f"（预计表{table0.index + 1}，关卡 {table0.from_level} 起）")
 
         return _ok()
 
@@ -1279,6 +1323,12 @@ class JobSetAutoCount(CustomAction):
                     break
         if lv is None:
             cur = _STATE.get("tracker")
+            # ★ 播报也要写一遍（2026-10-31）：focus 是节点上的**粘滞字段**，
+            #   这一轮没读到数字就 return 的话，上一轮写进去的「当前关卡：111」
+            #   会在新一轮开局（重置后是第 1 关）原样再弹一次 —— 用户会以为
+            #   计数器没重置。所以失败分支按计数器现值覆盖一遍。
+            _set_focus(context, NODE_AUTO_COUNT,
+                       _focus_level_line(cur.count if cur else 0, bool(cur and cur.count)))
             _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号（含重试 3 次）"
                  f" -> 保持计数器原值（{cur.count if cur else 0}"
                  f"{'，即 option 起始关卡兜底' if cur and cur.count else ''}）")
@@ -1290,6 +1340,15 @@ class JobSetAutoCount(CustomAction):
         _STATE["autocount_seen"] = True     # 本次任务确实用画面数字校准过
         _log(f"📟 自动计数：识别到「{text}」-> 计数器 = {tr.count}"
              f"（主界面这个数字就是本关要打的关卡）")
+
+        # ★ 用户可见播报（2026-10-31）：关卡号校准完**立刻**播一次，写在本节点上
+        #   （本节点自己的 custom action 里写，节点完成时弹出 —— 与 JobSetPlan
+        #   写自己要播的焦点是同一种用法）。
+        #   为什么要有这一条：本节点是「开局第一关」唯一的关卡播报点 ——
+        #     · 本地作业集没有 option「起始关卡」-> JobSetLoad 播的是「待识别」；
+        #     · JobSetPlan 的「当前关卡」只在**过关之后**播（那时已是下一关）。
+        #   所以真正的「我现在打第几关」只能由这里补上（§10.9）。
+        _set_focus(context, NODE_AUTO_COUNT, _focus_level_line(tr.count))
 
         # ★ 关卡号回落 = 新一轮无尽开始（重置流程走到「重置完毕（第1关）」
         #   会回本节点）。表锁/锁关卡号/阵容签名/神器签名全是上一轮的

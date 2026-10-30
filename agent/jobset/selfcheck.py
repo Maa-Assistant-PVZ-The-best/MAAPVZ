@@ -1109,6 +1109,22 @@ try:
     _blk = _rt14._focus_lineup_block(_t14, True)
     check("focus块: boss 无专属 -> 沿用普通关",
           _blk.split("\n")[0] == "当前使用：表1" and "大喷菇" in _blk, _blk)
+
+    # ★ 2026-10-31：关卡号播报前置（加载作业集 / 自动计数校准 / 过关）
+    #   用户实报「关卡数只有点继续挑战才播报，而那时已经下一关了」。
+    check("焦点: 计数器已知 -> 当前关卡：87",
+          _rt14._focus_level_line(87) == "当前关卡：87",
+          _rt14._focus_level_line(87))
+    _unk = _rt14._focus_level_line(1, False)
+    check("焦点: 计数器未知 -> 播「待识别」而不是硬报 1",
+          "待识别" in _unk and "当前关卡：1" not in _unk, _unk)
+    check("焦点: 过关播报带「已过第几关」",
+          _rt14._plan_level_msg(88, 87, True) == "第87关已过 → 当前关卡：88",
+          _rt14._plan_level_msg(88, 87, True))
+    check("焦点: 没过关（如开局首跑）只播当前关卡",
+          _rt14._plan_level_msg(88, None, False) == "当前关卡：88"
+          and _rt14._plan_level_msg(88, 87, False) == "当前关卡：88",
+          _rt14._plan_level_msg(88, 87, False))
 except Exception as _e14:
     check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
 
