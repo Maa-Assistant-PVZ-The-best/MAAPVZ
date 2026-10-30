@@ -12,13 +12,15 @@
 // ============================================================
 
 // 世界名 -> 立绘文件。与 task/Endless_ref「选择世界」选项的注入值同名对齐。
+// 「地宫无尽」= 无尽专用地图（不是 16 个常规世界之一），立绘取自拆包
+// 「选择世界图」的 mausoleum.png；排最后（童话世界之后）。
 const JOB_WORLD_IMG = {
     '神秘埃及': 'egypt.png',   '海盗港湾': 'pirate.png', '狂野西部': 'cowboy.png',
     '功夫世界': 'kongfu.png',  '未来世界': 'future.png', '黑暗时代': 'dark.png',
     '巨浪沙滩': 'beach.png',   '冰河世界': 'iceage.png', '天空之城': 'skycity.png',
     '失落之城': 'lostcity.png', '摇滚年代': 'eighties.png', '恐龙危机': 'dino.png',
     '摩登世界': 'modern.png',  '蒸汽时代': 'steam.png',  '复兴时代': 'renai.png',
-    '童话世界': 'tale.png',
+    '童话世界': 'tale.png',    '地宫无尽': 'mausoleum.png',
 };
 const WORLD_IMG_DIR = '/static/worlds/';
 
@@ -51,7 +53,7 @@ function jobWorldSyncLabel() {
     }
 }
 
-// ---- 弹窗渲染：16 世界图库，点击即设为主世界 ----
+// ---- 弹窗渲染：17 世界图库（16 常规世界 + 地宫无尽），点击即设为主世界 ----
 function jobRenderWorldPicker() {
     const grid = document.getElementById('wpSubGrid');
     if (!grid) return;

@@ -58,6 +58,21 @@
 | --- | --- |
 | **关卡数播报前置** | 原来只有「过关（点继续挑战）」才播关卡号，开局第一关一句话都没有。现在：加载作业集播一次 + 自动计数校准后播一次 + 过关播「第N关已过 → 当前关卡：N+1」 |
 
+**2026-10-31 追加（世界选择：地宫无尽）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **世界列表加「地宫无尽」** | 选择世界弹窗（37）末尾、**童话世界之后**多一格「地宫无尽」立绘（`static/worlds/mausoleum.png`）。它**不是** `task/Endless_ref` 的「选择世界」case —— 地宫跑的是 `Secret_realm` 任务、不注入「当前世界」，所以 `_check_world` 不比对、不会误报告警 |
+
+改动面（三处 + 一张图，全部是**追加一行**）：
+
+| 位置 | 改什么 |
+| --- | --- |
+| `static/js/20-jobset-core.js` | `JOB_WORLDS` 末尾追加 `'地宫无尽'` |
+| `static/js/37-jobset-world.js` | `JOB_WORLD_IMG` 追加 `'地宫无尽': 'mausoleum.png'`（图库顺序 = `JOB_WORLDS` 顺序，所以自动排最后） |
+| `static/js/40-jobset-mech.js` | `WORLD_MECHANICS` 追加空表条目（机制格未实测，`verified` 未置 true → 不画） |
+| `static/worlds/mausoleum.png` | 拆包「选择世界图」立绘，来自远程作业集仓 `img/worlds/` |
+
 ---
 
 ## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
@@ -359,6 +374,9 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   //   ★ 当前世界注到 JobSetPlan 双节点 param —— 别注 JobSetLoad：option 会合是
   //     同节点同字段整体替换，会顶掉起始关卡 option 的 起始关卡/重置，2026-10-22 事故）
   "world": "冰河世界",              // 主适配世界（最佳适配）；"" / 缺省 = 未标注
+  //   取值白名单 = 网页端 20-jobset-core.js 的 JOB_WORLDS（16 常规世界 +「地宫无尽」）；
+  //   「地宫无尽」是编辑器侧的标注值，task/Endless_ref 没有这个「选择世界」case，
+  //   所以 GUI 不注入「当前世界」-> _check_world 直接跳过比对（不会误报）。
   "sub_worlds": ["海盗港湾"],       // 副适配世界（候选，可多选，与主世界互斥）
   // 植物备注（2026-10-13 新增；38-jobset-notes.js 弹窗编辑；仅展示，运行时不消费）
   //   costume = 布尔：是否需要装扮（🎭 模式下点植物切换，与阶数同款交互）
