@@ -941,6 +941,12 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
 <script src="/static/js/04-cards.js"></script>
 <script src="/static/js/05-render-ops.js"></script>
 <script src="/static/js/15-board-actions.js"></script>
+<!-- ★ 16 = 作业集「预留接口」注册表（只留接口、不写实现，见 HANDOFF §10.10）。
+     加载位置有两条硬要求：
+       · 在 15 之后 —— 它往落子动作注册表里补一条**不可达**的预留动作；
+       · 在 20 之前 —— jobNewTable / jobBuild / jobApplyLoaded 都要调它的
+         jobReservedDefaults / jobReservedExport / jobReservedImport。 -->
+<script src="/static/js/16-jobset-reserved.js"></script>
 <script src="/static/js/06-switches.js"></script>
 <script src="/static/js/07-right-controls.js"></script>
 <script src="/static/js/08-board-data.js"></script>

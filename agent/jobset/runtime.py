@@ -41,6 +41,7 @@ from maa.custom_action import CustomAction
 from maa.custom_recognition import CustomRecognition
 
 from .engine import JobSet, JobSetError, load_jobset, RESOURCE_DIR
+from . import reserved as _reserved
 from .level_tracker import LevelTracker, from_params
 from .level_tracker import BOSS_SNAP as _BOSS_SNAP
 # 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
@@ -601,6 +602,55 @@ def _plan_level_msg(lv: int, before: Optional[int], counted: bool) -> str:
     return f"当前关卡：{lv}"
 
 
+# ---------------------------------------------------------------------------
+# ★ 预留接口的运行时挂钩点（2026-11-01，见 HANDOFF §10.10 / reserved.py）
+#
+#   用户要求「先留接口、以后再实现」，所以这个函数**只打日志，一个
+#   override 都不写**。它在两个位置被调用（这两个位置就是将来实现时
+#   真正要动的地方，提前占好位，实现时不用再挤进骨架里改 next）：
+#
+#     JobSetLoad            -> 作业集级的：世界作业链（按世界换阵容）
+#                              + 正赛模式检查
+#     _inject_lineup        -> 表级的：开局前动作（等待/刷僵尸/场外加速/
+#                              自动刷新下一波）+ 选卡标收藏 + 选卡自由阶数
+#
+#   ★ 三个「必须遵守」的约定：
+#     1. 只 log，不 override —— 配了也不会执行（用户明确的要求）；
+#     2. 只对**真的配了东西**的表/作业集说话，没配就一个字都不打（不制造噪音）；
+#     3. 去重（代码 + 表 + 关别），因为 _inject_lineup 每关都会跑。
+#
+#   ★ 实现时的唯一改动点：把函数体换成真正的 override_pipeline。
+#     ⚠️ 「开局前动作」要接的是**选卡终点与「开始战斗」之间**，和神器闸门
+#        （_inject_artifact）写同一批节点的 next —— 必须合起来算，
+#        各自 override 会互相顶掉（§10.5「字段分工」）。
+# ---------------------------------------------------------------------------
+def _reserved_notice(context: Context, js, table=None, is_boss: bool = False) -> None:
+    """把「配了但当前版本不会执行」的预留项提示一遍（只打日志）。"""
+    try:
+        seen = _STATE.get("reserved_seen")
+        if not isinstance(seen, set):
+            seen = set()
+            _STATE["reserved_seen"] = seen
+        lines: List[str] = []
+        code = getattr(js, "code", "") or ""
+        key_job = ("job", code)
+        if js is not None and key_job not in seen:
+            seen.add(key_job)
+            lines.extend(_reserved.jobset_notice_lines(js))
+        if table is not None:
+            key_tb = ("table", code, getattr(table, "index", -1), bool(is_boss))
+            if key_tb not in seen:
+                seen.add(key_tb)
+                lines.extend(_reserved.reserved_notice_lines(table, is_boss))
+        for ln in lines:
+            _log(ln)
+        if lines:
+            _log("（以上为预留接口：字段存得住、导出得出去，但当前版本不会执行；"
+                 "等后续版本实现）")
+    except Exception as e:                      # pragma: no cover
+        _log(f"⚠️ 预留接口提示失败（{type(e).__name__}: {e}）")
+
+
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
 
@@ -614,6 +664,9 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
       首次进关（签名为 None）永远不做空动作 —— 局内还没有任何配置。
     """
     sig = table.lineup_sig(is_boss)
+    # ★ 预留接口提示（只打日志、不写 override；表级：开局前动作 /
+    #   选卡标收藏 / 选卡自由阶数）—— 就是将来实现这三项的挂钩位置，见 §10.10
+    _reserved_notice(context, _STATE.get("jobset"), table, is_boss)
     # ★ 神器闸门独立判定（不跟植物签名、不跟训练模式）——必须先跑：
     #   它负责把神器唯一入口（选植物终点）接好，且下面「阵容未变」分支会
     #   early-return，不在这里调用的话换表后的同表关卡会留着上一关的接线。
@@ -1148,6 +1201,8 @@ class JobSetLoad(CustomAction):
             _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
             _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）
             _STATE["autocount_warned"] = None  # 「自动计数没跑成」是否已提醒过
+            # ★ 预留接口提示的去重集合（新任务要重新提示一遍，见 _reserved_notice）
+            _STATE["reserved_seen"] = None
             _log("已重置作业集状态（重新开始任务）")
 
         # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
@@ -1241,6 +1296,12 @@ class JobSetLoad(CustomAction):
 
         # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
         _apply_outer_pick(context, js)
+
+        # ---- ★ 预留接口提示（作业集级：世界作业链 / 正赛模式检查）----
+        #   只打日志、不写 override —— 用户要求「先留接口、以后再实现」（§10.10）。
+        #   将来「智能识别当前世界后替换对应阵容」就在这里落地（current_world
+        #   由 option「选择世界」注入，_check_world 已经在读它）。
+        _reserved_notice(context, js)
 
         # ---- 用户可见 focus：已加载作业集 + 当前关卡 + 当前使用阵容 ----
         #   写在本节点（无尽挑战_加载作业集代码）上，节点完成时弹出；

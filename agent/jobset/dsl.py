@@ -26,6 +26,13 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# ★ 预留接口（2026-11-01）：预留通用动作 id 的唯一权威在 reserved.py，
+#   这里只查表 —— 见到它们一律只报「预留未实现」，**绝不猜着执行**。
+try:                                    # 包内导入（正常路径）
+    from . import reserved as _reserved
+except ImportError:                     # 直接 python agent/jobset/dsl.py
+    import reserved as _reserved        # type: ignore[no-redef]
+
 # ---------------------------------------------------------------------------
 # 槽位名映射
 # ---------------------------------------------------------------------------
@@ -346,9 +353,18 @@ def generic_dsl(
     parts: List[str] = []
     missing: List[str] = []
 
+    # ★★ 预留动作（2026-11-01，见 HANDOFF §10.10 / agent/jobset/reserved.py）：
+    #    判定必须排在所有真实分支**之前** —— 万一将来某个 id 和真实动作同名，
+    #    「宁可不做」永远优先于「猜着执行」。这些 id 现在也没有界面能插进链里，
+    #    所以这条分支的作用是：手写 JSON 撞上时给出**明确**的解释，而不是
+    #    含糊的「未知通用动作」。
+    if aid in _reserved.RESERVED_GENERIC_ACTIONS:
+        missing.append(
+            f"{_reserved.RESERVED_GENERIC_ACTIONS[aid]}：接口已预留，当前版本未实现")
+
     # ★★ 通用「按槽位点 N 次」动作 —— 数据驱动，见下方 GENERIC_SLOT_CLICK。
     #    新增同类动作（如「滑飞弹」「使用神器」）只需往那张表里加一行。
-    if aid in GENERIC_SLOT_CLICK:
+    elif aid in GENERIC_SLOT_CLICK:
         spec = GENERIC_SLOT_CLICK[aid]
         key = _slot_click_point(coords, spec, merged.get(spec.get("slot_param", "slot")))
         if key is None:

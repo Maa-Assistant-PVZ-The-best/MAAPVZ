@@ -73,6 +73,18 @@
 | `static/js/40-jobset-mech.js` | `WORLD_MECHANICS` 追加空表条目（机制格未实测，`verified` 未置 true → 不画） |
 | `static/worlds/mausoleum.png` | 拆包「选择世界图」立绘，来自远程作业集仓 `img/worlds/` |
 
+**2026-11-01 改动（★ 预留接口，**只留接口、不写实现**，见 §10.10）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **预留接口注册表** | 新增网页端 `static/js/16-jobset-reserved.js` + agent 侧 `agent/jobset/reserved.py`，两表同名同 id，`selfcheck` §22 拿真实 JS 做漂移比对 |
+| **开局前额外动作** | 等待 / 刷僵尸 / 切换僵尸场外加速 / 自动刷新下一波 —— 字段 `pre_battle`，**不执行** |
+| **选卡相关** | 选卡同时标收藏（`pick_favorite`）/ 选卡时自由切换阶数（`pick_tiers`）—— 字段存得住，无人消费 |
+| **局内相关** | 植物主动技能（落子动作 `skill`，已进注册表但**不可达**）/ 切换形态·智能（`ga:form` 将来多 `plant` 字段） |
+| **局外相关** | 世界作业链（`world_chains`）/ 正赛模式检查（`mode_check`）—— 运行时只播一句「未实现」 |
+| **运行时只播提示** | `runtime._reserved_notice()`：只 log 不 override，去重；两个调用点 = 将来真正要动的位置 |
+| **顺带修预存在红灯** | `selfcheck` §18「世界 case 共 16 个」写死 16（用户后加了第 17 个 case「地宫」）→ 改成「**注入当前世界的** case 恰好 16 个」 |
+
 ---
 
 ## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
@@ -94,6 +106,7 @@
 | 撤销 / 重做 | `04-cards.js`（引擎）＋ 记录点挂 `29-jobset-init.js` 的 `jobSaveLocal()` |
 | 快捷键 | `27-jobset-board.js` 的 `jobHotkeyBlocked` / `JOB_MODAL_SELECTORS` |
 | 落子动作（喂豆/铲子/点击格子…） | `15-board-actions.js`（注册表，唯一入口，见 §10.3） |
+| **预留接口（没实现的功能都在这）** | `16-jobset-reserved.js` ＋ `agent/jobset/reserved.py`（见 §10.10） |
 | 棋盘右键 / Ctrl+右键 / 格内顺序方块窗 | `08-board-data.js`（右键分支）＋ `43-jobset-cell-queue.js`（§10.8） |
 | 槽位 ✕（含 Ctrl+左键直接删） | `27-jobset-board.js` 的槽位胶囊 ＋ `42` 的 `jobDeleteSlotHere` |
 | 通用动作（点波/捡豆/切换形态…） | `24-jobset-fields.js` 定义 + `agent/jobset/dsl.py` 编译（见 §10.2） |
@@ -108,12 +121,13 @@ cd game_assist_tools\endless_setup
 node --check static\js\<改过的文件>.js          # 每个改过的文件都要
 node tests\repro_undo_boss.js ; node tests\repro_copy_scope.js ;
 node tests\repro_slot_compact.js ; node tests\repro_cell_queue.js ;
-node tests\repro_shuipi.js ;
+node tests\repro_shuipi.js ; node tests\repro_reserved.js ;
 node tests\fuzz_drag.js 200 100                 # 链条相关必跑
 ```
 
-**当前基线（2026-10-31，全绿）**：39 个 JS `node --check` 通过；上述 5 套回归全过；
-`fuzz_drag 200×100 → 0 会话首错`；临时脚本（`zz*` / `_*`）为空。
+**当前基线（2026-11-01，全绿）**：40 个 JS `node --check` 通过；上述 **6 套**回归全过；
+`fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
+临时脚本（`zz*` / `_*`）为空。
 
 **三条最容易踩的坑**（都踩过）：
 
@@ -166,6 +180,8 @@ static/
 └── js/
     ├── 01-options.js … 14-onload.js              # 选项树编辑器（section 1–14）
     ├── 15-board-actions.js ★                     # 落子动作注册表（扩展入口）
+    ├── 16-jobset-reserved.js ★                   # 预留接口注册表（只留接口不写实现，§10.10）
+    │                                             # 必须在 15 之后、20 之前加载
     └── 20-jobset-core.js … 41-jobset-tags.js     # 作业集编辑器
                                                   # （37 世界 / 38 备注 / 41 标签 …）
     └── 42-jobset-batch.js ★                      # 批量替换植物 + 槽位连续化（压实）
@@ -190,6 +206,7 @@ static/
 | 文件 | 职责 |
 | --- | --- |
 | `engine.py` | 载入作业集，`pick_table(level)` 选表 |
+| `reserved.py` ★ | **预留接口**：注册表 / 解析 / 恒空编译 / 提示文案（只留接口不写实现，§10.10） |
 | `level_tracker.py` | 关卡计数器 + 得分期望 |
 | `dsl.py` | 格子名 → BatchSwipe DSL |
 | `runtime.py` | 全部 CustomAction / CustomRecognition |
@@ -388,10 +405,20 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   //   分组（「选择标签」弹窗的小标题）只活在网页端界面。
   //   ★ 纯标注：不参与运行时、也不给植物备注分套
   "tags": ["开僵尸场外加速", "氪佬", "需要月卡"],
+  // ★★ 预留接口（2026-11-01，只留接口不写实现，详见 §10.10）——
+  //   下面这 5 个键**现在恒为默认值**（还没做界面能改它们），
+  //   旧作业集没有它们，读进来 = 未启用 = 行为不变。
+  "reserved_version": 1,
+  "world_chains": { "enable": false, "items": [] },        // 世界作业链（按世界换阵容）
+  "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },  // 正赛检查
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
     "slots": { "1": "粉丝心...", ... },
+    // ---- 表级预留字段（同上：接口在、功能不在；side = both|normal|boss）----
+    "pre_battle": [{ "id": "wait", "side": "both", "ms": 3000 }],  // 开局前额外动作
+    "pick_favorite": false,                                        // 选卡同时标收藏
+    "pick_tiers": { "1": 5 },                                      // 选卡时自由切换阶数
     // 三条链的顺序（拖动 chip 调整）
     "slotOrder": [{key, from, to, picked?, order?}],
     "loopOrder": [...], "endOrder": [...],
@@ -1692,12 +1719,143 @@ node game_assist_tools\endless_setup\tests\repro_cell_queue.js
 
 ---
 
+## 10.10 ★★ 预留接口总表（2026-11-01，**只留接口、不写实现**）
+
+> 用户原话：「作业集后续还能适配的选项（**帮我做接口，不要写实际的功能，
+> 做接口存留，给未来做适配**）……全部做预留接口，以后再进行实际开发」。
+
+本轮**一行功能都没实现**，做的是「数据 + 注册表 + 挂钩点 + 门禁」四件事：
+字段存得住、导出得出去、agent 认得出、跑起来**什么都不做**（只播一句「未实现」）。
+
+### A. 两个唯一入口（注册表 = 权威，两边 id 必须一致）
+
+| 侧 | 文件 | 内容 |
+| --- | --- | --- |
+| 网页端 | **`static/js/16-jobset-reserved.js`** ★新增 | 四张注册表 + 默认值 + 导出/读回 + 恒空编译入口 |
+| agent | **`agent/jobset/reserved.py`** ★新增 | 同名镜像 + 解析/归一化 + 恒空编译 + 提示文案 |
+
+> ★ `16` 的加载位置有两条硬要求：**在 15 之后**（往落子动作注册表补一条不可达的
+> 预留动作）、**在 20 之前**（`jobNewTable`/`jobBuild`/`jobApplyLoaded` 都要调它）。
+> 注册表漂移由 `selfcheck.py` §22b 拿**真实 JS 文件**正则比对，改一边不改另一边会红。
+
+### B. 十项功能 × 接口落点（实现时照这张表走）
+
+| # | 功能（用户原话） | 数据字段 | 导出键 | 实现时的挂钩点 | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 等待（等待指定时间再开） | `t.preBattle[]` `id:'wait'` `ms` | `pre_battle` | 选卡终点→开始战斗之间插链，见 C | 未实现 |
+| 2 | 刷僵尸（技术力未到） | `id:'spawn'` `times` | `pre_battle` | 同上 + coords 新键（手法待实测） | 未实现 |
+| 3 | 切换僵尸场外加速 | `id:'zombieSpeed'` `on` | `pre_battle` | 同上（开关点击/状态识别） | 未实现 |
+| 4 | 自动刷新下一波 | `id:'refreshWave'` `on` | `pre_battle` | 同上 | 未实现 |
+| 5 | 选卡同时标收藏 | `t.pickFavorite` | `pick_favorite` | SelectPlants 的 `custom_action_param` 加开关 + `_inject_lineup` 注入 | 未实现 |
+| 6 | 选卡时自由切换阶数 | `t.pickTiers` `{cardN:1..5}` | `pick_tiers` | 选卡前阶数界面（新链站）+ `_inject_lineup` | 未实现 |
+| 7 | 植物主动技能（从槽位位置拖过去） | 落子动作 `skill`（已进 15 注册表，**不可达**） | 段 `type:'skill'` + `slot` | `compile.build_chain_nodes` 的 `RESERVED_SEG_TYPES` 分支 → 换成 `src = dsl.form_point(coords, seg['slot'])`（坐标 `槽N切换形态` 现成） | 未实现 |
+| 8 | 切换形态更智能（选植物→点几下） | `JOB_INBATTLE_RESERVED` `formSmart` | `ga:form` 段多 `plant` 字段 | `24` 加参数控件类型 `'plant'` + `dsl.generic_dsl` 的 form 分支 | 未实现 |
+| 9 | 世界作业链（导入一次、识别当前世界换阵容） | `jobReservedTop.worldChains` | `world_chains{enable,items[]}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成真替换（当前世界 `_check_world` 已在读） | 未实现 |
+| 10 | 正赛检查（选正赛会检查有没有开） | `jobReservedTop.modeCheck` | `mode_check{enable,expect,on_missing}` | 同上 | 未实现 |
+
+### C. 数据结构（导出长这样）
+
+```jsonc
+{
+  "reserved_version": 1,                 // 预留接口版本（形状变了 +1）
+  "world_chains": {                      // 作业集级（未启用）
+    "enable": false,
+    "items": [{ "world": "海盗港湾", "table": 1, "side": "both",
+                "slots": { "1": "豌豆射手" }, "lineup": [], "squad": null,
+                "artifact": null }]
+  },
+  "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },
+  "tables": [{
+    "pre_battle": [                      // 开局前动作（顺序 = 执行顺序）
+      { "id": "wait",        "side": "both", "ms": 3000 },
+      { "id": "spawn",       "side": "boss", "times": 1 },
+      { "id": "zombieSpeed", "side": "both", "on": 1 },
+      { "id": "refreshWave", "side": "both", "on": 1 }
+    ],
+    "pick_favorite": false,              // 选卡同时标收藏
+    "pick_tiers": { "1": 5, "3": 2 }     // 选卡阶数（0/越界会被丢掉）
+  }]
+}
+```
+
+- `side` = `both`（默认，普通关 + boss 关都执行）/ `normal` / `boss`。
+  **故意不拆两条数组**：拆了 90% 的项两边重复，以后加维度更难。
+- `pick_tiers` 与 `38-jobset-notes.js` 的 `plant_notes.tier` **不是一回事**：
+  前者是**要真去点界面**的配置，后者是**给人看的备注**（运行时不消费），故意分开存。
+
+### D. 「缺省不改变行为」——三条硬约定（都有门禁盯着）
+
+1. **旧作业集没有这些键 → 解析成空/假/未启用**，行为与旧版一字不差
+   （`selfcheck` §22e 旧作业集五条断言 + `repro_reserved` §5）。
+2. **一个界面都不加**（用户要求「不要写实际的功能」）：
+   `implemented:false` 的项一个都进不了面板；预留落子动作 `builtin:false` +
+   `inMore:false` → 左侧看不见、「更多」里没有、W/S 循环不到，也落不了子
+   （`repro_reserved` §7 五条断言）。
+3. **编译入口恒空**，且**绝不退化成别的东西**：
+   - `jobPreBattleCompile()` / `reserved.prebattle_dsl()` 返回
+     `{dsl:'', missing:['…未实现']}`；
+   - `dsl.generic_dsl` 见到 `RESERVED_GENERIC_ACTIONS` 只报「预留」；
+   - `compile.build_chain_nodes` 见到 `RESERVED_SEG_TYPES` **明确告警后跳过**
+     —— 绝不能落到通用起点逻辑变成 `click:格子N_M`（那是静默错动作）。
+
+### E. 运行时只播一句提示（不改 pipeline）
+
+`runtime.py` 的 `_reserved_notice(context, js, table, is_boss)`：
+**只 log，一个 `override_pipeline` 都不写**，去重键 = `代码 + 表 + 关别`，
+两个调用点就是将来真正要动的两个位置：
+
+| 调用点 | 管哪些 |
+| --- | --- |
+| `JobSetLoad`（载入作业集之后） | 作业集级：世界作业链 / 正赛检查 |
+| `_inject_lineup`（每关选卡前） | 表级：开局前动作 / 选卡标收藏 / 选卡自由阶数 |
+
+> ⚠️ 实现「开局前动作」时要注意：它插的是**选卡终点与「开始战斗」之间**，
+> 和神器闸门（`_inject_artifact`）写**同一批节点的 next** —— 必须合起来算，
+> 各自 override 会互相顶掉（§10.5「字段分工」的坑）。
+
+### F. 真要实现某一项时的固定六步
+
+1. 注册表把该项 `implemented` 改 `true`（**两边都改**）；
+2. 要点击的先去 `agent/assets/resource/coords.json` 补坐标键；
+3. 编译：`pre_battle_dsl` / `generic_dsl` / `build_chain_nodes` 对应分支补上；
+4. 注入：`_reserved_notice` 换成真正的 `override_pipeline`（注意 D/E 的约束）；
+5. 界面：**长在现有交互上**（§10.2 A/B 的通用动作、§10.3 的落子动作），
+   **不要加独立按钮/独立弹窗** —— 用户明确讨厌（§8 第 6 条）；
+6. 门禁：`selfcheck` §22 把「恒空」断言换成真实编译断言、
+   `repro_reserved` 同步、本表状态改「已实现」。
+
+### G. 门禁
+
+```powershell
+cd game_assist_tools\endless_setup
+node --check static\js\16-jobset-reserved.js
+node tests\repro_reserved.js          # 8 节 40+ 条：注册表/导出/读回/不可达/编译恒空
+cd ..\..
+.\.venv\Scripts\python.exe -X utf8 agent\jobset\selfcheck.py   # §22 共 38 条（含 JS↔PY 漂移）
+```
+
+### H. 本轮顺带修掉的预存在红灯（**不是本轮引入**）
+
+1. **`selfcheck` §18 一直是红的**：「世界 case 共 16 个」写死 16，而用户后来
+   在 `Endless_ref.json` 加了第 17 个 case「地宫」——它**故意不写 Plan 双节点**
+   （地宫跑 `Secret_realm`、不注入「当前世界」，见 §0 地宫无尽）。
+   现在判据改成：**注入「当前世界」的 case 恰好 16 个** + 任何 case 都不许碰
+   `无尽挑战_加载作业集代码`（那条会造成起始关卡被顶掉）。
+2. **`check_graph.py` 的空 next 从 6 个变成 10 个**（全部预存在，本轮没碰任何
+   pipeline 文件）：`01_Endless_plant_ref.json` 的「检查是否需要选植物」；
+   `0300Endless_fight.json` 的「单次种植 / 循环种植 / 恭喜过关 /
+   继续挑战_守卫 / jumpback_继续挑战 / 完成」；`Endless_End_or_loop.json`
+   的「无尽挑战_结束」；`Endless_html_ref.json` 的「编辑作业集」；
+   `Endless_out.json` 的「提示_返回地图」。退出码 1 属预期。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
 
-**编辑器（2026-10-31 收工时实测）**：
+**编辑器（2026-11-01 收工时实测）**：
 
 ```
-node --check static\js\*.js            → 39 个文件，0 失败
+node --check static\js\*.js            → 40 个文件，0 失败
 node tests\repro_undo_boss.js          → 撤销/链条一致性 + boss 分离（25 条）
 node tests\repro_copy_scope.js         → 复制阵容两侧复选框（含"都不勾=拒绝"）
 node tests\repro_slot_compact.js       → 槽位压实 + 替换指定表 + 删除这株 + 载入压实
@@ -1707,27 +1865,53 @@ node tests\repro_cell_queue.js         → 格内落子方块窗（§10.8）：�
                                           Ctrl+右键清空整格 / 单次循环分组隔离 / 上下文失效保护
                                           / 弹窗 DOM 结构（46 条）
 node tests\repro_shuipi.js             → 水皮场景回归
+node tests\repro_reserved.js           → 预留接口（§10.10）：8 节 —— 注册表齐全 / 全部未实现 /
+                                          导出默认值 / 导出配了值 / 读回(含脏数据) / 摘要+关别过滤
+                                          + 编译恒空 / 预留落子动作不可达
 node tests\fuzz_drag.js 200 100        → 200 会话 × 100 操作，0 个会话有首错
 Get-ChildItem -File . -Filter zz*      → 空（临时脚本必须删干净，见 §8）
 ```
 
-**运行时（Python，编辑器改动不影响，此处为历史基线）**：
+**运行时（Python，2026-11-01 实测）**：
 
 ```
 selfcheck.py                       →  全部通过
                                      第 8 节 form 21 条 / 第 9 节 tap 8 条
                                      第 10 节 squad 14 条（含与真实 pipe 对照）
+                                     §18 世界 case（改为「注入当前世界的恰好 16 个」）
+                                     §22 预留接口 38 条（含 JS↔PY 注册表漂移比对）
 check_resource.py assets/resource  →  All directories checked
 check_graph.py                     →  仅预存在空壳告警，无悬挂引用（见下方更正）
 ```
 
-> **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」。**实测是 6 个**，
-> 且全部为预存在、非本轮引入（`git diff --name-only | grep pipeline` 为空）：
-> `01_Endless_plant_ref.json` 的 `无尽挑战_检查是否需要选植物` / `无尽挑战_选植物`；
-> `0300Endless_fight.json` 的 `无尽局内_单次种植` / `无尽局内_循环种植` /
-> `无尽挑战_训练完成`；`Endless_html_ref.json` 的 `无尽挑战_编辑作业集`。
-> 其中 `无尽挑战_训练完成` 是 `StopTask`（本就该终止），其余是运行时注入的空壳。
+> **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」，后来记成 6 个。**2026-11-01 实测是 10 个**，
+> 且全部为预存在、非本轮引入（本轮没碰任何 pipeline 文件）：
+> `01_Endless_plant_ref.json` 的 `无尽挑战_检查是否需要选植物`；
+> `0300Endless_fight.json` 的 `无尽局内_单次种植` / `无尽局内_循环种植` / `无尽局内_恭喜过关` /
+> `无尽局内_继续挑战_守卫` / `无尽挑战_jumpback_继续挑战` / `无尽挑战_完成`；
+> `Endless_End_or_loop.json` 的 `无尽挑战_结束`；`Endless_html_ref.json` 的 `无尽挑战_编辑作业集`；
+> `Endless_out.json` 的 `无尽挑战_提示_返回地图`。都是运行时注入的空壳 / 自我终止节点。
 > 另注：`check_graph.py` 退出码为 **1**（`sys.exit` 在有问题时），属预期。
+
+本轮（2026-11-01：**预留接口**，见 §10.10）改动文件：
+
+```
+agent/jobset/reserved.py          ★新增  预留接口注册表（解析 / 恒空编译 / 提示文案）
+agent/jobset/engine.py                    Table: pre_battle / pick_favorite / pick_tiers
+                                          JobSet: world_chains / mode_check（一律缺省=不变）
+agent/jobset/dsl.py                       GENERIC_RESERVED 分支：见到预留 id 只报「未实现」
+agent/jobset/compile.py                   RESERVED_SEG_TYPES：预留落子动作告警后跳过
+                                          （绝不退化成 click —— 那是静默错动作）
+agent/jobset/runtime.py                   _reserved_notice（只 log 不 override）+ 两个调用点
+                                          JobSetLoad / _inject_lineup；重置清去重集合
+agent/jobset/selfcheck.py                 §22 预留接口 38 条；§18 世界 case 断言改「注入的 16 个」
+.../static/index.html                     ★ 引入 16-jobset-reserved.js（15 之后、20 之前）
+.../static/js/16-jobset-reserved.js ★新增  四张注册表 + 默认值 + 导出/读回 + 恒空编译入口
+.../static/js/20-jobset-core.js           jobNewTable 调 jobReservedDefaults
+.../static/js/27-jobset-board.js          jobBuild 导出 表级/作业集级预留字段
+.../static/js/28-jobset-io.js             jobApplyLoaded 读回；jobResetEditor 清空
+.../tests/repro_reserved.js       ★新增  预留接口回归（8 节）
+```
 
 本轮（2026-10-01：切换形态 + 点击格子 + 落子动作注册表 + 重复落子）改动文件：
 

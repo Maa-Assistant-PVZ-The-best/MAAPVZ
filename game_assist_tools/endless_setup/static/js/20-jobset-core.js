@@ -77,6 +77,9 @@ function jobNewTable() {
     for (let i = 1; i <= 8; i++) t.slots[i] = '';
     // 默认形态：单次（铺开局为主；要循环再右键/F 切）
     jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'once'; });
+    // ★ 预留接口字段（16-jobset-reserved.js）：preBattle / pickFavorite / pickTiers
+    //   只给默认值，不接任何界面（用户要求「只留接口，不写功能」，见 §10.10）。
+    if (typeof jobReservedDefaults === 'function') jobReservedDefaults(t);
     if (last) {
         // ★★ 棋盘与槽位严格对应（用户要求）：新表槽位是全空的，
         //   那么棋盘/链条/落点等待也必须全空 —— 不能只继承 boss 棋盘

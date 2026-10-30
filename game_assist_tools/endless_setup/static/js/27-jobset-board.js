@@ -3703,6 +3703,14 @@ function jobBuild() {
             boardEarly: JSON.parse(JSON.stringify(t.boardEarly || [])),
             boardLate: JSON.parse(JSON.stringify(t.boardLate || [])),
 
+            // ---- ★ 预留接口字段（16-jobset-reserved.js，见 HANDOFF §10.10）----
+            //   pre_battle   : 开局前额外动作 [{id, side, …参数}]（未消费）
+            //   pick_favorite: 选卡同时标收藏（未消费）
+            //   pick_tiers   : 选卡时自由切换阶数 {卡片号: 0..5}（未消费）
+            //   ★ 现在导出**恒为默认值**（空/假/空表），因为还没有界面能改它们；
+            //     先把「存得住 + 读得回」接好，将来实现功能时不用再动导出。
+            ...(typeof jobReservedExport === 'function' ? jobReservedExport(t) : {}),
+
             non_boss: {
                 plant: jobExtractPlantOps(t.boardEarly, t.slots),
                 feed: jobExtractCells(t.boardEarly, 'feed'),
@@ -3759,6 +3767,10 @@ function jobBuild() {
             // order = 用户排过的完整序列（锁定/手动混排），重载后据此恢复位置
             return { plants: ps, mode: m, order: (m === 'auto') ? (jobOuterPick.order || []).slice() : [] };
         })(),
+        // ★ 预留接口（作业集级，16-jobset-reserved.js / HANDOFF §10.10）：
+        //   reserved_version / world_chains（按世界换阵容）/ mode_check（正赛检查）。
+        //   现在恒为「未启用」；实现时才第一次真正写值。
+        ...(typeof jobReservedTopExport === 'function' ? jobReservedTopExport() : {}),
         tables
     };
 }

@@ -1337,7 +1337,17 @@ try:
     # ---- 本次事故的定点检查：当前世界/起始关卡 分信道 ----
     _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "Endless_ref.json")
     _cases18 = _t18["option"]["无尽挑战_选择世界"]["cases"]
-    check("世界 case 共 16 个", len(_cases18) == 16, f"got={len(_cases18)}")
+    # ★ 2026-11-01 起「地宫」也是一个 case，但它**故意不写 Plan 双节点**：
+    #   地宫跑的是 Secret_realm 任务、不注入「当前世界」（见 HANDOFF §0 地宫无尽）。
+    #   所以判据从「case 恰好 16 个」放宽成「**注入当前世界的** case 恰好 16 个」，
+    #   另外两条不变量不变：任何 case 都不许碰 JobSetLoad（会把起始关卡顶掉）。
+    _inject18 = [c for c in _cases18
+                 if isinstance(c, dict)
+                 and isinstance(c.get("pipeline_override"), dict)
+                 and "无尽局内_过关_正赛" in c["pipeline_override"]]
+    check("注入「当前世界」的世界 case 共 16 个"
+          f"（另有 {len(_cases18) - len(_inject18)} 个不注入的 case，如「地宫」）",
+          len(_inject18) == 16, f"got={len(_inject18)}/{len(_cases18)}")
 
     _worlds18 = set()
     _shape_ok = True
@@ -1345,6 +1355,8 @@ try:
         _ov = _c.get("pipeline_override", {})
         if "无尽挑战_加载作业集代码" in _ov:
             _shape_ok = False      # 冲突回归：世界 case 又去碰 JobSetLoad
+    for _c in _inject18:
+        _ov = _c.get("pipeline_override", {})
         for _node, _tr in (("无尽局内_过关_正赛", False), ("无尽局内_过关_训练", True)):
             _prm = _ov.get(_node, {}).get("custom_action_param")
             if not isinstance(_prm, dict) \
@@ -1354,8 +1366,8 @@ try:
                 _shape_ok = False
             else:
                 _worlds18.add(_prm["当前世界"])
-    check("16 case 都写 Plan 双节点且带静态键（训练模式/计数）", _shape_ok)
-    check("16 case 当前世界互不相同", len(_worlds18) == 16, str(sorted(_worlds18)))
+    check("16 个世界 case 都写 Plan 双节点且带静态键（训练模式/计数）", _shape_ok)
+    check("16 个世界 case 的当前世界互不相同", len(_worlds18) == 16, str(sorted(_worlds18)))
 except Exception as _e18:
     check("注入信道防冲突", False, f"{type(_e18).__name__}: {_e18}")
 
@@ -1581,6 +1593,204 @@ try:
             print(f"  [SKIP] {_name21} 口径比对：{_ie21}")
 except Exception as _e21:
     check("作业集目录口径", False, f"{type(_e21).__name__}: {_e21}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 22. 预留接口（reserved.py ↔ 网页端 16-jobset-reserved.js 不漂移）===")
+# 2026-11-01 用户需求：「作业集后续还能适配的选项……帮我做接口，不要写实际的
+# 功能，做接口存留」。所以这一节钉三件事：
+#   1. 两边注册表 id 完全一致（漂移 = 网页端能存、agent 认不出，将来一定踩）；
+#   2. 解析恒「缺省不改变行为」（旧作业集行为一字不差）；
+#   3. 编译入口恒空 —— 有人偷偷把它实现了、却没改 here 的断言，也会 FAIL。
+try:
+    import re as _re22
+
+    from agent.jobset import reserved as _rsv22
+    from agent.jobset import dsl as _dsl22
+    from agent.jobset import compile as _cpl22
+
+    # ---- 22a. 版本号 + 注册表齐全 ----
+    check("预留接口版本号 = 1", _rsv22.RESERVED_VERSION == 1,
+          str(_rsv22.RESERVED_VERSION))
+    check("开局前动作 4 项齐全（等待/刷僵尸/切换场外加速/自动刷新下一波）",
+          set(_rsv22.PREBATTLE_ACTIONS) == {"wait", "spawn", "zombieSpeed", "refreshWave"},
+          str(sorted(_rsv22.PREBATTLE_ACTIONS)))
+    check("选卡预留 2 项齐全（标收藏 / 自由阶数）",
+          set(_rsv22.PICK_FEATURES) == {"favorite", "tiers"},
+          str(sorted(_rsv22.PICK_FEATURES)))
+    check("局内预留 2 项齐全（主动技能 / 智能切换形态）",
+          set(_rsv22.INBATTLE_RESERVED) == {"skill", "formSmart"},
+          str(sorted(_rsv22.INBATTLE_RESERVED)))
+    check("局外预留 2 项齐全（世界作业链 / 正赛检查）",
+          set(_rsv22.OUTER_RESERVED) == {"worldChains", "modeCheck"},
+          str(sorted(_rsv22.OUTER_RESERVED)))
+    check("全部预留项都还没实现（implemented 全 False）",
+          all(spec.get("implemented") is False for spec in _rsv22.catalog()),
+          "实现某一项时必须同时改注册表与本节断言，别偷偷上功能")
+
+    # ---- 22b. ★ 两边 id 不漂移（拿真实 JS 文件比对）----
+    _js22 = (Path(__file__).resolve().parents[2] / "game_assist_tools" / "endless_setup"
+             / "static" / "js" / "16-jobset-reserved.js")
+    if not _js22.is_file():
+        check("网页端预留接口文件存在", False, str(_js22))
+    else:
+        _txt22 = _js22.read_text(encoding="utf-8")
+
+        def _js_ids22(block: str):
+            """从 `const <block> = [ … ];` 里抽全部 `id: 'xxx'`（顶层 const 以 `];` 收尾）。"""
+            m = _re22.search(r"const\s+" + block + r"\s*=\s*\[(.*?)\n\];",
+                             _txt22, _re22.S)
+            if not m:
+                return None
+            return set(_re22.findall(r"id:\s*'([A-Za-z0-9_]+)'", m.group(1)))
+
+        for _jsblk, _pyset, _cn in (
+            ("JOB_PREBATTLE_ACTIONS", set(_rsv22.PREBATTLE_ACTIONS), "开局前动作"),
+            ("JOB_PICK_FEATURES", set(_rsv22.PICK_FEATURES), "选卡选项"),
+            ("JOB_INBATTLE_RESERVED", set(_rsv22.INBATTLE_RESERVED), "局内动作"),
+            ("JOB_OUTER_RESERVED", set(_rsv22.OUTER_RESERVED), "局外选项"),
+        ):
+            _jsids = _js_ids22(_jsblk)
+            check(f"{_cn}：网页端 {_jsblk} 与 agent 侧 id 一致",
+                  _jsids is not None and _jsids == _pyset,
+                  f"js={sorted(_jsids) if _jsids is not None else 'null'} py={sorted(_pyset)}")
+
+    # ---- 22c. 解析：只认登记过的 id / side / 参数夹取 ----
+    _pb22 = _rsv22.parse_pre_battle([
+        {"id": "wait", "side": "boss", "ms": 1500, "垃圾字段": 1},
+        {"id": "spawn", "side": "??", "times": 999},          # side 非法 -> both；次数夹到 99
+        {"id": "不存在的动作", "ms": 1},                        # 未知 id -> 丢
+        "不是对象",                                             # 非 dict -> 丢
+    ])
+    check("parse_pre_battle: 丢掉未知 id / 非对象（3 项 -> 2 项）", len(_pb22) == 2, str(_pb22))
+    check("parse_pre_battle: side 非法回落 both", _pb22[1]["side"] == "both", str(_pb22[1]))
+    check("parse_pre_battle: 次数按 params 夹到 99", _pb22[1]["times"] == 99, str(_pb22[1]))
+    check("parse_pre_battle: 只收声明过的键（不搬「垃圾字段」）",
+          "垃圾字段" not in _pb22[0], str(_pb22[0]))
+    check("pre_battle_applies: both 两侧都跑 / boss 只跑 boss",
+          _rsv22.pre_battle_applies({"side": "both"}, True)
+          and _rsv22.pre_battle_applies({"side": "boss"}, True)
+          and not _rsv22.pre_battle_applies({"side": "boss"}, False))
+    check("pre_battle_for: 普通关只拿到 both+normal",
+          [it["side"] for it in _rsv22.pre_battle_for(
+              [{"side": "both"}, {"side": "boss"}, {"side": "normal"}], False)]
+          == ["both", "normal"])
+
+    # ---- 22d. ★ 编译入口恒空（有人悄悄实现 -> 这里必红）----
+    _r22 = _rsv22.pre_battle_dsl({"id": "wait", "ms": 1000})
+    check("pre_battle_dsl: 现在恒返回空 DSL", _r22["dsl"] == "" and _r22["count"] == 0, str(_r22))
+    check("pre_battle_dsl: 空理由写明「未实现」",
+          any("未实现" in m for m in _r22["missing"]), str(_r22["missing"]))
+    _coords22 = _dsl22.load_coords()
+    _g22 = _dsl22.generic_dsl("ga:skill", _coords22, None, 1, 1, {"slot": 1})
+    check("generic_dsl(预留动作): 不产出任何动作、只报「预留」",
+          _g22["dsl"] == "" and any("预留" in m for m in _g22["missing"]), str(_g22))
+    _cn22 = _cpl22.build_chain_nodes(
+        {"once_chain": [{"key": "skill", "type": "skill", "slot": 1,
+                         "label": "植物主动技能", "cells": ["格子1_1"]}]},
+        _coords22, swipe_ms=80, interval=None, every_n=10, has_end=False)
+    check("build_chain_nodes(预留段): 整段跳过、不编译出 click/swipe",
+          _cn22["once"] is None, str(_cn22["once"]))
+
+    # ---- 22e. 字段解析：缺省 = 行为不变；配了就解析出来 ----
+    _raw22_old = {
+        "code": "t22", "name": "旧作业集（无预留字段）", "max_level": 149,
+        "tables": [{"from_level": 1, "to_level": None,
+                    "lineup": {"plants": ["A"]}, "slots": {"1": "A"}}],
+    }
+    _js22_old = JobSet(_raw22_old, code="t22")
+    _t22_old = _js22_old.tables[0]
+    check("旧作业集: pre_battle = []（不改变行为）", _t22_old.pre_battle == [], str(_t22_old.pre_battle))
+    check("旧作业集: pick_favorite = False", _t22_old.pick_favorite is False)
+    check("旧作业集: pick_tiers = {}", _t22_old.pick_tiers == {}, str(_t22_old.pick_tiers))
+    check("旧作业集: world_chains 未启用",
+          _js22_old.world_chains == {"enable": False, "items": []},
+          str(_js22_old.world_chains))
+    check("旧作业集: mode_check 未启用",
+          _js22_old.mode_check == {"enable": False, "expect": "ranked", "on_missing": "warn"},
+          str(_js22_old.mode_check))
+
+    _raw22_new = {
+        "code": "t22b", "name": "新作业集（带预留字段）", "max_level": 149,
+        "world_chains": {"enable": True, "items": [
+            {"world": "海盗港湾", "table": 2, "side": "boss",
+             "slots": {"1": "X"}, "squad": 3, "artifact": "葫芦神器"}]},
+        "mode_check": {"enable": True, "expect": "ranked", "on_missing": "abort"},
+        "tables": [{"from_level": 1, "to_level": None,
+                    "lineup": {"plants": ["A"]}, "slots": {"1": "A"},
+                    "pre_battle": [{"id": "wait", "side": "both", "ms": 2500}],
+                    "pick_favorite": True,
+                    "pick_tiers": {"1": 5, "2": 0, "9": 3}}],
+    }
+    _js22_new = JobSet(_raw22_new, code="t22b")
+    _t22_new = _js22_new.tables[0]
+    check("新作业集: pre_battle 读回来了",
+          _t22_new.pre_battle == [{"id": "wait", "side": "both", "ms": 2500}],
+          str(_t22_new.pre_battle))
+    check("新作业集: pick_favorite = True", _t22_new.pick_favorite is True)
+    check("新作业集: pick_tiers 丢掉 0 与越界槽（只剩 {1: 5}）",
+          _t22_new.pick_tiers == {1: 5}, str(_t22_new.pick_tiers))
+    check("新作业集: world_chains 启用且条目读回",
+          _js22_new.world_chains["enable"] is True
+          and _js22_new.world_chains["items"][0]["world"] == "海盗港湾"
+          and _js22_new.world_chains["items"][0]["squad"] == 3,
+          str(_js22_new.world_chains["items"][:1]))
+    check("新作业集: mode_check on_missing=abort 读回",
+          _js22_new.mode_check["on_missing"] == "abort", str(_js22_new.mode_check))
+
+    # ---- 22f. 提示：没配 = 一个字都不打；配了 = 带 ⏳ 且写明未实现 ----
+    check("提示: 没配预留项的作业集不产生任何日志",
+          _rsv22.reserved_notice_lines(_t22_old, False) == []
+          and _rsv22.jobset_notice_lines(_js22_old) == [])
+    _ln22 = _rsv22.reserved_notice_lines(_t22_new, False)
+    check("提示: 配了就各出一行（开场前 1 + 标收藏 1 + 阶数 1）、行首 ⏳、含「未实现」",
+          len(_ln22) == 3 and all(x.startswith("⏳") and "未实现" in x for x in _ln22),
+          str(_ln22))
+    _ln22b = _rsv22.reserved_notice_lines(_t22_new, True)
+    check("提示: boss 关别一样能算出（side=both 两侧都算）", len(_ln22b) == 3, str(_ln22b))
+    check("提示: 作业集级两项各一行",
+          len(_rsv22.jobset_notice_lines(_js22_new)) == 2,
+          str(_rsv22.jobset_notice_lines(_js22_new)))
+
+    # ---- 22g. 运行时钩子 _reserved_notice：只 log、不 override、去重 ----
+    from agent.jobset import runtime as _rt22
+
+    class _Ctx22:
+        def __init__(self):
+            self.overrides = []
+
+        def override_pipeline(self, ov):
+            self.overrides.append(ov)
+
+    _logs22: list = []
+    _old_log22 = _rt22._log
+    _rt22._log = lambda m: _logs22.append(m)
+    try:
+        _rt22._STATE["reserved_seen"] = None
+        _ctx22 = _Ctx22()
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 作业集级 2 + 表级 3
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 同一组合 -> 去重
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, True)    # 换关别 -> 新键 3 行
+    finally:
+        _rt22._log = _old_log22
+        _rt22._STATE["reserved_seen"] = None
+    check("运行时钩子: 一个 override 都不写（配了也不执行）",
+          _ctx22.overrides == [], str(_ctx22.overrides))
+    check("运行时钩子: 首次 5 行 + 重复调用去重 + boss 关别 3 行 = 8 行",
+          sum(1 for m in _logs22 if m.startswith("⏳")) == 8, str(_logs22))
+
+    # ---- 22h. 真实作业集（第 1 节载入的那份）不受影响 ----
+    if js:
+        check("真实作业集: 全部表都没有预留配置（= 行为与旧版一致）",
+              all(not t.pre_battle and not t.pick_favorite and not t.pick_tiers
+                  for t in js.tables),
+              str([(t.pre_battle, t.pick_favorite, t.pick_tiers) for t in js.tables])[:160])
+        check("真实作业集: 作业集级预留项均未启用",
+              js.world_chains == {"enable": False, "items": []}
+              and js.mode_check["enable"] is False,
+              str((js.world_chains, js.mode_check)))
+except Exception as _e22:
+    check("预留接口", False, f"{type(_e22).__name__}: {_e22}")
 
 
 # ---------------------------------------------------------------------------

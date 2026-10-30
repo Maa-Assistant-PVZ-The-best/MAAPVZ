@@ -289,6 +289,8 @@ function jobResetEditor(quiet) {
 
     // 选择世界清空
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI('', []);
+    // 预留接口（作业集级）清空：world_chains / mode_check 回到「未启用」（§10.10）
+    if (typeof jobReservedTopDefaults === 'function') jobReservedTopDefaults();
     // 标签清空（41-jobset-tags.js）
     if (typeof jobSetTags === 'function') jobSetTags([]);
     // 植物备注清空
@@ -359,6 +361,11 @@ function jobApplyLoaded(job, code) {
         if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
         // 补给选取：数组（null/缺失都留空，由 jobSupplyList 填默认）
         if (!Array.isArray(t.supplyPicks)) t.supplyPicks = null;
+
+        // ★ 预留接口字段（16-jobset-reserved.js，见 HANDOFF §10.10）：
+        //   pre_battle / pick_favorite / pick_tiers —— 旧作业集没有这些字段，
+        //   走默认值（空列表 / false / 空表），行为与旧版**完全一致**。
+        if (typeof jobReservedImport === 'function') jobReservedImport(t, t);
 
         // ★ 编队切换：squad（1..6）是运行时读的权威字段。
         //   读回来时同步成编辑器的 lineupMode / deckNo，
@@ -464,6 +471,9 @@ function jobApplyLoaded(job, code) {
     jobOuterPick.order = (_opm === 'auto' && Array.isArray(_op.order))
         ? _op.order.filter(function (x) { return typeof x === 'string' && x; }) : [];
     jobOuterRefreshBadge();
+    // ★ 预留接口（作业集级）：world_chains（按世界换阵容）/ mode_check（正赛检查）
+    //   旧作业集没有这两个字段 -> 回到「未启用」，行为不变（见 §10.10）。
+    if (typeof jobReservedTopImport === 'function') jobReservedTopImport(job);
     // ★ 旧作业集里可能带着"中间空槽"（老版本允许卸中间槽 / 手写 JSON）——
     //   卡槽必须从槽1 起连续（游戏卡条紧排），所以载入即压实（42-jobset-batch.js）。
     //   ★ 必须在 jobLoadTable 之前：压实要改各表自己的 boardEarly/boardLate。

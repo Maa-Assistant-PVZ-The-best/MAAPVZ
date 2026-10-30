@@ -45,6 +45,13 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# ★ 预留接口（2026-11-01）：字段的**归一化口径**全部收在 reserved.py，
+#   engine 只负责「读出来挂到对象上」——这样网页端/agent 两边只有一处权威。
+try:                                    # 包内导入（正常路径）
+    from . import reserved as _reserved
+except ImportError:                     # 直接 python agent/jobset/engine.py
+    import reserved as _reserved        # type: ignore[no-redef]
+
 # ---------------------------------------------------------------------------
 # 路径
 # ---------------------------------------------------------------------------
@@ -316,6 +323,21 @@ class Table:
         self.non_boss: Dict[str, Any] = self._norm_rules(self.raw.get("non_boss"), self.wait_after)
         # ★ boss 规则用 bossWaitAfter（boss 关的等待与普通关完全独立）
         self.boss: Dict[str, Any] = self._norm_rules(self.raw.get("boss"), self.boss_wait_after)
+
+        # ---- ★ 预留接口字段（2026-11-01，见 HANDOFF §10.10）----
+        #   用户要求「先留接口、以后再实现」，所以这三个字段**只解析不消费**：
+        #     pre_battle    : 开局前额外动作 [{id, side, …参数}]（等待/刷僵尸/
+        #                     切换僵尸场外加速/自动刷新下一波）
+        #     pick_favorite : 选卡同时标收藏
+        #     pick_tiers    : 选卡时自由切换阶数 {槽位号: 1..5}（0 = 不指定，被丢掉）
+        #   ★ 缺省 = 空列表 / False / 空表 —— 旧作业集行为与没有它们时**一字不差**。
+        #   实现时**不要在这里加逻辑**，去 reserved.py 改 implemented + 编译/注入。
+        self.pre_battle: List[Dict[str, Any]] = _reserved.parse_pre_battle(
+            self.raw.get("pre_battle", self.raw.get("preBattle")))
+        self.pick_favorite: bool = (
+            self.raw.get("pick_favorite", self.raw.get("pickFavorite")) is True)
+        self.pick_tiers: Dict[int, int] = _reserved.parse_pick_tiers(
+            self.raw.get("pick_tiers", self.raw.get("pickTiers")))
 
     # -- 规则规范化 --------------------------------------------------------
 
@@ -620,6 +642,18 @@ class JobSet:
         self.outer_pick_mode: str = _op_mode if _op_mode in ("auto", "oneclick", "confirm") else "auto"
         # 封顶 80：界面最多选 80 个，多出的从末尾砍（网页端已截，这里兜底）
         self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))[:80]
+
+        # ---- ★ 预留接口（作业集级，2026-11-01，见 HANDOFF §10.10）----
+        #   world_chains: 「每个世界导入一次、智能识别当前世界后替换对应阵容」
+        #                 -> {"enable": bool, "items": [{world, table, side, slots, …}]}
+        #   mode_check  : 「选择正赛会检查正赛有没有开」
+        #                 -> {"enable": bool, "expect": ranked|training|any,
+        #                     "on_missing": warn|abort}
+        #   ★ 只解析、不消费；缺省 = 未启用 -> 行为与旧作业集完全一致。
+        self.world_chains: Dict[str, Any] = _reserved.parse_world_chains(
+            raw.get("world_chains"))
+        self.mode_check: Dict[str, Any] = _reserved.parse_mode_check(
+            raw.get("mode_check"))
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:

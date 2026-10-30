@@ -17,6 +17,7 @@
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from . import dsl as _dsl
+from . import reserved as _reserved
 from .engine import JobSet
 
 # ---------------------------------------------------------------------------
@@ -143,6 +144,15 @@ def build_chain_nodes(
         for seg in chain:
             key = str(seg.get("key") or "").strip()
             typ = str(seg.get("type") or "plant").lower()
+
+            # ★ 预留动作段（2026-11-01，见 HANDOFF §10.10 / reserved.py）：
+            #   「植物主动技能」这类**登记了但没实现**的落子动作，必须在这里
+            #   明确告警后 continue —— 绝不能落到下面的通用起点逻辑，
+            #   否则它会被编译成 `click:格子N_M`（= 静默点一下，动作完全错）。
+            if typ in _reserved.RESERVED_SEG_TYPES:
+                log(f"  ⏳ 预留动作跳过：{_reserved.RESERVED_SEG_TYPES[typ]}"
+                    f"（{seg.get('label') or key}）—— 当前版本未实现")
+                continue
 
             # ---- 通用动作段（点波/捡豆/加速/等待/切换形态/自定义）：没有格子，整段 = 一条 DSL ----
             if typ == "action" or key.startswith("ga:"):
