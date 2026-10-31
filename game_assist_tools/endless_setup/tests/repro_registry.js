@@ -270,5 +270,34 @@ armNos.forEach(function (n) {
     ok(n >= 9, 'armedNo ' + n + ' ≥ 9（1-8 是植物槽，被占用会选错动作）');
 });
 
+// ============================================================
+// 9）段字段的**跨语言契约**（编辑器写 ↔ agent/jobset/dsl.py 读）
+//    ★ 段是编辑器写、Python 读的共享格式。任何一边改字段名，
+//      另一边就会**静默读不到**（编译出来的动作少一截，运行时才炸）。
+//      这条检查就是「改名必须两边一起改」的门禁。
+//    ★ P0 把 picked 下标换成 sids 时，**必须先在这里加上 sids 再动代码**。
+// ============================================================
+section('9. 段字段跨语言契约（编辑器 ⟷ dsl.py）');
+
+const STEPS_SRC = J('27a-jobset-steps.js');
+const PY_DSL = (function () {
+    let out = '';
+    ['dsl.py', 'compile.py'].forEach(function (f) {
+        try {
+            out += fs.readFileSync(path.join(ROOT, '..', '..', 'agent', 'jobset', f), 'utf8');
+        } catch (e) { /* 缺一个就少一份契约，下面的断言会红 */ }
+    });
+    return out;
+})();
+ok(!!PY_DSL, '读到 agent/jobset/dsl.py + compile.py（跨语言契约的另一端）');
+
+const SEG_CONTRACT = ['key', 'from', 'to', 'ms', 'slot', 'times', 'comboMs', 'comboWatch', 'noint'];
+SEG_CONTRACT.forEach(function (k) {
+    const inPy = PY_DSL.indexOf('"' + k + '"') !== -1 || PY_DSL.indexOf("'" + k + "'") !== -1;
+    ok(inPy, 'Python 侧（dsl.py / compile.py）里仍在读段字段「' + k + '」');
+    ok(new RegExp('\\b' + k + '\\b').test(STEPS_SRC),
+        '编辑器 27a 里仍有段字段「' + k + '」（改名要两边一起改，否则 Python 静默读不到）');
+});
+
 console.log(fails ? ('\n❌ 有 ' + fails + ' 条断言失败') : '\n✅ 全部通过（静态登记检查）');
 process.exit(fails ? 1 : 0);

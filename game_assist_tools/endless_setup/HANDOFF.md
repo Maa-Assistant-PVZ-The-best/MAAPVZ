@@ -168,10 +168,11 @@ node tests\repro_shuipi.js ; node tests\repro_reserved.js ; node tests\repro_nud
 node tests\repro_mobile.js ;
 node tests\repro_registry.js ;                  # 静态登记检查（不开浏览器，改任何「登记表」必跑）
 node tests\repro_dirty.js ;                     # 未保存改动防护
+node tests\repro_sid.js ;                       # 步骤稳定身份 sid（P0 第一步）
 node tests\fuzz_drag.js 200 100                 # 链条相关必跑
 ```
 
-**当前基线（2026-11-02，全绿）**：47 个 JS `node --check` 通过；上述 **10 套**回归全过；
+**当前基线（2026-11-02，全绿）**：47 个 JS `node --check` 通过；上述 **11 套**回归全过；
 `fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
 临时脚本（`zz*` / `_*`）为空。
 
@@ -2210,6 +2211,8 @@ node tests\repro_mobile.js     # 11 节 62 条：桌面零影响 / 切屏 / 抽�
 | 7 | **预算门禁**（只能降不能升）：`index.html` 行内 `style` ≤ 66 · `base.css` 的 `!important` ≤ 46 ·
   原生 `alert/confirm/prompt` ≤ 16 | 新代码图省事再塞行内样式/`!important`/系统弹窗，样式和体验会重新变脆 |
 | 8 | 落子动作注册表：每个 `imgKey` 在 `JOB_UI_IMG` 里有图 · `armedNo` 不重复且 ≥ 9 | 新动作悄悄回退成铲子占位 / 撞号导致 W/S 选错动作 |
+| 9 | **段字段跨语言契约**：`key/from/to/ms/slot/times/comboMs/comboWatch/noint`
+  在 `agent/jobset/dsl.py`＋`compile.py` 与编辑器 `27a` 两边都还在 | 任一边改字段名 → Python **静默读不到**，编译出的动作少一截，真机才炸 |
 
 ### 使用
 
@@ -2533,7 +2536,100 @@ jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
 - 它必须在没有别的批次在飞的时候做，并且要有**一份你真实的作业集**做前后对读；
 - 我这一轮的上下文已经不足以「改完 + 反复 fuzz + 真实数据核对」，硬上等于拿你的数据赌。
 
-### 5. 下次开工前需要准备
+### 4.5 ★ 已落地：第一步（2026-11-02，段存储未动）
+
+按用户「你试试能不能改」的要求，只做了**能安全收口的那一层**：
+
+| 改了什么 | 位置 |
+| --- | --- |
+| 新增 `jobSidOfPlacement(which, key, pl)` / `jobStepSid(which, st, board)`：直接复用已有的 `jobPlacementKey`（`链\|槽\|行,列\|seq`） | `27a-jobset-steps.js` 顶部 `jobStepId` 上方 |
+| 植物步骤在解析时**盖上 `st.sid`**（两个创建点都盖了：`jobSegsToSteps` 与 `jobResolveSteps` 的「补位」分支） | 同上 |
+| `jobStepId` / `jobStepIdentity`：植物步骤**优先用 sid**，拿不到才退回 `key#gidx`（老数据/兜底不炸） | 同上 |
+| `jobCarryUids` 的植物分支：配对键从 `key#gidx` 换成 **sid** | 同上 |
+
+**没动的**：段存储格式（还是 `picked` 下标）→ **老作业集不需要迁移**，载入即用。
+
+**这一层治好了什么**：删掉/新增别的落点后，`gidx` 前移不再导致步骤「换身份」，
+于是 uid 继承（勾选、拖动配对）跟着稳定 —— §9.2 那族里「删一格后勾选跑到别的株上」
+这一类从根上消失了。
+
+**回归**：`tests/repro_sid.js`（4 节 12 条）——
+①步骤带 sid ②删中间那株后剩下两步的 sid/stepId/uid 全不变
+③新增落点不改已有 sid ④没有 sid 的老步骤仍按 `key#gidx`（兜底不炸）。
+全套 11 套回归 + `fuzz_drag 200×100` 全绿。
+
+**剩下的**（下一轮）：把段存储从 `picked` 下标换成 `sids` + `jobMigrateSegs` 迁移，
+然后退役 `jobPinSteps` 那套「先钉引用再改」的补丁。到那一步才算 P0 收官。
+
+### 4.55 ★ P0 第二步已落地：段里写 `sids`（2026-11-02，老数据零影响）
+
+**关键事实（勘察真实作业集 `火气珊瑚.json` 后确认）**：
+
+- 编辑器真源是表的 `slotOrder / loopOrder / endOrder / boss*Order`，段形如
+  `{key, from:-1, to:-1, picked:[0,1]}` —— **位置下标**（滑位的根就在这）；
+- 导出给运行时的是 `non_boss.*_chain`，形如 `{key, slot, type, label, mode, cells:["格子3_1"]}`
+  —— **格子名**，本来就稳定；
+- 所以 Python 侧读的是 `cells`（+ `noint` 等），**根本不看 `slotOrder`**。
+
+→ 结论：只要**在 `slotOrder` 类段里补一个 `sids`**，Python 完全不用改，
+  旧作业集也不用迁移（没有 `sids` 就走老逻辑）。
+
+| 端 | 改动 |
+| --- | --- |
+| `27a` `jobStepsToSegs` | 段里新增 `sids`（与 `picked` **一一对应**、顺序一致）；`picked/from/to` 照旧写；
+  合并/单元素归一化时同步维护；任一项为空或长度对不上就**整个丢掉 sids**（宁可不写也不写半截） |
+| `24` `jobSegPlacements` | 段带 `sids` 且长度与下标一致时，**按 stable id 找落点**（`jobPlacementKey` 比对）；
+  找不到 = 这株没了 → 丢掉（等价于原来的「严格读棋盘」）；没有 `sids` → 老逻辑一字不改 |
+| Python | **没动** |
+
+**治好的症状**（`repro_sid` 第 5 节是判定性用例）：
+同格放两株、链里只挑了第 2 株，然后把第 1 株删掉 →
+老格式下 `picked:[1]` 越界，这株被当成“新落点”**补到链尾**（顺序错、可能把「」组打散）；
+新格式下它靠 sid 认回自己，**留在原位**。
+
+**真实作业集验证**：把 `火气珊瑚.json` 复制到 `assets/resource/jobs/` 跑 `report.py` ——
+解析正常（该文件没有 `sids`，走的就是老路径，行为不变）；探针文件已删除。
+
+**还没做的**：编辑器**首次保存**后会把 `sids` 写进文件（体积略增），届时可以再观察一轮；
+`jobPinSteps` 仍然保留（等 `sids` 在真实数据上跑过一轮再退役）。
+
+### 4.57 ★ P0 第三步：清理「动作后等待」悬空键（2026-11-02）
+
+`waitAfter` 的键是 `jobPlacementKey`（形如 `once|card1|2,1|3`）。以前删落点 / 清空格子 /
+删槽位时**没有任何地方清理它** —— 文件里会一直攒着指向“不存在的落点”的键。
+现在无害（读时找不到落点自然不生效），但会让作业集越存越胖，也妨碍以后按 key 做校验。
+
+- 新函数：`jobPruneWaitAfter(t, board, which)`（在 `27a`）
+- 清理时机：`jobStoreSteps` 末尾 —— **链条唯一的写盘出口**，不用去改 08 / 42 / 43 那些散落的删除入口
+- 判定：键能拆成 `mode|槽|r,c|seq` 时，在两块棋盘上都找不到该落点就删；**认不出来的键一律保留**（不敢删）
+- 回归：`repro_sid` 第 6 节 —— 悬空键被清、有效键与「认不出来的键」都保留
+
+### 4.6 剩余的收尾工作（下一轮做，含跨语言面）
+
+⚠️ **这不是纯编辑器内部的活** —— 段存储是**编辑器写、Python 读**的共享格式：
+
+| 端 | 文件 | 依赖什么 |
+| --- | --- | --- |
+| 编辑器 | `27a-jobset-steps.js`（`jobSegsToSteps` / `jobStepsToSegs` / `jobStoreSteps`） | 写 `picked/from/to` 下标 |
+| Python | `agent/jobset/dsl.py`（读 `from`/`to`/`key`/`ms`/`slot`/`times`/`comboMs`/`comboWatch`） | 按下标取落点 |
+| Python | `agent/jobset/compile.py`（`noint` 分组等） | 同上 |
+
+所以「段存储换成 sids」这一步必须**两边一起改**：编辑器写 `sids`、Python 优先读 `sids` 且兼容旧 `picked`，
+再补 `selfcheck.py` 的断言。`tests/repro_registry.js` 第 9 节已经把字段名契约钉住了 ——
+**动手时先在那里加 `sids`，再改代码**。
+
+### 4.7 已知边界（先记着，别当没有）
+
+1. **同格同槽两个落点 `seq` 相同** → sid 会撞成同一个。正常数据不会出现（`jobNextSeq` 保证递增），
+   但**手改 JSON** 可能造出来；真遇到时行为是「这两株被当成同一株」（勾选会一起动）。
+   如果要彻底防，得在 sid 里加“同 sid 内第几个”——但那又引入位置依赖，所以**故意不做**，先记录。
+2. **段存储这一轮没动**，所以 `picked/noint/times` 仍是位置下标：
+   「删落点后无间隔组标记滑到别人头上」这一类**仍可能发生**，现在靠 `jobPinSteps`（先钉引用再改）兜着。
+   只做完 4.6 才能退役这个补丁。
+3. `waitAfter` 的键虽然也是 `jobPlacementKey`（同源），但**删落点时仍然没人清理**它 ——
+   等段存储换成 sids 后再一起做「删落点 → 清悬空键」。
+
+### 5. 下次开工前需要准备### 5. 下次开工前需要准备
 
 1. 一份真实作业集文件名（我会先把它复制一份到临时位置做对读）；
 2. 允许我把 `fuzz_drag` 跑到 **500 会话 × 150 操作**（约几分钟）；
@@ -2574,7 +2670,7 @@ game_assist_tools/endless_setup/HANDOFF.md  §0 表格 + §10.17 + §11
 
 ```
 node --check static\js\*.js        → 41 个文件，0 失败
-tests\repro_*.js（10 套）          → 全过（undo_boss / copy_scope / slot_compact / cell_queue /
+tests\repro_*.js（11 套）          → 全过（undo_boss / copy_scope / slot_compact / cell_queue /
                                      shuipi / reserved / nudge / mobile / registry / **dirty**）
 tests\fuzz_drag.js 200 100         → 200 会话 × 100 操作，0 个会话有首错
 CSS / 外观                          → 本环境**无法验证**（§7），需真机 / Ctrl+F5 / DevTools 手机模拟
@@ -2587,7 +2683,7 @@ game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机�
 game_assist_tools/endless_setup/static/js/45-jobset-dirty.js   ★新增 未保存改动防护（脏标记 / beforeunload / 三入口确认 / 胶囊）
 game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（12 节 77 条）
 game_assist_tools/endless_setup/tests/repro_nudge.js           ★新增 ↑/↓ 移一位回归（5 节 15 条）
-game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（8 节 112 条，见 §10.14）
+game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（9 节 131 条，见 §10.14）
 game_assist_tools/endless_setup/tests/repro_dirty.js           ★新增 未保存防护回归（6 节 23 条，见 §10.16）
 game_assist_tools/endless_setup/static/js/25-jobset-supply.js  补给卡 ← / →（手机改顺序，走 jobCommitSupplyOrder）
 game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳 + .sc-nav + 速查卡 + 脏胶囊

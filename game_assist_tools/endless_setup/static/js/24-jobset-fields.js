@@ -558,6 +558,36 @@ function jobSegPlacements(board, seg, which) {
         for (let g = (seg.from | 0); g < to; g++) idxs.push(g);
     }
 
+    // ★ P0 第二步（2026-11-02）：段里带 `sids` 时，**按稳定身份找落点**，不再按位置下标。
+    //   为什么：`picked/from-to` 是「该槽在该链里的第 N 个落点」，同格放两株时
+    //   「删掉第 2 株」会让 picked 里的 1 越界被丢掉 —— 表现为**这一株从链里消失**；
+    //   或者删第 1 株时下标前移、步骤「换了人」。
+    //   ★ 老作业集没有 `sids` -> 走下面的老逻辑，行为一字不改（这就是「旧作业集也能跑」）。
+    if (Array.isArray(seg.sids) && seg.sids.length === idxs.length) {
+        const mapped = [];
+        for (let i = 0; i < seg.sids.length; i++) {
+            const want = seg.sids[i];
+            if (!want) { mapped.push(idxs[i]); continue; }      // 没写 sid 的那一项按老口径
+            let hit = -1;
+            for (let k = 0; k < all.length; k++) {
+                let sid = '';
+                try {
+                    sid = jobPlacementKey(which, seg.key, all[k].r, all[k].c, all[k].item.seq);
+                } catch (e) { sid = ''; }
+                if (sid === want) { hit = k; break; }
+            }
+            // 找不到 = 这一株已经不在了 -> 丢掉（等价于老的「严格读棋盘」）
+            if (hit !== -1) mapped.push(hit);
+        }
+        // 去重（同一个 sid 只留一次），保持原顺序
+        const seen2 = {};
+        idxs = mapped.filter(function (g) {
+            if (seen2[g]) return false;
+            seen2[g] = true;
+            return true;
+        });
+    }
+
     // ★ 严格读取棋盘：丢掉棋盘上不存在的下标（植物被删掉后，
     //   picked/from-to 里会留下越界值；不清理的话段会「看起来还在」，
     //   但实际渲染为空，拖动时又拿不到落点 → 幽灵段）。

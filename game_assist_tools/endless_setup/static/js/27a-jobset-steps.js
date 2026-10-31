@@ -187,6 +187,33 @@ function jobBoardStepsFor(board, which, keys) {
 //     · 通用动作/等待：key + ms + occ，其中 occ 是「同 key 在第几个**落点组**里」
 //       —— 但那样又依赖位置了。所以改为：**同一份链里，按出现次序一次性编号，
 //       编号写进步骤对象（st.uid），拖动时连同对象一起搬走。**
+// ★★ P0 第一步（2026-11-02）：给「植物步骤」一个**不随位置漂移的稳定身份**
+//
+//   背景：段里存的 `picked/from/to/order` 是「该槽在该链里的第 N 个落点」这种
+//   **位置下标**，只要落点成员一变（删一个/翻形态/重载）下标就整体滑动，
+//   挂在 steps 上的 `uid`（勾选/拖动配对）也跟着滑 —— 这是 §9.2 那族
+//   「拖完互换 / 撤销错乱」的根。
+//
+//   落点的稳定身份项目里其实早就有：`jobPlacementKey(which, key, r, c, seq)`
+//   （原来专门用来挂「动作后等待」的键，口径已过实测）。
+//   这里把它盖到植物步骤上（`st.sid`），让 `jobStepId` / `jobCarryUids` 用它配对；
+//   **段存储格式这一轮不动**（还是 picked 下标），所以老作业集不需要迁移。
+function jobSidOfPlacement(which, key, pl) {
+    if (!pl || !pl.item) return '';
+    try {
+        return jobPlacementKey(which, key, pl.r, pl.c, pl.item.seq);
+    } catch (e) { return ''; }
+}
+
+// 给一个植物步骤算 sid（找不到落点 -> 返回空串，调用方自然退回旧口径）
+function jobStepSid(which, st, board) {
+    if (!st || st.kind !== 'plant') return '';
+    try {
+        const list = jobPlacementsOf(board, st.key, which);
+        return jobSidOfPlacement(which, st.key, list[st.gidx]);
+    } catch (e) { return ''; }
+}
+
 function jobStepId(s) {
     if (!s) return '';
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
@@ -199,7 +226,8 @@ function jobStepId(s) {
         const pid = jobParamsIdentity(ga, s);
         return s.key + ms + pid + uid;
     }
-    return s.key + '#' + s.gidx + uid;
+    // ★ 植物：优先用稳定身份 sid（格子+seq）；拿不到才退回 key#gidx 老口径
+    return (s.sid ? s.sid : (s.key + '#' + s.gidx)) + uid;
 }
 
 // 不含参数（ms）的「身份」：用于改毫秒数时定位自己。
@@ -208,7 +236,7 @@ function jobStepIdentity(s) {
     if (!s) return '';
     const uid = (s.uid !== undefined && s.uid !== null) ? ('~' + s.uid) : '';
     if (s.kind === 'generic' || s.kind === 'wait') return s.key + uid;
-    return s.key + '#' + s.gidx + uid;
+    return (s.sid ? s.sid : (s.key + '#' + s.gidx)) + uid;
 }
 
 // 按「不含参数的身份」在列表里定位（改 ms 时用）
@@ -279,6 +307,9 @@ function jobSegsToSteps(board, segs, which) {
         // 植物：展开成「一株一步」（无间隔组标记随步骤走）
         jobSegRealGidxs(board, seg, which).forEach(function (g) {
             const st = { kind: 'plant', key: seg.key, gidx: g };
+            // ★ P0：盖稳定身份（格子 + seq）。后面的 uid 继承 / 勾选 / 拖动配对
+            //   一律按它来，这样删掉别的落点、gidx 前移也不会换身份。
+            st.sid = jobStepSid(which, st, board);
             if (seg.noint === true) st.noint = true;
             // ★ 点击格子（tap）的连击次数 —— 不带上就静默丢
             if (seg.times !== undefined && seg.times !== null) st.times = Number(seg.times);
@@ -329,9 +360,16 @@ function jobStepsToSegs(steps) {
             && (last.comboWatch === false) === (st.comboWatch === false)
             && last.picked[last.picked.length - 1] === st.gidx - 1) {
             last.picked.push(st.gidx);          // 连续的继续接在后面
+            if (last.sids) last.sids.push(st.sid || '');
             return;
         }
         const o = { key: st.key, from: -1, to: -1, picked: [st.gidx] };
+        // ★ P0 第二步（2026-11-02）：段里额外写 `sids`（与 picked **一一对应**的稳定身份）。
+        //   旧字段 picked/from/to **照旧写**，所以：
+        //     · agent 侧（读 non_boss.*_chain 的 cells）完全不受影响；
+        //     · 老作业集没有 sids -> 读的时候按 picked 下标走，行为一字不改；
+        //     · 新存的文件带 sids -> 同格多株时不再因为「删掉一株」而丢步骤/换人。
+        if (st.sid) o.sids = [st.sid];
         if (st.noint === true) o.noint = true;
         if (st.times !== undefined && st.times !== null) o.times = Number(st.times);
         if (st.comboMs !== undefined && st.comboMs !== null) o.comboMs = Number(st.comboMs);
@@ -340,6 +378,12 @@ function jobStepsToSegs(steps) {
     });
     // picked 只有一项的还原成 from/to（更干净，也更接近旧数据的样子）
     segs.forEach(function (g) {
+        // ★ 只要有一个空 sid 就把 sids 整个丢掉：宁可不写，也不要写半截错数据
+        if (Array.isArray(g.sids)) {
+            const bad = g.sids.some(function (x) { return !x; });
+            const align = Array.isArray(g.picked) && g.sids.length === g.picked.length;
+            if (bad || !align) delete g.sids;
+        }
         if (Array.isArray(g.picked) && g.picked.length === 1) {
             g.from = g.picked[0];
             g.to = g.picked[0] + 1;
@@ -421,7 +465,10 @@ function jobResolveSteps(t, which, board) {
         const add = missing.map(function (g) {
             // ★ 标成 synthesized：表示「棋盘上有、链存储里还没有」，
             //   仅用于展示来源；存盘时由 jobStoreSteps 统一固化（存盘即所见）。
-            return { kind: 'plant', key: k, gidx: g, synthesized: true };
+            const st = { kind: 'plant', key: k, gidx: g, synthesized: true };
+            // ★ P0：补位出来的步骤同样要带稳定身份（否则它每次 gidx 前移都会换身份）
+            st.sid = jobStepSid(which, st, board);
+            return st;
         });
         if (at === -1) steps.push.apply(steps, add);
         else steps.splice.apply(steps, [at + 1, 0].concat(add));
@@ -459,17 +506,18 @@ function jobResolveSteps(t, which, board) {
 function jobCarryUids(newSteps, oldSteps) {
     if (!Array.isArray(newSteps) || !oldSteps || !oldSteps.length) return newSteps;
 
-    // ① 植物：key#gidx 直接对应
+    // ① 植物：按**稳定身份 sid**（格子+seq）对应；没有 sid 的老步骤退回 key#gidx
+    const stepKey = function (s) { return s.sid ? s.sid : (s.key + '#' + s.gidx); };
     const byKeyG = {};
     oldSteps.forEach(function (s) {
         if (s && s.kind === 'plant' && s.uid !== undefined) {
-            byKeyG[s.key + '#' + s.gidx] = s.uid;
+            byKeyG[stepKey(s)] = s.uid;
         }
     });
     const used = {};
     newSteps.forEach(function (s) {
         if (!s || s.kind !== 'plant') return;
-        const k = s.key + '#' + s.gidx;
+        const k = stepKey(s);
         if (byKeyG[k] !== undefined && !used[k]) { s.uid = byKeyG[k]; used[k] = true; }
     });
 
@@ -525,12 +573,61 @@ function jobNormalizeNoint(steps) {
 //   现在统一在存盘前固化：链 = 棋盘的派生视图，用户在链里看到什么，
 //   存下来就是什么。（删落点走 jobDeleteStep —— 它连棋盘落点一起删，
 //   不存在「想留在棋盘但不进链」的合法状态。）
+// ★★ 清理「动作后等待」里**指向已不存在落点**的悬空键（2026-11-02）
+//
+//   背景：`waitAfter` 的键是 `jobPlacementKey(mode, 槽, r, c, seq)`
+//   （例 `once|card1|2,1|3`）。删掉落点 / 清空格子 / 删掉槽位时，
+//   **没有任何地方清理它** —— 于是文件里会一直攒着指向“不存在的落点”的键。
+//   现在无害（读的时候按落点找，找不到自然不生效），但会让作业集越存越胖、
+//   而且以后真要按 key 做统计/校验时就是脏数据。
+//
+//   清理时机：`jobStoreSteps`（链条唯一的写盘出口）之后 —— 那儿正好有棋盘和链名，
+//   不用去改动 08 / 42 / 43 那些散落的删除入口。
+//
+//   ★ 认不出来的键**一律保留**（不认识的形态不敢删，宁可留着）。
+function jobPruneWaitAfter(t, board, which) {
+    const isBoss = (typeof jobIsBossBoard === 'function') ? jobIsBossBoard() : false;
+    const obj = isBoss ? t.bossWaitAfter : t.waitAfter;
+    if (!obj || typeof obj !== 'object') return 0;
+    // 两种语境都要看：普通关棋盘删落点不该影响 boss 侧，反之亦然
+    const boards = [];
+    if (typeof boardEarly !== 'undefined' && boardEarly) boards.push(boardEarly);
+    if (typeof boardLate !== 'undefined' && boardLate) boards.push(boardLate);
+    if (board && boards.indexOf(board) === -1) boards.push(board);
+
+    let removed = 0;
+    Object.keys(obj).forEach(function (k) {
+        const parts = String(k).split('|');
+        if (parts.length !== 4) return;                 // 认不出来 -> 留着
+        const mode = parts[0];
+        const scope = parts[1];
+        const rc = String(parts[2]).split(',');
+        if (rc.length !== 2) return;
+        const r = Number(rc[0]);
+        const c = Number(rc[1]);
+        const seq = Number(parts[3]);
+        // 在两块棋盘上都找不到这个落点 -> 悬空
+        let alive = false;
+        for (let i = 0; i < boards.length && !alive; i++) {
+            const list = jobPlacementsOf(boards[i], scope, mode);
+            for (let j = 0; j < list.length; j++) {
+                const pl = list[j];
+                if (pl.r === r && pl.c === c && Number(pl.item.seq) === seq) { alive = true; break; }
+            }
+        }
+        if (!alive) { delete obj[k]; removed++; }
+    });
+    return removed;
+}
+
 function jobStoreSteps(t, which, board, steps) {
     const field = jobChainField(which, board);
     const solid = (steps || []).filter(function (s) { return !!s; });
     solid.forEach(function (s) { if (s.synthesized) delete s.synthesized; });
     jobNormalizeNoint(solid);   // ★ 孤立 noint 步退回普通动作（组至少 2 步）
     t[field] = jobStepsToSegs(solid);
+    // ★ 顺手清掉「动作后等待」里指向已不存在落点的键（见上面的说明）
+    try { jobPruneWaitAfter(t, board, which); } catch (e) { }
     return t[field];
 }
 
