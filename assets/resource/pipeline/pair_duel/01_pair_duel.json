@@ -182,7 +182,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -198,7 +198,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -214,7 +214,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -230,7 +230,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -246,7 +246,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -262,7 +262,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -278,7 +278,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -294,7 +294,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -310,7 +310,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -326,7 +326,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -341,7 +341,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -357,7 +357,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -470,7 +470,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "post_wait_freezes": 500,
@@ -486,7 +486,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "post_wait_freezes": 500,
@@ -505,7 +505,7 @@
         "max_hit": 1,
         "post_wait_freezes": 500,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "next": [
@@ -520,7 +520,7 @@
         ],
         "max_hit": 1,
         "threshold": [
-            0.9
+            0.8
         ],
         "action": "Click",
         "post_wait_freezes": 500,
