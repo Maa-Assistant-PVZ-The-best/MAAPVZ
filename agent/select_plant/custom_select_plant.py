@@ -129,6 +129,101 @@ def _noop(*a, **k):
 
 
 # ===========================================================================
+# ★ 识别过程日志（2026-11-02 加）
+# ---------------------------------------------------------------------------
+#   背景（用户反馈）：「现在给的日志只有 OCR 核对那一条，识别过程本身是黑的；
+#   局外 80 选卡更是完全没日志」。
+#
+#   所以这里把**识别过程**逐帧打出来，而不是只打结论：
+#       · 这一帧为哪株植物找、在哪个 roi 找、什么阈值什么尺度
+#       · 这一帧有几个候选 / 最高分是多少（**低于阈值也打**，才知道差多少）
+#       · 被否定的卡位、顺路踩点的记录、滑动相似度、回顶次数
+#       · 最后一条汇总：按顺序选中的植物 + 各在第几屏命中 + 耗时
+#
+#   前缀统一成 [SelectPlants][识别]，导出日志里直接搜这个词就能把
+#   「识别过程」和「结论/播报」两类行分开。
+#
+#   ★ 逐帧日志比较啰嗦（局外 80 选卡一局几百帧），可以用参数
+#     「详细日志」（缺省 true）关掉；关掉后只留结论行。
+#   ★ 这里刻意**不引入 logging 模块**：本项目全部日志走
+#     `print(..., file=sys.stderr, flush=True)`（AGENTS.md 铁律 6），
+#     MaaFramework 会把它并进导出日志里，换 logging 反而可能丢在缓冲里。
+# ===========================================================================
+
+_VERBOSE = True          # 逐帧明细开关（run() 里按参数重设）
+
+_T_RUN = [0.0]           # 本段运行的开始时刻（time.monotonic()）
+
+
+def _ilog(msg: str) -> None:
+    """识别过程明细日志（逐帧）。关掉「详细日志」后自动静音。"""
+    if _VERBOSE:
+        print(f"[SelectPlants][识别] {msg}", file=sys.stderr, flush=True)
+
+
+def _wlog(msg: str) -> None:
+    """识别过程的**关键结论**日志（不受「详细日志」开关影响）。"""
+    print(f"[SelectPlants][识别] {msg}", file=sys.stderr, flush=True)
+
+
+def _elapsed() -> str:
+    """从 _clock_start() 起算的耗时文本（日志尾巴用）。"""
+    if not _T_RUN[0]:
+        return ""
+    return f"{time.monotonic() - _T_RUN[0]:.1f}s"
+
+
+def _clock_start() -> None:
+    _T_RUN[0] = time.monotonic()
+
+
+def _fmt_xy(box) -> str:
+    """把 [x,y,w,h] / dict 命中框格式化成日志里的「@(中心x,中心y)」。"""
+    if box is None:
+        return "@(?)"
+    if isinstance(box, dict):
+        x, y, w, h = box["x"], box["y"], box["w"], box["h"]
+    else:
+        x, y, w, h = box[0], box[1], box[2], box[3]
+    return f"@({int(x + w // 2)},{int(y + h // 2)})"
+
+
+def _fmt_cands(cands, limit=3) -> str:
+    """候选列表 -> 「名字@(x,y):0.912x1.0 | ...」（日志用，最多 limit 个）。"""
+    out = []
+    for c in (cands or [])[:limit]:
+        sc = c.get("scale")
+        tag = f"x{sc:g}" if isinstance(sc, (int, float)) else ""
+        out.append(f"{c['name']}{_fmt_xy(c)}:{c['score']:.3f}{tag}")
+    return " | ".join(out) if out else "（无候选）"
+
+
+def _fmt_scales(scales) -> str:
+    if not scales:
+        return "缺省(0.85~1.15)"
+    return "[" + ",".join(f"{float(s):g}" for s in scales) + "]"
+
+
+def _probe_cands(image, templates, roi, scales, topk=3):
+    """「不设阈值」的匹配探针：拿这一帧的最高分与候选（日志用）。
+
+    ★ 与 find_best 的区别：find_best 命中不了就返回 None，日志就只剩
+      「没找到」三个字 —— 用户没法判断「差 0.01 还是差 0.4」。
+      这里把最高分原样拿出来，命中判定由调用方按阈值自己比。
+    ★ 计算量与 find_best 完全相同（NCC 相关图整幅都算，阈值只做过滤）。
+    """
+    if image is None or getattr(image, "size", 0) == 0:
+        return []
+    try:
+        return PM.match_plants(image, templates, roi=roi, threshold=None,
+                               scales=scales, topk=topk)
+    except Exception as e:                      # pragma: no cover
+        print(f"[SelectPlants][识别] 匹配异常: {type(e).__name__}: {e}",
+              file=sys.stderr, flush=True)
+        return []
+
+
+# ===========================================================================
 # PlantMatch —— 自定义识别：在截图中找某植物模板（品质目录 + 多皮肤命中其一）
 # ===========================================================================
 
@@ -231,6 +326,8 @@ class SelectPlants(CustomAction):
           "槽位上限": 8,             // 仅单目标模式：最多处理列表前几个（局外选卡不生效）
           "尺度": [1.0],             // 匹配多尺度；单目标缺省 0.85~1.15，局外选卡缺省 [1.0]
           "局外点击间隔": 150,        // 无尽局外选卡模式每次点击之间的间隔 ms
+
+          "详细日志": true,          // ★ 识别过程逐帧日志（缺省开；关掉只留结论行）
         }
     """
 
@@ -359,6 +456,11 @@ class SelectPlants(CustomAction):
     def run(self, context: Context, argv: CustomAction.RunArg) -> CustomAction.RunResult:
         try:
             param = _parse_param(argv.custom_action_param) or {}
+            # ★ 识别过程日志开关（缺省开）+ 计时起点：一进来就设好，
+            #   后面所有分支（编队 / 局外 80 / 局内 8 槽）共用。
+            global _VERBOSE
+            _VERBOSE = self._to_bool(param.get("详细日志", True))
+            _clock_start()
             plants = _norm_list(param.get("植物列表") or param.get("plants"))
             # ★ 植物列表为空 = 「不指定选哪些卡，直接占位填充」。
             #   用途：作业集里某张表没配植物时（例如表2 故意留空测试换阵容），
@@ -449,6 +551,11 @@ class SelectPlants(CustomAction):
                 targets.append({
                     "zh": zh, "en": en, "quality": q, "templates": tpls,
                 })
+                # ★ 识别过程日志：这株植物最终会去哪几个模板、几张（皮肤/多模板）
+                _ilog(f"目标 {len(targets)}：**{zh}** -> {en}（品质 {q}，"
+                      f"模板 {len(tpls)} 张"
+                      f"{'：' + '、'.join(Path(t).name for t in tpls[:4]) if len(tpls) > 1 else ''}"
+                      f"{' …' if len(tpls) > 4 else ''}）")
             if not targets and not fill_only:
                 print("[SelectPlants] 没有可执行的植物", file=sys.stderr, flush=True)
                 return CustomAction.RunResult(success=False)
@@ -458,6 +565,25 @@ class SelectPlants(CustomAction):
             if fill_only:
                 print("[SelectPlants] 植物列表为空 -> 跳过选卡，直接占位填充",
                       file=sys.stderr, flush=True)
+
+            # ---- ★ 识别过程横幅：一次把「用什么几何/阈值/尺度在找」说清楚 ----
+            #   用户排查「为什么没认到」第一眼要看的就是这几个值。
+            _wlog(f"开始识别：模式="
+                  f"{'局外80选卡' if endless_mode else '局内8槽选卡'}，"
+                  f"目标 {len(targets)} 株，模板目录={Path(tdir).name}")
+            _ilog(f"识别几何：搜索roi={search_roi} 阈值={threshold:.2f} "
+                  f"尺度={_fmt_scales(scales)} 滑动={swipe.get('begin')}->{swipe.get('end')}"
+                  f"(duration={swipe.get('duration')}) "
+                  f"回顶={backtop.get('begin')}->{backtop.get('end')}"
+                  f"(duration={backtop.get('duration')})")
+            _ilog(f"节奏：滑动后等待={post_swipe_wait}ms 点击后等待={post_click_wait}ms "
+                  f"相似阈值={sim_threshold:.2f} 保底连续帧={backoff_frames} "
+                  f"最多重试={max_retry} 最多滑动步数={max_slides}")
+            if not endless_mode:
+                _ilog(f"局内槽位：上限={slot_limit} 核对={'开' if verify else '关'} "
+                      f"占位填充={'开' if fill_enabled else '关'} "
+                      f"槽位预检查={'开' if check_slots_first else '关'} "
+                      f"核对roi={verify_roi}")
 
             # ---- 无尽局外选卡模式（80 选卡）：一帧多目标，与单目标路径完全分离 ----
             # 隐含：不做核对 / 槽位检查 / 占位填充；触底回顶机制与单目标一致。
@@ -552,6 +678,8 @@ class SelectPlants(CustomAction):
                       file=sys.stderr, flush=True)
             else:
                 # 填充前要回到列表最顶：按最后一个植物的下滑屏数回顶
+                _ilog(f"占位填充：先按第 {prev_slides} 屏回顶，再依次点 "
+                      f"{len(fill_positions) if isinstance(fill_positions, (list, tuple)) else 1} 个填充点")
                 self._do_swipe_backtop(ctl, backtop, prev_slides)
                 if self._stopped(context):
                     return CustomAction.RunResult(success=False)
@@ -575,6 +703,8 @@ class SelectPlants(CustomAction):
                               file=sys.stderr, flush=True)
 
             print("[SelectPlants] 完成", file=sys.stderr, flush=True)
+            _wlog(f"局内选卡汇总：目标 {len(targets)} 株，"
+                  f"就绪 {sum(1 for d in slot_done if d)} 个槽，耗时 {_elapsed()}")
             return CustomAction.RunResult(success=True)
         except Exception as e:
             import traceback
@@ -731,15 +861,30 @@ class SelectPlants(CustomAction):
         return ""
 
     # ---- 槽位核对：模板匹配 -> 是否已含目标植物 ----
+    # ★ 现在主流程都走 _slot_score（要报最高分），本函数保留为语义封装，
+    #   内部统一委托给它 —— 两个判据不会各写一份、不会漂移。
     @staticmethod
     def _slot_has(img, tgt_templates, slot_roi, threshold, scales=None):
         if slot_roi is None or len(slot_roi) != 4:
             return False
         if slot_roi[2] <= 0 or slot_roi[3] <= 0:
             return False
-        hit = PM.find_best(img, tgt_templates, roi=slot_roi,
-                           threshold=threshold, scales=scales)
-        return hit is not None
+        return SelectPlants._slot_score(
+            img, tgt_templates, slot_roi, scales=scales) >= threshold
+
+    @staticmethod
+    def _slot_score(img, tgt_templates, slot_roi, scales=None):
+        """槽位区里的**最高分**（不设阈值，日志用）—— 0.0 表示没算成。
+
+        ★ 和 _slot_has 的区别只有「过不过滤阈值」：报告「最高分 0.887
+          （阈值 0.90）」比「没命中」有用得多。
+        """
+        if slot_roi is None or len(slot_roi) != 4:
+            return 0.0
+        if slot_roi[2] <= 0 or slot_roi[3] <= 0:
+            return 0.0
+        cands = _probe_cands(img, tgt_templates, slot_roi, scales, topk=1)
+        return cands[0]["score"] if cands else 0.0
 
     # ---- 位置否定记忆：判断一个卡位(topleft x,y,w,h)中心是否落在任一已否定框内 ----
     @staticmethod
@@ -762,14 +907,20 @@ class SelectPlants(CustomAction):
         img = self._screen(ctl)
         if img is None:
             return
+        _ilog(f"槽位预检查：一帧截图里逐个比 1..{min(slot_limit, len(targets))} 槽"
+              f"（阈值 {threshold:.2f}，尺度 {_fmt_scales(scales)}）")
         for i, tgt in enumerate(targets):
             if i >= slot_limit:
                 break
             if self._stopped(context):
                 return
             sr = slot_rois[i] if i < len(slot_rois) else None
-            if self._slot_has(img, tgt["templates"], sr, threshold,
-                              scales=scales):
+            # 识别过程日志：每槽都打最高分，认不到才知道差多少
+            score = self._slot_score(img, tgt["templates"], sr, scales=scales)
+            hit = score >= threshold
+            _ilog(f"  槽{i+1}（roi={sr}）**{tgt['zh']}** 最高分 {score:.3f}"
+                  f"（阈值 {threshold:.2f}）-> {'已就绪' if hit else '未就绪'}")
+            if hit:
                 slot_done[i] = True
                 print(f"[SelectPlants] 槽位检查: #{i+1} 已是 **{tgt['zh']}**",
                       file=sys.stderr, flush=True)
@@ -820,6 +971,14 @@ class SelectPlants(CustomAction):
         if watch_targets is None:
             watch_targets = []
 
+        # ★ 识别过程日志：逐帧计数器（日志里「帧N/屏M」就是这两个）
+        frame = 0
+        best_score = 0.0        # 最近一帧的最高分（放弃时汇总用）
+        _ilog(f"#{slot_index+1} **{tgt['zh']}** 开始查找：模板 {len(tgt['templates'])} 张，"
+              f"阈值 {threshold:.2f}，尺度 {_fmt_scales(scales)}，"
+              f"从第 {slide_count} 屏开始，踩点对象 "
+              f"{[w['zh'] for w in watch_targets] or '（无）'}")
+
         while retry <= max_retry and bounce_run < max_retry:
             if self._stopped(context):
                 return False, slide_count
@@ -828,6 +987,7 @@ class SelectPlants(CustomAction):
             if img is None:
                 time.sleep(0.3)
                 continue
+            frame += 1
 
             # ---- 顺路踩点：这帧里顺便看看后面没选的植物在不在（只记不点）----
             if watch_targets and watch_seen is not None:
@@ -842,12 +1002,17 @@ class SelectPlants(CustomAction):
                               f"**{wt['zh']}** 在第 {slide_count} 屏出现过"
                               f"（先记下，轮到它时少滑几屏）",
                               file=sys.stderr, flush=True)
+                        _ilog(f"  踩点命中 #{wt['idx']+1} {wt['zh']} "
+                              f"score={hit['score']:.3f}{_fmt_xy(hit)}"
+                              f"（阈值 {threshold:.2f}）")
 
             # ---- 在这帧里找目标植物：取多个候选，跳过已否定的卡位，避免反复选中同一张电能豌豆 ----
+            # ★ 探针用 threshold=None：这样即使一个都没过阈值，也能把「最高分」
+            #   打出来（差 0.02 和差 0.40 是两种完全不同的故障）。
             found = None
-            candidates = PM.match_plants(img, tgt["templates"],
-                                         roi=search_roi, threshold=threshold,
-                                         scales=scales, topk=60)
+            probed = _probe_cands(img, tgt["templates"], search_roi, scales, topk=60)
+            best_score = probed[0]["score"] if probed else 0.0
+            candidates = [c for c in probed if c["score"] >= threshold]
             # 同一卡位常被多个尺度/皮肤模板命中，按中心粗去重，避免 top 候选被同一位置占满
             seen_centers = set()
             deduped = []
@@ -864,6 +1029,12 @@ class SelectPlants(CustomAction):
                     continue
                 found = cd
                 break
+            _ilog(f"#{slot_index+1} 帧{frame} 屏{slide_count}："
+                  f"候选 {len(candidates)} 个（去重 {len(deduped)}，"
+                  f"已否定 {len(rejected)}）最高 {best_score:.3f}"
+                  f"（阈值 {threshold:.2f}{'，过阈值' if best_score >= threshold else '，未过阈值'}）"
+                  f" 最佳={_fmt_cands(candidates, 2)}"
+                  f"{'，可用→点击' if found is not None else ('，全被否定' if deduped else '，无可点候选')}")
             if found is not None:
                 # 点它
                 cx = found["x"] + found["w"] // 2
@@ -892,16 +1063,21 @@ class SelectPlants(CustomAction):
                 # 槽位 top-1 匹配很容易在槽区误命中，不能单独让 ok=True。
                 ok = ocr_hit
                 slot_hit = False
+                slot_thr = min(0.90, round(threshold + 0.10, 3))
+                slot_score = 0.0
                 if ocr_text.strip() == "":
                     # 槽位核对用更高阈值降低误报（threshold+0.1, 封顶0.9）
-                    slot_thr = min(0.90, round(threshold + 0.10, 3))
-                    slot_hit = self._slot_has(img2, tgt["templates"],
-                                              slot_roi, slot_thr,
-                                              scales=scales)
+                    slot_score = self._slot_score(img2, tgt["templates"],
+                                                  slot_roi, scales=scales)
+                    slot_hit = slot_score >= slot_thr
                     ok = slot_hit
                 print(f"[SelectPlants] 核对 #{slot_index+1}: "
                       f"ocr='{ocr_text}' ocr_hit={ocr_hit} slot_hit={slot_hit} -> ok={ok}",
                       file=sys.stderr, flush=True)
+                _ilog(f"  核对明细：OCR文本='{ocr_text}'（roi={verify_roi}）"
+                      f"名字匹配={ocr_hit}；槽位识别最高分={slot_score:.3f}"
+                      f"（阈值 {slot_thr:.2f}）"
+                      f"{'未走槽位判定（OCR 读到字，以名字为准）' if ocr_text.strip() else ''}")
 
                 if ok:
                     print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 核对通过",
@@ -935,6 +1111,8 @@ class SelectPlants(CustomAction):
             # （列表已到尽头/卡住）才判为"没滚动到底"，且需连续 backoff_frames 次。
             # 这样正常滑动时画面明显变化，不会误判。
             img_before = PL.bgr_to_gray(img) if img is not None else None
+            _ilog(f"#{slot_index+1} 帧{frame} 未命中 -> 下滑 1 步"
+                  f"（屏 {slide_count}->{slide_count + 1}）")
             self._do_swipe(ctl, swipe)
             slide_count += 1          # ★ 记下这一轮到底滑了几屏，回顶次数由它决定
             time.sleep(post_swipe_wait / 1000.0)
@@ -946,8 +1124,13 @@ class SelectPlants(CustomAction):
             if img_before is not None:
                 sim = self._gray_sim(img_before, PL.bgr_to_gray(img_after))
                 identical_run = identical_run + 1 if sim >= sim_threshold else 0
+                # ★ 相似度是「到底没到底」的唯一依据，逐帧打出来
+                _ilog(f"  滑动后相似度 {sim:.3f}"
+                      f"（阈值 {sim_threshold:.2f}，连续『没动静』"
+                      f" {identical_run}/{backoff_frames}）")
             else:
                 identical_run = 0
+                _ilog("  滑动前帧为空，本步不参与『到底』判定")
 
             # 判「到底」的两条路：
             #   a) 连续 backoff_frames 次滑动画面无变化 -> 列表已到尽头
@@ -979,6 +1162,10 @@ class SelectPlants(CustomAction):
         print(f"[SelectPlants] #{slot_index+1} **{tgt['zh']}** 放弃："
               f"核验失败 {retry}/{max_retry} 次 / 连续触底反弹 {bounce_run}/{max_retry} 次",
               file=sys.stderr, flush=True)
+        _wlog(f"#{slot_index+1} **{tgt['zh']}** 放弃明细：共扫 {frame} 帧，"
+              f"核验失败 {retry} 次，触底反弹 {bounce_run} 次，"
+              f"否定卡位 {len(rejected)} 个 {rejected[:3]}，"
+              f"最后一次最高分 {best_score:.3f}（阈值 {threshold:.2f}），耗时 {_elapsed()}")
         if ocr_seen:
             # ★ 汇总这株植物核验时 OCR 读到过的所有文本 —— 加别名就照这个抄
             print(f"[SelectPlants]   期间 OCR 读到过：{ocr_seen[:8]}"
@@ -1054,6 +1241,21 @@ class SelectPlants(CustomAction):
         return out
 
     @staticmethod
+    def _white_ratios(image, digit_boxes, white_min=235):
+        """每个编队号数字框的「近白像素占比」—— 白字判定的原始依据（日志用）。"""
+        ratios = {}
+        if image is None or getattr(image, "size", 0) == 0:
+            return ratios
+        for n, box in digit_boxes.items():
+            x, y, w, h = box
+            crop = image[max(0, y):y + h, max(0, x):x + w]
+            if crop.size == 0:
+                continue
+            near_white = (crop.min(axis=2) >= white_min)
+            ratios[n] = float(near_white.mean())
+        return ratios
+
+    @staticmethod
     def _white_digits(image, digit_boxes, white_min=235, ratio=0.10):
         """白字核对：逐框数近白像素占比，>= ratio 判白，返回白字编队号集合。
 
@@ -1061,18 +1263,16 @@ class SelectPlants(CustomAction):
         白字笔画在紧凑框里的占比实测约 20-50%；彩色数字近白像素≈0，
         0.10 的阈值余量很大。
         """
-        whites = set()
-        if image is None or getattr(image, "size", 0) == 0:
-            return whites
-        for n, box in digit_boxes.items():
-            x, y, w, h = box
-            crop = image[max(0, y):y + h, max(0, x):x + w]
-            if crop.size == 0:
-                continue
-            near_white = (crop.min(axis=2) >= white_min)
-            if float(near_white.mean()) >= ratio:
-                whites.add(n)
-        return whites
+        ratios = SelectPlants._white_ratios(image, digit_boxes, white_min)
+        return {n for n, r in ratios.items() if r >= ratio}
+
+    @staticmethod
+    def _fmt_ratios(ratios, limit=8):
+        """白字占比 -> 「1:0.42 2:0.00 …」（日志用）。"""
+        if not ratios:
+            return "（无）"
+        items = sorted(ratios.items())[:limit]
+        return " ".join(f"{n}:{r:.2f}" for n, r in items)
 
     @staticmethod
     def _squad_done(white_set, target):
@@ -1115,6 +1315,13 @@ class SelectPlants(CustomAction):
             for _ in range(max(1, n_slides + 2)):
                 self._squad_swipe(ctl, back, end_hold)
 
+        # ★ 识别过程日志：入口横幅（几何 + 判据），用户排查「编队选错」时要看
+        _wlog(f"编队选择：开始，目标编队 {target}，整列 roi={col_roi}，"
+              f"核对等待 {verify_wait}ms，滑动按住 {end_hold}ms，"
+              f"最多 {max_retry} 轮 / 单轮 {max_slides} 滑")
+        _ilog(f"  判据：白字集合={{{1}, 当前选中}}（目标≠1 看目标变白；"
+              f"目标=1 看白色集合收窄为 {{1}}）；滑动={swipe.get('begin')}->{swipe.get('end')}")
+
         slides = 0
         consec_last6 = 0
         for attempt in range(1, max_retry + 1):
@@ -1124,10 +1331,15 @@ class SelectPlants(CustomAction):
             if img is None:
                 return False
             digits = self._ocr_digits(context, img, col_roi)
+            # 白字集合仍走 _white_digits（判据唯一来源）；ratios 只为日志
             white = self._white_digits(img, digits)
+            ratios = self._white_ratios(img, digits)
             print(f"[SelectPlants] 编队选择: 第{attempt}轮 "
                   f"可见={sorted(digits)} 白字={sorted(white)}",
                   file=sys.stderr, flush=True)
+            _ilog(f"  第{attempt}轮 屏{slides}：OCR 可见数字 {sorted(digits)}，"
+                  f"近白占比 {self._fmt_ratios(ratios)} -> 白字 {sorted(white)}；"
+                  f"框={ {n: digits[n] for n in sorted(digits)} }")
 
             # 已完成短路只对 目标≠1 生效（不把已选中的再点一遍，防反选）。
             # ★ 编队1 是例外：它天生纯白，「白字={1}」不代表选中态 ——
@@ -1150,6 +1362,10 @@ class SelectPlants(CustomAction):
                 img2 = self._screen(ctl)
                 digits2 = self._ocr_digits(context, img2, col_roi)
                 white2 = self._white_digits(img2, digits2)
+                ratios2 = self._white_ratios(img2, digits2)
+                _ilog(f"  点击后复核：可见 {sorted(digits2)}，"
+                      f"近白占比 {self._fmt_ratios(ratios2)} -> 白字 {sorted(white2)}，"
+                      f"判据 {'满足' if self._squad_done(white2, target) else '不满足'}")
                 if self._squad_done(white2, target):
                     print(f"[SelectPlants] 编队选择: 编队{target} 核对通过 ✓",
                           file=sys.stderr, flush=True)
@@ -1184,12 +1400,15 @@ class SelectPlants(CustomAction):
                 backtop(slides)
                 slides = 0
             else:
+                _ilog(f"  目标 {target} 本帧不可见 -> 下滑 1 步（已滑 {slides + 1}）")
                 self._squad_swipe(ctl, swipe, end_hold)
                 slides += 1
             time.sleep(post_swipe_wait / 1000.0)
 
         print(f"[SelectPlants] 编队选择: {max_retry} 轮仍未选中编队{target}，放弃",
               file=sys.stderr, flush=True)
+        _wlog(f"编队选择汇总（未完成）：{max_retry} 轮没选上编队 {target}，"
+              f"耗时 {_elapsed()}")
         return False
 
     # ---- 无尽局外选卡：严格按列表顺序，当前帧优先找下一个，触底回顶重扫 ----
@@ -1229,6 +1448,9 @@ class SelectPlants(CustomAction):
         if not pending:
             print("[SelectPlants] 局外选卡: 植物列表为空，直接完成",
                   file=sys.stderr, flush=True)
+            _wlog("局外选卡：植物列表为空（作业集 outer_pick.plants 没配 / "
+                  "注入被顶掉）—— 一株都没得选，直接返回成功。"
+                  "要自动选卡请在网页端「局外选卡」里选够 80 个后重新保存作业集")
             return True
         if scales is None:
             # 手截图与界面同尺度，单尺度足够且快；
@@ -1240,12 +1462,20 @@ class SelectPlants(CustomAction):
                          if backtop_extra is None else int(backtop_extra))
 
         # 顶点重启扫描（还没滑过 -> 按 0+extra 次刷）
+        _wlog(f"局外选卡：开始，共 {len(pending)} 株待选，"
+              f"阈值 {threshold:.2f}，尺度 {_fmt_scales(scales)}，"
+              f"踩点数量 {watch_count}，回顶余量 +{backtop_extra}")
+        _ilog(f"  局外搜索roi={search_roi} 滑动={swipe.get('begin')}->{swipe.get('end')} "
+              f"回顶={backtop.get('begin')}->{backtop.get('end')} "
+              f"点击间隔={click_gap}ms 相似阈值={sim_threshold:.2f}")
         self._do_swipe_backtop(ctl, backtop, 0, extra=backtop_extra)
 
         bounce_run = 0           # 连续触底反弹次数（选中一个就清零）；到上限判失败
         slide_count = 0          # 本轮回顶之后，已经向下扫了几屏
         identical_run = 0
         seen_depth = {}          # seq -> 在第几屏出现过（顺路踩点记录）
+        frame = 0                # 识别帧计数（日志用）
+        picked_log = []          # [(中文名, 第几屏, score)] —— 完成时汇总「按什么顺序选的」
 
         # ★ 2026-10-03 扫描策略改版：
         #   - 点中一个 -> 留在当前帧再找下一个（循环开头重截帧就是这次检查），
@@ -1261,6 +1491,7 @@ class SelectPlants(CustomAction):
             if img is None:
                 time.sleep(0.3)
                 continue
+            frame += 1
 
             # ---- 顺路踩点：只记不点（后面 watch_count 个未选的）----
             if watch_count:
@@ -1275,11 +1506,20 @@ class SelectPlants(CustomAction):
                               f"**{wt['zh']}** 在第 {slide_count} 屏出现过"
                               f"（先记下，轮到它时少滑几屏）",
                               file=sys.stderr, flush=True)
+                        _ilog(f"  帧{frame} 踩点 #{wt['seq'] + 1} {wt['zh']} "
+                              f"score={hit_w['score']:.3f}{_fmt_xy(hit_w)}"
+                              f"（阈值 {threshold:.2f}）")
 
             # ---- 只找「第一个未选中的」（严格顺序）----
             tgt = pending[0]
-            hit = PM.find_best(img, tgt["templates"], roi=search_roi,
-                               threshold=threshold, scales=scales)
+            # ★ 探针不设阈值：没命中也要知道最高分（差多少才过阈值）
+            probed = _probe_cands(img, tgt["templates"], search_roi, scales, topk=3)
+            best_score = probed[0]["score"] if probed else 0.0
+            hit = probed[0] if (probed and best_score >= threshold) else None
+            _ilog(f"局外 帧{frame} 屏{slide_count} 目标 #{tgt['seq'] + 1} **{tgt['zh']}**："
+                  f"最高 {best_score:.3f}（阈值 {threshold:.2f}"
+                  f"{'，命中' if hit is not None else '，未过阈值'}）"
+                  f" 最高点={_fmt_cands(probed, 2)} 剩 {len(pending)} 个")
             if hit is not None:
                 cx = hit["x"] + hit["w"] // 2
                 cy = hit["y"] + hit["h"] // 2
@@ -1287,8 +1527,11 @@ class SelectPlants(CustomAction):
                       f"({hit['name']}, score={hit['score']:.3f}) "
                       f"点击 ({cx},{cy})（剩 {len(pending) - 1} 个）",
                       file=sys.stderr, flush=True)
+                _ilog(f"  -> 点击 ({cx},{cy})，该卡在整图 {_fmt_xy(hit)}，"
+                      f"模板 {hit['name']} 尺度 x{hit.get('scale', 1):g}")
                 self._click(ctl, cx, cy)
                 time.sleep(click_gap / 1000.0)
+                picked_log.append((tgt["zh"], slide_count, hit["score"]))
                 seen_depth.pop(tgt["seq"], None)   # 已选上，踩点记录作废
                 pending.pop(0)          # 按名除名：已打勾的卡不再匹配
                 identical_run = 0
@@ -1310,6 +1553,7 @@ class SelectPlants(CustomAction):
 
             # ---- 没找到 -> 顺势往下滑（不回顶），触底才反弹 ----
             img_before = PL.bgr_to_gray(img)
+            _ilog(f"  帧{frame} 未命中 -> 下滑 1 步（屏 {slide_count}->{slide_count + 1}）")
             self._do_swipe(ctl, swipe)
             slide_count += 1          # 记下这轮滑了几屏，回顶次数由它决定
             time.sleep(post_swipe_wait / 1000.0)
@@ -1319,6 +1563,8 @@ class SelectPlants(CustomAction):
                 continue
             sim = self._gray_sim(img_before, PL.bgr_to_gray(img_after))
             identical_run = identical_run + 1 if sim >= sim_threshold else 0
+            _ilog(f"  滑动后相似度 {sim:.3f}（阈值 {sim_threshold:.2f}，"
+                  f"连续『没动静』 {identical_run}/{backoff_frames}）")
 
             # 触底（连续无变化）或步数上限 -> 反弹回顶（不算失败，连续计数）
             if identical_run >= backoff_frames or slide_count >= max_slides:
@@ -1327,6 +1573,9 @@ class SelectPlants(CustomAction):
                       f"仍没找到 **{tgt['zh']}**（共剩 {len(pending)} 个），"
                       f"触底反弹回顶（连续 {bounce_run}/{max_retry} 次，不耗重试）",
                       file=sys.stderr, flush=True)
+                _ilog(f"  反弹原因：{'连续相似' if identical_run >= backoff_frames else '步数上限'}"
+                      f"（相似度 {sim:.3f}，连续 {identical_run}/{backoff_frames}，"
+                      f"屏 {slide_count}/{max_slides}）")
                 self._do_swipe_backtop(ctl, backtop, slide_count,
                                        extra=backtop_extra)
                 slide_count = 0       # 新的一轮，回顶次数重新按「本轮」计
@@ -1337,9 +1586,15 @@ class SelectPlants(CustomAction):
             print(f"[SelectPlants] 局外选卡: 连续触底反弹 {max_retry} 次仍没找到，"
                   f"剩 {len(pending)} 个未选中: {names}",
                   file=sys.stderr, flush=True)
+            _wlog(f"局外选卡汇总（未完成）：已选 {len(picked_log)}/{len(targets)}，"
+                  f"扫了 {frame} 帧，触底反弹 {bounce_run} 次，耗时 {_elapsed()}；"
+                  f"已选顺序={[(n, f'屏{s}') for n, s, _ in picked_log]}")
             return False
         print(f"[SelectPlants] 局外选卡: {len(targets)} 个植物全部选中",
               file=sys.stderr, flush=True)
+        _wlog(f"局外选卡汇总（完成）：{len(targets)}/{len(targets)}，"
+              f"扫了 {frame} 帧，耗时 {_elapsed()}；按序选中="
+              f"{[(n, f'屏{s}', round(sc, 2)) for n, s, sc in picked_log]}")
         return True
 
     @staticmethod

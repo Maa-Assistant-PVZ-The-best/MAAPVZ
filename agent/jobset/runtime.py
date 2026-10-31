@@ -80,6 +80,42 @@ def _log(msg: str) -> None:
     print(f"[JobSet] {msg}", file=sys.stderr, flush=True)
 
 
+def _sig_text(sig: Any) -> str:
+    """阵容签名 -> 短文本（日志用，别把 8 个植物名全倒进一行）。"""
+    if not isinstance(sig, tuple) or len(sig) < 2:
+        return str(sig)
+    if sig[0] == "deck":
+        return f"编队{sig[1]}"
+    plants = list(sig[1] or ())
+    head = "、".join(plants[:3])
+    return f"选卡{len(plants)}株[{head}{'…' if len(plants) > 3 else ''}]"
+
+
+def _reco_digest(argv: Any) -> str:
+    """把一次识别详情压成一行摘要（命中框 / OCR 候选文本），日志用。
+
+    ★ 用户要看的是「识别过程」，而不是只有结论：这条给出「这一帧识别
+      命中了哪个框、OCR 候选文本有哪些」，自定义动作里凡是能用上
+      argv.reco_detail 的地方都应该打一条。
+    """
+    reco = getattr(argv, "reco_detail", None)
+    if reco is None:
+        return "（本节点没有识别详情）"
+    parts: List[str] = []
+    box = getattr(reco, "box", None)
+    if box:
+        try:
+            parts.append("命中框=(" + ",".join(str(int(v)) for v in box) + ")")
+        except Exception:
+            parts.append(f"命中框={box}")
+    texts = _reco_all_texts(reco)
+    if texts:
+        parts.append("OCR候选=" + str(texts[:6]))
+    if not parts:
+        parts.append("（识别详情为空）")
+    return " ".join(parts)
+
+
 def _check_world(js: JobSet, cur_world: str) -> str:
     """适配世界校验：作业集标注的 world/sub_worlds vs GUI 选项「选择世界」当前值。
 
@@ -382,6 +418,11 @@ def _apply_outer_pick(context: Context, js) -> None:
     """
     mode = getattr(js, "outer_pick_mode", "auto")
     plants = getattr(js, "outer_pick_plants", []) or []
+    # ★ 识别过程日志：入口先说清「这次走哪条路、有多少株要选」。
+    #   用户报「局外选卡完全没日志」时，这一行就能区分三类情况：
+    #   ① 没走到（看不到这行）；② 走了 oneclick/confirm（不自动选）；
+    #   ③ 走了 auto 但列表为空。
+    _log(f"局外选卡：作业集 outer_pick mode={mode}，植物 {len(plants)} 个（上限 80）")
 
     if mode == "oneclick":
         try:
@@ -438,6 +479,13 @@ def _apply_outer_pick(context: Context, js) -> None:
         _log(f"局外选卡=按列表自动选取：「选择挑战植物」-> 清空 -> 自动选 "
              f"{len(plants)} 个 -> 确定；已注入 {plants[:5]}"
              f"{'...' if len(plants) > 5 else ''}")
+        # ★ 识别过程日志：把「80 选卡界面要用的识别几何」一并打出来 ——
+        #   用户排查「局外选卡认不到/点错」时，第一眼要看的就是这几个值
+        #   （它们来自 pipe 里用户实测的参数，runtime 只做合并、不改）。
+        _log(f"局外选卡识别参数：搜索roi={merged.get('搜索roi')} "
+             f"阈值={merged.get('匹配阈值')} "
+             f"滑动={merged.get('滑动')} 回顶={merged.get('回顶')} "
+             f"（节点 {NODE_OUTER_PICK}）")
     except Exception as e:
         _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
 
@@ -673,6 +721,12 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     _lineup_unchanged = (not _STATE.get("training")
                          and _STATE.get("lineup_sig") is not None
                          and _STATE.get("lineup_sig") == sig)
+    # ★ 识别/判定过程日志：这次是按「哪套阵容」判的、和局内现行的一致不一致
+    _log(f"阵容判定（{'boss 关' if is_boss else '普通关'}）："
+         f"本关需要 {_sig_text(sig)}，局内现行 "
+         f"{_sig_text(_STATE.get('lineup_sig')) if _STATE.get('lineup_sig') is not None else '（未知）'}"
+         f" -> {'一致，跳过清空/选卡' if _lineup_unchanged else '不一致/未知，走完整清空+选卡'}"
+         f"{'；训练模式强制重选' if _STATE.get('training') and _STATE.get('lineup_sig') == sig else ''}")
     _inject_artifact(context, table, is_boss)
     # ★ 训练模式永不 neuter：用户设定「训练 = 每一关都清空卡牌重选阵容」，
     #   闸门（lineup_gate_adjust）挡不住这里 —— 它只翻 next 分支，
@@ -1025,6 +1079,12 @@ class JobSetPlan(CustomAction):
         lv = tr.count
         table = js.pick_table(lv)
         training = bool(param.get("训练模式"))
+        # ★ 识别过程日志：关卡 -> 表 是怎么算出来的（用户核对计数器/覆盖区间用）
+        _log(f"选表：关卡{lv} -> 表{table.index + 1}"
+             f"（覆盖 {table.from_level}~"
+             f"{table.to_level if table.to_level is not None else '末'}；"
+             f"表内普通关植物 {table.plants[:4]}"
+             f"{'…' if len(table.plants) > 4 else ''}，编队={table.squad}）")
         # ★ 记下来给 _inject_lineup 用：训练模式永不跳过清空/选卡
         #   （节点参数只有 JobSetPlan 有，Fight/Stage 的注入路径读不到）。
         _STATE["training"] = training
@@ -1373,6 +1433,8 @@ class JobSetAutoCount(CustomAction):
                     _log(f"⚠️ 自动计数：重试 {attempt + 1}/3 识别异常"
                          f"（{type(e).__name__}: {e}）")
                     continue
+                _log(f"自动计数：重试 {attempt + 1}/3 识别过程 "
+                     f"候选文本={_reco_all_texts(reco)[:6]}")
                 for t in _reco_all_texts(reco):
                     text = text or t
                     lv = _parse_level_text(t)
@@ -1393,6 +1455,7 @@ class JobSetAutoCount(CustomAction):
             _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号（含重试 3 次）"
                  f" -> 保持计数器原值（{cur.count if cur else 0}"
                  f"{'，即 option 起始关卡兜底' if cur and cur.count else ''}）")
+            _log(f"自动计数：识别过程（首帧）{_reco_digest(argv)}")
             return _ok()
 
         tr = _ensure_tracker({})
@@ -1401,6 +1464,7 @@ class JobSetAutoCount(CustomAction):
         _STATE["autocount_seen"] = True     # 本次任务确实用画面数字校准过
         _log(f"📟 自动计数：识别到「{text}」-> 计数器 = {tr.count}"
              f"（主界面这个数字就是本关要打的关卡）")
+        _log(f"自动计数：识别过程 {_reco_digest(argv)} -> 解析出关卡号 {lv}")
 
         # ★ 用户可见播报（2026-10-31）：关卡号校准完**立刻**播一次，写在本节点上
         #   （本节点自己的 custom action 里写，节点完成时弹出 —— 与 JobSetPlan
@@ -1461,9 +1525,15 @@ def _resolve_is_boss(param: Dict[str, Any], lv: int) -> bool:
         is_boss = bool(param.get("是boss关"))
         _STATE["is_boss"] = is_boss
         _STATE["is_boss_level"] = lv
+        _log(f"boss 判定：参数显式给了「是boss关」={is_boss} -> 钉在本关 {lv}"
+             f"（后续同关的空 param 调用沿用这个值）")
         return is_boss
-    return (bool(_STATE.get("is_boss"))
-            and _STATE.get("is_boss_level") == lv)
+    picked = (bool(_STATE.get("is_boss"))
+              and _STATE.get("is_boss_level") == lv)
+    _log(f"boss 判定：param 没给 -> 读本关 {lv} 已记录的判定 "
+         f"{_STATE.get('is_boss')}（记录时的关卡={_STATE.get('is_boss_level')}）"
+         f" -> {'BOSS关' if picked else '普通关'}")
+    return picked
 
 
 # ---------------------------------------------------------------------------
@@ -1896,6 +1966,12 @@ class JobSetStage(CustomAction):
         # ★ boss 关判定仍由 pipeline 侧完成（「无尽挑战_局内识别boss关」）：
         #   调用顺序：进入到局内 -> 识别boss关(命中) -> 无尽挑战_确认阶段_BOSS -> 本动作
         is_boss = bool(param.get("是boss关"))
+        # ★ 识别过程日志：boss 判定是「头像模板匹配」给的，这里把来源讲清楚
+        #   （认错的锅在 pipeline 的「无尽挑战_局内识别boss关」节点，不在本动作）
+        _log(f"阶段识别：参数「是boss关」="
+             f"{param.get('是boss关') if '是boss关' in param else '（未提供）'}"
+             f" -> 本关按 {'BOSS关' if is_boss else '普通关'} 处理；"
+             f"本节点识别详情 {_reco_digest(argv)}")
 
         # ---- 1b) boss 关：计数器对齐到最近的 5 的倍数（唯一的自愈机制）----
         #

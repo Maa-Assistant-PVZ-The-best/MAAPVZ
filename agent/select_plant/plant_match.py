@@ -129,13 +129,19 @@ def match_plants(
         img_bgr   : HxWx3 uint8 (BGR) 截图
         templates : list[Path] 候选模板 PNG（命中其一即算命中）
         roi       : [x,y,w,h] 限定搜索区域；None 表示全图
-        threshold : 接受阈值 (0~1, NCC)
+        threshold : 接受阈值 (0~1, NCC)。
+                    ★ 传 None = **不做阈值过滤**，把每个 (模板 × 尺度) 的最高分
+                      原样返回 —— 只给「识别过程日志」用（要打印「最高分多少、
+                      差多少没过阈值」）；命中判定由调用方按 score 自己比。
         scales    : 多尺度搜索倍数，默认 (0.9, 0.95, 1.0, 1.05, 1.1)
         topk      : 返回前 k 个最优命中（默认 1）
 
     返回:
         list[ dict{name,x,y,w,h,score,template} ]，按分数降序；无命中返回 []。
         box 坐标为整图坐标（x,y,w,h）。
+
+    ⚠️ 阈值过滤只影响「要不要收进结果」，不影响计算量 —— 所以走 threshold=None
+       做日志探针不会变慢（NCC 相关图本来就整幅算完了）。
     """
     gray = bgr_to_gray(img_bgr)
     H, W = gray.shape
@@ -181,7 +187,8 @@ def match_plants(
             flat = ncc.ravel()
             idx = int(np.nanargmax(flat))
             score = float(flat[idx])
-            if score >= threshold:
+            # threshold=None -> 日志探针：不收阈值，最高分原样上报
+            if threshold is None or score >= threshold:
                 iy, ix = divmod(idx, ncc.shape[1])
                 best.append({
                     "name": path.stem,
