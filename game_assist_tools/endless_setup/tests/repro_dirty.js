@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const H = require('./harness');   // 公共假 DOM（见 harness.js 头注释）
 const JS_DIR = path.join(__dirname, '..', 'static', 'js');
 
 let fails = 0;
@@ -31,39 +32,7 @@ function eq(a, b, msg) {
     ok(JSON.stringify(a) === JSON.stringify(b), msg + '（实际=' + JSON.stringify(a) + '，期望=' + JSON.stringify(b) + '）');
 }
 
-function mkEl(tag, reg) {
-    let _id = '';
-    const el = {
-        tagName: tag, dataset: {}, style: {}, children: [], _text: '', _cls: {}, _h: {},
-        // 极简 classList（toggle 支持第二参数）
-        classList: {
-            add: function (c) { el._cls[c] = true; },
-            remove: function (c) { delete el._cls[c]; },
-            contains: function (c) { return !!el._cls[c]; },
-            toggle: function (c, f) {
-                const on = (f === undefined) ? !el._cls[c] : !!f;
-                if (on) el._cls[c] = true; else delete el._cls[c];
-                return on;
-            },
-        },
-        appendChild: function (c) { c.parentNode = el; el.children.push(c); return c; },
-        addEventListener: function (t, fn) { (el._h[t] = el._h[t] || []).push(fn); },
-        listeners: function (t) { return el._h[t] || []; },
-        setAttribute: function () { }, getAttribute: function () { return null; },
-        get textContent() { return el._text; },
-        set textContent(v) { el._text = String(v); },
-        get className() { return Object.keys(el._cls).join(' '); },
-        set className(v) { el._cls = {}; String(v).split(/\s+/).forEach(function (c) { if (c) el._cls[c] = true; }); },
-    };
-    // id 一旦被赋值就登记进 registry（模块是先 createElement 再设 id 的）
-    Object.defineProperty(el, 'id', {
-        get: function () { return _id; },
-        set: function (v) { _id = String(v || ''); if (_id && reg) reg[_id] = el; },
-        configurable: true,
-    });
-    return el;
-}
-
+const mkEl = H.mkEl;   // 原来这里有一份本地假元素实现（30 行），改为共用 harness
 function mkSandbox() {
     const els = {};
     const body = mkEl('body', els, 'body');

@@ -56,8 +56,13 @@
   24-jobset-fields.js  字段映射表(JOB_FIELD_MAP)、通用动作定义、链落点与全局序号计算
   25-jobset-supply.js  补给选取：堆叠卡片拖拽排序 + 固定项 + 图库（boss 关专属）
   26-jobset-supply-pick.js 补给选择弹窗 + 链段内落点重排
-  27-jobset-board.js   棋盘编辑器主体：顺序链渲染/拖拽、槽位面板、植物选择器(收藏/过滤)、
-                       作业集数据导出(jobBuild)
+  27a-jobset-steps.js       步骤模型 / 链解析 / 唯一 drop 出口（原 27-jobset-board.js 的第 1~1103 行）
+  27b-jobset-stepcfg.js     步骤参数弹窗 + 拖拽接线 + 链条 ↑↓ 移一位 + 棋盘缩放（原 1104~1624）
+  27c-jobset-chain-render.js 链条渲染：一株一块 / 无间隔组 / 通用动作块（原 1625~2235）
+  27d-jobset-slots.js       槽位面板 + 拖拽自动滚动 + 链条抽屉（原 2236~2954）
+  27e-jobset-hotkeys.js     落子动作「更多」+ 快捷键 + 键盘闸口(JOB_MODAL_SELECTORS) + 植物选择器（原 2955~3516）
+  27f-jobset-export.js      作业集数据导出 jobBuild / jobSave / 元信息（原 3517~4026）
+  （27 于 2026-11-02 按主题拆分，只搬代码不改逻辑；映射表见 HANDOFF §1）
   28-jobset-io.js      作业集下拉栏与后端读写（list_jobs / 删除 / 下载远程作业集）
   29-jobset-init.js    localStorage 本地缓存(刷新不丢) + 整体初始化(jobInit)
   30-jobset-generic.js 通用动作（点波/捡豆/加速）：无需格子直接插链 + 选链弹窗
@@ -684,35 +689,36 @@
                     data-tooltip-delay="1000">🌐 局外选卡 <span id="outerPickCount" style="background:#2d7aff;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;margin-left:2px;">0</span></button>
         </div>
     </div>
-    <!-- 植物选择器弹层 -->
-    <div id="plantPicker" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-        <div style="background:#fff;border-radius:12px;width:1140px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-            <div style="display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid #e5e7eb;">
+    <!-- 植物选择器弹层（★ 尺寸样式已搬进 base.css 的 #plantPicker 段，别再写行内样式） -->
+    <div id="plantPicker" style="display:none">
+        <div>
+            <div>
                 <b>选择植物</b>
-                <input type="text" id="plantSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
+                <input type="text" id="plantSearch" placeholder="搜索植物名 / 英文名…">
                 <button class="btn" id="plantPickerClose">关闭</button>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 16px;border-bottom:1px solid #f1f5f9;background:#fafbfc;">
-                <span style="font-size:12px;color:#64748b;">卡槽品质：</span>
-                <span id="plantRarityFilter" style="display:flex;flex-wrap:wrap;gap:6px;"></span>
-                <span id="plantPickerCount" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
+            <div>
+                <span class="jobp-label">卡槽品质：</span>
+                <span id="plantRarityFilter"></span>
+                <span id="plantPickerCount"></span>
             </div>
-            <div id="plantPickerBody" style="flex:1;display:flex;min-height:0;">
-                <div id="plantGrid" style="flex:1;overflow-y:auto;padding:14px;display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-content:start;"></div>
+            <div id="plantPickerBody">
+                <div id="plantGrid"></div>
                 <!-- 替换指定表（42-jobset-batch.js 渲染；没有植物时是提示态）
                      ★ 宽度从 236px 放宽到 256px：一张表一个大块，里面「普通关 / boss 关」
                        两个小块**左右并排**，各占一半 —— 太窄就点不准了。 -->
-                <div id="plantReplacePanel" style="width:256px;flex:0 0 256px;border-left:1px solid #e5e7eb;background:#fafbfc;overflow-y:auto;padding:10px 10px 14px;"></div>
+                <div id="plantReplacePanel"></div>
             </div>
         </div>
     </div>
 
-    <!-- 局外选卡弹层（无尽局外 80 选；逻辑见 32-jobset-outer.js） -->
-    <div id="outerPicker" style="display:none;position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;justify-content:center;align-items:center;">
-        <div style="background:#fff;border-radius:12px;width:640px;max-width:95vw;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,0.3);">
-            <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #e5e7eb;">
+    <!-- 局外选卡弹层（无尽局外 80 选；逻辑见 32-jobset-outer.js）
+         ★ 尺寸样式已搬进 base.css 的 #outerPicker 段，别再写行内样式 -->
+    <div id="outerPicker" style="display:none">
+        <div>
+            <div>
                 <b>局外选卡（无尽 · 选 80）</b>
-                <input type="text" id="outerSearch" placeholder="搜索植物名 / 英文名…" style="flex:1;max-width:none;">
+                <input type="text" id="outerSearch" placeholder="搜索植物名 / 英文名…">
                 <button class="btn" id="outerFillBtn"
                         data-tooltip="自动把未选的植物补到 80 个（按当前排序从头扫，跳过无图植物；新补的接在现有已选后面）"
                         data-tooltip-delay="1000">补齐空选</button>
@@ -721,35 +727,35 @@
                         data-tooltip-delay="1000">清空</button>
                 <button class="btn" id="outerPickerClose">关闭</button>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:6px 14px;border-bottom:1px solid #f1f5f9;background:#fafbfc;">
-                <span style="font-size:12px;color:#64748b;">卡槽品质：</span>
-                <span id="outerRarityFilter" style="display:flex;flex-wrap:wrap;gap:6px;"></span>
-                <label style="font-size:12px;color:#64748b;display:inline-flex;align-items:center;gap:4px;"
+            <div>
+                <span class="jobp-label">卡槽品质：</span>
+                <span id="outerRarityFilter"></span>
+                <label class="jobp-label-inline"
                        data-tooltip="显示排序（不影响已选顺序——选取优先级永远是点击先后，黄框锁定植物永远最先）"
                        data-tooltip-delay="1000">排序
-                    <select id="outerSortMode" style="width:auto;">
+                    <select id="outerSortMode">
                         <option value="default">默认顺序</option>
                         <option value="rare_desc">橙卡优先</option>
                         <option value="rare_asc">白卡优先</option>
                         <option value="selected">已选优先</option>
                     </select>
                 </label>
-                <button class="btn" id="outerReorderBtn" style="padding:2px 10px;font-size:12px;"
+                <button class="btn" id="outerReorderBtn"
                         data-tooltip="重排已选植物的选取顺序：进入后只显示已选植物，序号清零，按你想要的优先级依次点击（先点的先选）；再点「完成排序」退出"
                         data-tooltip-delay="1000">调整排序</button>
-                <span id="outerPickCountText" style="font-size:12px;color:#94a3b8;margin-left:auto;"></span>
+                <span id="outerPickCountText"></span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid #f1f5f9;background:#fffbeb;">
-                <span style="font-size:12px;color:#64748b;">局内执行方式：</span>
-                <div style="position:relative;">
-                    <button class="btn" id="outerModeBtn" style="padding:3px 12px;font-size:12px;"
+            <div>
+                <span class="jobp-label">局内执行方式：</span>
+                <div class="jobp-rel">
+                    <button class="btn" id="outerModeBtn"
                             data-tooltip="点击切换局内执行方式"
                             data-tooltip-delay="1000">按列表自动选取 ▾</button>
-                    <div id="outerModeMenu" style="display:none;position:absolute;left:0;top:calc(100% + 4px);z-index:12001;background:#fff;border:1px solid #e5e7eb;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.18);min-width:240px;overflow:hidden;"></div>
+                    <div id="outerModeMenu" style="display:none"></div>
                 </div>
-                <span id="outerModeDesc" style="font-size:11px;color:#94a3b8;"></span>
+                <span id="outerModeDesc"></span>
             </div>
-            <div id="outerGrid" style="flex:1;min-height:0;overflow-y:auto;padding:12px 14px;display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-content:start;"></div>
+            <div id="outerGrid"></div>
         </div>
     </div>
 
@@ -974,7 +980,16 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
 <script src="/static/js/24-jobset-fields.js"></script>
 <script src="/static/js/25-jobset-supply.js"></script>
 <script src="/static/js/26-jobset-supply-pick.js"></script>
-<script src="/static/js/27-jobset-board.js"></script>
+<!-- 27 已按主题拆成 6 个文件（2026-11-02，只搬代码不改逻辑）：
+     a 步骤模型/链解析/drop 出口 · b 步骤参数+拖拽接线+↑↓+缩放
+     c 链条渲染 · d 槽位面板+自动滚动+抽屉 · e 快捷键+键盘闸口+植物选择器 · f 导出
+     映射表见 HANDOFF §1 -->
+<script src="/static/js/27a-jobset-steps.js"></script>
+<script src="/static/js/27b-jobset-stepcfg.js"></script>
+<script src="/static/js/27c-jobset-chain-render.js"></script>
+<script src="/static/js/27d-jobset-slots.js"></script>
+<script src="/static/js/27e-jobset-hotkeys.js"></script>
+<script src="/static/js/27f-jobset-export.js"></script>
 <script src="/static/js/28-jobset-io.js"></script>
 <script src="/static/js/29-jobset-init.js"></script>
 <script src="/static/js/30-jobset-generic.js"></script>

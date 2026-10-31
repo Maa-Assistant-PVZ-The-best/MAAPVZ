@@ -3088,6 +3088,99 @@ body.m-app #seqDrawer { padding-bottom: 56px; }
 /* 手机上让开底部导航 */
 body.m-app #jobDirtyBadge { bottom: 70px; }
 
+/* ============================================================
+   植物选择器 / 局外选卡：行内样式搬进 CSS（2026-11-02）
+   ------------------------------------------------------------
+   这两块原来把 60+ 条尺寸全写在 index.html 的 `style=""` 里，
+   害得手机端每一项覆盖都得 !important（而且谁改了行内样式就一起崩）。
+   这里按 id **原样搬过来，数值一个没改**，只是换了位置。
+   ★ 以后调这两个弹层的尺寸请改这里，**不要再往 HTML 写行内样式**。
+   ============================================================ */
+
+/* ---- 植物选择器 ---- */
+#plantPicker {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, .5); z-index: 9999;
+    justify-content: center; align-items: center;
+}
+#plantPicker > div:first-child {
+    background: #fff; border-radius: 12px;
+    width: 1140px; max-width: 96vw; max-height: 88vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+#plantPicker > div:first-child > div:nth-child(1) {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; border-bottom: 1px solid #e5e7eb;
+}
+#plantPicker > div:first-child > div:nth-child(2) {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 8px 16px; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
+}
+#plantSearch { flex: 1; max-width: none; }
+#plantRarityFilter { display: flex; flex-wrap: wrap; gap: 6px; }
+#plantPickerCount { font-size: 12px; color: #94a3b8; margin-left: auto; }
+#plantPickerBody { flex: 1; display: flex; min-height: 0; }
+#plantGrid {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    align-content: start;
+}
+#plantReplacePanel {
+    width: 256px; flex: 0 0 256px;
+    border-left: 1px solid #e5e7eb; background: #fafbfc;
+    overflow-y: auto; padding: 10px 10px 14px;
+}
+
+/* ---- 局外选卡（无尽 80 选）---- */
+#outerPicker {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, .5); z-index: 9999;
+    justify-content: center; align-items: center;
+}
+#outerPicker > div:first-child {
+    background: #fff; border-radius: 12px;
+    width: 640px; max-width: 95vw; max-height: 88vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+#outerPicker > div:first-child > div:nth-child(1) {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid #e5e7eb;
+}
+#outerPicker > div:first-child > div:nth-child(2) {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 6px 14px; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
+}
+#outerPicker > div:first-child > div:nth-child(3) {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 8px 14px; border-bottom: 1px solid #f1f5f9; background: #fffbeb;
+}
+#outerSearch { flex: 1; max-width: none; }
+#outerRarityFilter { display: flex; flex-wrap: wrap; gap: 6px; }
+#outerSortMode { width: auto; }
+#outerReorderBtn { padding: 2px 10px; font-size: 12px; }
+#outerModeBtn { padding: 3px 12px; font-size: 12px; }
+#outerModeDesc { font-size: 11px; color: #94a3b8; }
+#outerModeMenu {
+    position: absolute; left: 0; top: calc(100% + 4px); z-index: 12001;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18); min-width: 240px; overflow: hidden;
+}
+#outerGrid {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    align-content: start;
+}
+/* 两个弹层共用的两个小工具类（原来也是行内样式） */
+.jobp-label { font-size: 12px; color: #64748b; }
+.jobp-label-inline {
+    font-size: 12px; color: #64748b;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.jobp-rel { position: relative; }
+#plantPickerCount, #outerPickCountText { font-size: 12px; color: #94a3b8; margin-left: auto; }
+
 /* ---- 表条上的「?」：手机操作速查 + 诊断信息（见 44-jobset-mobile.js）----
    手机上有一半功能是手势，不讲没人会发现；诊断信息则专门用来「让用户贴数字给我」。 */
 #mTableBar .m-tb-help {
@@ -3164,53 +3257,56 @@ body.m-app .seq-drawer-tip { font-size: 10px; line-height: 1.35; padding: 6px 10
 /* ============================================================
    手机端第二轮：把「最常用的两个弹层」和「槽位屏」真正改对
    ------------------------------------------------------------
-   ① 植物选择器 / 局外 80 选卡：内部样式是**行内写死**的
-      （1140px / 640px 居中浮层 + 5 列 / 6 列网格 + 右侧 256px 替换栏），
-      手机上就是「一格里塞 70px 的小图标 + 右边一条挤扁的侧栏」。
-      → 全屏 + 3 列 + 替换栏折到下面。行内样式只能用 !important 压。
+   ① 植物选择器 / 局外 80 选卡：原来是「1140px / 640px 居中浮层 + 5 列 / 6 列网格
+      + 右侧 256px 替换栏」，手机上就是「一格里塞 70px 的小图标 + 右边一条挤扁的侧栏」。
+      → 全屏 + 3 列 + 替换栏折到下面。
+      ★ 2026-11-02：这两块的尺寸已经**从行内样式搬进 base.css**（见上面
+        「植物选择器 / 局外选卡：行内样式搬进 CSS」一节），所以下面这些覆盖
+        **不再需要 !important** —— `body.m-app #id` 的特异性天然高于 `#id`。
+        以后往这两块加手机规则，同样不要写 !important。
    ② 槽位屏：8 个胶囊是 flex + 每项后面跟一个 `flex-basis:100%` 的换行 span，
       手机上应改成 **2 列大卡**（一个手指标 = 一整个槽）。
+      ⚠️ 槽位胶囊的尺寸仍是**行内样式**（27d 的 jobRenderSlots 生成的），
+        所以 ② 这一段还得保留 !important。
    ============================================================ */
 
-/* ---- ① 植物选择器 / 局外选卡：手机全屏 ----
-   ⚠️ 这一个弹层的**所有尺寸都在行内样式里**（index.html 直接写的），
-      所以每一行都必须 !important，否则一条都不生效。 */
+/* ---- ① 植物选择器 / 局外选卡：手机全屏 ---- */
 body.m-app #plantPicker,
 body.m-app #outerPicker {
-    z-index: 10060 !important;          /* 必须压在底部导航(10050) 上面 */
-    align-items: stretch !important;
-    justify-content: flex-start !important;
+    z-index: 10060;                      /* 必须压在底部导航(10050) 上面 */
+    align-items: stretch;
+    justify-content: flex-start;
 }
 /* 面板用 fixed + inset 铺满：不依赖父级是 flex 还是 block，也不会被居中规则挤小。
    height 先写 100vh（老浏览器兜底），再用 @supports 叠 dvh（避开手机地址栏吃高度）。 */
 body.m-app #plantPicker > div:first-child,
 body.m-app #outerPicker > div:first-child {
     position: fixed; inset: 0;
-    margin: 0 !important;
-    width: auto !important; max-width: none !important;
-    height: 100vh !important; max-height: 100vh !important;
-    border-radius: 0 !important;
+    margin: 0;
+    width: auto; max-width: none;
+    height: 100vh; max-height: 100vh;
+    border-radius: 0;
 }
 @supports (height: 100dvh) {
     body.m-app #plantPicker > div:first-child,
     body.m-app #outerPicker > div:first-child {
-        height: 100dvh !important; max-height: 100dvh !important;
+        height: 100dvh; max-height: 100dvh;
     }
 }
 /* ★ 顶部那一行原来是「标题 + 搜索框 + 关闭」挤在 390px 里 → 搜索框只剩几十像素，
      看起来就是「显示坏了」。改成：标题 + 关闭占第一行，搜索框整行独占第二行。 */
 body.m-app #plantPicker > div:first-child > div:first-child,
 body.m-app #outerPicker > div:first-child > div:first-child {
-    flex-wrap: wrap !important;
-    gap: 6px 8px !important;
-    padding: 8px 12px !important;
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 8px 12px;
 }
 body.m-app #plantSearch,
 body.m-app #outerSearch {
-    flex: 1 1 100% !important;
-    max-width: none !important;
+    flex: 1 1 100%;
+    max-width: none;
     order: 9;                            /* 换行到第二行 */
-    margin: 0 !important;
+    margin: 0;
 }
 body.m-app #plantPickerClose,
 body.m-app #outerPickerClose {
@@ -3218,28 +3314,28 @@ body.m-app #outerPickerClose {
 }
 /* 品质筛选行：一行横滑，不要折成三行把卡片挤下去 */
 body.m-app #plantPicker > div:first-child > div:nth-child(2) {
-    flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    padding: 6px 12px !important;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px 12px;
     -webkit-overflow-scrolling: touch;
 }
-body.m-app #plantRarityFilter { flex-wrap: nowrap !important; }
+body.m-app #plantRarityFilter { flex-wrap: nowrap; }
 /* 主体：卡片网格在上、替换面板折到下面 */
-body.m-app #plantPickerBody { flex-direction: column !important; }
+body.m-app #plantPickerBody { flex-direction: column; }
 /* 卡片网格 5 列 → 3 列（390px 宽时每格约 110px，立绘和名字都看得清） */
 body.m-app #plantGrid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important; padding: 8px !important;
-    min-height: 0 !important;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px; padding: 8px;
+    min-height: 0;
 }
 /* 「替换指定表」侧栏：手机上折到下面（侧栏会把网格挤到只剩 100px 宽） */
 body.m-app #plantReplacePanel {
-    width: auto !important; flex: 0 0 auto !important;
-    max-height: 34vh !important;
-    border-left: none !important;
-    border-top: 2px solid #e2e8f0 !important;
-    background: #fff !important;
-    padding: 8px 10px !important;
+    width: auto; flex: 0 0 auto;
+    max-height: 34vh;
+    border-left: none;
+    border-top: 2px solid #e2e8f0;
+    background: #fff;
+    padding: 8px 10px;
     -webkit-overflow-scrolling: touch;
 }
 

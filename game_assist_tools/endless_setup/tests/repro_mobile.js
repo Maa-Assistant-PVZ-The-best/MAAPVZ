@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const H = require('./harness');   // 公共假 DOM（见 harness.js 头注释）
 const JS_DIR = path.join(__dirname, '..', 'static', 'js');
 
 let fails = 0;
@@ -45,51 +46,7 @@ function mkClassList(el) {
     };
 }
 
-function mkEl(tag, reg) {
-    let _id = '';
-    const el = {
-        tagName: tag, dataset: {}, style: {}, children: [], _text: '', _html: '',
-        _h: {}, __tagChild: null, parentNode: null,
-        listeners(type) { return el._h[type] || []; },
-        addEventListener(t, fn) { (el._h[t] = el._h[t] || []).push(fn); },
-        removeEventListener() { },
-        dispatchEvent(ev) { (el._h[ev.type] || []).forEach(function (fn) { fn(ev); }); return true; },
-        closest(sel) {
-            const want = sel.replace('.', '');
-            let n = el;
-            while (n) {
-                if (n.classList && n.classList.contains(want)) return n;
-                if (n.tagName === want) return n;
-                n = n.parentNode;
-            }
-            return null;
-        },
-        querySelector(sel) {
-            if (sel === '.tag') return el.__tagChild;
-            if (sel === '.m-tb-txt') return el.__txt || null;
-            return null;
-        },
-        querySelectorAll(sel) { return (el.__qsa && el.__qsa[sel]) || []; },
-        appendChild(c) { c.parentNode = el; el.children.push(c); return c; },
-        insertBefore(c, ref) { c.parentNode = el; el.children.push(c); return c; },
-        setAttribute() { }, getAttribute() { return null; },
-        get textContent() { return el._text; },
-        set textContent(v) { el._text = String(v); },
-        get innerHTML() { return el._html; },
-        set innerHTML(v) { el._html = String(v); },
-        offsetWidth: 100,
-    };
-    // id 一旦被赋值就登记进 registry —— 这样 `ensureXxx()` 里
-    // 「先 getElementById，没有再 createElement」的写法才和浏览器一致
-    Object.defineProperty(el, 'id', {
-        get() { return _id; },
-        set(v) { _id = String(v || ''); if (_id && reg) reg[_id] = el; },
-        configurable: true,
-    });
-    el.classList = mkClassList(el);
-    return el;
-}
-
+const mkEl = H.mkEl;   // 原来这里有一份本地假元素实现（30 行），改为共用 harness
 function mkSandbox(opts) {
     const mobile = !(opts && opts.desktop);
     const els = {};

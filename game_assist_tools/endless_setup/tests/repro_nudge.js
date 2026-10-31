@@ -20,6 +20,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const H = require('./harness');   // 公共假 DOM（见 harness.js 头注释）
 const JS_DIR = path.join(__dirname, '..', 'static', 'js');
 
 let fails = 0;
@@ -34,31 +35,7 @@ function eq(actual, expect, msg) {
 }
 
 // 简易 DOM（这里只需要「元素挂得上、事件能绑」；样式/尺寸靠肉眼）
-function mkEl(tag) {
-    const el = {
-        tagName: tag, style: {}, children: [], _text: '', _html: '', _a: {}, _h: {}, _cls: {},
-        classList: {
-            add(c) { el._cls[c] = true; },
-            remove(c) { delete el._cls[c]; },
-            contains(c) { return !!el._cls[c]; },
-            toggle(c, on) { if (on === undefined) { el._cls[c] ? delete el._cls[c] : el._cls[c] = true; } else if (on) el._cls[c] = true; else delete el._cls[c]; },
-        },
-        appendChild(c) { el.children.push(c); return c; },
-        addEventListener(t, fn) { el._h[t] = fn; },
-        setAttribute(k, v) { el._a[k] = v; },
-        getAttribute(k) { return el._a[k]; },
-        setAttributeNS() { },
-        querySelector() { return null; },
-        querySelectorAll() { return []; },
-        getBoundingClientRect() { return { left: 0, top: 0, width: 68, height: 44 }; },
-        get textContent() { return el._text; },
-        set textContent(v) { el._text = String(v); },
-        get innerHTML() { return el._html; },
-        set innerHTML(v) { el._html = String(v); if (!v) el.children = []; },
-    };
-    return el;
-}
-
+const mkEl = H.mkEl;   // 原来这里有一份本地假元素实现（30 行），改为共用 harness
 function mkSandbox() {
     const els = {};
     const sandbox = {
@@ -80,7 +57,7 @@ function mkSandbox() {
     vm.createContext(sandbox);
     for (const f of ['04-cards.js', '08-board-data.js', '15-board-actions.js', '20-jobset-core.js',
         '21-jobset-levels.js', '22-jobset-chain.js', '23-jobset-end.js', '24-jobset-fields.js',
-        '27-jobset-board.js', '29-jobset-init.js', '42-jobset-batch.js',
+        '27a-jobset-steps.js', '27b-jobset-stepcfg.js', '27c-jobset-chain-render.js', '27d-jobset-slots.js', '27e-jobset-hotkeys.js', '27f-jobset-export.js', '29-jobset-init.js', '42-jobset-batch.js',
         '43-jobset-cell-queue.js']) {
         try {
             vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), sandbox, { filename: f });

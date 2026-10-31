@@ -131,7 +131,8 @@
 
 1. 本节 + **§10.7**（2026-10-30 那一轮的全部坑与约定）；
 2. 要改的那个文件的**顶部注释块**（`42-jobset-batch.js` / `04-cards.js` 撤销段 /
-   `27-jobset-board.js` 链条段 / `24-jobset-fields.js` 的 `jobSegPlacements` 都写了"为什么"）；
+   `27a-jobset-steps.js` 步骤模型段 / `24-jobset-fields.js` 的 `jobSegPlacements` 都写了"为什么"）；
+   ★ `27` 已于 2026-11-02 按主题拆成 `27a`~`27f`，映射表见 §1。
 3. `AGENTS.md` 七条铁律 + 门禁表。
 
 **编辑器高频定位（编辑器 = `static/js/*`，38 个文件、共享全局作用域、数字前缀=加载顺序）**：
@@ -140,13 +141,16 @@
 | --- | --- |
 | 数据模型 / 表字段 / 关卡覆盖 | `20-jobset-core.js`（`jobNewTable` 是字段总表） |
 | 槽位、棋盘落子、槽号搬迁 | `21-jobset-levels.js`（`placePlantOnBoard` / `jobSyncSlotPlantOnBoard` / `jobClearNormalSlot`） |
-| 链条顺序、槽位键 | `22-jobset-chain.js` + `27-jobset-board.js`（`jobResolveSteps` / `jobStoreSteps`） |
+| 链条顺序、槽位键 | `22-jobset-chain.js` + `27a-jobset-steps.js`（`jobResolveSteps` / `jobStoreSteps`） |
+| 链条块渲染 / 拖拽接线 | `27c-jobset-chain-render.js` + `27b-jobset-stepcfg.js`（`jobApplyDrop` 在 27a） |
+| 槽位胶囊 / 植物选择器 / 更多列表 | `27d-jobset-slots.js` + `27e-jobset-hotkeys.js` |
 | 撤销 / 重做 | `04-cards.js`（引擎）＋ 记录点挂 `29-jobset-init.js` 的 `jobSaveLocal()` |
-| 快捷键 | `27-jobset-board.js` 的 `jobHotkeyBlocked` / `JOB_MODAL_SELECTORS` |
+| 快捷键 | `27e-jobset-hotkeys.js` 的 `jobHotkeyBlocked` / `JOB_MODAL_SELECTORS` |
 | 落子动作（喂豆/铲子/点击格子…） | `15-board-actions.js`（注册表，唯一入口，见 §10.3） |
 | **预留接口（没实现的功能都在这）** | `16-jobset-reserved.js` ＋ `agent/jobset/reserved.py`（见 §10.10） |
 | 棋盘右键 / Ctrl+右键 / 格内顺序方块窗 | `08-board-data.js`（右键分支）＋ `43-jobset-cell-queue.js`（§10.8） |
-| 槽位 ✕（含 Ctrl+左键直接删） | `27-jobset-board.js` 的槽位胶囊 ＋ `42` 的 `jobDeleteSlotHere` |
+| 槽位 ✕（含 Ctrl+左键直接删） | `27d-jobset-slots.js` 的槽位胶囊 ＋ `42` 的 `jobDeleteSlotHere` |
+| 导出 / jobBuild / jobSave | `27f-jobset-export.js` |
 | 通用动作（点波/捡豆/切换形态…） | `24-jobset-fields.js` 定义 + `agent/jobset/dsl.py` 编译（见 §10.2） |
 | 槽位连续化 / 替换 / 删除植物 | `42-jobset-batch.js` |
 | 布局（1-149 关图层） | `34-jobset-layout.js` |
@@ -167,7 +171,7 @@ node tests\repro_dirty.js ;                     # 未保存改动防护
 node tests\fuzz_drag.js 200 100                 # 链条相关必跑
 ```
 
-**当前基线（2026-11-02，全绿）**：42 个 JS `node --check` 通过；上述 **10 套**回归全过；
+**当前基线（2026-11-02，全绿）**：47 个 JS `node --check` 通过；上述 **10 套**回归全过；
 `fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
 临时脚本（`zz*` / `_*`）为空。
 
@@ -226,6 +230,13 @@ static/
     │                                             # 必须在 15 之后、20 之前加载
     └── 20-jobset-core.js … 41-jobset-tags.js     # 作业集编辑器
                                                   # （37 世界 / 38 备注 / 41 标签 …）
+    ├── 27a-jobset-steps.js ★                    # 【2026-11-02 由 27-jobset-board.js 拆出】
+    │                                             #   步骤模型 / 链解析 / 唯一 drop 出口
+    ├── 27b-jobset-stepcfg.js ★                   #   步骤参数弹窗 + 拖拽接线 + ↑↓移一位 + 棋盘缩放
+    ├── 27c-jobset-chain-render.js ★              #   链条渲染（一株一块 / 无间隔组 / 通用动作块）
+    ├── 27d-jobset-slots.js ★                     #   槽位面板 + 拖拽自动滚动 + 链条抽屉
+    ├── 27e-jobset-hotkeys.js ★                   #   更多列表 + 快捷键 + 键盘闸口 + 植物选择器
+    ├── 27f-jobset-export.js ★                    #   jobBuild 导出 / jobSave / 元信息
     └── 42-jobset-batch.js ★                      # 批量替换植物 + 槽位连续化（压实）
                                                   # 必须最后加载（Ctrl 不到的扩展点）
     └── 43-jobset-cell-queue.js ★                 # 格内落子顺序方块窗（右键棋盘格）+ Ctrl 右键清空
@@ -1567,7 +1578,7 @@ node game_assist_tools\endless_setup\tests\repro_slot_compact.js  # 槽位压实
 | P0 | **链条段身份从"位置下标"改成"稳定 id"** | `24-jobset-fields.js` 的 `jobSegPlacements`、`27` 的 `jobStepsToSegs/jobSegsToSteps` | **高**（§9.2 修过 6 个同族 bug） | `picked/gidx` 是**该槽内部**的位置下标，任何落点增减都会滑位；这是"拖拽串位/撤销错乱"整族的根。必须用 `tests/fuzz_drag.js` 兜 |
 | P1 | **触摸端可用**（安卓 Web 已适配，但拖拽全废） | 链条块 / 补给卡 / 布局涂抹走 HTML5 `draggable`；全仓零 pointer 事件 | 中 | 轻量版：链条 chip 与补给卡加「↑/↓ 移一位、移到首/尾」（约 80 行，手机立刻能用）。彻底版：改 Pointer Events（约 300 行，跑 fuzz） |
 | P2 | **未保存改动防护** | 全仓无 dirty 标记、无 `beforeunload` | 低 | 本地缓存 300ms 自动存，但**写回作业集文件必须手点 💾**；切作业集/新建/删除前该做 confirm，顶部该显示「● 有未保存改动」 |
-| P3 | **拆分 `27-jobset-board.js`**（183KB / 3800+ 行） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器全在一个文件 | 中 | 纯搬移，只减未来 bug；放 P0 之后做，避免在巨型文件里二次改结构 |
+| ~~P3~~ **已做** | ~~**拆分 `27-jobset-board.js`**~~（2026-11-02 已拆成 27a~27f，见 §1）（183KB / 3800+ 行） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器全在一个文件 | 中 | 纯搬移，只减未来 bug；放 P0 之后做，避免在巨型文件里二次改结构 |
 | P4 | boss 关交互小优化 | `27` 的槽位胶囊 | 低 | 给"已独立化的 boss 槽"加个 🔒 角标，让「落子即固化」这件事看得见 |
 
 ---
@@ -2193,6 +2204,12 @@ node tests\repro_mobile.js     # 11 节 62 条：桌面零影响 / 切屏 / 抽�
 | 3 | `dataset` 契约：`27` 写 `dataset.slot / act / which` ⟷ `44` 读同名 | 手机端长按 / 连点切链 / 拖拽**静默不工作**（桌面完全看不出来） |
 | 4 | `44` **包了一层**的全局函数（`setStatus` / `jobLoadTable` / `jobApplyLoaded` / `jobRenderSlots` / `jobConfirmPick`）在别的文件里是否还有定义 | 被包的函数一改名，44 包了个 null，手机端功能静默消失 |
 | 5 | `08` 的 `JOB_CELL_MAX_MARKS` 是否等于 `base.css` 里最大的 `.job-pN` | 「+N」角标数和实际能摆的位置对不上（§10.3.1 那条老坑） |
+| 6 | **唯一入口**：`jobStoreSteps` / `jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove` /
+  `jobCommitSupplyOrder` / `jobSaveLocal` / `jobResolveSteps` / `jobSegsToSteps` / `jobStepsToSegs` /
+  `jobPinSteps` / `jobBuild` / `setStatus` **全仓恰好 1 处定义** | 有人复制粘贴出第二份排序/写盘逻辑 = §9.2 那族 bug 重演（AGENTS.md 铁律 9） |
+| 7 | **预算门禁**（只能降不能升）：`index.html` 行内 `style` ≤ 66 · `base.css` 的 `!important` ≤ 46 ·
+  原生 `alert/confirm/prompt` ≤ 16 | 新代码图省事再塞行内样式/`!important`/系统弹窗，样式和体验会重新变脆 |
+| 8 | 落子动作注册表：每个 `imgKey` 在 `JOB_UI_IMG` 里有图 · `armedNo` 不重复且 ≥ 9 | 新动作悄悄回退成铲子占位 / 撞号导致 W/S 选错动作 |
 
 ### 使用
 
@@ -2331,6 +2348,199 @@ node tests\repro_dirty.js      # 6 节 23 条：干净不拦 / 改脏 / beforeun
 
 ---
 
+## 10.17 ★★ 拆分 27-jobset-board.js（2026-11-02，只搬代码不改逻辑）
+
+> 老账 §10.7-G 的 **P3**。4025 行、把「链条解析 / 渲染 / 槽位面板 / 快捷键 / 植物选择器 / 导出」
+> 全塞在一个文件里，任何改动都要在巨文件里二次施工。
+
+### 怎么拆的
+
+| 新文件 | 原 27 行号 | 内容 |
+| --- | --- | --- |
+| `27a-jobset-steps.js` | 1~1103 | 步骤模型 / 链解析（`jobResolveSteps` / `jobStoreSteps`）/ `jobApplyDrop` |
+| `27b-jobset-stepcfg.js` | 1104~1624 | 步骤参数弹窗 + 拖拽接线（`jobWireDropTarget`）+ `jobNudgeSelected` + 棋盘缩放 |
+| `27c-jobset-chain-render.js` | 1625~2235 | 链条渲染：一株一块 / 无间隔组 / 通用动作块 |
+| `27d-jobset-slots.js` | 2236~2954 | 槽位面板 `jobRenderSlots` + 拖拽自动滚动 + 链条抽屉 |
+| `27e-jobset-hotkeys.js` | 2955~3516 | 更多列表 + 快捷键 + `JOB_MODAL_SELECTORS` + 植物选择器 |
+| `27f-jobset-export.js` | 3517~4026 | `jobBuild` / `jobSave` / `jobSetCurrent` / 元信息 |
+
+### 三条硬约束（再拆别踩）
+
+1. **只搬代码、一行逻辑都不改**。拆分脚本先做「可逆校验」（把 6 段拼回去必须与原文逐字节相等），
+   再删原文件 —— 这一步过了才敢继续。
+2. **切点只能落在顶层 `function` / `const` 前面**，尤其不能切进 `27d` 里那 4 个顶层的
+   `document.addEventListener(...)`（拖拽自动滚动那段），它一破整页拖拽就废。
+3. **文件是 classic script、共享全局作用域**：函数跨文件互调没问题（调用时才解析），
+   但顶层 `const/let` 只在本文件加载后可用 —— 所以 `index.html` 的 `<script>` 顺序必须 a→f。
+
+### 连带改动
+
+- `index.html`：一个 `27-jobset-board.js` 标签 → 6 个（顺序 a~f），文件清单注释同步。
+- `tests/*.js`（10 个测试）：加载列表里的旧文件名一并换成 6 个（否则沙箱里加载不到，测试会
+  静默变成"空跑"）。
+- `tests/repro_registry.js`：原来是 `J('27-jobset-board.js')` 精确读那个文件，拆分后改成
+  **全仓拼接检索**（`ALL_JS`）—— 同一契约可能落在任意 27x 文件里，按文件名找是脆的。
+- 本文档：§0.1 定位表 / §1 文件树 / P3 标记已更新；**历史章节里的旧文件名不改写**（那是当时的记录）。
+
+### 验证
+
+```
+6 个新文件逐个 node --check        → 全过
+10 套 repro_*.js                   → 全过
+fuzz_drag.js 200 100               → 0 会话首错（拆分的真正护栏）
+```
+
+---
+
+## 10.18 ★ 行内样式搬进 CSS：两个弹层（2026-11-02）
+
+### 做了什么
+
+`#plantPicker`（植物选择器）和 `#outerPicker`（局外 80 选卡）这两个弹层，
+原来把 **60+ 条尺寸全写在 `index.html` 的 `style=""` 里**，后果：
+① 手机端每一项覆盖都得 `!important`（谁改行内样式就一起崩）；② 想统一调尺寸得改 HTML。
+
+现在：
+
+| 项 | 之前 | 之后 |
+| --- | --- | --- |
+| 两个弹层的尺寸/网格/行距 | `index.html` 行内 `style` | **`base.css` 新一节**（`#plantPicker` / `#outerPicker` 按 id 写） |
+| 手机端覆盖 | 逐条 `!important` | **不再需要**（`body.m-app #id` 特异性天然高于 `#id`） |
+| `index.html` 行内样式数 | 92 | **66** |
+| `base.css` 里 `!important` 数 | 77 | **46** |
+
+★ **只有 `display` 保留在行内**：全仓有多处代码读写 `el.style.display` 判断开关状态，
+  改成 CSS 控制会改变语义。所以 `#plantPicker` / `#outerPicker` / `#outerModeMenu`
+  三个元素仍是 `style="display:none"` 开关（CSS 里不再重复写 display）。
+★ 槽位胶囊（`27d` 的 `jobRenderSlots` 生成）**仍是行内样式**，所以手机端「槽位屏 2 列」
+  那几条还保留 `!important` —— 要彻底清干净，得先改 `jobRenderSlots` 的建 DOM 方式。
+
+### 没做的两件（明确留给单独一轮）
+
+| 事项 | 为什么这一轮不做 |
+| --- | --- |
+| **测试公共脚手架**（把 10 个测试各自的假 DOM/桩抽成 `tests/harness.js`） | 只迁一两个文件反而留下两套写法；要一次性迁完 10 个，属于独立一轮的纯重构 |
+| **P0 链条段身份**（位置下标 `picked/gidx` → 稳定 id） | 它会**改段存储格式**，老作业集需要迁移；必须在单独一轮里做，并用真实作业集 + `fuzz_drag` 长时间跑 |
+
+---
+
+## 10.19 ★ 测试公共脚手架 `tests/harness.js`（2026-11-02）
+
+### 做了什么
+
+原来每个测试**各自手写一份假 DOM**（`mkEl` ≈ 30 行）+ 自己的断言函数，10 个测试 = 10 份
+略有差别的副本。后果是「测试桩能力不一致」：有的桩支持「先 createElement 再设 id」，有的不支持，
+排查时会被桩本身的缺陷误导。
+
+现在 `tests/harness.js` 统一提供：
+
+| 导出 | 内容 |
+| --- | --- |
+| `mkEl(tag, reg?)` | 假元素：classList（含 `toggle(name, force)`）、`dataset`、事件（`_h[type]` 是**数组**、配 `listeners(type)`）、`closest`、`querySelector(.tag / .m-tb-txt)`、`querySelectorAll`（走 `__qsa` 白名单）、`appendChild/insertBefore`、`getBoundingClientRect`（68×44）、**id 一赋值就登记进 reg**（与浏览器一致） |
+| `ok / eq / done(title)` | 断言（计数在 harness 内部），`done()` 负责收尾 `process.exit` |
+| `mkClassList` | 独立可复用 |
+
+已迁移 **5 个**自带 `mkEl` 的测试：`repro_cell_queue` / `repro_nudge` / `repro_slot_compact` /
+`repro_mobile` / `repro_dirty`（各自本地实现 → `const mkEl = H.mkEl`）。
+其余 5 个测试本来就没有假 DOM（直接用 `jobNewTable` 之类），不需要动。
+
+### 迁移时踩到并修掉的
+
+- 旧本地桩把事件处理器存成**单个函数**（`el._h.click = fn`），harness 存**数组**（一个元素可能挂多个）。
+  两处测试顺着旧形状写（`firstX._h.click(...)` / `b._h && b._h.click`），已改成 `listeners('click')`。
+  ★ 这条记下来：**以后写测试碰事件，一律走 `el.listeners(type)`**，不要去摸 `_h`。
+
+### 门禁
+
+```
+10 套 repro_*.js   → 全过（迁移前后断言数不变）
+fuzz_drag 200 100  → 0 会话首错
+```
+
+---
+
+## 10.20 ⏳ P0「链条段身份换地基」—— 只写了方案，没动手（2026-11-02）
+
+> 这是 §10.7-G 的 P0，也是历史上「拖完互换 / 撤销错乱」那一整族的**根**。
+> **本轮没有实现**，原因写在第 4 条：它会改**段存储格式**，必须单独一轮 + 用真实作业集验收。
+
+### 1. 现状（为什么会有这族 bug）
+
+链段的持久化形状是 `{key, from, to, picked:[下标], order:[下标], noint, times, ...}`，
+其中 `picked / from / to / order` 都是**「该槽在该链里的第 N 个落点」这种位置下标**。
+只要落点成员一变（删一个、翻转形态、重载），下标就整体滑动 —— 挂在它上面的一切标记
+（`picked/noint/times/uid`）全部跟着滑到别的落点上。§9.2 的 6 个 bug、以及后来 `jobPinSteps`
+那套「先钉对象引用再改」的补丁，全是为了绕开这一点。
+
+### 2. 目标形状
+
+把下标换成**落点自己的稳定身份**：
+
+```jsonc
+// 落点 = 棋盘上的一个 item，它的身份信息本来就有（见 21/08 的 item 形状）
+//   key(cardN/feed/…) + row + col + seq
+// 段：picked 从 [0,2] 变成 ["card1@2,1#1", "card1@2,1#3"]
+{ "key": "card1", "sids": ["card1@2,1#1","card1@2,1#3"], "noint": true }
+```
+
+好处：删/加别的落点**不会改变**任何 sid；跨链搬运也不用再「钉引用」。
+`jobPinSteps` / `jobStepIdentity` / `gidx` 那一套补丁可以整体退役。
+
+### 2.5 ★ 一个关键发现：稳定键**其实已经有了**（2026-11-02 勘察）
+
+`24-jobset-fields.js` 里已经有 `jobPlacementKey(mode, scopeId, r, c, seq)`，
+产出形如 `once|card1|2,1|3` 的**落点稳定键** —— 它现在专门用来挂「动作后等待」
+（`waitAfter` 的键），也就是说「落点身份」这件事项目里早就做对了，
+**只是链段存储没用它**（段里存的仍是 `picked` 位置下标）。
+
+这条让 P0 的成本和风险都降了一档：
+
+- 不需要新设计 id 格式，直接复用 `jobPlacementKey`（口径已经过实测）；
+- 段里加一个 `sids: ["once|card1|2,1|3", …]` 即可，迁移时把 `picked` 逐个翻译成 sids；
+- `waitAfter` 与 `sids` 从此同源 —— 以前「删落点后 waitAfter 键悬空」的问题也会一并消失。
+
+### 2.6 ⚠️ 真正的工作量在「身份解析要拿到棋盘」
+
+`jobStepId(st)` 现在是 `key + '#' + gidx`（纯位置），被 `jobCarryUids` / `jobPickId` /
+`jobApplyDrop` 的兜底匹配 / 勾选集合共用。要改成 sid，就得知道落点在哪一格：
+
+```
+jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
+```
+
+**调用点约 15 处**（27a / 43 / 44 / 测试里都有）。所以 P0 的实际顺序应该是：
+
+1. 先加 `jobSidOfPlacement(which, key, pl)` / `jobSegSids(...)`（纯新增，行为不变）；
+2. 把 `jobStepId` 换成 sid 版并**改全部调用点**（这一步一次性做完，不能半途）；
+3. 段存储改 `sids` + 迁移（读旧写新）；
+4. 退役 `jobPinSteps` / gidx 补丁；
+5. `fuzz_drag` 跑 500×150 + 真实作业集前后对读。
+
+### 3. 实施步骤（建议一次提交一步）
+
+| # | 步骤 | 门禁 |
+| --- | --- | --- |
+| 1 | 加 `jobSidOfPlacement(item)` / `jobSegSids(seg)`：**新旧双读**（有 `sids` 用 sids，没有就把 `picked` 当下标翻译成 sids） | 现有 10 套 + fuzz 全绿（行为不变） |
+| 2 | 所有写入口改成**只写 `sids`**（`picked/from/to/order` 保留写一份给旧运行时？→ 不保留，改 runtime 侧不用它） | + 新增 `repro_sid.js`：删/加落点后 sid 不漂 |
+| 3 | 删掉 `jobPinSteps` / gidx 相关补丁与注释 | fuzz 加长到 500×150 |
+| 4 | 迁移：载入旧作业集时把 `picked` 翻译成 `sids`（`jobMigrateSegs`），并**立刻回写**（存一次就变成新格式） | 用真实作业集跑 `report.py` + 手动对读 |
+| 5 | 文档：§9.2 的教训保留、但补一句「已在 P0 根治」；`AGENTS.md` 铁律 7 之后的提交要求不变 | — |
+
+### 4. 为什么这轮没做（重要）
+
+- 第 4 步是**数据迁移**：你现有的作业集（`assets/resource/jobs/*.json`）会从下标格式换成 sids。
+  迁移写错 = 你辛苦配的链条错位，而且**保存一次就固化**；
+- 它必须在没有别的批次在飞的时候做，并且要有**一份你真实的作业集**做前后对读；
+- 我这一轮的上下文已经不足以「改完 + 反复 fuzz + 真实数据核对」，硬上等于拿你的数据赌。
+
+### 5. 下次开工前需要准备
+
+1. 一份真实作业集文件名（我会先把它复制一份到临时位置做对读）；
+2. 允许我把 `fuzz_drag` 跑到 **500 会话 × 150 操作**（约几分钟）；
+3. 明确「旧格式还要不要兼容」——建议：**读旧写新**，只保留 1 个版本的兼容。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
 
 **2026-11-02 实测（运行时：选卡/自定义动作的识别过程日志，见 §10.17）**：
@@ -2377,7 +2587,7 @@ game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机�
 game_assist_tools/endless_setup/static/js/45-jobset-dirty.js   ★新增 未保存改动防护（脏标记 / beforeunload / 三入口确认 / 胶囊）
 game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（12 节 77 条）
 game_assist_tools/endless_setup/tests/repro_nudge.js           ★新增 ↑/↓ 移一位回归（5 节 15 条）
-game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（5 节 87 条，见 §10.14）
+game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（8 节 112 条，见 §10.14）
 game_assist_tools/endless_setup/tests/repro_dirty.js           ★新增 未保存防护回归（6 节 23 条，见 §10.16）
 game_assist_tools/endless_setup/static/js/25-jobset-supply.js  补给卡 ← / →（手机改顺序，走 jobCommitSupplyOrder）
 game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳 + .sc-nav + 速查卡 + 脏胶囊

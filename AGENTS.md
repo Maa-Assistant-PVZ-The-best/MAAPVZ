@@ -22,6 +22,25 @@ PVZ2 自动化（MAA 框架）。详细开发规范见官网：
    （2026-11-02 用户明确要求：「不要帮我提交啊」「所有 push 必须我自己来」）。
    AI 只改工作区文件；改完只列出「改了哪些文件 + 建议的 commit message + 跑了哪些门禁」，
    由用户自己决定怎么提交。**理由**：commit 错了还能 `reset`，push 出去就是远端历史。
+9. **先找现成的，不擅自造新东西**——本项目已经为「加功能」备好了固定入口。
+   新增功能**必须挂在既有入口上**；需要新能力时**改那个已有函数**，
+   绝不在旁边长一个新的（`jobApplyDrop2`、`stepStoreNew` 这类一律禁止）：
+
+   | 要加的东西 | 唯一入口 |
+   |---|---|
+   | 落子动作（喂豆/铲子/点击格子…） | `15-board-actions.js` 注册表（HANDOFF §10.3） |
+   | 通用动作（点波/捡豆/切换形态…） | `24` 的定义 + `params` 声明 + `dsl.py` 的 `generic_dsl`（§10.2） |
+   | 链条 / 格内 / 补给的排序写回 | `jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove` / `jobCommitSupplyOrder`（§10.12） |
+   | 改完数据的记录点 | `jobSaveLocal()`（§10.7-A，**改数据 → 重绘 → 最后记录**） |
+   | 新弹窗 | `index.html` + `base.css` + `JOB_MODAL_SELECTORS` 三处登记（§10.7-E） |
+   | 手机端新界面块 | `44-jobset-mobile.js` 的 `screenGroups()`（§10.13） |
+   | 跨文件传值 | `dataset`，写方读方都要在（§10.14） |
+   | 预留 / 未实现功能 | `16-jobset-reserved.js` ＋ `agent/jobset/reserved.py` 两边同改（§10.10） |
+
+   **动手前先 `grep`**：同名函数 / 类名 / 常量是否已存在；存在就改它。
+   `node tests\repro_registry.js` 会拦住四类「擅自造新东西」：
+   ①关键函数被写了第二份 ②漏登记 ③预算被顶高（行内样式 /`!important`/原生弹窗）
+   ④新落子动作忘了配图或 `armedNo` 撞号。
 
 ## 测试门禁（改动后对号入座，全绿才算完）
 
@@ -32,6 +51,7 @@ PVZ2 自动化（MAA 框架）。详细开发规范见官网：
 | pipeline 节点 | `.\.venv\Scripts\python.exe -X utf8 agent\jobset\check_graph.py` |
 | 资源文件 | `.\.venv\Scripts\python.exe -X utf8 check_resource.py assets\resource` |
 | 编辑器 JS | `node --check static\js\<文件>.js` |
+| **编辑器任何改动（JS / HTML / CSS）** | `cd game_assist_tools\endless_setup` 后 `node tests\repro_registry.js`（+ 相关 `node tests\repro_*.js`）——它会拦「关键函数写了第二份 / 漏登记 / 预算被顶高」 |
 
 ## 生效矩阵
 

@@ -22,6 +22,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const H = require('./harness');   // 公共假 DOM（见 harness.js 头注释）
 const JS_DIR = path.join(__dirname, '..', 'static', 'js');
 
 let fails = 0;
@@ -36,24 +37,7 @@ function eq(actual, expect, msg) {
 }
 
 // 简易 DOM 元素：只用来验证「右栏面板画出来长什么样」（children 可数、事件可触发）
-function mkEl(tag) {
-    const el = {
-        tagName: tag, style: {}, children: [], _text: '', _html: '', _a: {}, _h: {},
-        classList: { add() { }, remove() { }, contains() { return false; } },
-        appendChild(c) { el.children.push(c); return c; },
-        addEventListener(t, fn) { el._h[t] = fn; },
-        setAttribute(k, v) { el._a[k] = v; },
-        getAttribute(k) { return el._a[k]; },
-        querySelector() { return null; },
-        querySelectorAll() { return []; },
-        get textContent() { return el._text; },
-        set textContent(v) { el._text = String(v); },
-        get innerHTML() { return el._html; },
-        set innerHTML(v) { el._html = String(v); if (!v) el.children = []; },
-    };
-    return el;
-}
-
+const mkEl = H.mkEl;   // 原来这里有一份本地假元素实现（30 行），改为共用 harness
 function mkSandbox(opts) {
     const withDom = !!(opts && opts.dom);
     const panel = mkEl('div');
@@ -75,7 +59,7 @@ function mkSandbox(opts) {
     sandbox.globalThis = sandbox;
     vm.createContext(sandbox);
     for (const f of ['04-cards.js', '08-board-data.js', '15-board-actions.js', '20-jobset-core.js',
-        '21-jobset-levels.js', '22-jobset-chain.js', '24-jobset-fields.js', '27-jobset-board.js',
+        '21-jobset-levels.js', '22-jobset-chain.js', '24-jobset-fields.js', '27a-jobset-steps.js', '27b-jobset-stepcfg.js', '27c-jobset-chain-render.js', '27d-jobset-slots.js', '27e-jobset-hotkeys.js', '27f-jobset-export.js',
         '29-jobset-init.js', '42-jobset-batch.js']) {
         try {
             vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), sandbox, { filename: f });
@@ -697,7 +681,7 @@ function blocksOf(card) {
 var shapes = cards.map(function (c) {
   var bs = blocksOf(c);
   return c._jobCard + ':' + bs.map(function (b) {
-    return b._jobSide + (b._jobUsable ? '' : '(灰)') + (b._h && b._h.click ? '' : '(不可点)');
+    return b._jobSide + (b._jobUsable ? '' : '(灰)') + ((b.listeners && b.listeners('click').length) ? '' : '(不可点)');
   }).join('|');
 });
 var normalChecked = (blocksOf(cards[0])[0]._html || '').indexOf('☑') >= 0;

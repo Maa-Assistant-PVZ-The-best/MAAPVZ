@@ -36,6 +36,8 @@ const jsFiles = fs.readdirSync(JS_DIR).filter(function (f) { return f.endsWith('
 const js = {};
 jsFiles.forEach(function (f) { js[f] = readF(path.join(JS_DIR, f)); });
 const J = function (f) { return js[f] || ''; };
+// 拆分后同一个契约可能落在任意一个 27x 文件里 —— 一律按「全仓拼接」来查
+const ALL_JS = jsFiles.map(function (f) { return js[f]; }).join('\n');
 // 手机壳的源码（第 1 节就要用，所以提到最前面声明）
 const M44 = J('44-jobset-mobile.js');
 
@@ -63,7 +65,7 @@ let m;
 while ((m = panelRe.exec(html))) panels.push(m[1]);
 ok(panels.length >= 15, '扫到面板型弹窗 ' + panels.length + ' 个');
 
-const selBlock = (J('27-jobset-board.js').match(/const JOB_MODAL_SELECTORS = \[([\s\S]*?)\];/) || [])[1] || '';
+const selBlock = (ALL_JS.match(/const JOB_MODAL_SELECTORS = \[([\s\S]*?)\];/) || [])[1] || '';
 const selIds = [];
 const selRe = /'#([A-Za-z]+)\./g;
 while ((m = selRe.exec(selBlock))) selIds.push(m[1]);
@@ -123,8 +125,8 @@ const pairs = [
     { key: 'which', why: '拖拽判断落在哪条链' },
 ];
 pairs.forEach(function (p) {
-    ok(J('27-jobset-board.js').indexOf('dataset.' + p.key) !== -1,
-        '27 写了 dataset.' + p.key + '（' + p.why + ' 的数据来源）');
+    ok(ALL_JS.indexOf('dataset.' + p.key) !== -1,
+        '写方（27x 任一文件）写了 dataset.' + p.key + '（' + p.why + ' 的数据来源）');
     ok(M44.indexOf('dataset.' + p.key) !== -1,
         '44 读了 dataset.' + p.key + '（' + p.why + '）');
 });
@@ -173,6 +175,100 @@ while ((m = pRe.exec(css))) {
 }
 const maxP = pNums.length ? Math.max.apply(null, pNums) : 0;
 eq(maxMarks, maxP, 'JOB_CELL_MAX_MARKS 必须等于 CSS 里最大的 .job-pN（否则「+N」角标数和实际摆位对不上）');
+
+// ============================================================
+// 6）唯一入口：关键函数全仓只能有一处定义
+//    ★ 这一节就是「防止以后另起一套」的门禁 —— 谁要是复制粘贴出一个
+//      jobApplyDrop2 / 自己写个新的段写回函数，这里当场红。
+//      真需要新入口时：**改这个已有函数**，不要在旁边再长一个。
+// ============================================================
+section('6. 唯一入口：关键函数全仓只能有一处定义');
+
+const UNIQUE = [
+    ['jobStoreSteps', '链条段写回（唯一写盘口）'],
+    ['jobApplyDrop', '同链排序（唯一 drop 出口）'],
+    ['jobMoveStepsToChain', '跨链搬运（唯一出口）'],
+    ['jobCellQueueMove', '格内方块排序（唯一出口）'],
+    ['jobCommitSupplyOrder', '补给顺序写回（唯一出口）'],
+    ['jobSaveLocal', '撤销记录点 + 本地缓存（唯一通道）'],
+    ['jobResolveSteps', '链 → 步骤解析（唯一真相来源）'],
+    ['jobSegsToSteps', '段 → 步骤'],
+    ['jobStepsToSegs', '步骤 → 段'],
+    ['jobPinSteps', '落点引用钉住（P0 根治后可退役）'],
+    ['jobBuild', '导出 JSON（唯一真源）'],
+    ['setStatus', '状态提示（唯一通道）'],
+];
+UNIQUE.forEach(function (pr) {
+    const re = new RegExp('function\\s+' + pr[0] + '\\s*\\(');
+    const hits = jsFiles.filter(function (f) { return re.test(js[f]); });
+    ok(hits.length === 1,
+        pr[0] + '（' + pr[1] + '）全仓恰好 1 处：' + (hits.join(', ') || '（无！）'));
+});
+
+// ============================================================
+// 7）预算式门禁：行内样式 / !important / 原生弹窗「只能降不能升」
+//    ★ 写手机断点、加覆盖样式时，最省事的做法就是再来一条 !important 或
+//      往 HTML 塞行内 style —— 那正是让样式越来越脆的原因。
+//      这里给硬上限：**新增代码不许把数字推高**（要加就先把旧的清掉）。
+// ============================================================
+section('7. 预算门禁：行内样式 / !important / 原生弹窗只能变少');
+
+const inlineCnt = (html.match(/style="/g) || []).length;
+const impCnt = (css.match(/!important/g) || []).length;
+const nativeCnt = (function () {
+    let n = 0;
+    jsFiles.forEach(function (f) {
+        n += (js[f].match(/(window\.)?(alert|confirm|prompt)\(/g) || []).length;
+    });
+    return n;
+})();
+
+const BUDGET = [
+    ['index.html 行内 style', inlineCnt, 66,
+        '新增样式请写进 base.css；行内样式会让后面的覆盖只能靠 !important'],
+    ['base.css 里 !important', impCnt, 46,
+        '!important 变多 = 又有行内样式在挡路，先把它搬进 CSS'],
+    ['原生 alert/confirm/prompt', nativeCnt, 16,
+        '新代码请用 setStatus / 项目自己的面板，不要弹系统窗'],
+];
+BUDGET.forEach(function (b) {
+    ok(b[1] <= b[2],
+        b[0] + ' = ' + b[1] + '（上限 ' + b[2] + '，只能降不能升）' + (b[1] > b[2] ? ' —— ' + b[3] : ''));
+});
+
+// ============================================================
+// 8）落子动作注册表 ↔ 图标表 / 编号唯一性
+//    新加落子动作最容易漏两处：图标没配（悄悄回退成铲子占位）、
+//    armedNo 撞号（按 W/S 选到的不是你以为的那个动作）。
+// ============================================================
+section('8. 落子动作：imgKey 必须有图、armedNo 唯一且 ≥9');
+
+const ACT_SRC = J('15-board-actions.js');
+// 去掉整行注释，免得把文件头注释里的示例条目也扫进来
+const ACT_NC = ACT_SRC.split('\n')
+    .filter(function (l) { return l.trim().indexOf('//') !== 0; })
+    .join('\n');
+const FIELD_SRC = J('24-jobset-fields.js');
+
+const imgKeys = [];
+let m8;
+const ikRe = /imgKey:\s*'([A-Za-z0-9_]+)'/g;
+while ((m8 = ikRe.exec(ACT_NC))) imgKeys.push(m8[1]);
+ok(imgKeys.length >= 3, '扫到落子动作 imgKey ' + imgKeys.length + ' 个：' + imgKeys.join(', '));
+imgKeys.forEach(function (k) {
+    ok(new RegExp('\\b' + k + '\\s*:').test(FIELD_SRC),
+        'imgKey「' + k + '」在 24-jobset-fields.js 的 JOB_UI_IMG 里有对应图');
+});
+
+const armNos = [];
+const anRe = /armedNo:\s*(\d+)/g;
+while ((m8 = anRe.exec(ACT_NC))) armNos.push(Number(m8[1]));
+ok(armNos.length >= 3, '扫到 armedNo ' + armNos.length + ' 个：' + armNos.join(', '));
+const dupA = armNos.filter(function (v, i) { return armNos.indexOf(v) !== i; });
+ok(dupA.length === 0, 'armedNo 不重复（重复的：' + (dupA.join(', ') || '无') + '）');
+armNos.forEach(function (n) {
+    ok(n >= 9, 'armedNo ' + n + ' ≥ 9（1-8 是植物槽，被占用会选错动作）');
+});
 
 console.log(fails ? ('\n❌ 有 ' + fails + ' 条断言失败') : '\n✅ 全部通过（静态登记检查）');
 process.exit(fails ? 1 : 0);

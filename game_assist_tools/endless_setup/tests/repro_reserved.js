@@ -58,7 +58,7 @@ function mkSandbox() {
     for (const f of ['04-cards.js', '08-board-data.js', '15-board-actions.js',
         '16-jobset-reserved.js', '20-jobset-core.js', '21-jobset-levels.js',
         '22-jobset-chain.js', '23-jobset-end.js', '24-jobset-fields.js',
-        '27-jobset-board.js', '29-jobset-init.js']) {
+        '27a-jobset-steps.js', '27b-jobset-stepcfg.js', '27c-jobset-chain-render.js', '27d-jobset-slots.js', '27e-jobset-hotkeys.js', '27f-jobset-export.js', '29-jobset-init.js']) {
         try {
             vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), sandbox, { filename: f });
         } catch (e) {
