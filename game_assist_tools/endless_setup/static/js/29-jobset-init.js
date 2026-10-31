@@ -306,6 +306,10 @@ function jobInit() {
     if (_dl) _dl.addEventListener('click', jobRemoteMenuOpen);
     const _rf = document.getElementById('jobRefreshBtn');
     if (_rf) _rf.addEventListener('click', function () { jobLoadList(); });
+    // 手机专用「⤢ 放大 / 适应」棋盘开关（桌面 CSS 里 display:none，这里绑定无害）
+    const _bz = document.getElementById('boardZoomBtn');
+    if (_bz) _bz.addEventListener('click', function () { jobToggleBoardZoom(); });
+    if (typeof jobRestoreBoardZoom === 'function') jobRestoreBoardZoom();
     jobLoadList();        // 载入本地作业集列表到下拉栏
     jobInitSeqDrawer();   // 右侧「种植顺序」抽屉
     jobRenderSeqChains();

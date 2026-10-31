@@ -1,4 +1,4 @@
-# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
+﻿# MAAPVZ 作业集 / 无尽挑战 —— 交接文档
 
 > 工作区：`D:\maapvz\MAAPVZ`
 > 网页端（作业集编辑器）：`game_assist_tools\endless_setup\static\`
@@ -85,6 +85,20 @@
 | **运行时只播提示** | `runtime._reserved_notice()`：只 log 不 override，去重；两个调用点 = 将来真正要动的位置 |
 | **顺带修预存在红灯** | `selfcheck` §18「世界 case 共 16 个」写死 16（用户后加了第 17 个 case「地宫」）→ 改成「**注入当前世界的** case 恰好 16 个」 |
 
+**2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
+
+| 功能 | 说明 | 位置 |
+| --- | --- | --- |
+| **棋盘尺寸变量化** | `.cell` 与同格缩略图的 9 个定位/尺寸全部由 `--cell` + `--u` 等比推导（桌面值一字不差） | `base.css` 顶部「棋盘尺寸变量」 |
+| **手机 / 窄屏断点** | ≤900px：整页收缩、两栏上下堆叠、棋盘一屏放下（~38px/格）、弹窗贴底整屏、链条按钮改右下角浮动 | `base.css` 末尾「移动端 / 窄屏」 |
+| **`⤢ 放大` 棋盘开关** | 手机专用（桌面 `display:none`）：切 58px/格 + 棋盘自己横滑；状态存 localStorage | `index.html` + `27` 的 `jobApplyBoardZoom` |
+| **链条 `↑` `↓` 移一位** | **触屏不支持 HTML5 拖拽**，这是手机上改种植顺序的入口（复用 `jobApplyDrop`） | `27` 的 `jobNudgeSelected` + 吸附栏 |
+| **格内方块 `←` `→`** | 同上，本格内执行顺序的入口（复用 `jobCellQueueMove`） | `43` 的 `_cqBuildBlock` |
+| **★ 手机四屏 App 壳（v2）** | 底部导航：🎯棋盘 / 🪴槽位 / 🔗顺序 / 💾作业集；表条（切表 + 当前动作 + 状态镜像）；**长按 = 右键**；桌面零影响 | `44-jobset-mobile.js` ★新增 + `base.css` 末尾一节（见 §10.13） |
+
+> ★ 第一版把按钮一律放大到 ≥34px，用户实测反馈「**按键太大**」→ **已回退**（见 §10.11-E）。
+> ★ 第二版是「压窄桌面版」，用户反馈「**没怎么改，不好适配**」→ 推翻重做成四屏壳（§10.13）。
+
 ---
 
 ## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
@@ -112,6 +126,7 @@
 | 通用动作（点波/捡豆/切换形态…） | `24-jobset-fields.js` 定义 + `agent/jobset/dsl.py` 编译（见 §10.2） |
 | 槽位连续化 / 替换 / 删除植物 | `42-jobset-batch.js` |
 | 布局（1-149 关图层） | `34-jobset-layout.js` |
+| **手机 / 窄屏样式** | `base.css` **顶部** `--cell` 变量（棋盘缩放的唯一入口）＋ **末尾**「移动端 / 窄屏」一节（见 §10.11） |
 | 存/取作业集、作业集列表 | `28-jobset-io.js` |
 
 **门禁（编辑器改动只需要这两条，不需要跑 Python）**：
@@ -121,11 +136,12 @@ cd game_assist_tools\endless_setup
 node --check static\js\<改过的文件>.js          # 每个改过的文件都要
 node tests\repro_undo_boss.js ; node tests\repro_copy_scope.js ;
 node tests\repro_slot_compact.js ; node tests\repro_cell_queue.js ;
-node tests\repro_shuipi.js ; node tests\repro_reserved.js ;
+node tests\repro_shuipi.js ; node tests\repro_reserved.js ; node tests\repro_nudge.js ;
+node tests\repro_mobile.js ;
 node tests\fuzz_drag.js 200 100                 # 链条相关必跑
 ```
 
-**当前基线（2026-11-01，全绿）**：40 个 JS `node --check` 通过；上述 **6 套**回归全过；
+**当前基线（2026-11-02，全绿）**：41 个 JS `node --check` 通过；上述 **8 套**回归全过；
 `fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
 临时脚本（`zz*` / `_*`）为空。
 
@@ -188,6 +204,9 @@ static/
                                                   # 必须最后加载（Ctrl 不到的扩展点）
     └── 43-jobset-cell-queue.js ★                 # 格内落子顺序方块窗（右键棋盘格）+ Ctrl 右键清空
                                                   # 见 §10.8；排在 42 之后
+    └── 44-jobset-mobile.js ★                     # 手机端 App 壳（四屏 + 底部导航 + 长按=右键）
+                                                  # 必须最后加载（要包 jobLoadTable 等）；桌面零影响
+                                                  # 见 §10.13
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -1850,7 +1869,313 @@ cd ..\..
 
 ---
 
+## 10.11 ★★ 移动端 M1「排版收缩」（2026-11-02）
+
+> 用户原话：「手机打开网页端的 UI 可以再优化一下吗…安卓打开现在操作很难受，
+> 可不可以让安卓浏览器打开的和电脑不一样」。
+
+### A. 手机上原来「难受」的四个硬事实（都是查出来的，不是感觉）
+
+| # | 事实 | 位置 | 后果 |
+| --- | --- | --- | --- |
+| 1 | 棋盘列宽**写死 68px**，`.cell{width:68px}` | `08-board-data.js` 的 `gridEl.style.gridTemplateColumns`、`index.html` 两个 `#gridEarly/#gridLate` 行内样式 | 9 列 ≈ **676px**，390px 手机必横向溢出 |
+| 2 | 同格缩略图 9 个定位是硬编码 px（`4/25/35/46/58/27/17/3`） | `base.css` 的 `.job-n1..n9` | **所以不能简单把格子改小**，一改缩略图就错位 |
+| 3 | 两栏是**行内固定宽**（槽位列 `flex:0 0 380px`、棋盘列 `min-width:420px`） | `index.html` | 420 在 390 屏上把整页顶出横向滚动条 |
+| 4 | 全仓 **0 个** `touchstart/pointerdown`，拖拽全靠 HTML5 `draggable`（7 处） | grep | 链条排序 / 补给排序 / 方块窗拖拽在触屏**全废**；另加右键 / Ctrl 手势在手机上根本不存在 |
+
+### B. 本轮做了什么（**只做排版收缩，不碰交互语义**）
+
+1. **棋盘尺寸变量化**（`base.css` 顶部「棋盘尺寸变量」一节）：
+   ```css
+   :root{ --cell:68px; --u:calc(var(--cell)/68);          /* 1 个基准像素 */
+          --thumb-inset:calc(4*var(--u)); --thumb-gap:calc(4*var(--u));
+          --thumb-1:calc(58*var(--u)); --thumb-2:calc(27*var(--u)); --thumb-3:calc(17*var(--u)); }
+   ```
+   `.cell` 的 `width/height/**border-width**/padding` 与 `.job-n1..n9` 的 9 组定位全部改走变量。
+   - **边框与内边距也必须按 `--u` 缩**：缩略图是相对**内边距盒**定位的，
+     边框固定 2px 时，小格子上 3×3 会挤出格边被 `overflow:hidden` 裁掉。
+   - 桌面 `--u` 恒等于 `1px` → **渲染结果与改造前逐像素一致**（4/25/35/46/58/27/17/3 全部原样还原）。
+   - ★ **以后想缩放棋盘只改 `--cell` 一个值**，别在别处再写死这些数字
+     （这跟 §10.3.1「改 `JOB_CELL_MAX_MARKS` 必须同步改 CSS」是同一类坑，现在从结构上消失了）。
+2. **网格列宽走变量**：`08-board-data.js` 的 `repeat(${cols}, 68px)` → `repeat(${cols}, var(--cell))`；
+   `index.html` 两个棋盘的**行内** `grid-template-columns` 同步改成 `var(--cell)`
+   （行内样式优先级高，不改就是死值）。
+3. **窄屏断点 `@media (max-width:900px)`**（`base.css` 末尾「移动端 / 窄屏」）：
+   - `--cell: clamp(28px, calc((100vw - 80px)/9), 46px)` —— 390px 宽 → ≈34px/格，整盘 ≈342px **一屏放下**；
+   - 两栏上下堆叠（`!important` 压行内固定宽）、通用动作条从棋盘右侧**移到棋盘下方横排**；
+   - 局外 80 选卡 6 列 → 3 列；
+   - 弹窗统一**贴底整屏**（`.jp/.cq/.cc/.ja/.lz/.sc/.artp/.gp/.mp/.cp/.sp/.wp/.np/.tp/.rp-panel`），
+     关闭按钮 26px → 34px；`#moreList`/`#boardMoreList` 是贴着按钮小菜单，**故意不动**；
+   - 链条抽屉整屏 + `#seqToggle` 从「右缘竖条」改成**右下角浮动圆角块**（原来会盖住棋盘最后一列）。
+4. **触屏命中区 `@media (pointer: coarse)`**：按钮/tab/勾选框加大到 ≥34px / 18px，去掉点击高亮。
+
+### C. 本轮**没做**（下一批 M2，明确留给后面）
+
+- **长按 = 右键**（格内方块窗）、Ctrl 变体（清空整格 / 删槽）——手机上没有替代入口。
+- 手机版信息架构（底部三格导航：槽位 / 链条 / 棋盘），桌面专属重交互（布局涂抹 / 对照）在手机上提示去电脑改。
+- **补给卡的排序**仍然只有拖拽（`25-jobset-supply.js` 的卡片是扇子叠图、布局特殊，
+  往里加按钮有视觉风险，留到看过真机再动）。
+
+### E. ★ 第一版上机/模拟器反馈与修订（2026-11-02 当天）
+
+用户在电脑上用「DevTools 设备模拟」看的，三条反馈 + 处理：
+
+| 反馈 | 原因 | 处理 |
+| --- | --- | --- |
+| **棋盘太小** | `--cell` 只到 ~34px（页边距/面板内边距/间缝吃掉了 80px） | 手机断点里把页面 chrome 压到最小（页边距 4、面板 8、间缝 **4→2**）→ **~38px/格**；再加一个 `⤢ 放大` 开关 |
+| **按键太大** | 第一版在 `pointer:coarse` 里把 `.btn` 一律 `min-height:34px` + 加大 padding | **全部回退**（只留 `-webkit-tap-highlight-color`）。教训写进 CSS 注释：手机上缺的是**手势**，不是更大的按钮 |
+| **拖拽用不了** | HTML5 `draggable` 在触屏不工作 | 补了按钮替代入口 → 见 **§10.12** |
+
+**`⤢ 放大` 开关**（手机专用，桌面不占位）：
+
+- `index.html` 的「🎯 布阵棋盘」标题行末尾一个 `#boardZoomBtn`，CSS 里默认 `display:none`，
+  **只在 `max-width:900px` 里 `display:inline-flex`** —— 桌面不多一个按钮。
+- 点一下 → `body.board-zoom` → `--cell: 58px` + `.board-main{overflow-x:auto}`：
+  **格子变大、棋盘自己左右滑**（页面整体不横滚）。再点回到「适应屏幕」。
+- 状态存 localStorage（`jobBoardZoom`），刷新保持。函数：`jobApplyBoardZoom` /
+  `jobToggleBoardZoom` / `jobRestoreBoardZoom`（都在 `27-jobset-board.js`，紧邻 `jobRenderSeqChains` 上方），
+  绑定在 `29-jobset-init.js`。
+- 为什么用 `body` 挂变量而不是 `:root`：`--cell` 定义在 `:root`，而 CSS 变量可被后代覆盖 ——
+  `body.board-zoom` 声明的 `--cell` 会让 `#gridEarly` 的行内 `repeat(9, var(--cell))` 直接吃到新值。
+
+### D. 验证（诚实版）
+
+- 门禁：`node --check` 40 个 JS 全过；6 套 `tests\*.js` 全过；`fuzz_drag 200×100` **0 会话首错**。
+- **CSS 无法本环境验证**（§7 无头浏览器跑不了）→ 必须「手机浏览器 / DevTools 响应式 + Ctrl+F5」肉眼确认。
+  要 PC 起服务用手机看，`pvz.py` / `pvz_android.py` 绑的是 `127.0.0.1`（需临时改 `0.0.0.0` 才能局域网访问，
+  且作业集接口无鉴权，别长期开）。
+
+---
+
+## 10.12 ★★ 手机没有拖拽 → 「↑ / ↓ 移一位」按钮（2026-11-02）
+
+> 用户原话：「有些拖拽相关的用不了」（在电脑的 DevTools 设备模拟里看的）。
+
+### A. 为什么会有这块
+
+排序原本只有一条路：HTML5 `draggable`（`27` 的链条块、`43` 的格内方块、`25` 的补给卡）。
+**触屏浏览器不支持 HTML5 draggable** —— 手指按上去根本不触发 `dragstart`，
+于是手机上「种植顺序」「格内执行顺序」都改不了。这是**能力缺失**，不是样式问题。
+
+### B. 做了什么（三条，全部复用拖拽的同一条出口）
+
+| 位置 | 入口 | 内部调用的函数 | 说明 |
+| --- | --- | --- | --- |
+| 链条（单次 / 循环 / 收尾） | **按住块头左侧的拖柄 `⠿` 直接拖** | 同链 `jobApplyDrop()` / 跨链 `jobMoveStepsToChain()` | 见下面 B2：触屏真拖拽（用户实报「手机端链条拖不动」后补的） |
+| 链条（单次 / 循环 / 收尾） | **勾选块 → 抽屉顶部吸附栏的 `↑` `↓`** | `jobNudgeSelected(dir)` → `jobApplyDrop()` | 与「勾选后拖拽」**同一个 drop 出口**，所以整组搬 / 无间隔组跟随 / 摘出再插入的语义完全一致 |
+| 格内方块窗（`#cellQueueModal`） | **每个方块下面 `←` `→`** | `jobCellQueueMove()` | 与拖拽同一个出口（横向排布，所以是左右） |
+
+> ★ **铁律**：以后再加「替代拖拽」的入口，**必须调这几个已有出口**
+> （`jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove`），
+> **不许自己写第二套排序逻辑** —— §9.2 那 6 个结构性 bug 全在「下标换算」上，
+> 第二套就是第二次踩。
+
+#### B2. 触屏真拖拽（2026-11-02 补，用户实报「手机端的链条拖不动」）
+
+⚠️ 上一轮只给了 `↑/↓`，但那要**先勾选**才出现 —— 用户要的是「能拖」。
+`44-jobset-mobile.js` 的 `bindChainTouchDrag()` 用 **Pointer Events** 补了真拖拽：
+
+- **只有拖柄 `.seq-grip` 能发起**：CSS 里单独给它 `touch-action:none`，
+  块体其它地方仍是滚动 —— 整块都禁用滚动的话，链一长就翻不了页。
+  （手机断点里拖柄被做成 26×36 的蓝灰小方块，比桌面那个 `⠿` 小字好抓得多。）
+- 落点判定**全部复用**：`jobNearestBlockInList`（就近插入，块缝里也接得住）、
+  `jobMarkDropTarget` / `jobClearSeqOver`（蓝色落点线）。
+- 提交只有两个出口：同链 `jobApplyDrop`、跨链 `jobMoveStepsToChain`
+  （boss 不许进收尾由下层拦）；勾选多项 → `jobDragGroupFor` 整组搬。
+- 落点就是自己 → **什么都不做**（不产生无意义的撤销点）。
+- 拖到屏幕上下边缘会**自动滚抽屉**（`-14/+14` 每帧）。
+- 指针的 `move/up` 挂在 **window** 上（不是手柄上）：手柄被重渲染、
+  或 `setPointerCapture` 不被支持时也不会「拖到一半丢事件」。
+
+> 需要数据侧配合的一行：`27` 的 `jobRenderOneChain` 给 `.seq-section`
+> 补了 `sec.dataset.which = which` —— 手机端靠它判断「松手落在哪条链」，
+> **不要去解析 class 名**。
+
+细节：
+
+- `jobNudgeSelected(dir)` 作用于**当前勾选项**（没勾 = 空操作、不写盘、不记撤销点）：
+  同一条链勾 N 项 → 整组挪一位；跨链勾选 → **每条链各自在自己链内挪**（链之间不可混排）。
+- 到顶/到底 → 数据不变 + `setStatus('⚠️ 已经是最前面了')`（**不许静默错位**）。
+- 按钮样式 `#seq-selbar-move`（`.seq-selbar-move`），在吸附栏里、`「」无间隔组` 左边；
+  吸附栏本来就「只有勾选了东西才出现」，所以**没勾选时界面上不多任何按钮**。
+- 提示文案同步改了（不然手机上写着"拖动"会误导）：抽屉头 `拖拽排序` → `拖拽 / 勾选后 ↑↓`，
+  抽屉说明补一行「手机 / 触屏不支持拖动」；格内弹窗 `cqHint` 也带上 `← / →`。
+
+### C. 回归（新增，别再删）
+
+```powershell
+node tests\repro_nudge.js      # 5 节 15 条：单块上/下移、到顶到底不动+提示、
+                               # 整组挪（组内顺序不变）、跨链各挪各的、没勾选=空操作
+```
+
+---
+
+## 10.13 ★★ 手机端 UI v2：四屏 App 壳（2026-11-02，推翻前两版）
+
+> 用户原话：「……没怎么改，不好适配，**手机端你直接重新改 ui 吧，按照你想要的样子来，
+> 越顺手越好，最好可以找到别人现成的例子**」。
+
+### A. 为什么前两版白做了（记下来别再犯）
+
+前两版都是「把桌面版压窄」：缩小格子、放大按钮、弹窗贴底。
+问题是——**这个页面同时装着四件不相干的事**（棋盘 / 槽位 / 链条 / 存档），
+手机屏一次只放得下一件。压窄的结果是一条 3000px 长的页面，
+用户每次都得上下翻几百像素找东西。**"适配"这条路本身就不对，得换信息架构。**
+
+### B. 现成的做法（用户要的"别人的例子"）
+
+| 参考 | 借了什么 |
+| --- | --- |
+| [Material Design · Bottom navigation](https://material.io/design/components/bottom-navigation.html) / [M3](https://m3.material.io/) | **底部导航放 3–5 个目的地，图标 + 短文字**；一级导航不要塞进抽屉 |
+| [Apple HIG · Interface essentials](https://developer.apple.com/ios/human-interface-guidelines/overview/interface-essentials/) | 一屏一件事；触控目标别做太小（这也是「按钮别乱放大、要放大的是内容」的依据） |
+| [Best Practices for Mobile App Navigation Menus](https://appinstitute.com/best-practices-for-mobile-app-navigation-menus/) | **底部 tab bar 优于侧边抽屉**；二级功能才进"更多" |
+
+### C. v2 长什么样（`static/js/44-jobset-mobile.js` + `base.css` 末尾一节）
+
+```
+┌───────────────────────────────┐
+│ [◀] 表A（1/3）· 覆盖 40 关 [▶][🧩] │ ← 表条第 1 行：现在哪张表、一键切
+│ [🌱 槽2 · 豌豆射手]  🗑️ 已清空…   │ ← 表条第 2 行：**拿在手上的动作** + setStatus 镜像
+├───────────────────────────────┤
+│  [普通关] [boss关]              │
+│      9 × 5 棋盘（一屏放下）       │ ← 点格子 = 落子；**长按 = 右键**（方块窗/清格）
+│  🌱1 🌱2 🌱3 … 🫘 🧤 👆（动作条）  │
+│  [🧹清空]            [⤢ 放大]    │
+└───────────────────────────────┘
+│  🎯棋盘   🪴槽位   🔗顺序   💾作业集 │ ← 底部导航（4 项，fixed）
+```
+
+| 屏 | 内容 | 实现 |
+| --- | --- | --- |
+| 🎯 棋盘（默认） | 表条 + 普通关/boss关 + 棋盘 + 动作条 + 清空/放大 | `#mTableBar` + `#colBoard` |
+| 🪴 槽位 | 8 槽位配置（点槽 = 选植物） | `#colSlots` |
+| 🔗 顺序 | **复用现有抽屉**（手机上本来就是整屏）+ 勾选后 `↑↓` | `jobOpenSeqDrawer()` |
+| 💾 作业集 | 选择/保存/删除/远程/世界/配置/布局/复制/局外选卡 + 撤销重做 | `#jobsetPanel` + `.toolbar` |
+
+顺手干掉的三处「手机上的坑」：
+- 大标题 + 🌱新手教程 → 隐藏（`body.m-app h1`）；
+- 「✕ 关闭后台」→ 隐藏（手机上太容易误触，见 `20`/`pvz.py` 的端口逻辑）；
+- 右缘的浮动「种植顺序」条 → 隐藏（底部导航已替代，且它原来会盖住棋盘最后一列）。
+
+### D. 实现要点 / 踩点（改这块之前必读）
+
+1. **不搬 DOM**：只给块挂/摘 `.m-hide`（`display:none`）。
+   `appendChild` 搬节点会让 `getBoundingClientRect()`、自动滚动、拖拽命中判定全部
+   按新位置重算 —— 那些地方没一个在手机上验证过，别给自己找事。
+2. **门控是 `body.m-app`**（`44` 在 `matchMedia('(max-width:900px)')` 命中时加）：
+   **桌面一行样式都不会变**。这是硬要求——桌面版是用户实测过的。
+3. **长按 = 右键**：不是"长按自己写一套该干什么"，而是给格子**派发一个真的
+   `contextmenu` 事件**（`ev.__mSynthetic = true`），直接复用
+   `08-board-data.js` 那条右键分支（多落点→方块窗 / 单落点→清格 / Ctrl→清空整格）。
+   三件配套细节：① 长按后紧跟的 click 在**捕获阶段**吞掉（否则又落一次子）；
+   ② 手指滑动 >10px 就取消（那是滚动页面）；③ 记 `_lastNativeCtx`，
+   系统自己弹过 contextmenu 就不再补一次。
+4. **「顺序」屏的闭环**：用户关抽屉有 ✕ / 点遮罩 / Esc 三条路，而 ✕ 的事件是
+   **绑定时就抓住原函数值**的（`addEventListener('click', jobCloseSeqDrawer)`），
+   所以"包一层 jobCloseSeqDrawer"没用 → 用 **MutationObserver 盯
+   `#seqDrawer` 的 class**，一关就 `setTab('board')`。不做这条，
+   用户关掉抽屉后会停在**空白屏**。
+5. **`#mTableBar` 是 `.flex-row` 的 flex 子项**，必须 `flex: 1 1 100%`，
+   否则它会和槽位列并排（一个很隐蔽的排版错）。
+6. `#mTableBar` 第 2 行镜像 `setStatus` 的消息 —— 手机上 `#jobStatus` 在作业集屏里，
+   不镜像的话「已清空 / 已调整顺序 / ⚠️已经是最前面」这些反馈**一个字都看不到**。
+7. ★ **新增一块界面时必须往 `44` 的 `screenGroups()` 里登记**，
+   否则它在手机上要么永远看不见、要么一直挂着。
+
+### E. 回归
+
+```powershell
+node tests\repro_mobile.js     # 11 节 62 条：桌面零影响 / 切屏 / 抽屉关闭回棋盘 /
+                               # setStatus 镜像 / 长按派发 contextmenu / 滑动与空格子不误触
+```
+
+> 注意：这套测试用的是**假 DOM**（不跑浏览器），盯的是"显示哪块、派发什么事件"，
+> 不盯样式。样式仍然只能手机 / DevTools 手机模拟 + Ctrl+F5 眼看。
+
+### F. 还没做（下一步）
+
+- **补给卡排序**仍只有拖拽（`25` 的扇子叠图布局特殊，往卡片里塞按钮有视觉风险）。
+- 槽位 ✕ 的 Ctrl 变体（手机上就是那个二选一确认弹窗，够用）。
+
+### G. ★ 第二轮（2026-11-02 当天接着改，用户说「再适配一轮」）
+
+第一轮做完，手机上还有几处「点下去会骂人」的地方，这轮全补上了：
+
+| # | 问题 | 改法 |
+| --- | --- | --- |
+| 1 | **植物选择器 / 局外 80 选卡**是**行内样式**写死的 1140px / 640px 居中浮层 + 5/6 列网格 + 右侧 256px「替换指定表」栏 → 手机上每格只有 ~70px，右边还挤一条侧栏 | `body.m-app #plantPicker > div:first-child{width:100vw;height:100dvh}`（行内样式只能 `!important` 压）+ 网格改 **3 列** + 替换栏**折到下面**（`max-height:34vh`） |
+| 2 | 选植物得先跳「槽位」屏再跳回「棋盘」，不能直接落子 | 棋盘屏加 **「槽位快选条」**（`#mSlotStrip`，8 个槽一行横滑）：点已配好的槽 = 直接拿它去落子；点空槽 = 直接开选植物 |
+| 3 | 落错子**没法撤销**（手机按不了 Ctrl+Z；撤销按钮在「作业集」屏） | 表条加 **↩ / ↪**（调 `undoBoard()` / `redoBoard()`），排在切表按钮后面 |
+| 4 | 「长按 = 更多」**没有任何提示**，没人会发现 | 表条第二行空态固定显示 `点格子落子 · 长按格子 = 格内顺序 / 清空`（有消息时被消息顶掉，6s 后自动回落） |
+| 5 | **z-index 打架**：植物选择器是 9999、底部导航 10050 → 全屏选择器**底部一条被导航盖住**（关闭按钮正好在那条里） | `body.m-app #plantPicker/#outerPicker{z-index:10060}`；抽屉比导航矮一层，`#seqDrawer{padding-bottom:56px}` 让内容不被压 |
+
+另外两处「顺手」：
+
+- **选完植物自动切回「棋盘」屏**（包一层 `jobConfirmPick`）—— 选植物的目的就是去落子，
+  停在槽位屏等于让用户再点一次导航，而且他会以为没生效。
+- **槽位屏改 2 列大卡**：8 个胶囊原来是 `inline-flex` + 每项后面跟一个
+  `flex-basis:100%` 的换行 `<span>`；手机改成 `grid` 2 列，并且必须
+  `#jobSlots > span{display:none}` —— 那些换行 span 在 grid 里会**占掉格子**。
+
+> ⚠️ 快选条与表条都是 `44` 用 `createElement` 建出来的（不在 `index.html` 里），
+> 所以 **`screenGroups()` 要登记它们**，否则切屏时会留在屏幕上。
+
+回归扩到 **11 节 62 条**（新增：槽位快选条「点槽=拿它 / 点空槽=选植物」、
+表条 ↩↪ 真的调到 `undoBoard`/`redoBoard`、空态提示文案、
+**槽位长按动作单**「替换→`jobOpenPicker` / 删除→`jobOpenPlantDelete(name,'normal',slot)`」、
+空槽长按不长动作单而是直接选植物）。
+
+### H. ★ 槽位长按 = 「✎ 替换植物 / 🗑 删除这株」动作单（2026-11-02）
+
+> 用户原话：「选择植物后长按可以选择替换，或者删除」。
+
+**为什么必须做**：桌面上这两个入口是槽位胶囊里的 ✎ 和 ✕ —— **6px 的小字**，
+手指压根戳不中；而「换一株 / 删掉这一株」是手机上最常干的两件事。
+
+| 动作 | 转调的既有入口 | 等价于桌面上的 |
+| --- | --- | --- |
+| ✎ 替换植物 | `jobOpenPicker(slot)` | 点胶囊里的 ✎ |
+| 🗑 删除这株（普通关） | `jobOpenPlantDelete(name, 'normal', slot)` | 点胶囊里的 ✕ → 「只删本表 / 删所有表」二选一 |
+| 🗑 删除这株（boss 关） | `jobDeleteSlotHere({name, side:'boss', slot})` | Ctrl+点 ✕ |
+
+- 长按位置**两处都支持**：棋盘屏的「槽位快选条」+ 槽位屏的胶囊。
+- **空槽长按不长动作单**，直接开选植物（没有「替换/删除」可言，少一次点击）。
+- 槽号从 `dataset.slot` 读 —— 为此在 `27` 的 `jobRenderSlots` 里补了两行
+  `chip.dataset.slot / chip.dataset.plant`。**不要去解析 `槽N: 名字` 那段文本**。
+- 新弹窗按规矩登记了：`JOB_MODAL_SELECTORS` 补 `'#mSlotSheet.m-open'` +
+  `base.css` 独立 `#mSlotSheet` 样式块（本仓弹窗样式按 id 逐条写，没有公共类）。
+- 事件复用：长按逻辑抽成了 `bindLongPressOn(el, resolve, onLong)`
+  （棋盘格与槽位共用一套：480ms / 滑动 10px 取消 / 吞掉随后的 click / 轻微震动）。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（移动端：四屏 App 壳 + 拖拽按钮替代，见 §10.11~§10.13）**：
+
+```
+node --check static\js\*.js        → 41 个文件，0 失败
+tests\repro_*.js（8 套）           → 全过（undo_boss / copy_scope / slot_compact /
+                                     cell_queue / shuipi / reserved / nudge / **mobile**）
+tests\fuzz_drag.js 200 100         → 200 会话 × 100 操作，0 个会话有首错
+CSS / 外观                          → 本环境**无法验证**（§7），需真机 / Ctrl+F5 / DevTools 手机模拟
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机四屏壳（切屏 / 表条 / 长按=右键 / 状态镜像）
+game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（11 节 62 条，含触屏拖拽）
+game_assist_tools/endless_setup/tests/repro_nudge.js           ★新增 ↑/↓ 移一位回归（5 节 15 条）
+game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳样式
+game_assist_tools/endless_setup/static/index.html              棋盘行内 grid -> var(--cell)；#colSlots/#colBoard；
+                                                               #mNav 底部导航；⤢ 按钮；引入 44
+game_assist_tools/endless_setup/static/js/08-board-data.js      gridTemplateColumns 走 var(--cell)
+game_assist_tools/endless_setup/static/js/27-jobset-board.js    jobNudgeSelected / 棋盘缩放 / 吸附栏 ↑↓
+game_assist_tools/endless_setup/static/js/29-jobset-init.js     绑定 #boardZoomBtn + 恢复缩放
+game_assist_tools/endless_setup/static/js/43-jobset-cell-queue.js  方块 ← → + 提示文案
+game_assist_tools/endless_setup/HANDOFF.md                     §10.11 / §10.12 / §10.13 + §0/§0.1/§1/§11 同步
+```
 
 **编辑器（2026-11-01 收工时实测）**：
 

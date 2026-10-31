@@ -106,7 +106,10 @@ function renderBoard(gridId, boardData, isLate) {
         loop: jobBuildGlobalSeq(boardData, _tbl, 'loop'),
         end:  jobBuildGlobalSeq(boardData, _tbl, 'end')
     };
-    gridEl.style.gridTemplateColumns = `repeat(${cols}, 68px)`;
+    // ★ 2026-11-02：列宽走 CSS 变量 --cell（base.css 顶部「棋盘尺寸变量」一节），
+    //   手机断点只改 --cell 一个值，棋盘与同格缩略图一起等比缩放。
+    //   不要再写死 68px —— 写死了手机端 9 列 ≈ 676px，必然横向溢出。
+    gridEl.style.gridTemplateColumns = `repeat(${cols}, var(--cell))`;
     gridEl.innerHTML = '';
     for (let r=0; r<rows; r++) for (let c=0; c<cols; c++) {
         const cellItems = boardData[r][c] || [];

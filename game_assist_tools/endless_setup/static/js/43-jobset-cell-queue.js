@@ -150,8 +150,8 @@ function jobRenderCellQueue() {
     const hint = document.getElementById('cqHint');
     if (hint) {
         hint.textContent = (groups.length === 1 && total === 2)
-            ? '拖动方块 = 换这两步的先后（只影响本格这一条链）'
-            : '拖动方块调整顺序：左上角 = 最先执行；只能在同一形态内拖（单次 / 循环 / 收尾各排各的）';
+            ? '拖动方块（或点方块下面 ← →）= 换这两步的先后（只影响本格这一条链）'
+            : '拖动方块或点 ← / → 调整顺序：左上角 = 最先执行；只能在同一形态内排（单次 / 循环 / 收尾各排各的）';
     }
 }
 
@@ -266,6 +266,35 @@ function _cqBuildBlock(g, it, idx) {
     nm.className = 'cq-name';
     nm.textContent = _cqItemName(it) || '';
     el.appendChild(nm);
+
+    // ★ ← / → 移一位（2026-11-02）：**触屏浏览器不支持 HTML5 draggable**，
+    //   这是本格内调顺序在手机上唯一的入口。完全复用拖拽的同一个出口
+    //   jobCellQueueMove()，所以语义与拖动一致（别的格/别的链一概不动）。
+    const nav = document.createElement('div');
+    nav.className = 'cq-nav';
+    [-1, 1].forEach(function (d) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'cq-nav-btn';
+        b.textContent = (d < 0) ? '←' : '→';
+        b.title = (d < 0) ? '往前挪一位（先放）' : '往后挪一位（后放）';
+        b.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const list = (jobCellQueueItemsOf(g.which).items) || [];
+            const i0 = list.indexOf(it);
+            if (i0 === -1) return;
+            const j = i0 + d;
+            if (j < 0 || j >= list.length) {
+                if (typeof setStatus === 'function') {
+                    setStatus(d < 0 ? '⚠️ 它已经是本格第一个了' : '⚠️ 它已经是本格最后一个了');
+                }
+                return;
+            }
+            jobCellQueueMove(g.which, it, list[j], d > 0);
+        });
+        nav.appendChild(b);
+    });
+    el.appendChild(nav);
 
     // ---- 拖放 ----
     el.addEventListener('dragstart', function (e) {

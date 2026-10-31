@@ -1539,6 +1539,89 @@ function jobDropAtChainEnd(t, which, board, drag) {
     jobApplyDrop(drag, { t: t, which: which, board: board, step: null, after: true });
 }
 
+// ============================================================
+// ★★ 链条顺序「↑ / ↓ 移一位」（2026-11-02，手机上没有拖拽）
+//
+//   为什么要有它：排序原本只有 HTML5 `draggable` 一条路，
+//   而**触屏浏览器不支持 draggable** —— 手机上种植顺序根本改不了。
+//   这里**复用同一条 drop 出口 `jobApplyDrop()`**，所以语义
+//   （摘出→重新插入、勾选多项整组搬、无间隔组跟随）与拖拽**完全一致**，
+//   绝不出现第二套排序逻辑（§9.2 那一族 bug 的入口就在这附近，别自己另写一套）。
+//
+//   作用对象 = 当前勾选项（没勾就不动）：
+//     同一条链勾了 N 项 → 整组一起挪一位（与「勾选后拖拽」同语义）；
+//     跨链勾选 → 每条链各自在自己链内挪一位（链之间不能混排）。
+// ============================================================
+function jobNudgeSelected(dir) {
+    const t = jobTables[currentTable];
+    if (!t) return;
+    const board = jobCurrentBoard();
+    let moved = 0, edge = 0;
+    ['once', 'loop', 'end'].forEach(function (which) {
+        const picked = jobSelectedInOrder(which, board);
+        if (!picked.length) return;
+        const steps = jobResolveSteps(t, which, board);
+        // 渲染时的步骤对象 ↔ 刚解析出来的对象：先按引用，再按步骤 id 兜底
+        const idxs = [];
+        picked.forEach(function (st) {
+            let i = steps.indexOf(st);
+            if (i === -1) {
+                const id = jobStepId(st);
+                i = steps.findIndex(function (x) { return jobStepId(x) === id; });
+            }
+            if (i !== -1 && idxs.indexOf(i) === -1) idxs.push(i);
+        });
+        if (!idxs.length) return;
+        idxs.sort(function (a, b) { return a - b; });
+        const first = idxs[0], last = idxs[idxs.length - 1];
+
+        let target;
+        if (dir < 0) {
+            if (first === 0) { edge++; return; }                  // 已经在最前
+            target = { t: t, which: which, board: board, step: steps[first - 1], after: false };
+        } else {
+            if (last === steps.length - 1) { edge++; return; }     // 已经在最后
+            target = { t: t, which: which, board: board, step: steps[last + 1], after: true };
+        }
+        const drag = (picked.length > 1)
+            ? { which: which, kind: 'group', group: picked }
+            : { which: which, kind: 'step', step: picked[0] };
+        if (jobApplyDrop(drag, target)) moved++;
+    });
+    if (moved) return;          // jobApplyDrop → jobAfterChainChange 内部已重绘并给提示
+    if (edge) setStatus(dir < 0 ? '⚠️ 已经是最前面了' : '⚠️ 已经是最后面了');
+}
+
+// ============================================================
+// ★ 棋盘缩放「⤢ 放大 / 适应」（2026-11-02，手机专用）
+//   手机上 9 列一屏最多 ~38px/格；嫌小就切放大 = 58px/格 + 棋盘自己横滑。
+//   按钮只在手机断点里显示（`#boardZoomBtn{display:none}` 桌面不占位），
+//   所以这段对桌面行为零影响。选择存 localStorage，刷新后保持。
+// ============================================================
+const JOB_BOARD_ZOOM_KEY = 'jobBoardZoom';
+
+function jobApplyBoardZoom(on) {
+    const btn = document.getElementById('boardZoomBtn');
+    document.body.classList.toggle('board-zoom', !!on);
+    if (btn) {
+        btn.classList.toggle('on', !!on);
+        btn.textContent = on ? '⤢ 适应' : '⤢ 放大';
+        btn.title = on ? '回到「一屏看全棋盘」' : '放大到 58px/格（放大后左右滑动看整盘）';
+    }
+}
+
+function jobToggleBoardZoom() {
+    const on = !document.body.classList.contains('board-zoom');
+    jobApplyBoardZoom(on);
+    try { localStorage.setItem(JOB_BOARD_ZOOM_KEY, on ? '1' : '0'); } catch (e) { }
+}
+
+function jobRestoreBoardZoom() {
+    let on = false;
+    try { on = localStorage.getItem(JOB_BOARD_ZOOM_KEY) === '1'; } catch (e) { }
+    jobApplyBoardZoom(on);
+}
+
 function jobRenderSeqChains() {
     const box = document.getElementById('seqChains');
     if (!box) return;
@@ -1562,6 +1645,23 @@ function jobRenderSeqChains() {
         tip.className = 'seq-selbar-tip';
         tip.textContent = '已勾选 ' + selTotal + ' 项';
         bar.appendChild(tip);
+
+        // ★ ↑ / ↓ 移一位（2026-11-02）：**拖拽在触屏上不工作**，
+        //   这是「调整种植顺序」在手机上唯一的入口；桌面同样可用。
+        //   语义完全走 jobNudgeSelected -> jobApplyDrop（与拖拽同一条路）。
+        const upBtn = document.createElement('button');
+        upBtn.className = 'seq-selbar-move';
+        upBtn.textContent = '↑';
+        upBtn.title = '把勾选项在本链内上移一位（手机没有拖拽，用这个）';
+        upBtn.addEventListener('click', function (e) { e.stopPropagation(); jobNudgeSelected(-1); });
+        bar.appendChild(upBtn);
+
+        const downBtn = document.createElement('button');
+        downBtn.className = 'seq-selbar-move';
+        downBtn.textContent = '↓';
+        downBtn.title = '把勾选项在本链内下移一位（手机没有拖拽，用这个）';
+        downBtn.addEventListener('click', function (e) { e.stopPropagation(); jobNudgeSelected(1); });
+        bar.appendChild(downBtn);
 
         // 「」无间隔动作组：把勾选的连续步骤组成无间隔组（再点一次解散）
         const nointBtn = document.createElement('button');
@@ -1690,6 +1790,9 @@ function jobRenderOneChain(box, t, board, which) {
     sec.className = 'seq-section'
         + (which === 'loop' ? ' seq-section-loop' : '')
         + (which === 'end' ? ' seq-section-end' : '');
+    // ★ 2026-11-02：链路进 dataset —— 手机端「拖拽到哪条链」按它判定
+    //   （44-jobset-mobile.js 的触屏拖拽），不要去解析 class 名。
+    sec.dataset.which = which;
     const hd = document.createElement('div');
     hd.className = 'seq-section-head';
     hd.textContent = meta.icon + ' ' + meta.label;
@@ -2348,6 +2451,10 @@ function jobRenderSlots() {
         chip.style.cssText = 'display:inline-flex;align-items:center;gap:5px;background:#fff;border:2px solid '
             + (armed ? '#2d7aff' : '#d0d7de') + ';border-radius:8px;padding:3px 7px;cursor:pointer;user-select:none;';
         if (armed) chip.className = 'job-slot-armed';
+        // ★ 2026-11-02：槽号进 dataset —— 手机端「长按槽位 = 替换 / 删除」要按槽号
+        //   转调已有入口（44-jobset-mobile.js），**不要去解析 label 文本**。
+        chip.dataset.slot = String(i);
+        chip.dataset.plant = name || '';
 
         const frame = document.createElement('span');
         frame.style.cssText = 'position:relative;width:30px;height:30px;flex:0 0 30px;background-size:100% 100%;background-repeat:no-repeat;'
@@ -2366,6 +2473,9 @@ function jobRenderSlots() {
         const edit = document.createElement('span');
         edit.textContent = '✎';
         edit.title = '更换植物';
+        // ★ dataset.act 是给手机端用的标记（44-jobset-mobile.js 的「重复点击=切链条」
+        //   要在捕获阶段放过 ✎ / ✕ 这类动作控件，只接管「点槽体」）。
+        edit.dataset.act = 'pick';
         edit.style.cssText = 'font-size:12px;color:#2d7aff;padding:0 2px;flex:0 0 auto;';
         edit.addEventListener('click', (e) => { e.stopPropagation(); jobOpenPicker(i); });
 
@@ -2382,6 +2492,7 @@ function jobRenderSlots() {
         //             已删除槽 ↩ = 恢复沿用
         const clr = document.createElement('span');
         clr.textContent = _blocked ? '↩' : '✕';
+        clr.dataset.act = 'del';       // 手机端「重复点击=切链条」要放过它，见上
         clr.title = !_bossCtx ? '清空该槽位（同时清掉棋盘上该槽的落点；后面的槽会自动左移补位）'
                 + '\n★ Ctrl+点击 = 不问「只删本表 / 删所有表」，直接删掉本表这一槽'
             : _inherited ? '删除沿用：boss 关不再使用这个槽（普通关不受影响；后面的槽会左移补位）'
@@ -2939,6 +3050,7 @@ const JOB_MODAL_SELECTORS = [
     '#tableCopyModal.jp-open',        // 复制阵容（21）
     '#plantDeleteModal.jp-open',      // 删除植物二选一（42）
     '#jobAdvModal.ja-open',           // 高级设置（31）
+    '#mSlotSheet.m-open',             // 手机：槽位长按「替换 / 删除」动作单（44）
     '#layoutModal.lz-open',           // 布局配置（34）
     '#lzFormulaModal.lz-open',        // 布局配置：指定覆盖公式（34）
     '#artifactPicker.artp-open',      // 神器选择（35）
