@@ -303,7 +303,8 @@ class SelectPlants(CustomAction):
           "占位坐标":  [[x,y],...8个],               // 可选，不足8个时填充空槽用；缺省取槽位坐标
           "选卡界面槽位检查": true/1/"Yes",           // 可选，先查1..8槽是否已就绪
           "搜索roi":  [x,y,w,h],                     // 可选，植物列表滚动区
-          "匹配阈值": 0.90,                          // 可选（默认 0.90，0.70 太松会认错植物）
+          "匹配阈值": 0.90,                          // 可选（局内缺省 0.90，0.70 太松会认错植物；
+                                                     //   局外 80 选卡缺省 0.80，见 ENDLESS_THRESHOLD）
           "滑动":  {"begin":[x,y],"end":[x,y],"duration":600},
           "回顶":  {"begin":[x,y],"end":[x,y],"duration":600},   // 次数=本轮下滑次数+3
           "滑动后等待": 300,
@@ -385,6 +386,14 @@ class SelectPlants(CustomAction):
     #   原因：80 个卡的网格比 8 槽列表长得多，按「本轮下滑 +3」算出的次数在
     #   中途回顶时容易欠一口气 —— 回不到顶，后面「从顶重扫」就是假的。
     ENDLESS_BACKTOP_EXTRA_STEPS = 10
+
+    # ★ 局外 80 选卡的匹配阈值（2026-11-02 用户定：0.80）。
+    #   局内 8 槽仍是 0.90（那里有 OCR 名字核对兜底，阈值必须紧）；
+    #   局外界面卡牌**没有文字**、也没有核对手段，阈值略松更容易认到，
+    #   而且它后面还有「按名除名 + 触底回顶重扫」兜着，误点的代价小。
+    #   ⚠️ 只影响「参数里没写 匹配阈值」时的缺省值：
+    #     pipe 里显式写了（0601 的 custom_action_param）就以 pipe 为准。
+    ENDLESS_THRESHOLD = 0.80
 
     # 默认填充位置（滑回最顶上后依次快速点击这些坐标占位）
     # 当 custom_action_param 没传「填充位置」时使用。
@@ -501,9 +510,13 @@ class SelectPlants(CustomAction):
             check_slots_first = self._to_bool(param.get(
                 "选卡界面槽位检查", False))
             search_roi = param.get("搜索roi") or self.DEFAULT_SEARCH_ROI
-            # ★ 匹配阈值默认 0.90（2026-10-07 改：0.70 太松，0.781 就把
-            #   原始坚果墙认成电能豌豆）。
-            threshold = float(param.get("匹配阈值", 0.90))
+            # ★ 匹配阈值缺省按模式分流：
+            #   局内 8 槽 = 0.90（2026-10-07 改：0.70 太松，0.781 就把
+            #   原始坚果墙认成电能豌豆）；
+            #   局外 80 选卡 = 0.80（2026-11-02 用户定，见 ENDLESS_THRESHOLD）。
+            threshold = float(param.get(
+                "匹配阈值",
+                self.ENDLESS_THRESHOLD if endless_mode else 0.90))
             swipe = dict(self.DEFAULT_SWIPE)
             swipe.update(param.get("滑动") or {})
             backtop = dict(self.DEFAULT_BACKTOP)

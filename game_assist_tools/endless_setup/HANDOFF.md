@@ -113,6 +113,16 @@
 | **新参数「详细日志」** | `SelectPlants` 的 `custom_action_param`，缺省 `true`；关掉只留结论行（`[SelectPlants][识别]` 前缀不变） |
 | **`match_plants(threshold=None)`** | 新增「不设阈值」探针模式 —— 只给日志用，计算量与 `find_best` 完全相同（NCC 相关图本来就整幅算完） |
 
+**2026-11-02 追加：局外选卡阈值降到 0.8（用户要求，其余不变）**
+
+| 位置 | 改什么 | 备注 |
+| --- | --- | --- |
+| `pipeline/Endless_ref/06_Endless_80plant_choose/0601_80plant_choose_1.json` | `无尽80植物编辑方案1_准备选择80个植物` 的 `custom_action_param.匹配阈值` **0.9 → 0.8** | 这是**生效的那一份**；runtime 注入只覆盖「无尽局外选卡 / 植物列表」，阈值从 pipe 合并 |
+| `agent/select_plant/custom_select_plant.py` | 新增常量 `ENDLESS_THRESHOLD = 0.80`；参数里**没写** `匹配阈值` 时，局外 80 选卡回落 0.80 | 局内 8 槽仍是 **0.90**（那里靠 OCR 名字核对，阈值必须紧）；pipe 显式写了就以 pipe 为准 |
+
+> 为什么要区分：局外界面卡牌**没有文字**、也没有核对手段，0.90 偏紧容易漏认；
+> 而且它后面还有「按名除名 + 触底回顶重扫」兜着，误点的代价比局内小。
+
 ---
 
 ## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
@@ -2345,6 +2355,8 @@ agent/select_plant/custom_select_plant.py  ★识别过程日志：_ilog/_wlog/_
 agent/select_plant/plant_match.py           match_plants(threshold=None) 探针模式（日志用，零额外算力）
 agent/jobset/runtime.py                     _sig_text / _reco_digest + Plan/Stage/Fight/AutoCount/
                                             _apply_outer_pick 的识别依据日志
+assets/resource/pipeline/Endless_ref/06_Endless_80plant_choose/0601_80plant_choose_1.json
+                                            局外选卡 匹配阈值 0.9 -> 0.8（§10.17 追加）
 game_assist_tools/endless_setup/HANDOFF.md  §0 表格 + §10.17 + §11
 ```
 
