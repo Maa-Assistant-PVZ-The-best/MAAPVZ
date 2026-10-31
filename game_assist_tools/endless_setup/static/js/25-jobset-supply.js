@@ -163,6 +163,35 @@ function jobRenderSupply() {
         nm.textContent = item.name;
         card.appendChild(nm);
 
+        // ★ ← / → 移一位（2026-11-02）：**触屏浏览器不支持 HTML5 draggable**，
+        //   手机端「补给顺序」原本完全改不了（这是全仓最后一个只能拖的地方）。
+        //   ★ 和拖拽走**同一个出口** jobCommitSupplyOrder(list, sortable)：先改
+        //     已剔除「查看」的 sortable，再写回 list —— 绝不另写一套写回逻辑。
+        //   ★ 桌面不显示（拖动更好用），只在 `body.m-app` 下出现（见 base.css）。
+        const nav = document.createElement('div');
+        nav.className = 'sc-nav';
+        [-1, 1].forEach(function (d) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sc-nav-btn';
+            btn.textContent = (d < 0) ? '←' : '→';
+            btn.title = (d < 0) ? '往前挪一位（先拿）' : '往后挪一位（后拿）';
+            btn.addEventListener('click', function (e) {
+                e.stopPropagation();                       // 别触发「点卡片打开补给库」
+                const j = i + d;
+                if (j < 0 || j >= sortable.length) {
+                    setStatus('⚠️ 已经是' + (d < 0 ? '第一个' : '最后一个') + '了');
+                    return;
+                }
+                const moved = sortable.splice(i, 1)[0];
+                sortable.splice(j, 0, moved);
+                jobCommitSupplyOrder(list, sortable);
+                setStatus('↔ 已调整补给顺序：' + moved.name + ' → 第 ' + (j + 1) + ' 位');
+            });
+            nav.appendChild(btn);
+        });
+        card.appendChild(nav);
+
         // ---- 拖拽排序 ----
         card.addEventListener('dragstart', function (e) {
             e.dataTransfer.setData('text/plain', String(i));

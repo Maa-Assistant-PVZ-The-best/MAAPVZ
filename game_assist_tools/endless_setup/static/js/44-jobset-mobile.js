@@ -83,6 +83,7 @@
             + '  <button type="button" class="m-tb-btn" data-act="undo" title="撤销上一步（手机上没法按 Ctrl+Z）">↩</button>'
             + '  <button type="button" class="m-tb-btn" data-act="redo" title="重做">↪</button>'
             + '  <button type="button" class="m-tb-btn m-tb-more" title="布局配置：新建表 / 给表划分关卡">🧩</button>'
+            + '  <button type="button" class="m-tb-btn m-tb-help" data-act="help" title="手机操作速查 / 诊断信息">?</button>'
             + '</div>'
             + '<div class="m-tb-row2">'
             + '  <span class="m-tb-armed" id="mArmed">未选动作</span>'
@@ -111,6 +112,7 @@
                 renderTableBar();
                 return;
             }
+            if (btn.dataset && btn.dataset.act === 'help') { openHelpSheet(); return; }
             if (btn.classList.contains('m-tb-more') && typeof jobOpenLayout === 'function') jobOpenLayout();
         });
         const board = document.getElementById('colBoard');
@@ -603,6 +605,131 @@
     }
 
     // ------------------------------------------------------------
+    // ★ 手机操作速查 + 自检（2026-11-02）
+    //
+    //   为什么：手机上有一半功能是**手势**（长按 / 连点 / 拖柄），没人会自己发现
+    //   （用户已经两次踩在「不知道有这个」上）；而我在这个环境里看不到屏幕 ——
+    //   每次排查都要我打一段 console 片段让用户粘。
+    //   所以收进表条上的一个「?」：
+    //     · 手势速查（7 条，照着做）；
+    //     · 诊断信息 `jobMobileDiag()`：结构化 JSON —— 视口 / `--cell` 实际值 /
+    //       格子实测宽 / 棋盘宽 / 是否横向溢出 / 当前屏 / 各屏可见性 / 打开的弹窗。
+    //       点一下显示出来并尝试复制到剪贴板，用户直接贴给我就能定位。
+    //   ★ 全程**只读**：不改作业集数据、不写 localStorage。
+    // ------------------------------------------------------------
+    const M_HELP_ROWS = [
+        ['点格子', '用「手里拿着的」动作落子（表条第二行写着是什么）'],
+        ['长按格子', '= 桌面右键：多个落子 → 格内顺序方块窗；单个 → 清空这格'],
+        ['点槽位', '拿着这个槽，然后去棋盘落子'],
+        ['连点同一个槽', '切换链条：单次 1× → 循环 ⟳ → 收尾 🚩 → …'],
+        ['长按槽位', '替换植物 / 删除这株'],
+        ['按住拖柄 ⠿', '拖链条块改顺序（拖到别的链上松手 = 换链）'],
+        ['勾选后点 ↑ ↓', '链条里勾选块后，上面那行可以挪一位'],
+    ];
+
+    function ensureHelpSheet() {
+        let el = document.getElementById('mHelpSheet');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'mHelpSheet';
+        el.innerHTML = '<div class="mhs-card">'
+            + '<div class="mhs-head"><b>手机操作速查</b>'
+            + '<button type="button" class="mhs-close" data-act="close" title="关闭">✕</button></div>'
+            + '<div class="mhs-body">'
+            + M_HELP_ROWS.map(function (r) {
+                return '<div class="mhs-row"><span class="mhs-k">' + r[0] + '</span>'
+                    + '<span class="mhs-v">' + r[1] + '</span></div>';
+            }).join('')
+            + '<pre class="mhs-diag" id="mDiagOut" style="display:none"></pre>'
+            + '</div>'
+            + '<div class="mhs-foot">'
+            + '<button type="button" class="mhs-btn" data-act="diag">🩺 诊断信息</button>'
+            + '<button type="button" class="mhs-btn mhs-ok" data-act="close">关闭</button>'
+            + '</div></div>';
+        el.addEventListener('click', function (e) {
+            if (e.target === el) { closeHelpSheet(); return; }     // 点遮罩 = 关闭
+            const b = (e.target && e.target.closest) ? e.target.closest('[data-act]') : null;
+            if (!b) return;
+            const act = b.dataset ? b.dataset.act : '';
+            if (act === 'close') { closeHelpSheet(); return; }
+            if (act === 'diag') { showMobileDiag(); }
+        });
+        document.body.appendChild(el);
+        return el;
+    }
+
+    function openHelpSheet() { ensureHelpSheet().classList.add('m-open'); }
+
+    function closeHelpSheet() {
+        const el = document.getElementById('mHelpSheet');
+        if (el) el.classList.remove('m-open');
+    }
+
+    // 只读自检 —— 每个字段单独 try，一个查不到不影响其它
+    function jobMobileDiag() {
+        const out = {};
+        const safe = function (k, fn) {
+            try { out[k] = fn(); } catch (e) { out[k] = 'ERR:' + e.message; }
+        };
+        safe('视口', function () { return window.innerWidth + '×' + window.innerHeight; });
+        safe('触摸屏', function () { return window.matchMedia('(pointer: coarse)').matches; });
+        safe('手机模式', function () { return document.body.classList.contains('m-app'); });
+        safe('当前屏', function () { return _tab; });
+        safe('屏可见', function () {
+            const g = screenGroups(), r = {};
+            Object.keys(g).forEach(function (k) {
+                r[k] = (g[k] || []).map(function (el) {
+                    return el ? (el.classList.contains('m-hide') ? 'hidden' : 'shown') : 'missing';
+                }).join('/') || '（无块）';
+            });
+            return r;
+        });
+        safe('cell变量', function () {
+            return getComputedStyle(document.documentElement).getPropertyValue('--cell').trim();
+        });
+        safe('棋盘放大', function () { return document.body.classList.contains('board-zoom'); });
+        safe('格子实测宽', function () {
+            const c = document.querySelector('#gridEarly .cell');
+            return c ? Math.round(c.getBoundingClientRect().width * 100) / 100 : null;
+        });
+        safe('棋盘总宽', function () {
+            const g = document.getElementById('gridEarly');
+            return g ? Math.round(g.getBoundingClientRect().width) : null;
+        });
+        safe('整页横向溢出', function () {
+            return document.documentElement.scrollWidth > window.innerWidth + 1;
+        });
+        safe('打开的弹窗', function () {
+            const ids = [];
+            const list = (typeof JOB_MODAL_SELECTORS !== 'undefined') ? JOB_MODAL_SELECTORS : [];
+            list.forEach(function (sel) {
+                try { if (document.querySelector(sel)) ids.push(sel); } catch (e) { }
+            });
+            return ids;
+        });
+        return out;
+    }
+
+    function showMobileDiag() {
+        const out = jobMobileDiag();
+        const txt = JSON.stringify(out, null, 2);
+        const pre = document.getElementById('mDiagOut');
+        if (pre) { pre.textContent = txt; pre.style.display = 'block'; }
+        let copied = false;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt);
+                copied = true;
+            }
+        } catch (e) { }
+        if (typeof setStatus === 'function') {
+            setStatus(copied ? '🩺 诊断信息已复制，可直接粘贴'
+                : '🩺 诊断信息已显示在下面（长按文字复制）');
+        }
+        return out;
+    }
+
+    // ------------------------------------------------------------
     // 切屏
     // ------------------------------------------------------------
     function setTab(tab) {
@@ -817,4 +944,7 @@
     // 供调试 / 将来的「强制手机视图」按钮用
     window.jobMobileSetTab = setTab;
     window.jobMobileActive = isMobile;
+    // 自检：手机上点「?」→ 诊断信息；也可以在控制台直接 `jobMobileDiag()`
+    window.jobMobileDiag = jobMobileDiag;
+    window.jobMobileHelp = openHelpSheet;
 })();

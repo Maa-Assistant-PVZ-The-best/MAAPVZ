@@ -3051,6 +3051,7 @@ const JOB_MODAL_SELECTORS = [
     '#plantDeleteModal.jp-open',      // 删除植物二选一（42）
     '#jobAdvModal.ja-open',           // 高级设置（31）
     '#mSlotSheet.m-open',             // 手机：槽位长按「替换 / 删除」动作单（44）
+    '#mHelpSheet.m-open',             // 手机：操作速查 + 诊断信息（44）
     '#layoutModal.lz-open',           // 布局配置（34）
     '#lzFormulaModal.lz-open',        // 布局配置：指定覆盖公式（34）
     '#artifactPicker.artp-open',      // 神器选择（35）

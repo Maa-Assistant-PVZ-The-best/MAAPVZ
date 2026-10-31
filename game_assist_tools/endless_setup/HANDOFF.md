@@ -138,10 +138,12 @@ node tests\repro_undo_boss.js ; node tests\repro_copy_scope.js ;
 node tests\repro_slot_compact.js ; node tests\repro_cell_queue.js ;
 node tests\repro_shuipi.js ; node tests\repro_reserved.js ; node tests\repro_nudge.js ;
 node tests\repro_mobile.js ;
+node tests\repro_registry.js ;                  # 静态登记检查（不开浏览器，改任何「登记表」必跑）
+node tests\repro_dirty.js ;                     # 未保存改动防护
 node tests\fuzz_drag.js 200 100                 # 链条相关必跑
 ```
 
-**当前基线（2026-11-02，全绿）**：41 个 JS `node --check` 通过；上述 **8 套**回归全过；
+**当前基线（2026-11-02，全绿）**：42 个 JS `node --check` 通过；上述 **10 套**回归全过；
 `fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
 临时脚本（`zz*` / `_*`）为空。
 
@@ -1913,8 +1915,9 @@ cd ..\..
 
 - **长按 = 右键**（格内方块窗）、Ctrl 变体（清空整格 / 删槽）——手机上没有替代入口。
 - 手机版信息架构（底部三格导航：槽位 / 链条 / 棋盘），桌面专属重交互（布局涂抹 / 对照）在手机上提示去电脑改。
-- **补给卡的排序**仍然只有拖拽（`25-jobset-supply.js` 的卡片是扇子叠图、布局特殊，
-  往里加按钮有视觉风险，留到看过真机再动）。
+
+> 注：**补给卡排序**已在 §10.12 的表里补上（补给卡下 `←` `→`，走 `jobCommitSupplyOrder`），
+> 这里原先写的「仍然只有拖拽」已过期。
 
 ### E. ★ 第一版上机/模拟器反馈与修订（2026-11-02 当天）
 
@@ -1964,6 +1967,7 @@ cd ..\..
 | 链条（单次 / 循环 / 收尾） | **按住块头左侧的拖柄 `⠿` 直接拖** | 同链 `jobApplyDrop()` / 跨链 `jobMoveStepsToChain()` | 见下面 B2：触屏真拖拽（用户实报「手机端链条拖不动」后补的） |
 | 链条（单次 / 循环 / 收尾） | **勾选块 → 抽屉顶部吸附栏的 `↑` `↓`** | `jobNudgeSelected(dir)` → `jobApplyDrop()` | 与「勾选后拖拽」**同一个 drop 出口**，所以整组搬 / 无间隔组跟随 / 摘出再插入的语义完全一致 |
 | 格内方块窗（`#cellQueueModal`） | **每个方块下面 `←` `→`** | `jobCellQueueMove()` | 与拖拽同一个出口（横向排布，所以是左右） |
+| 补给顺序（boss 关） | **每张补给卡下面 `←` `→`**（只在 `body.m-app` 显示） | `jobCommitSupplyOrder(list, sortable)` | 与拖拽同一个出口；`查看` 是开关、不在 sortable 里，所以不会被挪动 |
 
 > ★ **铁律**：以后再加「替代拖拽」的入口，**必须调这几个已有出口**
 > （`jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove`），
@@ -2149,14 +2153,106 @@ node tests\repro_mobile.js     # 11 节 62 条：桌面零影响 / 切屏 / 抽�
 
 ---
 
+## 10.14 ★★ 静态登记检查：把「必须手工同步的表」变成门禁（2026-11-02）
+
+> `tests/repro_registry.js` —— **不开浏览器、只扫源码**。5 节 70 条。
+
+### 为什么要有它
+
+这个项目有几处**约定**，漏一处就**静默失效**：不报错、界面看起来正常，只有用户按下去才发现没反应。
+以前这些全靠读 §10 的警告条 + 人的记性，这轮把它们变成一条命令。
+
+| # | 检查 | 漏了会怎样 |
+| --- | --- | --- |
+| 1 | `index.html` 的**面板型弹窗**（`<div id="X">` + `<div class="Y-panel">`）⟷ `base.css` 有没有 `#X` 样式 ⟷ `JOB_MODAL_SELECTORS` 有没有 `#X.` 条目 | ①没样式 = 「点了没反应」（`#batchReplaceModal` 漏过一次）②没登记 = 弹窗里按 W/S/Ctrl+Z 漏到主界面 |
+| 2 | `44` 的 `screenGroups()` 是否登记了每个屏块；`index.html` 里每个 `id="colXxx"` 是否被登记；`TABS` 里每个屏名是否都有 `data-mtab` 按钮 | 那个块在手机上**永远看不见**，或切屏时一直挂着；某个屏永远进不去 |
+| 3 | `dataset` 契约：`27` 写 `dataset.slot / act / which` ⟷ `44` 读同名 | 手机端长按 / 连点切链 / 拖拽**静默不工作**（桌面完全看不出来） |
+| 4 | `44` **包了一层**的全局函数（`setStatus` / `jobLoadTable` / `jobApplyLoaded` / `jobRenderSlots` / `jobConfirmPick`）在别的文件里是否还有定义 | 被包的函数一改名，44 包了个 null，手机端功能静默消失 |
+| 5 | `08` 的 `JOB_CELL_MAX_MARKS` 是否等于 `base.css` 里最大的 `.job-pN` | 「+N」角标数和实际能摆的位置对不上（§10.3.1 那条老坑） |
+
+### 使用
+
+```powershell
+cd game_assist_tools\endless_setup
+node tests\repro_registry.js      # 5 节 70 条，退出码 0 = 全过
+```
+
+★ **新增任何一处登记点时必须同步跑它**：
+
+- 新弹窗 → 三处登记齐（`index.html` / `base.css` / `JOB_MODAL_SELECTORS`）；
+- 新屏块 → 进 `44` 的 `screenGroups()`；
+- 新 `dataset` 约定 → 写方读方都要有；
+- `44` 新包一个全局函数 → 那个函数必须真实存在（它自己也会被扫出来）。
+
+---
+
+## 10.15 ★ 手机「?」：操作速查 + 自检 `jobMobileDiag()`（2026-11-02）
+
+表条右端一个 `?`（`44` 里动态建的 `#mHelpSheet`），一张卡片两件事：
+
+1. **手势速查**（7 条）：点格子 / 长按格子 / 点槽 / 连点槽 / 长按槽 / 按住拖柄 / 勾选后 ↑↓。
+   为什么要：手机上有一半功能是**手势**，不讲没人会发现（用户就两次踩在「不知道有这个」上）。
+2. **🩺 诊断信息** → `jobMobileDiag()` 的结构化 JSON，显示在卡片里并**尝试复制到剪贴板**：
+
+   ```
+   视口 / 触摸屏 / 手机模式 / 当前屏 / 屏可见（每屏 shown·hidden·missing）/
+   cell变量（--cell 实际值）/ 棋盘放大 / 格子实测宽 / 棋盘总宽 /
+   整页横向溢出 / 打开的弹窗
+   ```
+
+   ★ 用途很实在：**我在这个环境里看不到屏幕**，每次排查手机样式都只能让用户"描述现象"。
+   有了它，用户点一下「?」→「🩺 诊断信息」→ 把 JSON 贴给我，我直接看数。
+   ★ 全程**只读**：不改数据、不写 localStorage、不触发撤销记录点（`repro_mobile` 第 11 节盯着）。
+   ★ 也可以在控制台直接 `jobMobileDiag()`（已挂到 window）。
+
+---
+
+## 10.16 ★★ 未保存改动防护（`45-jobset-dirty.js`，2026-11-02）
+
+> 老账 §10.7-G 的 **P2**，一直没做。这是唯一会**真丢用户数据**的一条。
+
+### 问题
+
+本地缓存（localStorage）是 300ms 自动存的，**但写回作业集文件必须手点 💾**。
+这两件事界面上完全看不出来，于是：换作业集 / 新建 / 删作业集 / 误关标签页 → 改动没了。
+
+### 做法（只加护栏，不改任何既有流程）
+
+| 件 | 实现 |
+| --- | --- |
+| **脏标记** | `JSON.stringify(jobBuild())` 与「基线」比对 —— 口径和保存导出的**完全一致** |
+| 触发 | 包一层 `jobSaveLocal`（全仓改数据的唯一通道，§10.7-A），**延后 700ms 合并**再算 |
+| 基线刷新 | `jobSetCurrent`（`jobSave` 成功后必调它）＋ 三个 guard 成功的入口 |
+| 提示 | 左下角胶囊 `#jobDirtyBadge`「● 有未保存改动」，**点它 = 直接保存**（复用 `jobSave`）；手机上抬到导航上方 |
+| 关页面 | `beforeunload`：脏时 `preventDefault` + `returnValue = ''` |
+| 三个会丢东西的入口 | `jobApplyLoaded`（换作业集）/ `jobResetEditor`（新建）/ `jobDelete`：脏时先 `confirm`，**用户拒绝就一个原函数都不调** |
+
+### ★ 为什么不把脏标记塞进 `jobSaveLocal` 里面
+
+`jobSaveLocal` 也是**渲染副作用**的落点（§10.8-H：渲染会补 seq/ord、回写覆盖率段）。
+在里面直接置脏会把「只是渲染了一下」当成改动 → 满屏误报。
+所以这里**只比签名**：渲染来回补的字段最终值不变，签名就不变，也就不会误报（`repro_dirty` 第 6 节盯着）。
+
+### 回归
+
+```powershell
+node tests\repro_dirty.js      # 6 节 23 条：干净不拦 / 改脏 / beforeunload /
+                               # 三入口拒绝=不执行 + 同意=执行且变干净 / 保存后变干净 / 渲染不误报
+```
+
+> ⚠️ 已知取舍：`jobSetCurrent` 被当成「刚写盘完成」的信号。若将来有地方**只是切换当前作业集、
+> 并没有保存**，基线会被误刷新一次 —— 那种情况下胶囊会晚一点才亮，不会丢数据。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
 
 **2026-11-02 实测（移动端：四屏 App 壳 + 拖拽按钮替代，见 §10.11~§10.13）**：
 
 ```
 node --check static\js\*.js        → 41 个文件，0 失败
-tests\repro_*.js（8 套）           → 全过（undo_boss / copy_scope / slot_compact /
-                                     cell_queue / shuipi / reserved / nudge / **mobile**）
+tests\repro_*.js（10 套）          → 全过（undo_boss / copy_scope / slot_compact / cell_queue /
+                                     shuipi / reserved / nudge / mobile / registry / **dirty**）
 tests\fuzz_drag.js 200 100         → 200 会话 × 100 操作，0 个会话有首错
 CSS / 外观                          → 本环境**无法验证**（§7），需真机 / Ctrl+F5 / DevTools 手机模拟
 ```
@@ -2164,14 +2260,18 @@ CSS / 外观                          → 本环境**无法验证**（§7），�
 本轮改动文件：
 
 ```
-game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机四屏壳（切屏 / 表条 / 长按=右键 / 状态镜像）
-game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（11 节 62 条，含触屏拖拽）
+game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机四屏壳（切屏 / 表条 / 长按 / 触屏拖拽 / 「?」速查+自检）
+game_assist_tools/endless_setup/static/js/45-jobset-dirty.js   ★新增 未保存改动防护（脏标记 / beforeunload / 三入口确认 / 胶囊）
+game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（12 节 77 条）
 game_assist_tools/endless_setup/tests/repro_nudge.js           ★新增 ↑/↓ 移一位回归（5 节 15 条）
-game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳样式
+game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（5 节 87 条，见 §10.14）
+game_assist_tools/endless_setup/tests/repro_dirty.js           ★新增 未保存防护回归（6 节 23 条，见 §10.16）
+game_assist_tools/endless_setup/static/js/25-jobset-supply.js  补给卡 ← / →（手机改顺序，走 jobCommitSupplyOrder）
+game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳 + .sc-nav + 速查卡 + 脏胶囊
 game_assist_tools/endless_setup/static/index.html              棋盘行内 grid -> var(--cell)；#colSlots/#colBoard；
-                                                               #mNav 底部导航；⤢ 按钮；引入 44
+                                                               #mNav 底部导航；⤢ 按钮；引入 44 / 45
 game_assist_tools/endless_setup/static/js/08-board-data.js      gridTemplateColumns 走 var(--cell)
-game_assist_tools/endless_setup/static/js/27-jobset-board.js    jobNudgeSelected / 棋盘缩放 / 吸附栏 ↑↓
+game_assist_tools/endless_setup/static/js/27-jobset-board.js    jobNudgeSelected / 棋盘缩放 / 吸附栏 ↑↓ / dataset 契约
 game_assist_tools/endless_setup/static/js/29-jobset-init.js     绑定 #boardZoomBtn + 恢复缩放
 game_assist_tools/endless_setup/static/js/43-jobset-cell-queue.js  方块 ← → + 提示文案
 game_assist_tools/endless_setup/HANDOFF.md                     §10.11 / §10.12 / §10.13 + §0/§0.1/§1/§11 同步

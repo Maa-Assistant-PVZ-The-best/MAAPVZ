@@ -999,4 +999,8 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
        jobCloseSeqDrawer（包一层 = 保持原行为的前提下加「屏切换」同步）。
      ★ 桌面零影响：所有改动由 body.m-app 门控，那个类只在 ≤900px 时加。 -->
 <script src="/static/js/44-jobset-mobile.js"></script>
+<!-- 45 = 未保存改动防护（脏标记 / beforeunload / 换作业集前确认 / 左下角胶囊）
+     ★ 依赖 jobBuild（导出用的同一份口径）、jobSaveLocal（改数据的唯一通道）、
+       jobApplyLoaded / jobResetEditor / jobDelete / jobSetCurrent —— 必须最后加载。 -->
+<script src="/static/js/45-jobset-dirty.js"></script>
 </body></html>

@@ -190,6 +190,8 @@ function mkSandbox(opts) {
     sandbox.jobCloseSeqDrawer = function () { byId('seqDrawer').classList.remove('seq-open'); };
     sandbox.jobOpenPicker = function (i) { sandbox.__pickerFor = i; };
     sandbox.jobFindPlant = function (n) { return n ? { img: '/static/plant/' + n + '.png', rare: 0 } : null; };
+    sandbox.jobSaveLocal = function () { sandbox.__saves = (sandbox.__saves || 0) + 1; };
+    sandbox.__saves = 0;
     sandbox.undoBoard = function () { sandbox.__undo = (sandbox.__undo || 0) + 1; };
     sandbox.redoBoard = function () { sandbox.__redo = (sandbox.__redo || 0) + 1; };
     // 触屏链条拖拽用到的既有函数（这里只验「调对了谁、带对了参数」）
@@ -568,6 +570,41 @@ console.log('10. 手机端链条拖拽（同一链内 → jobApplyDrop）');
     s.__fire('pointermove', { clientY: 200, clientX: 10, cancelable: true, preventDefault: function () { } });
     s.__fire('pointerup', {});
     ok(!s.__applied, '落点就是自己被拖的那一步 → 什么都不做（不产生无意义撤销点）');
+}
+
+// ============================================================
+// 11）「?」操作速查 + 自检（jobMobileDiag）
+//    自检是**只读**的：只报数字，不改作业集、不写 localStorage。
+// ============================================================
+console.log('11. 「?」速查卡片 + 诊断信息（只读）');
+{
+    const s = mkSandbox();
+    s.__fireDomReady();
+
+    ok(typeof s.jobMobileDiag === 'function', '暴露了 window.jobMobileDiag（控制台可直接调）');
+    const saves0 = s.__saves;
+    const diag = s.jobMobileDiag();
+    ok(diag && typeof diag === 'object' && !Array.isArray(diag), '诊断返回对象');
+    ['视口', '手机模式', '当前屏', '屏可见', 'cell变量', '整页横向溢出'].forEach(function (k) {
+        ok(k in diag, '诊断里有「' + k + '」字段');
+    });
+    eq(diag['手机模式'], true, '手机模式下「手机模式」= true');
+    ok(diag['屏可见'] && typeof diag['屏可见'].board === 'string',
+        '「屏可见」里带每屏状态（board/slots/order/job）');
+    eq(s.__saves, saves0, '诊断不写盘（只读，没有撤销记录点被触发）');
+
+    const bar = findCreated(s, 'mTableBar');
+    clickBar(bar, fakeBtn({ act: 'help' }));
+    const sheet = s.__els.mHelpSheet;
+    ok(!!sheet, '速查卡片被创建（动态 DOM）');
+    ok(sheet.classList.contains('m-open'), '点表条上的「?」→ 速查卡片弹出');
+
+    // 点「🩺 诊断信息」：假 DOM 里没有 <pre>，走的是容错分支，只要不抛错即可
+    sheet.listeners('click')[0]({ target: { closest: function () { return { dataset: { act: 'diag' } }; } } });
+    ok(typeof s.jobMobileDiag === 'function', '点「诊断信息」后仍可用（没有崩）');
+
+    sheet.listeners('click')[0]({ target: { closest: function () { return { dataset: { act: 'close' } }; } } });
+    ok(!sheet.classList.contains('m-open'), '点「关闭」→ 卡片收起');
 }
 
 console.log(fails ? ('\n❌ 有 ' + fails + ' 条断言失败') : '\n✅ 全部通过（手机端 App 壳）');

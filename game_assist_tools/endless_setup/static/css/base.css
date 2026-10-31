@@ -831,6 +831,23 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .supply-card:hover .sc-del { display: flex; }
 .supply-card .sc-del:hover { background: #dc2626; }
 
+/* ---- ← / → 移一位（手机专用，2026-11-02）----
+   卡片是 position:absolute + left 由 --i 算出来的「扇面」，所以按钮挂在卡片内部、
+   卡名下面一行；桌面默认不显示（桌面拖动更好用），只在 body.m-app 下出现。
+   ★ 代价：手机上扇面要多占约 20px 高 —— 由下面 body.m-app 的 .supply-stage 一并加高。 */
+.supply-card .sc-nav { display: none; }
+body.m-app .supply-card .sc-nav {
+    display: flex; gap: 3px; justify-content: center; margin-top: 3px;
+}
+body.m-app .supply-card .sc-nav-btn {
+    width: 30px; height: 20px; padding: 0; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 5px;
+    background: #fff; color: #475569;
+    font-size: 11px; line-height: 1; font-family: inherit;
+}
+body.m-app .supply-card .sc-nav-btn:active { background: #e2e8f0; }
+body.m-app .supply-stage { min-height: calc(var(--sc-card-w) * var(--sc-card-ratio) + 58px); }
+
 /* ---- 悬停抽牌：位移按「距离」算（变量驱动，无需逐张写规则）----
    左侧卡（--i < --hover-i）：往左退，越远退越多
    右侧卡（--i > --hover-i）：往右退
@@ -3053,6 +3070,78 @@ body.m-app #seqDrawer { padding-bottom: 56px; }
 }
 #mSlotSheet .mss-danger { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
 #mSlotSheet .mss-cancel { background: #fff; border-color: #e2e8f0; color: #64748b; font-weight: 500; }
+
+/* ---- 「● 有未保存改动」胶囊（45-jobset-dirty.js）----
+   本地缓存是自动存的，但**写回作业集文件必须手点 💾** —— 界面上原本完全看不出来。
+   点它 = 直接保存（复用 jobSave）。只在脏的时候出现，干净时 display:none。 */
+#jobDirtyBadge {
+    display: none; position: fixed; left: 10px; bottom: 10px; z-index: 10045;
+    align-items: center; gap: 6px; padding: 7px 13px;
+    border-radius: 999px; cursor: pointer; font-family: inherit;
+    background: #fff7ed; border: 1px solid #fdba74; color: #c2410c;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+    animation: jobFadeIn .16s ease-out both;
+}
+#jobDirtyBadge.on { display: flex; }
+#jobDirtyBadge:active { background: #ffedd5; }
+/* 手机上让开底部导航 */
+body.m-app #jobDirtyBadge { bottom: 70px; }
+
+/* ---- 表条上的「?」：手机操作速查 + 诊断信息（见 44-jobset-mobile.js）----
+   手机上有一半功能是手势，不讲没人会发现；诊断信息则专门用来「让用户贴数字给我」。 */
+#mTableBar .m-tb-help {
+    font-weight: 700; color: #4338ca; background: #eef2ff; border-color: #c7d2fe;
+}
+#mHelpSheet { display: none; }
+#mHelpSheet.m-open {
+    display: flex; position: fixed; inset: 0; z-index: 10070;
+    align-items: flex-end; justify-content: center;
+    background: rgba(15, 23, 42, .45);
+}
+#mHelpSheet .mhs-card {
+    width: 100%; max-width: 620px; max-height: 86vh;
+    display: flex; flex-direction: column;
+    background: #fff; border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, .25);
+    animation: jobPanelUp .18s cubic-bezier(.22, .61, .36, 1) both;
+}
+#mHelpSheet .mhs-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px; color: #1d4ed8;
+}
+#mHelpSheet .mhs-close {
+    margin-left: auto; width: 30px; height: 30px; border: none; border-radius: 8px;
+    background: #f1f5f9; color: #475569; font-size: 14px; cursor: pointer;
+}
+#mHelpSheet .mhs-body { flex: 1 1 auto; overflow-y: auto; padding: 10px 14px; }
+#mHelpSheet .mhs-row {
+    display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #eef2f7;
+    font-size: 12px; line-height: 1.45;
+}
+#mHelpSheet .mhs-row:last-child { border-bottom: none; }
+#mHelpSheet .mhs-k {
+    flex: 0 0 92px; font-weight: 700; color: #4338ca;
+}
+#mHelpSheet .mhs-v { flex: 1 1 auto; color: #334155; }
+#mHelpSheet .mhs-diag {
+    margin: 8px 0 2px; padding: 10px; border-radius: 8px;
+    background: #0f172a; color: #cbd5e1;
+    font-size: 10px; line-height: 1.45; white-space: pre-wrap; word-break: break-all;
+    font-family: Consolas, Menlo, monospace;
+    -webkit-user-select: text; user-select: text;
+}
+#mHelpSheet .mhs-foot {
+    display: flex; gap: 8px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #e2e8f0;
+}
+#mHelpSheet .mhs-btn {
+    flex: 1 1 0; padding: 11px 0; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; border-radius: 10px;
+    border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;
+}
+#mHelpSheet .mhs-ok { background: #2563eb; border-color: #2563eb; color: #fff; }
 
 /* ---- 链条块：手机上把拖柄变成**真正能拖的手柄**（触屏没有 HTML5 draggable）----
    ★ 只有拖柄设 `touch-action:none`：按手柄拖动 = 搬块，按块体其它地方仍然
