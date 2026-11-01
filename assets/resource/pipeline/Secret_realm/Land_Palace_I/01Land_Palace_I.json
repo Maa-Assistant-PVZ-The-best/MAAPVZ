@@ -2,7 +2,7 @@
     "地宫1无尽_地宫秘境1": {
         "recognition": "TemplateMatch",
         "template": [
-            "Detection_Order/地宫1.png"
+            "land_gong_one/地宫1.png"
         ],
         "roi": [
             212,
