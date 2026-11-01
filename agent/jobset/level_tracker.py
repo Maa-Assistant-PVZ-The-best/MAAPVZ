@@ -304,14 +304,18 @@ class LevelTracker:
         """给「日志弹窗」用的一行状态（在点「开始战斗」时刷新）。
 
             当前关卡: 87    当前表: 表2 (50~99)    本关: 普通关
+
+        ★ 区间走 `table.level_range()`（闭区间）—— 以前直接打印 `to_level`
+          （开区间上界 = 最大关 + 1），于是「设计 1~30」被报成「1~31」
+          （2026-11-01 用户实报）。
         """
         lv = self.state.count
         kind = "boss关" if is_boss else "普通关"
         if table is None:
             return f"当前关卡: {lv}    本关: {kind}"
         try:
-            rng = (f"{table.from_level}~{table.to_level}"
-                   if getattr(table, "to_level", None) is not None
+            rng_fn = getattr(table, "level_range", None)
+            rng = (rng_fn() if callable(rng_fn)
                    else f"{table.from_level}~")
             return (f"当前关卡: {lv}    "
                     f"当前表: 表{int(table.index) + 1} ({rng})    "

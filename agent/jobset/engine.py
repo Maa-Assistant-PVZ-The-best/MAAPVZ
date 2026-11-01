@@ -530,6 +530,24 @@ class Table:
             return False
         return True
 
+    def level_range(self) -> str:
+        """覆盖区间的**闭区间**文本（播报/日志唯一口径）。
+
+        ★ 2026-11-01 用户实报「作业表设计 1~30 关，agent 侧报 1~31 关」：
+          `to_level` 是**开区间上界**（= 最大关 + 1，见 `covers()`）；
+          导出侧也是按「最大关 + 1」写的（`27f-jobset-export.js`），
+          但以前 6 处播报点都把它原样打印，于是每一处都多报一关。
+          这里统一换算成用户看得懂的闭区间：
+            · 图层模式（有 levels）-> 真实 min(levels)~max(levels)
+            · 旧版区间模式        -> from_level~(to_level-1)
+            · to_level 为空        -> from_level~末
+        """
+        if self.levels:
+            return f"{min(self.levels)}~{max(self.levels)}"
+        if self.to_level is None:
+            return f"{self.from_level}~末"
+        return f"{self.from_level}~{max(self.from_level, self.to_level - 1)}"
+
     def rules(self, is_boss: bool) -> Dict[str, Any]:
         """按是否 boss 关取种植规则。"""
         return self.boss if is_boss else self.non_boss
@@ -576,8 +594,7 @@ class Table:
         return ("plants", tuple(self.eff_plants(is_boss)), self.eff_artifact(is_boss))
 
     def __repr__(self) -> str:
-        rng = f"{self.from_level}~{self.to_level if self.to_level is not None else '-'}"
-        return f"<Table#{self.index} {rng} plants={self.plants}>"
+        return f"<Table#{self.index} {self.level_range()} plants={self.plants}>"
 
 
 # ---------------------------------------------------------------------------

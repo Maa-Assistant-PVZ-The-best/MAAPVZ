@@ -215,7 +215,7 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
     #   ★ 2026-10-22 修复：这三行曾被 v3 fail-fast 的 return 顶成死代码
     #     （10-12 起）—— 自动计数收号后界面永远停在「当前关卡：1」，
     #     且 plan_table_index 不落账导致 Plan 每关保守换阵。
-    _lv_msg = f"当前关卡：{lv}"
+    _lv_msg = _focus_level_line(lv, lv > 0)
     _set_focus(context, NODE_PLAN_NORMAL, _lv_msg)
     _set_focus(context, NODE_PLAN_TRAINING, _lv_msg)
 
@@ -591,9 +591,40 @@ _SQUAD_PICK_NEXT_ORIG = [NODE_BATTLE_START]
 # ---------------------------------------------------------------------------
 NODE_LOAD = "无尽挑战_加载作业集代码"
 
+# ★ focus 用哪条事件渲染（2026-11-01 修「关卡播报晚一关 / boss 关被读成上一关」）：
+#
+#   focus 是**随事件携带**的：事件发出那一刻，MaaFW 就把节点当前的 focus 抄进
+#   details_json 里。而我们是**在这个节点的动作执行中**才覆写它 —— 于是同一拍的
+#   `Node.Action.Starting` / `Node.Action.Succeeded` 携带的仍是**上一次**写进去的
+#   旧文案，新文案第一次出现在动作结束几毫秒后的 `Node.PipelineNode.Starting`。
+#
+#   实测（assets/debug/maafw.bak.2026.10.30-22.08.43.201.log，同一秒）：
+#     21:58:17.129  Node.Action.Starting      focus = "第113关已过 → 114"   ← 旧的
+#     21:58:17.146  override 写入                focus = "第114关已过 → 115"
+#     21:58:17.157  Node.Action.Succeeded     focus = "第113关已过 → 114"   ← 仍旧
+#     21:58:17.161  Node.PipelineNode.Starting focus = "第114关已过 → 115"  ← 新文案首现
+#
+#   而 App 侧对**整串写法**的 focus 只在 `Node.Action.Starting` 取值渲染
+#   （MaaFwApp `FocusMessage.kt:107`）-> 整串写法天生慢一拍：每条「第N关已过」
+#   都要等这个节点**下一次**过关才显示。boss 播报是 pipe 里的静态 focus（实时），
+#   两者永远错位一格 -> 用户读成「第4关是 boss 关」（2026-11-01 实报）。
+#
+#   所以：写**字典写法**、按本事件分键 -> 显示的就是刚写进去的新文案。
+FOCUS_EVENT = "Node.PipelineNode.Starting"
+
 
 def _set_focus(context: Context, node: str, text: str) -> None:
-    """给节点写用户可见 focus 文本；失败只告警，不影响流程。"""
+    """给节点写用户可见 focus 文本；失败只告警，不影响流程。
+
+    ★ 用字典写法按 `FOCUS_EVENT` 分键（原因见上面的长注释）：
+      整串写法只在 `Node.Action.Starting` 渲染，而那条事件携带的是上一次的旧文案。
+    老版本 MaaFW 若不认字典写法，退回整串（晚一拍，但不至于没播报）。
+    """
+    try:
+        context.override_pipeline({node: {"focus": {FOCUS_EVENT: text}}})
+        return
+    except Exception as e:
+        _log(f"⚠️ 写 focus（字典写法）失败，退回整串写法：{type(e).__name__}: {e}")
     try:
         context.override_pipeline({node: {"focus": text}})
     except Exception as e:
@@ -625,29 +656,37 @@ def _focus_lineup_block(table, is_boss: bool) -> str:
 
 
 def _focus_level_line(lv: int, known: bool = True) -> str:
-    """「当前关卡：N」播报行（开局 / 自动计数校准后用）。
+    """关卡播报文本（2026-11-01 用户定稿）。
+
+        普通关 -> `关卡数:2`
+        boss 关 -> `关卡数:5-boss关`      # boss 关恒定 5 的倍数（BOSS_SNAP）
+
+    ★ 为什么不再播「第N关已过 → 当前关卡：N+1」：那条文案在**过关那一刻**显示不出来
+      （晚一拍，见 FOCUS_EVENT 注释），而 boss 播报是实时的 —— 两者错位一格就被读成
+      「第N关是 boss 关」。现在只播「你即将打第几关」，天然和 boss 播报同一时刻、同一口径。
 
     ★ known=False 的由来（2026-10-31 用户实报「只有点继续挑战才播报关卡数」）：
       使用**本地作业集**时，option「使用本地作业集」case 只挂了
       `无尽模式_重构` / `无尽挑战_选择世界`，**没有**「无尽_起始关卡」
       （见 assets/resource/task/Endless_ref/Endless_ref.json）——
       于是 JobSetLoad 拿到的计数器是 0，关卡号要等「无尽挑战_自动计数」
-      OCR 主界面「第X关」才知道。这种情况下不能硬播「当前关卡：1」，
+      OCR 主界面「第X关」才知道。这种情况下不能硬播「关卡数:1」，
       否则用户会以为要打第 1 关，必须明说是「待识别」。
     """
-    return f"当前关卡：{lv}" if known else "当前关卡：待识别（等主界面「第X关」自动计数校准）"
+    if not known:
+        return "关卡数:待识别（等主界面「第X关」自动计数校准）"
+    boss = "-boss关" if lv > 0 and lv % _BOSS_SNAP == 0 else ""
+    return f"关卡数:{lv}{boss}"
 
 
-def _plan_level_msg(lv: int, before: Optional[int], counted: bool) -> str:
-    """JobSetPlan 的关卡播报文本。
+def _plan_level_msg(lv: int, before: Optional[int] = None,
+                    counted: bool = False) -> str:
+    """JobSetPlan 的关卡播报文本 = `关卡数:N` / `关卡数:N-boss关`。
 
-    counted=True（本节点顺手计数，即刚点完「继续挑战/继续训练」）时，
-    把「哪一关已过」也带上 —— 用户原话是「点继续挑战时告诉我处于第几关」，
-    只写「当前关卡：N」看不出上一关是多少（§10.9）。
+    与 `_focus_level_line` 同一口径（唯一实现），`before` / `counted` 只为兼容
+    既有调用点与自测保留 —— 文本不再使用「哪一关已过」（2026-11-01 用户定稿）。
     """
-    if counted and before is not None and before != lv:
-        return f"第{before}关已过 → 当前关卡：{lv}"
-    return f"当前关卡：{lv}"
+    return _focus_level_line(lv, True)
 
 
 # ---------------------------------------------------------------------------
@@ -1081,8 +1120,7 @@ class JobSetPlan(CustomAction):
         training = bool(param.get("训练模式"))
         # ★ 识别过程日志：关卡 -> 表 是怎么算出来的（用户核对计数器/覆盖区间用）
         _log(f"选表：关卡{lv} -> 表{table.index + 1}"
-             f"（覆盖 {table.from_level}~"
-             f"{table.to_level if table.to_level is not None else '末'}；"
+             f"（覆盖 {table.level_range()}；"
              f"表内普通关植物 {table.plants[:4]}"
              f"{'…' if len(table.plants) > 4 else ''}，编队={table.squad}）")
         # ★ 记下来给 _inject_lineup 用：训练模式永不跳过清空/选卡
@@ -1287,8 +1325,7 @@ class JobSetLoad(CustomAction):
         _STATE["error"] = None
         _log(f"已载入作业集「{js.name}」 code={js.code} 表数={len(js.tables)}")
         for t in js.tables:
-            rng = f"{t.from_level}~{t.to_level if t.to_level is not None else '末'}"
-            _log(f"  表{t.index + 1} 关卡{rng} 植物={t.plants}")
+            _log(f"  表{t.index + 1} 关卡{t.level_range()} 植物={t.plants}")
 
         # ---- 覆盖重叠检查（图层模式）：同一关被多张表覆盖时，**先涂的赢** ----
         #   2026-10-22 事故：表1{1,2} 与 表2{2,3} 都覆盖第 2 关，用户以为

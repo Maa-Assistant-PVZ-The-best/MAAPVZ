@@ -1774,6 +1774,43 @@ node game_assist_tools\endless_setup\tests\repro_cell_queue.js
 > 只能真机看一眼。若真机上「自动计数」那条没出现，先确认节点有没有被触发
 > （日志里有没有 `📟 自动计数：识别到…`），而不是怀疑 `_set_focus`。
 
+### ★ 2026-11-01 修「关卡播报晚一关」+ 播报文案定稿（用户实报「boss 关在第四关」）
+
+**症状**：用户看到 `第3关已过→当前关卡:4` 紧跟 `boss关`，认定「第4关是 boss 关」；
+且 `过关计数` / `📋 状态行` 都显示 5，三处口径互相打架。
+
+**根因（框架日志实证，不是推断）**：`focus` 是**随事件携带**的 —— 事件发出那一刻
+MaaFW 就把节点当前的 focus 抄进 `details_json`。而 `_set_focus` 是**在动作执行中**
+才覆写的，所以：
+
+```
+21:58:17.129  Node.Action.Starting       focus = "第113关已过 → 114"   ← 旧的
+21:58:17.146  override 写入                 focus = "第114关已过 → 115"
+21:58:17.157  Node.Action.Succeeded      focus = "第113关已过 → 114"   ← 仍旧
+21:58:17.161  Node.PipelineNode.Starting focus = "第114关已过 → 115"   ← 新文案首现
+```
+
+（`assets/debug/maafw.bak.2026.10.30-22.08.43.201.log`，同一次动作内）
+而 App 侧对**整串写法**的 focus 只在 `Node.Action.Starting` 取值
+（`MaaFwApp/.../runner/FocusMessage.kt:107`）→ 每条关卡播报**慢一次过关**才显示。
+boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
+统计：143 次 `过关计数` ↔ 142 条 `[Focus]`，且每条值恒等于真实值 − 1。
+
+**修法**：
+1. `_set_focus` 改写成**字典写法 + 按 `FOCUS_EVENT = "Node.PipelineNode.Starting"`
+   分键**（老版本 MaaFW 不认时退回整串，晚一拍但不至于没播报）。`selfcheck §14`
+   有断言盯着「必须是分键写法」。
+2. 文案按用户 2026-11-01 定稿：`关卡数:2` / boss 关 `关卡数:5-boss关`；
+   不再播「第N关已过 → 当前关卡：N+1」（`_focus_level_line` 是唯一实现，
+   `_plan_level_msg` 委托它、`before`/`counted` 仅为兼容保留）。
+3. 顺带修**区间多一关**：`to_level` 是开区间上界（= 最大关 + 1），以前 6 处
+   播报点原样打印 → 设计 1~30 被报成 1~31。现在统一走
+   `Table.level_range()`（唯一出口，闭区间；图层模式取 levels 的 min~max）。
+
+**教训**：`override_pipeline` 写 focus ≠ 立刻显示。凡是「运行时写 focus」的播报，
+都要问一句「这条事件发出时，focus 是不是已经是我要写的那份？」——不是的话，
+要么换事件分键，要么换播报通道（agent 用户可见行是实时的）。
+
 ---
 
 ## 10.10 ★★ 预留接口总表（2026-11-01，**只留接口、不写实现**）

@@ -88,7 +88,7 @@ if js:
         t999 = js.pick_table(200)
         check("L=200 仍在有效表内", t999 is not None)
         print(f"  表区间: " + ", ".join(
-            f"表{t.index + 1}[{t.from_level}~{t.to_level if t.to_level is not None else '末'}]"
+            f"表{t.index + 1}[{t.level_range()}]"
             for t in js.tables))
     print(f"  lineup@1   = {js.lineup_at(1)['plants']}")
     print(f"  rules@1    = non_boss seq={len(js.rules_at(1, False)['sequence'])}")
@@ -244,20 +244,21 @@ check("再 reset() 回 0", lt.count == 0, f"count={lt.count}")
 print("\n=== 7b. 状态行（给日志弹窗用） ===")
 lt = LevelTracker(start_level=87)
 
+# ★ 2026-11-01：这里改用**真实 Table** 而不是手搓桩 —— 区间口径由
+#   `Table.level_range()` 唯一决定（闭区间）。to_level=100 是开区间上界
+#   （= 最大关 + 1），播报必须是 50~99，不再是 50~100。
+_T = Table({"from_level": 50, "to_level": 100,
+            "lineup": {"plants": ["大喷菇"]}}, 1)
 
-class _T:
-    index = 1
-    from_level = 50
-    to_level = 100
 
-
-line = lt.status_line(_T(), is_boss=False)
+line = lt.status_line(_T, is_boss=False)
 print(f"  {line}")
 check("状态行含关卡", "当前关卡: 87" in line, line)
-check("状态行含表号与区间", "表2" in line and "50~100" in line, line)
+check("状态行含表号与区间（闭区间 50~99）",
+      "表2" in line and "50~99" in line and "50~100" not in line, line)
 check("状态行含普通关", "普通关" in line, line)
 
-line_b = lt.status_line(_T(), is_boss=True)
+line_b = lt.status_line(_T, is_boss=True)
 check("状态行含 boss 关", "boss关" in line_b, line_b)
 
 line_none = lt.status_line(None, is_boss=False)
@@ -1112,19 +1113,57 @@ try:
 
     # ★ 2026-10-31：关卡号播报前置（加载作业集 / 自动计数校准 / 过关）
     #   用户实报「关卡数只有点继续挑战才播报，而那时已经下一关了」。
-    check("焦点: 计数器已知 -> 当前关卡：87",
-          _rt14._focus_level_line(87) == "当前关卡：87",
+    # ★ 2026-11-01 用户定稿文案：`关卡数:2` / boss 关 `关卡数:5-boss关`
+    check("焦点: 普通关 -> 关卡数:87",
+          _rt14._focus_level_line(87) == "关卡数:87",
           _rt14._focus_level_line(87))
+    check("焦点: boss 关（5 的倍数）-> 关卡数:85-boss关",
+          _rt14._focus_level_line(85) == "关卡数:85-boss关",
+          _rt14._focus_level_line(85))
     _unk = _rt14._focus_level_line(1, False)
     check("焦点: 计数器未知 -> 播「待识别」而不是硬报 1",
-          "待识别" in _unk and "当前关卡：1" not in _unk, _unk)
-    check("焦点: 过关播报带「已过第几关」",
-          _rt14._plan_level_msg(88, 87, True) == "第87关已过 → 当前关卡：88",
+          "待识别" in _unk and "关卡数:1" not in _unk, _unk)
+    check("焦点: 过关播报与开局同一口径（不再带「已过第几关」）",
+          _rt14._plan_level_msg(88, 87, True) == "关卡数:88"
+          and _rt14._plan_level_msg(88, None, False) == "关卡数:88",
           _rt14._plan_level_msg(88, 87, True))
-    check("焦点: 没过关（如开局首跑）只播当前关卡",
-          _rt14._plan_level_msg(88, None, False) == "当前关卡：88"
-          and _rt14._plan_level_msg(88, 87, False) == "当前关卡：88",
-          _rt14._plan_level_msg(88, 87, False))
+    check("焦点: 过关播报 boss 关也带 -boss关",
+          _rt14._plan_level_msg(85, 84, True) == "关卡数:85-boss关",
+          _rt14._plan_level_msg(85, 84, True))
+
+    # ★ 2026-11-01「播报晚一关」根因守卫：focus 必须按 FOCUS_EVENT 分键写（字典写法）。
+    #   整串写法只在 Node.Action.Starting 渲染，而那条事件携带的是上一次的旧文案
+    #   -> 每条关卡播报晚一次过关（用户实报「boss 关在第四关」）。
+    class _FakeCtx14:
+        def __init__(self):
+            self.patches = []
+
+        def override_pipeline(self, patch):
+            self.patches.append(patch)
+
+    _c14 = _FakeCtx14()
+    _rt14._set_focus(_c14, "节点X", "关卡数:5")
+    _p14 = _c14.patches[-1] if _c14.patches else {}
+    check("焦点: 按 Node.PipelineNode.Starting 分键写（不再整串写法）",
+          _p14 == {"节点X": {"focus": {_rt14.FOCUS_EVENT: "关卡数:5"}}}, str(_p14))
+
+    # ★ 2026-11-01 用户实报「设计 1~30 关，agent 报 1~31」：
+    #   区间唯一口径 = Table.level_range()（闭区间）
+    _t30 = _eng14.Table({"from_level": 1, "to_level": 31,
+                         "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: to_level(开区间上界) -> 报闭区间 1~30",
+          _t30.level_range() == "1~30", _t30.level_range())
+    _t30b = _eng14.Table({"from_level": 1, "to_level": 31,
+                          "levels": list(range(1, 31)),
+                          "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: 图层模式 -> 报 levels 真实 min~max",
+          _t30b.level_range() == "1~30", _t30b.level_range())
+    _tnone = _eng14.Table({"from_level": 50, "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: 无 to_level -> 50~末",
+          _tnone.level_range() == "50~末", _tnone.level_range())
+    _line30 = LevelTracker(30).status_line(_t30, False)
+    check("区间: 状态行也是闭区间（表1 (1~30)）",
+          "表1 (1~30)" in _line30, _line30)
 except Exception as _e14:
     check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
 
