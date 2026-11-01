@@ -655,11 +655,16 @@ def _focus_lineup_block(table, is_boss: bool) -> str:
     return "\n".join(lines)
 
 
-def _focus_level_line(lv: int, known: bool = True) -> str:
+def _focus_level_line(lv: int, known: bool = True,
+                      uncalibrated: bool = False) -> str:
     """关卡播报文本（2026-11-01 用户定稿）。
 
         普通关 -> `关卡数:2`
         boss 关 -> `关卡数:5-boss关`      # boss 关恒定 5 的倍数（BOSS_SNAP）
+        uncalibrated=True -> `关卡数:5-boss关（未校准）`   # 只用在开局那一条
+
+    ★ `（未校准）` 只在**开局播报**上带一次（用户要求「运行时只弹一次」）：
+      每关的 `关卡数:N` 一律不带，否则就是噪音。
 
     ★ 为什么不再播「第N关已过 → 当前关卡：N+1」：那条文案在**过关那一刻**显示不出来
       （晚一拍，见 FOCUS_EVENT 注释），而 boss 播报是实时的 —— 两者错位一格就被读成
@@ -676,7 +681,8 @@ def _focus_level_line(lv: int, known: bool = True) -> str:
     if not known:
         return "关卡数:待识别（等主界面「第X关」自动计数校准）"
     boss = "-boss关" if lv > 0 and lv % _BOSS_SNAP == 0 else ""
-    return f"关卡数:{lv}{boss}"
+    tail = "（未校准）" if uncalibrated else ""
+    return f"关卡数:{lv}{boss}{tail}"
 
 
 def _plan_level_msg(lv: int, before: Optional[int] = None,
@@ -1131,11 +1137,18 @@ class JobSetPlan(CustomAction):
         #   `📟 自动计数` 行 —— 节点没被触发（OCR 没认到「第」），计数器就完全是
         #   option「起始关卡」的值，而日志一个字都不提。用户于是无从判断
         #   「计数器对不对」，只能靠事后复盘。只提醒一次，不刷屏。
+        # ★ 2026-11-01 修：这里原来打印的 `lv` 是**本节点刚 tick 之后**的计数器，
+        #   却写成「option「起始关卡」= N」—— 填 1 会报成 2（用户实报）。
+        #   现在报 option 原值（JobSetLoad 记下的 `option_start`）+ 此刻计数器，
+        #   两个数一起给，用户一眼能看出差在哪。
         if not _STATE.get("autocount_seen") and not _STATE.get("autocount_warned"):
             _STATE["autocount_warned"] = True
+            _opt = _STATE.get("option_start")
+            _opt_txt = (_opt if isinstance(_opt, int) and _opt > 0 else "未填")
             _log(f"⚠️ 本次任务「自动计数」没跑成（没认到主界面「第X关」）—— "
-                 f"关卡号完全来自 option「起始关卡」= {lv}；"
-                 f"若它和游戏里显示的不一致，整局都会错一格，请核对")
+                 f"关卡号来自 option「起始关卡」= {_opt_txt}（尚未用画面校准；"
+                 f"此刻计数器 = {lv}）；若它与游戏里显示的关卡不一致，"
+                 f"整局都会偏，请核对")
 
         # ---- 播报（每关都报；两种模式都经过本节点）----
         # ★ 「本关是否 boss」此时还不知道（头像识别在局内才发生），
@@ -1288,6 +1301,7 @@ class JobSetLoad(CustomAction):
         if param.get("重置"):
             _STATE["jobset"] = None
             _STATE["tracker"] = None
+            _STATE["option_start"] = None      # option 原值（「自动计数没跑成」警告用）
             _STATE["table_index"] = None
             _STATE["locked_level"] = None     # 锁关卡号也是粘滞状态（2026-10-10：
                                               #   曾残留 147 进新一轮，日志误诊断）
@@ -1353,6 +1367,9 @@ class JobSetLoad(CustomAction):
         #     · 能直接算出该用哪张表（不用等进局内识别）
         #     · 换卡可以发生在**局外**（这就是「不重开」的关键）
         tr = from_params(param)
+        # ★ 记下 option 的**原值**（2026-11-01）：JobSetPlan 的「自动计数没跑成」
+        #   警告要报这个值，不能用 tick 之后的计数器（填 1 报成 2 的实锤）。
+        _STATE["option_start"] = tr.count
         if tr.count > 0:
             _log(f"起始关卡={tr.count}（由参数给定，填的是「你要打的那一关」，"
              f"与主界面显示的数字一致）")
@@ -1360,6 +1377,36 @@ class JobSetLoad(CustomAction):
             _log("未给定起始关卡 -> 计数器暂从 0 起；若流程走「自动计数」节点，"
                  "会用主界面识别到的关卡号覆盖，否则请在 option 里填「起始关卡」")
         _STATE["tracker"] = tr
+
+        # ---- ★ 起手锚点对账（2026-11-01，只读、绝不点击、**绝不改用户填的值**）----
+        #   为什么需要：唯一能读出「游戏里到底第几关」的就是这个 OCR。
+        #   而 `无尽挑战_自动计数` 只挂在「主界面点开始挑战」那条路径上
+        #   （01_Endless_plant_ref.json:45-86）；任务若已经在选卡/结算界面起手，
+        #   走的是 `无尽挑战_识别开始战斗`（02:2-23），**根本不经过它** ——
+        #   实测 2026-11-01 两局（143 / 72 关）框架日志里该节点出现 0 次。
+        #
+        #   ★ 为什么只播报不采信（2026-11-01 用户定稿）：
+        #     用户手填「起始关卡」时本来就不走自动计数，option 是**他给的事实**，
+        #     不能被画面覆盖。这里只做对账：
+        #       · 一致 -> 一句「一致」（说明这一局的绝对数是可信的）
+        #       · 不一致 -> 响一声，让他自己改 option
+        #     ★ 这也是**唯一**能发现「计数器整体偏 5 的整数倍」的地方：
+        #       偏 5k 时 boss 头像、补给屏、snap 全都看不出来（补给出现的位置在
+        #       计数器上仍是 5 的倍数），只有绝对读数能戳破。
+        _anchor = _probe_auto_count(context)
+        if _anchor is not None:
+            if tr.count <= 0:
+                _log(f"📟 起手锚点：主界面显示「第{_anchor}关」"
+                     f"（option 未填起始关卡，仅供参考）")
+            elif _anchor == tr.count:
+                _log(f"📟 起手锚点：主界面显示「第{_anchor}关」（与起始关卡一致）")
+            else:
+                _log(f"⚠️ 起手锚点：主界面显示「第{_anchor}关」，而 option"
+                     f"「起始关卡」= {tr.count}（差 {_anchor - tr.count:+d} 关）—— "
+                     f"以 option 为准不改动；若游戏里确实是第{_anchor}关，"
+                     f"请改正「起始关卡」")
+            _STATE["autocount_seen"] = True
+            _set_focus(context, NODE_AUTO_COUNT, _focus_level_line(_anchor))
 
         # ---- 当前阵容（预热） ----
         #
@@ -1410,7 +1457,10 @@ class JobSetLoad(CustomAction):
         #     计数器为 0（本地作业集没配「起始关卡」）时如实播「待识别」，
         #     真正的关卡号由 JobSetAutoCount 识别后补报。
         table0 = js.pick_table(lv)
-        lv_line = _focus_level_line(lv, tr.count > 0)
+        # ★「（未校准）」只在**开局这一条**播报上带一次（2026-11-01 用户要求），
+        #   每关的 `关卡数:N` 一律不带 —— 免得变成噪音。
+        lv_line = _focus_level_line(lv, tr.count > 0,
+                                    uncalibrated=not _STATE.get("autocount_seen"))
         _set_focus(context, NODE_LOAD,
                    f"已加载作业集：{js.name}\n"
                    + lv_line + "\n"
@@ -1419,6 +1469,36 @@ class JobSetLoad(CustomAction):
              f"（预计表{table0.index + 1}，关卡 {table0.from_level} 起）")
 
         return _ok()
+
+
+# ---------------------------------------------------------------------------
+# 起手锚点探测（只读：截一帧 + 跑一次「第X关」识别，绝不点击，绝不改计数器）
+# ---------------------------------------------------------------------------
+
+
+def _probe_auto_count(context: Context) -> Optional[int]:
+    """截一帧、跑一次 `无尽挑战_自动计数` 的识别，读到关卡号就返回。
+
+    ★ 只读：不点击、不改流程。认不到（当前不是主界面 / ROI 里没有「第X关」）
+      返回 None，调用方闭嘴即可。
+
+    ★ 为什么要它：这个节点本身只挂在「主界面点开始挑战/继续挑战」那条路径上
+      （01_Endless_plant_ref.json:45-86）；任务若已经在选卡/结算界面起手，走的是
+      `无尽挑战_识别开始战斗`（02_Endless_plant_Choose_ref.json:2-23），
+      **根本不经过它** —— 实测 2026-11-01 两局（143 / 72 关）框架日志里该节点
+      出现 0 次，计数器全程 = option 起始关卡 + 过关次数，绝对值从未被核对。
+    """
+    try:
+        image = context.tasker.controller.post_screencap().wait().get()
+        reco = context.run_recognition(NODE_AUTO_COUNT, image)
+    except Exception as e:
+        _log(f"起手锚点：跳过（{type(e).__name__}: {e}）")
+        return None
+    for t in _reco_all_texts(reco):
+        lv = _parse_level_text(t)
+        if lv is not None:
+            return lv
+    return None
 
 
 # ---------------------------------------------------------------------------

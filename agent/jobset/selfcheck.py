@@ -195,6 +195,20 @@ print(f"  用户可见日志: {_msgs}")
 check("boss 日志含『boss关，当前关卡数：』", "boss关，当前关卡数：60" in _msgs[0], str(_msgs))
 check("未偏移时不输出偏移警告", len(_msgs) == 1, str(_msgs))
 
+# ★ 2026-11-01：`describe()` 不许再把空跑写成「判定=snap」（假的"已修正"痕迹）
+_lt_desc = LevelTracker(start_level=60)
+_lt_desc.snap_boss()                       # 60 已是 5 的倍数 -> 空跑
+check("describe: 空跑写成 snap(未改动)",
+      _lt_desc.describe() == "关卡=60 判定=snap(未改动)", _lt_desc.describe())
+_lt_desc2 = LevelTracker(start_level=58)
+_lt_desc2.snap_boss()                      # 58 -> 60（真纠偏）
+check("describe: 真纠偏写成 snap(58→60)",
+      _lt_desc2.describe() == "关卡=60 判定=snap(58→60)", _lt_desc2.describe())
+_lt_desc3 = LevelTracker(start_level=60)
+_lt_desc3.tick()
+check("describe: tick 原样",
+      _lt_desc3.describe() == "关卡=61 判定=tick", _lt_desc3.describe())
+
 _msgs3 = lt3.snap_boss_message(res3)
 print(f"  用户可见日志(偏移): {_msgs3}")
 check("偏移时输出三行（含不许静默的告警）", len(_msgs3) == 3, str(_msgs3))
@@ -1130,6 +1144,11 @@ try:
     check("焦点: 过关播报 boss 关也带 -boss关",
           _rt14._plan_level_msg(85, 84, True) == "关卡数:85-boss关",
           _rt14._plan_level_msg(85, 84, True))
+    # ★ 2026-11-01 用户要求：`（未校准）`只在开局那一条带一次，每关的不带
+    check("焦点: 「（未校准）」只由开局播报带（每关不带）",
+          _rt14._focus_level_line(5, True, True) == "关卡数:5-boss关（未校准）"
+          and _rt14._focus_level_line(5) == "关卡数:5-boss关",
+          _rt14._focus_level_line(5, True, True))
 
     # ★ 2026-11-01「播报晚一关」根因守卫：focus 必须按 FOCUS_EVENT 分键写（字典写法）。
     #   整串写法只在 Node.Action.Starting 渲染，而那条事件携带的是上一次的旧文案
@@ -1164,6 +1183,38 @@ try:
     _line30 = LevelTracker(30).status_line(_t30, False)
     check("区间: 状态行也是闭区间（表1 (1~30)）",
           "表1 (1~30)" in _line30, _line30)
+
+    # ★ 2026-11-01 起手绝对锚点探测 `_probe_auto_count`：
+    #   读到「第X关」就返回关卡号；认不到必须**返回 None 而不是抛**
+    #   （它在 JobSetLoad 里跑，抛了会断掉整局）。
+    class _FakeCtl14:
+        def post_screencap(self):
+            return self
+
+        def wait(self):
+            return self
+
+        def get(self):
+            return object()
+
+    class _FakeCtxProbe14:
+        def __init__(self, text):
+            self._text = text
+            self.tasker = type("T", (), {"controller": _FakeCtl14()})()
+
+        def run_recognition(self, node, image):
+            return type("R", (), {
+                "best_result": (type("B", (), {"text": self._text})()
+                                if self._text else None),
+                "filtered_results": [],
+                "all_results": [],
+            })()
+
+    check("起手锚点: 读到「第87关」-> 87",
+          _rt14._probe_auto_count(_FakeCtxProbe14("第87关")) == 87,
+          str(_rt14._probe_auto_count(_FakeCtxProbe14("第87关"))))
+    check("起手锚点: 认不到 -> None（不抛）",
+          _rt14._probe_auto_count(_FakeCtxProbe14(None)) is None)
 except Exception as _e14:
     check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
 
