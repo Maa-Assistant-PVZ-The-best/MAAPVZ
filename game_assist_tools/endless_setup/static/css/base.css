@@ -2668,11 +2668,30 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 .cell.mech-bg-tomb   { background: #e7e5e4; }
 .cell.mech-bg-cart   { background: #fef3c7; }
 .cell.mech-bg-power  { background: #dcfce7; }
-.cell.mech-bg-gold   { background: #fef9c3; }
+/* 阳光砖（失落之城，已实测 5 格）：唯一被要求「要看得出来」的机制格 ——
+   加强只做在底色与边框上（用户不要格子上多出图标），所以未落点格也从灰虚线
+   变黄实线。其余机制格仍是弱提示底色，一条都不动。 */
+.cell.mech-bg-gold   { background: #fde68a; border-color: #f59e0b; border-style: solid; }
+/* 坑道 / 兵马俑（地宫无尽，用户作业集落点标注）：与阳光砖同一套读法 ——
+   底色加深 + 同色系实线框，未落点格也是实线。 */
+.cell.mech-bg-tunnel     { background: #d1d5db; border-color: #6b7280; border-style: solid; }
+.cell.mech-bg-terracotta { background: #c9a06a; border-color: #92400e; border-style: solid; }
+/* 同一格既是坑道又立着兵马俑（2,8 / 3,6 / 4,8）：灰棕斜纹，两种机制都看得见。
+   那三格在 40 的 cells 里各登记了两条，两条 mech-bg-* 类叠在同一格上就是它。 */
+.cell.mech-bg-tunnel.mech-bg-terracotta {
+    background: repeating-linear-gradient(45deg, #d1d5db 0 5px, #c9a06a 5px 10px);
+    border-color: #6b7280;
+}
 .cell.mech-bg-ice    { background: #cffafe; }
 .cell.mech-bg-sewer  { background: #d6d3d1; }
 .cell.mech-bg-arrow  { background: #ede9fe; }
 .cell.mech-bg-fungus { background: #fae8ff; }
+/* 上述「要看得出来」的三种机制格落了植物后：底色不动，边框换回落点蓝，
+   保住「这格已经有东西」的既有读法。放最后 —— 特异性与上面几条相同，
+   靠顺序压住它们（含斜纹那条）。 */
+.cell.has.mech-bg-gold,
+.cell.has.mech-bg-tunnel,
+.cell.has.mech-bg-terracotta { border-color: #7dd3fc; }
 
 /* 「是否查看配置」提示条（载入作业集后弹出） */
 .npr {

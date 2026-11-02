@@ -13,7 +13,8 @@
 //   推断无尽 —— 校对只能靠在无尽里实测。已校对：失落之城（2026-10-24）。
 //
 //   条目级开关：`boss: false` = boss 关不刷、只画普通关棋盘；
-//   `mark: false` = 只刷底色，不放图标/文字。
+//   `mark: false` = 只刷底色/描边，不放图标/文字（失落之城的阳光砖就是这样：
+//   用户不想让格子上多出图标，加强只做在底色与边框上，见 base.css）。
 //
 // 机制类型（MECH_TYPES）渲染为格子左上角小标记 + 底色 + 悬停说明；
 // 纯显示层：不参与导出、不影响落子、不进作业集数据。
@@ -26,7 +27,9 @@ const MECH_TYPES = {
     tomb: { icon: '🪦', label: '墓碑（占位，打碎后可种）' },
     cart: { icon: '🛒', label: '矿车轨道（矿车可上下滑动）' },
     power: { icon: '🔋', label: '能量砖（联动大招）' },
-    gold: { icon: '', label: '黄色格子' },
+    gold: { icon: '', label: '阳光砖' },
+    tunnel: { icon: '', label: '坑道（灰色）' },
+    terracotta: { icon: '', label: '兵马俑（棕色）' },
     ice: { icon: '🧊', label: '浮冰（会上下漂移；仍可种植）' },
     sewer: { icon: '⚙️', label: '井盖（不可种植）' },
     arrow: { icon: '➡️', label: '箭头机关格' },
@@ -70,12 +73,16 @@ const WORLD_MECHANICS = {
         return a;
     })() },
     // ★ 失落之城：无尽实测（2026-10-24 用户提供）—— 普通关开局固定刷这 5 格
-    //   黄色格；boss 关不刷。用户给的坐标是 (列,行)：(4,1)(5,2)(6,3)(5,4)(4,5)，
+    //   阳光砖；boss 关不刷。用户给的坐标是 (列,行)：(4,1)(5,2)(6,3)(5,4)(4,5)，
     //   换算成本文件的 [行,列] 即下表（4-6 列一条斜线）。
-    //   boss:false = boss 棋盘不画；mark:false = 只刷黄色底，不放图标/文字。
+    //   boss:false = boss 棋盘不画。
+    // ★ 2026-11 用户明确：这 5 格就是「阳光砖」，并要求显示更明显 —— 但不要
+    //   放图标（用户否决了 ☀️ 角标），所以仍 mark:false，加强靠底色/描边：
+    //   base.css `.cell.mech-bg-gold`（黄底加深 + 黄实线框）。机制语义仍只以
+    //   实测为准。
     '失落之城': {
         verified: true, boss: false, mark: false,
-        note: '已校对（无尽实测）：普通关固定 5 格黄色格；boss 关不刷',
+        note: '已校对（无尽实测）：普通关固定 5 格阳光砖；boss 关不刷',
         cells: [
             [1, 4, 'gold'], [2, 5, 'gold'], [3, 6, 'gold'], [4, 5, 'gold'], [5, 4, 'gold'],
         ],
@@ -86,9 +93,31 @@ const WORLD_MECHANICS = {
     '蒸汽时代': { note: '待校对：机制格未填', cells: [] },
     '复兴时代': { note: '待校对：机制格未填', cells: [] },
     '童话世界': { note: '待校对：机制格未填', cells: [] },
-    // ★ 地宫无尽：无尽专用地图（不是常规世界）。机制格未实测 —— 一律空表，
-    //   jobRenderMech 的 verified 闸门也不会画，等实测再填。
-    '地宫无尽': { note: '待校对：机制格未填', cells: [] },
+    // ★ 地宫无尽：无尽专用地图（不是常规世界）。
+    //   来源：2026-11 用户提供的作业集（草垛落点 = 坑道、巴豆落点 = 兵马俑），
+    //   按 boardEarly 的行,列 逐格抄下来 —— 属于用户实测标注，不是拆包推断。
+    //   其中 2,8 / 3,6 / 4,8 三格**同时**是坑道和兵马俑（用户确认要双色斜纹），
+    //   所以这三格在 cells 里各出现两次：两条 mech-bg-* 类叠在同一格上，
+    //   base.css 的 `.mech-bg-tunnel.mech-bg-terracotta` 负责画成灰棕斜纹。
+    //   未写 boss 键 = 两块棋盘都画（本作业集 boardLate 是空的，地宫也不分
+    //   普通关 / boss 关；要只画普通关就补 boss: false）。
+    '地宫无尽': {
+        verified: true, mark: false,
+        note: '已校对（用户作业集落点）：坑道 26 格、兵马俑 5 格；重叠格画双色斜纹',
+        cells: [
+            // 坑道（草垛落点，26 格）
+            [1, 2, 'tunnel'], [1, 3, 'tunnel'], [1, 4, 'tunnel'], [1, 8, 'tunnel'], [1, 9, 'tunnel'],
+            [2, 1, 'tunnel'], [2, 2, 'tunnel'], [2, 4, 'tunnel'], [2, 6, 'tunnel'], [2, 7, 'tunnel'],
+            [2, 8, 'tunnel'],
+            [3, 4, 'tunnel'], [3, 5, 'tunnel'], [3, 6, 'tunnel'], [3, 8, 'tunnel'],
+            [4, 1, 'tunnel'], [4, 2, 'tunnel'], [4, 4, 'tunnel'], [4, 6, 'tunnel'], [4, 7, 'tunnel'],
+            [4, 8, 'tunnel'],
+            [5, 2, 'tunnel'], [5, 3, 'tunnel'], [5, 4, 'tunnel'], [5, 8, 'tunnel'], [5, 9, 'tunnel'],
+            // 兵马俑（巴豆落点，5 格；后三条与上面的坑道重叠）
+            [1, 7, 'terracotta'], [5, 7, 'terracotta'],
+            [2, 8, 'terracotta'], [3, 6, 'terracotta'], [4, 8, 'terracotta'],
+        ],
+    },
 };
 
 // ---- 渲染（由 renderBoard 在每次重建格子后调用 —— 机制层必须跟着每一次
