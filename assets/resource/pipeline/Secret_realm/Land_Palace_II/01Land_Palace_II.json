@@ -574,45 +574,23 @@
         ]
     },
     "地宫2无尽_第一关_检查灵体": {
-        "recognition": "And",
-        "all_of": [
-            {
-                "recognition": "TemplateMatch",
-                "template": [
-                    "Land_gong_two/灵体.png",
-                    "Land_gong_two/灵体1.png"
-                ],
-                "green_mask": true,
-                "roi": [
-                    899,
-                    72,
-                    309,
-                    553
-                ],
-                "threshold": [
-                    0.6
-                ]
-            },
-            {
-                "recognition": "ColorMatch",
-                "method": 40,
-                "lower": [
-                    83,
-                    48,
-                    170
-                ],
-                "upper": [
-                    90,
-                    140,
-                    255
-                ],
-                "roi": [
-                    899,
-                    72,
-                    309,
-                    553
-                ]
-            }
+        "recognition": "ColorMatch",
+        "method": 40,
+        "lower": [
+            83,
+            48,
+            170
+        ],
+        "upper": [
+            90,
+            140,
+            255
+        ],
+        "roi": [
+            899,
+            72,
+            309,
+            553
         ],
         "next": [
             "地宫2无尽_第一关_尝试刷掉灵体",
