@@ -1,5 +1,5 @@
 {
-    "关闭公告": {
+    "关闭叉叉": {
         "recognition": "TemplateMatch",
         "template": [
             "back_to_home/ref_backtohome/关闭公告.png"
