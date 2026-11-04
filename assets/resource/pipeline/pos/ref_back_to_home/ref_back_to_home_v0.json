@@ -1,0 +1,34 @@
+{
+    // 本层（主界面自身）的判定与通用弹窗。
+    //   分区内的定位按「主界面 → 分区 → 子页」拆在同级目录：
+    //     shop/shop.json             商店（底栏）
+    //     daily/<sub>/<sub>.json     日常（底栏）→ travel_wood / plants_explore /
+    //                                fragment_challenge / activity / notice / friend
+    //     arena/arena.json           竞技（底栏）
+    //     plants/plants.json         植物（底栏）
+    //     backpack/backpack.json     背包
+    //   目录/文件名一律 ASCII；节点名保持中文（节点名是全局标识，与文件名无关）。
+    //   跨层恢复项在 ../../global/global.json。
+    "定位_主界面": {
+        "recognition": "And",
+        "all_of": [
+            "定位_主界面_ui_1",
+            "定位_主界面_ui_2",
+            "定位_主界面_ui_3",
+            "定位_主界面_ui_4"
+        ]
+    },
+    "定位_主界面_公告类": {
+        "recognition": "OCR",
+        "expected": [
+            "今日内不再弹出",
+            "不再弹出",
+            "弹出",
+            "公告"
+        ],
+        "action": "Click",
+        "next": [
+            "关闭叉叉"
+        ]
+    }
+}
