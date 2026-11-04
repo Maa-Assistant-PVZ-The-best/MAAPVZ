@@ -208,7 +208,8 @@
         "recognition": "TemplateMatch",
         "template": [
             "Endless/frame/boss/僵王的头.png",
-            "Endless/frame/boss/功夫僵王.png"
+            "Endless/frame/boss/功夫僵王.png",
+            "Endless/frame/boss/地宫之主.png"
         ],
         "roi": [
             169,
