@@ -1,5 +1,5 @@
 {
-    "定位_主界面ui_1": {
+    "定位_主界面_ui_1": {
         "recognition": "TemplateMatch",
         "template": [
             "Panni_free/商店.png"
@@ -15,7 +15,7 @@
             106
         ]
     },
-    "定位_主界面ui_2": {
+    "定位_主界面_ui_2": {
         "recognition": "TemplateMatch",
         "template": [
             "plants_explore/日常.png"
@@ -31,7 +31,7 @@
             106
         ]
     },
-    "定位_主界面ui_3": {
+    "定位_主界面_ui_3": {
         "recognition": "TemplateMatch",
         "template": [
             "pair_duel/竞技.png"
@@ -47,7 +47,7 @@
             106
         ]
     },
-    "定位_主界面ui_4": {
+    "定位_主界面_ui_4": {
         "recognition": "TemplateMatch",
         "template": [
             "Detection_Order/植物.png"

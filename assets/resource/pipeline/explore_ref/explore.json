@@ -3,9 +3,9 @@
         "focus": "执行植物探险",
         "recognition": "DirectHit",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
-            "[JumpBack]定位_公告类",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "[JumpBack]定位_主界面_公告类",
             "导航_植物探险"
         ]
     },
@@ -17,8 +17,8 @@
             "pipe_over": {
                 "导航_点击日常": {
                     "next": [
-                        "[JumpBack]定位_菊花",
-                        "[JumpBack]定位_服务器通讯中",
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
                         "导航_植物探险_点击"
                     ]
                 }

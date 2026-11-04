@@ -3,9 +3,9 @@
         "focus": "戴夫杯",
         "recognition": "DirectHit",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
-            "[JumpBack]定位_公告类",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "[JumpBack]定位_主界面_公告类",
             "戴夫杯_立即前往",
             "戴夫杯_点击匹配",
             "导航_戴夫杯"
@@ -19,8 +19,8 @@
             "pipe_over": {
                 "导航_点击日常": {
                     "next": [
-                        "[JumpBack]定位_菊花",
-                        "[JumpBack]定位_服务器通讯中",
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
                         "导航_活动合集"
                     ]
                 }
@@ -43,8 +43,8 @@
         ],
         "action": "Click",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "戴夫杯_立即前往"
         ]
     },
@@ -61,15 +61,15 @@
         ],
         "action": "Click",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "戴夫杯_匹配循环"
         ]
     },
     "戴夫杯_匹配循环": {
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "戴夫杯_点击匹配"
         ]
     },
@@ -87,8 +87,8 @@
         "timeout": 60000,
         "action": "Click",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "戴夫杯_按兵不动"
         ]
     },
@@ -107,8 +107,8 @@
             "按兵不动"
         ],
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "戴夫杯_按兵不动",
             "戴夫杯_结算"
         ]

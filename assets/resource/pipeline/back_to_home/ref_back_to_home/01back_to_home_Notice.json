@@ -6,10 +6,10 @@
         ],
         "action": "Click",
         "next": [
-            "[JumpBack]定位_菊花",
-            "[JumpBack]定位_服务器通讯中",
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
             "定位_主界面",
-            "[JumpBack]定位_公告类"
+            "[JumpBack]定位_主界面_公告类"
         ]
     }
 }
