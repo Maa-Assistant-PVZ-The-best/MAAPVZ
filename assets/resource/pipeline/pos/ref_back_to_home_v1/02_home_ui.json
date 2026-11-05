@@ -80,7 +80,7 @@
             398
         ]
     },
-    "定位_主界面_ui_反转_关闭按钮": {
+    "定位_主界面_ui_关闭按钮": {
         "recognition": "TemplateMatch",
         "template": [
             "back_to_home/global/叉叉.png"
@@ -89,9 +89,8 @@
             0.9
         ],
         "order_by": "Vertical"
-        // "inverse": true
     },
-    "定位_主界面_ui_反转_关闭按钮_异格": {
+    "定位_主界面_ui_关闭按钮_异格": {
         "recognition": "TemplateMatch",
         "template": [
             "back_to_home/global/叉叉_异格.png"
@@ -100,9 +99,8 @@
             0.9
         ],
         "order_by": "Vertical"
-        // "inverse": true
     },
-    "定位_主界面_ui_反转_返回按钮": {
+    "定位_主界面_ui_返回按钮": {
         "recognition": "TemplateMatch",
         "template": [
             "back_to_home/global/返回.png"
@@ -111,9 +109,8 @@
             0.9
         ],
         "order_by": "Vertical"
-        // "inverse": true
     },
-    "定位_主界面_ui_反转_返回按钮_异格": {
+    "定位_主界面_ui_返回按钮_异格": {
         "recognition": "TemplateMatch",
         "template": [
             "back_to_home/global/返回_异格.png"
@@ -122,6 +119,5 @@
             0.9
         ],
         "order_by": "Vertical"
-        // "inverse": true
     }
 }
