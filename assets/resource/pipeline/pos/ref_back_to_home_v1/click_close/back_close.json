@@ -1,0 +1,35 @@
+{
+    "返回主界面_关闭按钮": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "order_by": "Vertical"
+    },
+    "返回主界面_关闭按钮_异格": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉_异格.png"
+        ],
+        "action": "Click",
+        "order_by": "Vertical"
+    },
+    "返回主界面_返回按钮": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/返回.png",
+            "back_to_home/global/返回_变种.png"
+        ],
+        "action": "Click",
+        "order_by": "Vertical"
+    },
+    "返回主界面_返回按钮_异格": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/返回_异格.png"
+        ],
+        "action": "Click",
+        "order_by": "Vertical"
+    }
+}
