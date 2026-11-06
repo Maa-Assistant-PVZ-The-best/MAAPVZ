@@ -28,6 +28,172 @@
 > 「Maa Pipeline Support」的预期版本一致，否则报
 > `Protocol version mismatch`。详见 §12。
 
+**2026-10-30 新增/改动（编辑器，见 §10.7）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **撤销/重做重构** | 快照从「两块棋盘」升级成「棋盘 + 链条 + 槽位形态 + 等待 + 补给」整表快照，带上下文键（不跨表/不跨作业集）；记录点统一挂 `jobSaveLocal()` |
+| **快捷键闸口** | `jobHotkeyBlocked()` + `JOB_MODAL_SELECTORS`，弹窗开着时 Ctrl+Z/Y、W/S/Q/E 一律让开（修「布局配置里 Ctrl+Z 同时撤销主棋盘」） |
+| **boss 落子即固化** | boss 棋盘落子把该槽从「沿用」升级成「显式覆盖」；普通关改植物/清槽只动普通关棋盘 |
+| **复制阵容** | **两步**：先点来源表 → 再勾「普通关 / boss 关」（两个复选框，可单勾可双勾）（§10.7-D） |
+| **替换指定表** | 植物选择器右侧「替换指定表」：点表再点植物 = 把那张表（普通关/boss 关分开）的该植物换掉（§10.7-E） |
+| **删除植物** | 槽位 ✕ 弹二选一：只删本表这一株 / 删掉所有表里的这一株（普通关 + boss 关，含棋盘落点）（§10.7-E） |
+| **槽位自动左移** | 删中间槽不再报错，后面的槽顶上来；boss 覆盖层压实后显式封尾，不再出现中间空槽；**旧作业集载入时自动压实**（不留手动按钮）（§10.7-E） |
+
+**2026-10-31 改动（编辑器）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **替换指定表 → 多选** | 右栏 **一张表一个大块，里面普通关 / boss 关两个小块左右并排**（`_jobReplaceCard`）；可同时勾多张表 / 多个关别，点一株植物就把这些地方的 A 全部换掉（§10.7-E ①） |
+| **正在编辑默认打勾** | 打开选择器时「正在编辑」那一小块默认勾上（`jobResetReplaceSel`）；只勾这一处时点植物 = 老选卡流程，勾了别的表就一并改当前槽 |
+| **boss 关小块灰掉** | boss 侧没有**显式覆盖**这株（纯沿用）时，那个小块灰色不可点，写「没用·沿用」 |
+| **boss 关追问** | 要改的普通关里，若同一张表 **boss 关也在用 A** 且没勾，面板停下问「一起替换 / boss 关不动」（`_jobReplacePending`）（§10.7-E ①） |
+| **格内落子顺序（方块窗）** | 右键一个多落点的格子 → `#cellQueueModal`：按链条顺序铺成方块（角标 = 棋盘 `#N`），**跨植物/跨动作拖拽**可改本格执行顺序，单次/循环/收尾分组建模各自排序（§10.8） |
+| **Ctrl+右键 = 清空整格** | 右键不再直接清多落点格；清空整格改成 Ctrl+右键（单落点格右键仍直接清空）（§10.8） |
+| **Ctrl+左键 = 直接删槽** | 左侧槽位胶囊 ✕：直接点是「只删本表 / 删所有表」二选一，**Ctrl+点直接删本表这一槽**（§10.8） |
+
+**2026-10-31 改动（运行时播报，见 §10.9）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **关卡数播报前置** | 原来只有「过关（点继续挑战）」才播关卡号，开局第一关一句话都没有。现在：加载作业集播一次 + 自动计数校准后播一次 + 过关播「第N关已过 → 当前关卡：N+1」 |
+
+**2026-10-31 追加（世界选择：地宫无尽）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **世界列表加「地宫无尽」** | 选择世界弹窗（37）末尾、**童话世界之后**多一格「地宫无尽」立绘（`static/worlds/mausoleum.png`）。它**不是** `task/Endless_ref` 的「选择世界」case —— 地宫跑的是 `Secret_realm` 任务、不注入「当前世界」，所以 `_check_world` 不比对、不会误报告警 |
+
+改动面（三处 + 一张图，全部是**追加一行**）：
+
+| 位置 | 改什么 |
+| --- | --- |
+| `static/js/20-jobset-core.js` | `JOB_WORLDS` 末尾追加 `'地宫无尽'` |
+| `static/js/37-jobset-world.js` | `JOB_WORLD_IMG` 追加 `'地宫无尽': 'mausoleum.png'`（图库顺序 = `JOB_WORLDS` 顺序，所以自动排最后） |
+| `static/js/40-jobset-mech.js` | `WORLD_MECHANICS` 追加空表条目（机制格未实测，`verified` 未置 true → 不画） |
+| `static/worlds/mausoleum.png` | 拆包「选择世界图」立绘，来自远程作业集仓 `img/worlds/` |
+
+**2026-11-01 改动（★ 预留接口，**只留接口、不写实现**，见 §10.10）**：
+
+| 功能 | 说明 |
+| --- | --- |
+| **预留接口注册表** | 新增网页端 `static/js/16-jobset-reserved.js` + agent 侧 `agent/jobset/reserved.py`，两表同名同 id，`selfcheck` §22 拿真实 JS 做漂移比对 |
+| **开局前额外动作** | 等待 / 刷僵尸 / 切换僵尸场外加速 / 自动刷新下一波 —— 字段 `pre_battle`，**不执行** |
+| **选卡相关** | 选卡同时标收藏（`pick_favorite`）/ 选卡时自由切换阶数（`pick_tiers`）—— 字段存得住，无人消费 |
+| **局内相关** | 植物主动技能（落子动作 `skill`，已进注册表但**不可达**）/ 切换形态·智能（`ga:form` 将来多 `plant` 字段） |
+| **局外相关** | 世界作业链（`world_chains`）/ 正赛模式检查（`mode_check`）—— 运行时只播一句「未实现」 |
+| **运行时只播提示** | `runtime._reserved_notice()`：只 log 不 override，去重；两个调用点 = 将来真正要动的位置 |
+| **顺带修预存在红灯** | `selfcheck` §18「世界 case 共 16 个」写死 16（用户后加了第 17 个 case「地宫」）→ 改成「**注入当前世界的** case 恰好 16 个」 |
+
+**2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
+
+| 功能 | 说明 | 位置 |
+| --- | --- | --- |
+| **棋盘尺寸变量化** | `.cell` 与同格缩略图的 9 个定位/尺寸全部由 `--cell` + `--u` 等比推导（桌面值一字不差） | `base.css` 顶部「棋盘尺寸变量」 |
+| **手机 / 窄屏断点** | ≤900px：整页收缩、两栏上下堆叠、棋盘一屏放下（~38px/格）、弹窗贴底整屏、链条按钮改右下角浮动 | `base.css` 末尾「移动端 / 窄屏」 |
+| **`⤢ 放大` 棋盘开关** | 手机专用（桌面 `display:none`）：切 58px/格 + 棋盘自己横滑；状态存 localStorage | `index.html` + `27` 的 `jobApplyBoardZoom` |
+| **链条 `↑` `↓` 移一位** | **触屏不支持 HTML5 拖拽**，这是手机上改种植顺序的入口（复用 `jobApplyDrop`） | `27` 的 `jobNudgeSelected` + 吸附栏 |
+| **格内方块 `←` `→`** | 同上，本格内执行顺序的入口（复用 `jobCellQueueMove`） | `43` 的 `_cqBuildBlock` |
+| **★ 手机四屏 App 壳（v2）** | 底部导航：🎯棋盘 / 🪴槽位 / 🔗顺序 / 💾作业集；表条（切表 + 当前动作 + 状态镜像）；**长按 = 右键**；桌面零影响 | `44-jobset-mobile.js` ★新增 + `base.css` 末尾一节（见 §10.13） |
+
+> ★ 第一版把按钮一律放大到 ≥34px，用户实测反馈「**按键太大**」→ **已回退**（见 §10.11-E）。
+> ★ 第二版是「压窄桌面版」，用户反馈「**没怎么改，不好适配**」→ 推翻重做成四屏壳（§10.13）。
+
+**2026-11-02 改动（运行时 · ★ 识别过程日志，见 §10.17）**：
+
+> 用户原话：「给自定义动作，局外局内的选卡加上识别过程中给详细的日志，
+> 现在给的日志只有 ocr 核对那一条，局外选卡又没日志」。
+
+| 功能 | 说明 |
+| --- | --- |
+| **选卡逐帧识别日志** | `SelectPlants` 两个模式都逐帧打：目标、roi、阈值、尺度、候选数、**最高分（低于阈值也打）**、否定卡位、踩点、滑动相似度、回顶次数 |
+| **局外 80 选卡也有日志了** | 入口横幅 + 每帧「目标 #k 最高分 x.xxx（阈值 y）」+ 结束时「按序选中 = [(植物, 屏N, 分数)] + 耗时」 |
+| **编队选择日志** | 每轮 OCR 可见数字、**每个数字的近白占比**、白字集合、判据是否满足 |
+| **自定义动作日志** | `JobSetPlan` 打「关卡→表」依据 + 阵容签名判定；`JobSetStage` 打 boss 判定的来源；`JobSetAutoCount` 打 OCR 候选；`_apply_outer_pick` 打 mode/株数/注入的识别几何 |
+| **新参数「详细日志」** | `SelectPlants` 的 `custom_action_param`，缺省 `true`；关掉只留结论行（`[SelectPlants][识别]` 前缀不变） |
+| **`match_plants(threshold=None)`** | 新增「不设阈值」探针模式 —— 只给日志用，计算量与 `find_best` 完全相同（NCC 相关图本来就整幅算完） |
+
+**2026-11-02 追加：局外选卡阈值降到 0.8（用户要求，其余不变）**
+
+| 位置 | 改什么 | 备注 |
+| --- | --- | --- |
+| `pipeline/Endless_ref/06_Endless_80plant_choose/0601_80plant_choose_1.json` | `无尽80植物编辑方案1_准备选择80个植物` 的 `custom_action_param.匹配阈值` **0.9 → 0.8** | 这是**生效的那一份**；runtime 注入只覆盖「无尽局外选卡 / 植物列表」，阈值从 pipe 合并 |
+| `agent/select_plant/custom_select_plant.py` | 新增常量 `ENDLESS_THRESHOLD = 0.80`；参数里**没写** `匹配阈值` 时，局外 80 选卡回落 0.80 | 局内 8 槽仍是 **0.90**（那里靠 OCR 名字核对，阈值必须紧）；pipe 显式写了就以 pipe 为准 |
+
+> 为什么要区分：局外界面卡牌**没有文字**、也没有核对手段，0.90 偏紧容易漏认；
+> 而且它后面还有「按名除名 + 触底回顶重扫」兜着，误点的代价比局内小。
+
+---
+
+## 0.1 ★ 给下一个 AI 的开工清单（先读这一节，能省掉一半 token）
+
+**改动前必读顺序**（只读这三处，别通读全仓）：
+
+1. 本节 + **§10.7**（2026-10-30 那一轮的全部坑与约定）；
+2. 要改的那个文件的**顶部注释块**（`42-jobset-batch.js` / `04-cards.js` 撤销段 /
+   `27a-jobset-steps.js` 步骤模型段 / `24-jobset-fields.js` 的 `jobSegPlacements` 都写了"为什么"）；
+   ★ `27` 已于 2026-11-02 按主题拆成 `27a`~`27f`，映射表见 §1。
+3. `AGENTS.md` 七条铁律 + 门禁表。
+
+**编辑器高频定位（编辑器 = `static/js/*`，38 个文件、共享全局作用域、数字前缀=加载顺序）**：
+
+| 想改什么 | 去哪 |
+| --- | --- |
+| 数据模型 / 表字段 / 关卡覆盖 | `20-jobset-core.js`（`jobNewTable` 是字段总表） |
+| 槽位、棋盘落子、槽号搬迁 | `21-jobset-levels.js`（`placePlantOnBoard` / `jobSyncSlotPlantOnBoard` / `jobClearNormalSlot`） |
+| 链条顺序、槽位键 | `22-jobset-chain.js` + `27a-jobset-steps.js`（`jobResolveSteps` / `jobStoreSteps`） |
+| 链条块渲染 / 拖拽接线 | `27c-jobset-chain-render.js` + `27b-jobset-stepcfg.js`（`jobApplyDrop` 在 27a） |
+| 槽位胶囊 / 植物选择器 / 更多列表 | `27d-jobset-slots.js` + `27e-jobset-hotkeys.js` |
+| 撤销 / 重做 | `04-cards.js`（引擎）＋ 记录点挂 `29-jobset-init.js` 的 `jobSaveLocal()` |
+| 快捷键 | `27e-jobset-hotkeys.js` 的 `jobHotkeyBlocked` / `JOB_MODAL_SELECTORS` |
+| 落子动作（喂豆/铲子/点击格子…） | `15-board-actions.js`（注册表，唯一入口，见 §10.3） |
+| **预留接口（没实现的功能都在这）** | `16-jobset-reserved.js` ＋ `agent/jobset/reserved.py`（见 §10.10） |
+| 棋盘右键 / Ctrl+右键 / 格内顺序方块窗 | `08-board-data.js`（右键分支）＋ `43-jobset-cell-queue.js`（§10.8） |
+| 槽位 ✕（含 Ctrl+左键直接删） | `27d-jobset-slots.js` 的槽位胶囊 ＋ `42` 的 `jobDeleteSlotHere` |
+| 导出 / jobBuild / jobSave | `27f-jobset-export.js` |
+| 通用动作（点波/捡豆/切换形态…） | `24-jobset-fields.js` 定义 + `agent/jobset/dsl.py` 编译（见 §10.2） |
+| 槽位连续化 / 替换 / 删除植物 | `42-jobset-batch.js` |
+| 布局（1-149 关图层） | `34-jobset-layout.js` |
+| **手机 / 窄屏样式** | `base.css` **顶部** `--cell` 变量（棋盘缩放的唯一入口）＋ **末尾**「移动端 / 窄屏」一节（见 §10.11） |
+| 存/取作业集、作业集列表 | `28-jobset-io.js` |
+
+**门禁（编辑器改动只需要这两条，不需要跑 Python）**：
+
+```powershell
+cd game_assist_tools\endless_setup
+node --check static\js\<改过的文件>.js          # 每个改过的文件都要
+node tests\repro_undo_boss.js ; node tests\repro_copy_scope.js ;
+node tests\repro_slot_compact.js ; node tests\repro_cell_queue.js ;
+node tests\repro_shuipi.js ; node tests\repro_reserved.js ; node tests\repro_nudge.js ;
+node tests\repro_mobile.js ;
+node tests\repro_registry.js ;                  # 静态登记检查（不开浏览器，改任何「登记表」必跑）
+node tests\repro_dirty.js ;                     # 未保存改动防护
+node tests\repro_sid.js ;                       # 步骤稳定身份 sid（P0 第一步）
+node tests\fuzz_drag.js 200 100                 # 链条相关必跑
+```
+
+**当前基线（2026-11-02，全绿）**：47 个 JS `node --check` 通过；上述 **11 套**回归全过；
+`fuzz_drag 200×100 → 0 会话首错`；`selfcheck.py` 全部通过（含 §22 预留接口 38 条）；
+临时脚本（`zz*` / `_*`）为空。
+
+**三条最容易踩的坑**（都踩过）：
+
+1. **新弹窗必须两处登记**：`base.css` 那组 `#jobPickModal, #tableCopyModal {...}` 的
+   id 选择器（样式是**按 id 逐条写的**，只加 HTML 会"点了没反应"）＋
+   `27-jobset-board.js` 的 `JOB_MODAL_SELECTORS`（键盘闸口）。
+2. **槽号被五处数据引用**（槽位表 / boss 覆盖层 / 形态 / 动作后等待 / 棋盘落点+链条段），
+   任何"挪槽"必须走 `jobCompactSlots()`，禁止就地改号。
+3. **boss 槽位是稀疏覆盖层**："没写键 = 沿用普通关同槽"。所以
+   ① boss 落子即固化成显式覆盖；② 普通关改植物/清槽只动普通关棋盘；
+   ③ 压实后尾部要显式置 `null`，否则删掉的槽会"自己长回来"。
+4. **跑不了无头浏览器**（§7）：一切布局/CSS 类改动只能靠用户 Ctrl+F5 眼看，
+   逻辑用 `node tests\*.js` 兜底。
+5. **撤销记录点必须放在渲染之后**（§10.8-H，2026-10-31 用户实锤）：
+   渲染会改数据（`jobEnsureSeq` 补 seq/ord、`jobGetChainOrder` 写回覆盖率段），
+   先把 `jobSaveLocal()` 存了就等于记了个"渲染前"的旧快照 ——
+   用户按 Ctrl+Z 第一下**看起来没反应**（状态栏还说已撤销），得按第二下。
+   正确顺序永远是：**改数据 → 重绘 → 最后 `jobSaveLocal()`**。
+
 ---
 
 ## 1. 三层架构
@@ -35,7 +201,7 @@
 | 层 | 位置 | 职责 |
 | --- | --- | --- |
 | 网页（编辑器） | `game_assist_tools\endless_setup\static\` | 可视化配置，导出作业集 JSON |
-| 数据（作业集） | `assets/resource/jobs/<code>.json` + `current.json` | 每个阵容一张表 |
+| 数据（作业集） | 用户数据目录，口径见 `agent/jobset/engine.py` 的 `jobs_dir_for()`：开发仓库 `assets/resource/jobs/`、桌面发行包 `<包根>/jobs/`、安卓 `<pi>/../jobs/`（**必须在包外**，否则更新清空，见 §12.1「作业集目录」） | 每个阵容一张表 |
 | 运行时（执行） | `agent/jobset/*` + pipeline → 驱动 BatchSwipe | 解析作业集并注入管道 |
 
 执行层**复用两个成熟动作，不重写**：
@@ -61,7 +227,24 @@ static/
 └── js/
     ├── 01-options.js … 14-onload.js              # 选项树编辑器（section 1–14）
     ├── 15-board-actions.js ★                     # 落子动作注册表（扩展入口）
-    └── 20-jobset-core.js … 31-jobset-adv.js      # 作业集编辑器
+    ├── 16-jobset-reserved.js ★                   # 预留接口注册表（只留接口不写实现，§10.10）
+    │                                             # 必须在 15 之后、20 之前加载
+    └── 20-jobset-core.js … 41-jobset-tags.js     # 作业集编辑器
+                                                  # （37 世界 / 38 备注 / 41 标签 …）
+    ├── 27a-jobset-steps.js ★                    # 【2026-11-02 由 27-jobset-board.js 拆出】
+    │                                             #   步骤模型 / 链解析 / 唯一 drop 出口
+    ├── 27b-jobset-stepcfg.js ★                   #   步骤参数弹窗 + 拖拽接线 + ↑↓移一位 + 棋盘缩放
+    ├── 27c-jobset-chain-render.js ★              #   链条渲染（一株一块 / 无间隔组 / 通用动作块）
+    ├── 27d-jobset-slots.js ★                     #   槽位面板 + 拖拽自动滚动 + 链条抽屉
+    ├── 27e-jobset-hotkeys.js ★                   #   更多列表 + 快捷键 + 键盘闸口 + 植物选择器
+    ├── 27f-jobset-export.js ★                    #   jobBuild 导出 / jobSave / 元信息
+    └── 42-jobset-batch.js ★                      # 批量替换植物 + 槽位连续化（压实）
+                                                  # 必须最后加载（Ctrl 不到的扩展点）
+    └── 43-jobset-cell-queue.js ★                 # 格内落子顺序方块窗（右键棋盘格）+ Ctrl 右键清空
+                                                  # 见 §10.8；排在 42 之后
+    └── 44-jobset-mobile.js ★                     # 手机端 App 壳（四屏 + 底部导航 + 长按=右键）
+                                                  # 必须最后加载（要包 jobLoadTable 等）；桌面零影响
+                                                  # 见 §10.13
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -80,6 +263,7 @@ static/
 | 文件 | 职责 |
 | --- | --- |
 | `engine.py` | 载入作业集，`pick_table(level)` 选表 |
+| `reserved.py` ★ | **预留接口**：注册表 / 解析 / 恒空编译 / 提示文案（只留接口不写实现，§10.10） |
 | `level_tracker.py` | 关卡计数器 + 得分期望 |
 | `dsl.py` | 格子名 → BatchSwipe DSL |
 | `runtime.py` | 全部 CustomAction / CustomRecognition |
@@ -131,6 +315,9 @@ static/
 | --- | --- | --- |
 | `无尽挑战_识别开始战斗_清空卡牌` | `next` | `["无尽挑战_切换编队"]`（默认 `["无尽挑战_选取植物"]`） |
 | `无尽_选择编队`（custom 节点） | `custom_action_param` | `{"编队选择": true, "目标编队": N}`（默认目标 0=占位） |
+
+> ⚠️ 2026-10-28 起 `无尽_选择编队.next` 也归运行时管（它是「编队模式下的选卡终点」，
+> 神器链的唯一入口挂在这里 + `选取植物.next`，见 §10.5）。编队注入本身仍然只动上面两个字段。
 
 注入点共 **4 处**：`JobSetLoad`（预计表预热）、`JobSetStage` 首次锁定、`JobSetStage` 换阵容、`_apply_table`（切表辅助）。
 
@@ -261,14 +448,34 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   //   ★ 当前世界注到 JobSetPlan 双节点 param —— 别注 JobSetLoad：option 会合是
   //     同节点同字段整体替换，会顶掉起始关卡 option 的 起始关卡/重置，2026-10-22 事故）
   "world": "冰河世界",              // 主适配世界（最佳适配）；"" / 缺省 = 未标注
+  //   取值白名单 = 网页端 20-jobset-core.js 的 JOB_WORLDS（16 常规世界 +「地宫无尽」）；
+  //   「地宫无尽」是编辑器侧的标注值，task/Endless_ref 没有这个「选择世界」case，
+  //   所以 GUI 不注入「当前世界」-> _check_world 直接跳过比对（不会误报）。
   "sub_worlds": ["海盗港湾"],       // 副适配世界（候选，可多选，与主世界互斥）
   // 植物备注（2026-10-13 新增；38-jobset-notes.js 弹窗编辑；仅展示，运行时不消费）
   //   costume = 布尔：是否需要装扮（🎭 模式下点植物切换，与阶数同款交互）
   "plant_notes": { "冰西瓜": { "tier": 5, "pendant": "闪耀雪花挂坠", "costume": true } },
+  "artifact_notes": { "风扇": { "tier": 2 } },   // 神器备注（同 plant_notes 口径）
+  // 作业集标签（2026-10-26 新增；「📝 配置」弹窗顶部的「标签」行，41-jobset-tags.js）
+  //   tags = 打法开关 + 账号档位 + 条件与风险 + 失败建议（见 §5.1）。
+  //   点一下加上、再点一下摘掉，不限个数；数据层是**平铺字符串数组**，
+  //   分组（「选择标签」弹窗的小标题）只活在网页端界面。
+  //   ★ 纯标注：不参与运行时、也不给植物备注分套
+  "tags": ["开僵尸场外加速", "氪佬", "需要月卡"],
+  // ★★ 预留接口（2026-11-01，只留接口不写实现，详见 §10.10）——
+  //   下面这 5 个键**现在恒为默认值**（还没做界面能改它们），
+  //   旧作业集没有它们，读进来 = 未启用 = 行为不变。
+  "reserved_version": 1,
+  "world_chains": { "enable": false, "items": [] },        // 世界作业链（按世界换阵容）
+  "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },  // 正赛检查
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
     "slots": { "1": "粉丝心...", ... },
+    // ---- 表级预留字段（同上：接口在、功能不在；side = both|normal|boss）----
+    "pre_battle": [{ "id": "wait", "side": "both", "ms": 3000 }],  // 开局前额外动作
+    "pick_favorite": false,                                        // 选卡同时标收藏
+    "pick_tiers": { "1": 5 },                                      // 选卡时自由切换阶数
     // 三条链的顺序（拖动 chip 调整）
     "slotOrder": [{key, from, to, picked?, order?}],
     "loopOrder": [...], "endOrder": [...],
@@ -301,6 +508,40 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
 - `from:0, to:null` = 该槽全部落点（按 seq）
 - `picked:[0,2]` = 指定下标（不连续时用）
 - `order:[2,0,1]` = **块内自定义顺序**（拖动 chip 后写入）
+
+### 5.1 作业集标签（2026-10-26；2026-10-27 加两组）
+
+**标签**（`41-jobset-tags.js`）：入口在「📝 配置」弹窗顶部那一行 ——
+
+```
+标签：（未选择）  [已加的标签…]  ＋ 选择标签
+```
+
+- 点「＋ 选择标签」**跳出另一个弹窗**（`#tagPicker`，z-index 压在备注弹窗上面）分组列出全部标签，
+  点哪个就加进「标签」那一行，再点一次摘掉；关掉弹窗即生效。不限个数（不做互斥校验）。
+- 分组只是**界面层的排版**（`JOB_TAG_GROUPS`，展开成平铺白名单 `JOB_TAGS`）：
+  | 分组 | 标签 |
+  |---|---|
+  | 打法开关 | `关僵尸场外加速` `开僵尸场外加速` `关刷新下一波` `开刷新下一波` |
+  | 账号档位 | `难民` `0氪` `微氪` `氪佬` |
+  | 条件与风险 | `需要重开` `需要月卡` `破阵风险高` |
+  | 失败建议 | `失败建议：停止任务` `失败建议：重置后继续打` `失败建议：继续挑战` |
+- 「失败建议」三条**故意带前缀**：导出后平铺在 JSON 里单看也知道是「打失败之后怎么处理」，
+  不会和普通动作名混淆（改名前先问用户，改名 = 老作业集标签被洗掉）。
+- 标签**只是作业集级标注**（导出 `tags`）：说明这份作业集适合什么开关/什么账号档位/有什么前置条件。
+  ★ 它**不影响**植物阶数/挂件标注 —— 标注仍然只有一套（`plant_notes` / `artifact_notes`），
+  点标签不会切换、也不会把角标变淡（早期做过的「按标签分套」已按用户要求撤掉）。
+- 选择弹窗（`#jobPickModal`）里由 `/list_jobs` 带回显示成小 chip。
+- agent 侧（`engine.py` JobSet）**不设白名单**，只收非空字符串、原样透传；
+  唯一权威白名单是网页端 `41-jobset-tags.js` 的 `JOB_TAGS`。
+
+**备注分套 —— 已撤掉（2026-10-27 核实）**：
+
+- 早期做过「标签行下面再加一条『标注』行，按标签分套覆盖 `通用`」的方案，用户要求撤掉后
+  代码里已经没有任何残留：`38-jobset-notes.js` 里没有分套逻辑，`engine.py` 也没有
+  `tag_notes` 字段，全仓 grep `tag_notes` / `notes_sets` 均为空。
+- 现状：标注**只有一套**（`plant_notes` / `artifact_notes`），标签就只是标签。
+  别再照着旧记忆把它加回来；要加先问用户。
 
 ---
 
@@ -352,6 +593,12 @@ cd D:\maapvz\MAAPVZ
 2. **不要动 `tools\` 目录**（`tools\AGENTS.md` 明令禁止，那是构建产物）。
 
 3. 改 pipeline 后跑 `check_resource.py`；改 Python 后跑 `selfcheck.py`。
+4. **改编辑器 JS 后**：每个改过的文件 `node --check`，再跑 `tests\*.js`（5 套，
+   见 §11）；碰链条/拖拽/撤销/落点顺序必须加跑 `node tests\fuzz_drag.js 200 100`。
+5. **交给你的是「用户实测过的编辑器」**：任何布局 / CSS / 弹窗改动都无法在本环境
+   自动验证（§7 跑不了无头浏览器），改完必须让用户 Ctrl+F5 看一眼再说"完成"。
+6. **新功能优先"长在现有交互上"**：用户明确讨厌多出来的独立按钮/独立弹窗
+   （"批量替换"按钮就是被要求撤掉的）——替换挂植物选择器右栏、删除挂槽位 ✕ 上就是范例。
 
 ---
 
@@ -371,6 +618,45 @@ cd D:\maapvz\MAAPVZ
   - 「至少一张表有植物列表」放宽为「**有植物 或 有编队号**」——
     编队模式的表 `plants` 本来就是空的，属正常
   - 截至最近一次运行：**全部通过，无失败项**
+
+### 9.2 ★ 链条拖拽稳定性大修（2026-10-24，水皮报"喂豆互换"顺藤摸出 6 个结构性 bug）
+
+**症状**（水皮原话）：循环链和单次链都有喂豆时，把一边的喂豆拖到另一边，
+两条链里的同槽喂豆**位置互换**；同链拖拽也会错序；「不是关闭重开才触发」。
+
+**根因是一个家族**：链是棋盘的派生视图，段存储用 **gidx（同槽第几个）** 指认落点，
+而 gidx 由 (seq, ord/扫描序) 排序导出 —— 任何落点成员变动（mode 翻转/删除/重载）
+都会让 gidx 重排，挂在 gidx 上的一切（picked/noint/times/uid）全部滑位。
+
+**修复点**（全在 `static/js/27-jobset-board.js`，配套语义见代码注释）：
+
+1. **`jobStoreSteps` 存盘即所见**：不再跳过 `synthesized` 步骤 —— 旧做法让
+   同链拖拽/删除/成组/调参把所有"未固化落点"丢回浮动位按 seq 重排（= 同链拖完乱跳）。
+2. **跨链翻转 mode 时 seq 按目标形态重编号**（`jobNextSeq`）—— 旧 seq 是源形态
+   作用域的，带过去和目标已有落点**撞号**，撞号后靠 ord/扫描序兜底，
+   保存重开后 ord 按行主序重建 → picked 指向另一个物理落点（= 水皮的"重开后互换"）。
+   「动作后等待」的 waitAfter 键尾含旧 seq，迁移时用新 seq 重建。
+3. **`jobPinSteps` 钉引用**：跨链搬运的源链重建、删除步骤，都在**变动前**给每个
+   植物步骤钉上落点**对象引用**，变动后按引用刷回新 gidx、死者剔除。
+   旧代码跨链源链靠"翻转后重新解析"（段上的 noint 滑到别的落点），
+   删除靠"事后按 jobStepId 找回"（uid 按 key#gidx 继承 → 删错下一步）。
+4. **通用动作摘除按 uid 精确命中**：同样的动作出现多次且中间隔着别的步骤时，
+   按指纹摘第一个会把链序弄反（uid 兜底指纹）。
+5. **`jobResolveSteps` 不再做 noint 归一化**（只留 `jobStoreSteps` 出口归一）——
+   视图层归一化会直接改步骤对象，浮动补位落进「」组中段时组员被当孤立剥标记，
+   后续存储把被剥对象写回 = 无间隔组静默解散。
+6. **浮动补位跳过「」组**：落点补位若会插进无间隔组中段，顺延到组尾之后。
+7. **跨链载荷补齐链侧字段**：植物带 times/comboMs/comboWatch/noint，
+   通用带 noint + 自定义参数袋 + **神器快照**（旧版神器跨链后变裸「使用神器·?」）。
+
+**回归测试台**（Node 直接跑，vm 沙箱加载真实编辑器 JS）：
+
+- `tests/fuzz_drag.js [会话数] [每会话操作数]` —— 随机操作序列
+  （放喂豆/加通用/同链拖拽/跨链单步/多选组搬/保存重开/删除/无间隔），
+  逐步校验"视图 == 用户意图模型"，首错即停打印事前模型+事前/事后 raw。
+  当前 200 会话 × 100 操作 **0 失败**。
+- `tests/repro_shuipi.js` —— 水皮原始场景确定性回归
+  （单次[喂豆5-5,喂豆5-3] → 搬出 → 保存重开 → 搬回 → 位置不变）。
 
 ### 9.1 观察项（暂不改，先攒数据）
 
@@ -842,26 +1128,69 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
   手写 JSON 只给 `boss_squad` → 反推 `bossLineupMode='deck'`。
 - 局外选卡锁定集合（32 `jobOuterLockedPlants`）= 普通槽位 ∪ boss 有效槽位。
 
+### ★ 骨架固定、只翻动作（2026-10-28 用户定稿）
+
+**一条固定路线，永不拆节点、永不换识别：**
+
+```
+识别开始战斗(OCR) -> 清空卡牌(OCR) -> 选取植物 -> (选取神器?) -> 开始战斗
+                                      └ 编队模式: 切换编队 -> 无尽_选择编队 ┘
+```
+
+运行时**只翻动作 + 只接一个 next**，其余全交给 pipe 静态值：
+
+| 情形 | 清空卡牌 | 选取植物 / 选择编队 | next 接线 |
+| --- | --- | --- | --- |
+| 阵容变 | `action: Click` | `action: Custom` | 终点 `next → [开始战斗]` |
+| 阵容不变 | `action: DoNothing`（只认不点） | `action: DoNothing`（不真选） | 同上 |
+| 神器要换 | 按阵容（同上两行） | 按阵容（同上两行） | 终点 `next → [选取神器]` |
+
+- **`recognition` 永不覆盖**：`清空卡牌` 的 OCR 就是「确实站在选卡界面」的闸口，
+  认不到就超时 —— 不会瞎点。（旧版阵容不变时改成 `DirectHit`，等于把闸口拆了：
+  任何画面都「识别成功」，然后带着 60s 超时去 OCR「开始战斗」，重开过渡态最易炸。）
+- **神器唯一入口 = 选卡终点**（`选取植物.next` / `无尽_选择编队.next`）：
+  神器不换 → `选取神器` 压根不在链上，节点保持 pipe 原样（OCR 认「神器」）；
+  要换 → 终点接过去，装完靠 `关闭神器界面.next = [开始战斗]`（pipe 静态）开打
+  —— 植物在进神器链**之前**就换完了，所以神器链终点固定回开始战斗。
+- **补给确定/闸门/首关入口一律进骨架**，不再各自塞一条神器分支：
+  `神器补给_确定.next` 永远 `[清空卡牌, 自己]`，`识别开始战斗.next` 永远
+  `[清空卡牌]`，未变闸门平时直跳开始战斗、要换神器时换成 `_JUMP_SAME_ART`
+  （多插一站 清空卡牌）。
+- **为什么这样就「不冲突」**：字段分工 —— `next` 归 `_inject_artifact`
+  （要不要接神器），`action` 归 `_inject_lineup`（要不要真做），两个函数各写
+  各的字段，MAA 按字段合并，谁都不会把对方顶掉。
+
 ### agent 端（engine / runtime）
 
 - `engine.Table`：`boss_plants` / `boss_squad` / `boss_artifact` / `artifact`；
   有效值访问器 `eff_plants(is_boss)` / `eff_squad(is_boss)` / `eff_artifact(is_boss)`；
   **`lineup_sig(is_boss)`** = `("deck", squad, artifact)` 或 `("plants", tuple(plants), artifact)`。
-- **阵容相同跳过**：`_STATE["lineup_sig"]` 记录当前生效阵容。
+- **阵容相同 → 只认不做**：`_STATE["lineup_sig"]` 记录当前生效阵容。
   `_inject_lineup(context, table, is_boss)` 统一所有注入点
   （JobSetFight 首锁/换表、JobSetPlan 换阵）：
-  签名相同 → `无尽挑战_识别开始战斗_清空卡牌` 改 `DirectHit + DoNothing`
-  直跳 `无尽挑战_选取植物_开始战斗`（不清空、不选卡、不切编队）；
-  不同 → 还原清空卡牌节点 + 正常注入。首次进关（签名 None）必走完整选卡。
-- **⚠️ `_CLEAR_CARDS_ORIG`（runtime.py）是清空卡牌节点 pipe 原值的照抄快照
-  —— 改 pipe 里这个节点必须同步它**（selfcheck §13 有一致性断言）。
+  签名相同 → `清空卡牌.action = DoNothing` + `选取植物.action = DoNothing`
+  （不清卡、不选卡、不切编队），识别与 next 一概不动；
+  不同 → 两个动作还原 `Click` / `Custom` + 正常注入。首次进关（签名 None）必真选。
+- **⚠️ 快照原则（2026-10-24 定稿）**：「还原用快照」**只收 runtime 自己会改的
+  字段**。MAA override 按字段合并，没写的字段永远保持 pipe 现值 ——
+  expected/roi/template 故意不收，pipe 改了也不会被还原顶掉（实锤过：pipe 给
+  「选取神器」加 OCR 单字兜底「神」「器」，全量快照恢复时把兜底顶掉）。
+  2026-10-28 起进一步收紧：
+  · `_CLEAR_CARDS_ORIG` = `{action, next}`（**recognition 不在里面**，永不写）；
+  · `_ARTIFACT_PICK_ORIG` **整份删除**（选取神器彻底退出 runtime 管辖）；
+  · 新增 `_CHOOSE_PLANTS_ACTION_ORIG`（action）/ `_CHOOSE_PLANTS_NEXT_ORIG`（next）
+    / `_SQUAD_PICK_NEXT_ORIG`（next）—— 动作与 next 分家，各归各的注入函数；
+  · `关闭神器界面.next`、`识别开始战斗.next` 变成 pipe 静态值，runtime 不再碰。
+  selfcheck §13 断言：字段集恰好是上面这些 + 值与 pipe 逐项一致 + 选取神器无快照。
+  （闸门 next 清单 `_JUMP_*_ORIG` / `_SUPPLY_CONFIRM_ORIG` 仍是全量照抄 ——
+  next 本来就是整表替换、runtime 全权负责，pipe 改了必须同步，同样有断言。）
 - **闸门阵容维度修正**（`lineup_gate_adjust`，纯函数）：表没变但形态阵容不同
   → 翻「变化」重选；表变了但阵容相同 → 翻「未变」跳过。训练模式不修正
   （每关必重选是用户设定）。boss 预判用计数器 `lv % 5 == 0`（与补给预告同口径）。
 - **★ 训练模式双层豁免**（踩过的坑）：闸门修正挡训练只翻了 next 分支，
-  但 `_inject_lineup` 的签名跳过会把「清空卡牌」节点**本身**改成 DirectHit 空跳
+  但 `_inject_lineup` 的签名相同分支会把节点**本身**的动作翻成空动作
   —— 分支走对了、节点被废了。所以 `_inject_lineup` 里还有第二道：
-  `_STATE["training"]` 为真时永不跳过（`JobSetPlan` 每关写入该标记，
+  `_STATE["training"]` 为真时永不 neuter（`JobSetPlan` 每关写入该标记，
   Fight/Stage 的节点参数里没有「训练模式」键，只能走状态；
   `JobSetLoad` 重置/新开局时清空）。
 - 预热（`_prewarm_for_level`）：首关是 5 的倍数时用 boss 阵容预热；
@@ -869,27 +1198,1628 @@ chain_dsl()        → click:...格子4_3 ×3 + swipe:...格子4_3 ×3，count=6
 
 ### 验证
 
-selfcheck §13 全覆盖（解析/签名/快照一致性/跳过行为/闸门修正），全部通过。
+selfcheck §13 全覆盖（解析/签名/快照一致性/只认不做/神器终点接线/闸门修正/补给），
+全部通过。
+
+### 补给屏旁路 bug（2026-10-24 水皮实锤 → 2026-10-28 结构性消失）
+
+**症状**：boss 关槽位覆盖的植物永远不进卡组（"不会去修改卡槽"），
+换到哪个槽都一样 —— 与槽位无关。
+
+**当时的机制**：boss 关开局前必弹补给屏；闸门「变化」的 next 里
+`无尽局内_补给` 排第一，流程被补给接管；补给终点 `神器补给_确定`
+的 pipe 原值 next = `[开始战斗]`，被无条件还原 → 选卡整段旁路。
+
+**现在为什么不会再犯**：`神器补给_确定.next` 是**常量** `[清空卡牌, 自己]`，
+不存在「按 lineup_changed 分流」的分支可漏；清不清卡/选不选植物由骨架的
+`action` 决定 —— 图上「补给→开始战斗」的旁路路径已经不存在
+（`check_supply_bypass.py` 场景 A/B/C 的 bypass 计数恒为 0）。
+
+**回归**：selfcheck §13「补给」2 条断言 + `agent/jobset/check_supply_bypass.py`
+（真实 pipe + 真实 override 序列，枚举「闸门→开始战斗」全路径；阵容变的场景
+每条都过 清空卡牌+选取植物，阵容不变时「未变闸门→开始战斗」的合法直跳保留）。
+
+**教训**：决策层（闸门/注入/sig）全对不代表流程对 —— pipe 里任何
+**终点节点的静态 next**（补给确定、神器界面关闭）都是选卡入口的同层节点。
+后来干脆把所有分支收成一条骨架（只翻动作），这类「漏还原」问题从根上没了。
+
+### ⚠️ 计数器落后 1 格（2026-10-29 追查中；一次错误修复已回退）
+
+**现象**：某一局 bot 说自己在 107 关，游戏里实际是 108 关；真 boss 关（104）被按
+105 处理并出现「已自动偏移」。
+
+**已确认**：
+- 主界面「第 X 关」**就是本关要打的关卡**（2026-10-29 实跑：识别到「第111关」
+  时游戏里确实是 111 关）。❌ 曾经据此加过 `+1` 偏移（以为显示的是「已通过」
+  那一关），实跑立刻多算 1 关，**已回退**，别再给计数器加偏移。
+- `snap_boss()` 的静默对齐是「掩盖现场」的元凶：±2 偏差内它直接把计数器改掉、
+  只写一行「已自动偏移」，于是「104 关被当成 boss 关」看不出根因。
+  **已改**：偏差对齐时额外打一行 `⚠️ 计数器与 boss 关不符（偏差 +1）…`，
+  `selfcheck` 有断言盯着（不许再静默）。
+
+**待查（下次复现看这两行）**：
+1. `📟 自动计数：识别到「第X关」` —— 用户观测「第一关不报数，第二关才报，且报的是
+   上一关的号」＝ **自动计数的触发时机/取帧偏晚**，不是换算口径。
+2. `过关计数：A -> B` 之间有没有缺一次（换了阵容重开 / 收尾重开 / 手动重开任务
+   都可能是漏 tick 的点）。
+
+**2026-10-29 21:58 那次日志（起始关卡=110）**：计数器全程正确 —— 预热按
+`110 % 5 == 0` 判 boss、头像命中 `boss关，当前关卡数：110`、`过关计数：110 -> 111`
+都对得上，**没有偏移行**。所以「落后 1 格」在那一局没有复现。
+同一份日志暴露了另一件事：**`📟 自动计数` 一次都没出现**（节点没被触发，OCR 没认到
+「第」），计数器全程等于 option「起始关卡」，而日志一个字都不提 —— 已于 2026-10-29 补：
+`JobSetAutoCount` 成功时置 `_STATE["autocount_seen"]`，`JobSetPlan` 发现没置位就
+**只提醒一次** `⚠️ 本次任务「自动计数」没跑成…关卡号完全来自 option「起始关卡」= N`。
+
+### ⚠️ 覆盖 action 把自定义动作名冲掉 → `Action is null` → 整局 Task.Failed（2026-10-29 实锤）
+
+**症状**：跑到某关选卡时任务直接失败，agent 侧只看到 `Tasker.Task.Failed`（很像"莫名其妙"）。
+
+**MAA 侧证据**（`agent/debug/maafw.log` / `assets/debug/maafw.log`）：
+```
+22:24:18 Node.Action.Starting   无尽挑战_选取植物
+22:24:18 [WRN] custom action target rect is empty ... [param.name=]
+22:24:18 [ERR] Action is null [node_name=无尽挑战_选取植物] [param.name=]
+22:24:18 Node.Action.Failed → 22:24:19 Tasker.Task.Failed
+```
+即：节点 `action` 还是 `Custom`，但**自定义动作名是空的**，MAA 找不到动作 → 动作失败 → 整局挂。
+
+**根因**：骨架里「阵容不变 -> 只认不做」要翻动作，旧写法只覆盖 `action`
+（`{"action": "DoNothing"}` / `{"action": "Custom"}`）——一旦 MaaFW 把这次覆盖
+当成**整套动作**重建，`custom_action` 就丢成空串，留下「action=Custom + 空动作名」的半截状态。
+
+**修复**：覆盖动作时**永远把 `custom_action` 一起写全**
+（`_CHOOSE_PLANTS_ACTION_ORIG = {"action": "Custom", "custom_action": "SelectPlants"}`，
+关动作时写 `{"action": "DoNothing", "custom_action": "SelectPlants"}`）。
+selfcheck 加 2 条断言：快照必须带 custom_action、关动作时也必须带。
+**规矩**：以后凡是要 override 一个 Custom 节点的 `action`，必须同时写 `custom_action`；
+只覆盖 `custom_action_param` 才是安全的（「无尽_选择编队」就是这种，不动动作）。
+
+### ⚠️ boss 关误用普通关卡组（2026-10-29 用户日志实锤，已修）
+
+**症状**：第一次进 boss 关（计数 5/50/105…）走普通关路线：卡组还是上一关的普通关植物，
+到了局内才靠头像认出「这是 boss 关」，然后才回头换卡。
+
+**日志证据（两条独立 bug，同一个现象）**：
+
+1. 局外闸门判成「未变」——日志里 `📋 当前关卡: 50 本关: boss关`、`⚔️ 第 50 关是 boss 关`
+   后面**没有** `★ 阵容维度修正` 那一行。
+   原因：任务刚起手时 `lineup_sig` 恒为 `None`，`lineup_gate_adjust` 的
+   「签名未知 -> 保守不修正」这条规则对 boss 关是**反的**。
+2. 局内阶段确认注入了普通关——日志里 `boss关，当前关卡数：105` 紧跟
+   `已注入选卡植物（普通关）：[…杜英投手, 复活萝卜]`。
+   原因：`JobSetStage` 调 `JobSetStage._apply_table(context, js, table)` **没传 `is_boss`**，
+   里面回退读 `_STATE["is_boss"]`，而那个 state 只有 `JobSetFight` 写 ——
+   阶段确认先跑（或那关 Fight 走普通关变体）时读到 False，boss 关被按普通关注入+锁定。
+
+**修复**：
+- `lineup_gate_adjust` 加两条规则：`cur_sig is None` + 本关 boss -> **一律重选**；
+  新增 `cur_is_boss`（当前生效卡组的形态，`_STATE["lineup_is_boss"]`）与本关形态
+  不同 -> **一律重选**。`_inject_lineup` 两个分支都记形态，
+  `JobSetLoad` 重置 / `关卡回落` 时清空。
+- `JobSetStage` 的两处 `_apply_table` 改成显式传 `is_boss`；
+  `_apply_table` 回退读 state 时打警告（这坑不许再静默）。
+
+**验证**：selfcheck §13 新增 4 条闸门断言 + 形态记录断言；用真实作业集
+`assets/resource/jobs/pvz_20261029_003417.json` 跑状态机：起始关卡=103 时
+第 105 关现在是 `★ 阵容维度修正：本关形态与当前生效卡组不同（boss 关配置）-> 重新选卡`
++ `清空卡牌 Click` + boss 卡组；`JobSetStage(是boss关=True)` 直接注入 boss 卡组。
+
+**教训**：「签名未知」在普通关是安全方向（沿用），在 boss 关是**危险方向**
+（拿错卡组打 boss）；凡是「保守」分支都要问一句：对另一种形态也保守吗？
+
+## 10.6 相机神器（特殊类第二种，2026-10-25）
+
+相机神器与葫芦同为 `special` 类，子模式走 `artBody` 通道（与葫芦体型共用
+全部链路：编辑器体型子图标 / 段快照 / 导出 / dsl 编译）：
+
+- **子模式**：`capture`（拍照）/ `print`（打印）。
+  拍照 = 点神器位置 → 点「神器_初始化_相机复制」[707,570]；
+  打印 = 点神器位置 → 点「神器_初始化_相机粘贴」[794,570] → sleep0.5 → 再点粘贴。
+  （dsl.py `artifact` special 分支按 artBody 分流；连击展开重复，与葫芦同款。）
+- **资源**：识别模板 `god_vessel/artifact_camera/{capture,print}.png`
+  （在 bodytype/ 下 —— `/artifacts` 扫它得出 bodytypes 列表）；
+  编辑器图标 `static/artifact/artifact_camera/bodytype/{capture,print}.webp`；
+  主图 `god_vessel/artifact_camera/artifact_camera{,_1}.png`。
+- **artifacts.json**：相机 type = `special`（编辑器按 bodytypes 自动出
+  「拍照/打印」子按钮；中文名映射在 35 的 `ART_BODY_CN` 与 24 的摘要里）。
+- **坐标**：`神器_初始化_相机复制/粘贴` 与 pipe 初始化节点都是现成的。
+- selfcheck §8k 有编译断言（拍照/打印/连击展开/葫芦回归）。
+
+**加下一种特殊类神器的流程**：拆包按钮图 → god_vessel/<en>/bodytype/<key>.png
++ static/artifact/<en>/bodytype/<key>.webp → artifacts.json type=special →
+35/24 加中文名 → dsl.py special 分支加点击序列 → selfcheck 断言。
+
+## 10.7 ★★ 撤销重构 + boss 关 / 普通关植物彻底分离（2026-10-30，用户实报）
+
+> 用户原话：「落子撤销后重新落子，顺序链结构会不一致」「boss 关植物和普通关分离不彻底：
+> boss 关选取了植物 a 落子后，普通关换植物 b，那 boss 关也不会把植物 a 变成植物 b」
+
+### A. 撤销不可靠（两个独立根因）
+
+| # | 根因 | 现象 |
+| --- | --- | --- |
+| 1 | 撤销快照**只存 boardEarly/boardLate 两块棋盘数组**，而链条顺序活在表的 `slotOrder/loopOrder/endOrder/boss*Order` 上 | 拖 chip 后 Ctrl+Z：撤掉的是**上一次落子**，链顺序没回退 → 链段里的 `picked` 下标按落点位置算，落点少一个就整体滑位 → **同一条链被拆成两段、顺序乱掉** |
+| 2 | 快照**不认上下文**（不存表号/作业集），`jobLoadTable()` 换掉全局棋盘却不做任何处理 | 切表/换作业集后 Ctrl+Z → **上一张表的棋盘被灌进当前表** |
+
+**现在的模型**（`04-cards.js` 顶部已写清楚，改代码前必读）：
+
+- 快照 = `{ ctx, boardEarly, boardLate, t }`；`t` 是当前表除「身份字段」外的全部内容
+  （`JOB_UNDO_TABLE_IDENTITY`：表名/覆盖关系/色块/头像 —— 它们归布局配置弹窗自己的 Ctrl+Z）。
+- **栈顶 == 当前状态**（记录即所见）：`jobUndoRecord()` 内容不变就自动去重；
+  撤销 = 回退到「上一份快照」，重做 = 反向。
+- 快照带 `ctx = 作业集 code + 表序号`，**上下文一变就清栈**（`jobUndoReset()`：
+  `jobLoadTable` / `jobApplyLoaded` / `jobResetEditor` 三处）；撤销时若上下文对不上
+  直接拒绝并提示，绝不撤错表。
+- **统一记录点 = `jobSaveLocal()`**（29-jobset-init.js 顶部）。全仓所有改数据的入口
+  都会调它，所以落子 / 拖链条 / 切形态 / 改等待 / 补给 / 收尾参数一次全覆盖。
+  老的 `saveBoardState()` 保留成 `jobUndoRecord()` 的同义别名（老调用点不用改）。
+- 还原走 `jobUndoApply()`：棋盘 + 表字段**一起**换，然后统一重绘
+  （`renderAllBoards / jobRenderTabs / jobFillForm / jobRenderSlots /
+  jobRenderSeqChains / updatePreview`），最后 `jobSaveLocal()` 保证
+  **视图 == 引擎导出 == 本地缓存**。
+- 还原时清 `_jobLastSteps`（uid 配对缓存）、`jobSeqSel`（勾选）、`jobLastDrop`，
+  否则勾选/uid 会指向旧对象。
+- `08-board-data.js` 里旧的两处 `undoStack.pop()`（"操作失败就撤销刚记的那笔"）
+  改成 `jobUndoDiscard()` —— 新模型是「记录当前状态 + 去重」，
+  直接 pop 会误删一笔合法历史。
+
+### B. Ctrl+Z 跨面板串扰（同族）
+
+`04-cards.js` 的 document 级 keydown 以前只挡 `INPUT/TEXTAREA`，
+所以在「🧩 布局配置」里按 Ctrl+Z 会**同时**撤销布局和主棋盘。
+
+修法：把「打字中 / 有没有弹层开着」抽成**唯一判据**
+`jobHotkeyBlocked(e)` + `JOB_MODAL_SELECTORS`（都在 `27-jobset-board.js`），
+`jobInstallSlotHotkeys` 与 `04-cards.js` 的快捷键共用它；弹窗开着时
+Ctrl+Z/Y 和 W/S/A/D 一律让开，弹窗自己的撤销（`34` 的 `jobLayoutUndo`）照常工作。
+
+> ⚠️ **新增弹窗必须往 `JOB_MODAL_SELECTORS` 加一行**（根元素 id + 打开时挂的
+> class），否则那个弹窗里按 W/S/Q/E/Ctrl+Z 会漏到主界面。
+
+### C. boss 关 / 普通关植物分离（三处）
+
+模型没变（`bossSlots` 三态：不存在=沿用 / `null`=已删除 / 名字=覆盖），
+**变的是"什么时候从沿用变成覆盖"**：
+
+1. **boss 棋盘落子 = 立即固化为显式覆盖**（`21-jobset-levels.js` 的 `placePlantOnBoard`）。
+   在 boss 棋盘上放植物 a 的那一刻，若该槽还是「沿用」，就写
+   `t.bossSlots[slot] = a`（值相同、语义变成"独立"），并给一行状态提示。
+   之后普通关怎么改都不影响 boss。
+2. **改普通关槽位植物只同步普通关棋盘**（`jobSyncNormalSlotPlant`）。
+   旧 `jobSyncSlotPlantEverywhere` 把 boardEarly / boardLate **两块都改**，
+   这正是"普通关换 b，boss 关的 a 跟着变 b"的直接原因。
+   现在 boardLate 不动；若该槽仍「沿用」且 boss 棋盘上有落点，就地固化成覆盖
+   （`jobBossBoardPlantName()` 取那株植物）。
+3. **清空普通关槽位只清普通关棋盘**（`jobClearNormalSlot`）。
+   旧 `jobPurgeSlotFromBoard` 两块都清。现在 boss 侧同理先固化再保留。
+
+配套语义：一旦 boss 与普通关真的不一致，`jobBossSlotsDiffer()` 自然为真 →
+「boss 关阵容」下拉自动变成「单独选卡」（原逻辑，未改）。
+如果 boss 落的是**同一株**植物，覆盖值相同 → 仍算一致 → 继续「沿用普通关」，
+不会平白给用户多出一套阵容配置。
+
+> boss 关的植物选择器本来就是全植物列表（普通关在用的植物当然也在候选里），
+> 这一点没动；改的只是"选中之后会不会被普通关带着走"。
+
+### D. 复制阵容支持「勾选复制哪一侧」（2026-10-30，用户要求）
+
+> 用户原话：「复制阵容会直接复制一整个表，可以选择只复制 boss，或者只复制普通关」
+> 后续：「选择表后再选择复制 boss 关 / 普通关，或者都复制，你改成多选框好了」
+
+`#tableCopyModal` 现在是**两步**（用户要求「点击那个表后再选择复制哪个阵容」）：
+
+1. **第 1 步：选表** —— 每张来源表一行卡片，点一下选中（`_jobCopyTarget = i`）。
+   卡片上已经写着两侧各会搬什么（`jobCopySideSummary`），但**还没有复选框**。
+2. **第 2 步：选复制哪一侧** —— 两个复选框 `☑ 普通关` `☑ boss 关`（可只勾一个、可都勾），
+   下面是「取消 / 📋 复制到当前表」，左上角「↩ 重选表」退回第 1 步。
+   勾选状态**按来源表序号分别记**（`_jobCopySidesByTable` + `jobCopySidesOf(i)`），默认两个都勾。
+   Esc 在第二步先退回选表，再按一次才关弹窗。
+
+两个都勾 = 整表（走老的全量拷贝分支）；只勾一个 = 只搬那一侧；
+两个都不勾 = 直接拒绝并提示，一个字段都不改。
+- 老的那行「整表 / 只普通关 / 只 boss 关」胶囊按钮已删除（`jobBuildCopyScopeRow` /
+  `jobCopyScope` 都没了）。`jobCopyTableFrom(srcIdx, sides)` 现在接受
+  `{normal,boss}` 对象，同时**保留** `'normal' | 'boss' | 'all'` 字符串写法（回归测试在用）。
+- 卡片比原来的列表宽，`#tableCopyModal .jp-panel` 在 `base.css` 里单独放宽到 460px。
+
+字段切分（`JOB_COPY_NORMAL_FIELDS` / `JOB_COPY_BOSS_FIELDS`，对着 `jobNewTable` 逐个归类）：
+
+| 范围 | 拷什么 |
+| --- | --- |
+| 只普通关 | `lineupMode/deckNo/slots/artifact`、三条链（`slotOrder/loopOrder/endOrder`）、`slotModes/waitAfter`、收尾参数（`end*`）、`boardEarly`、`waveEnabled/loopPlant/oncePlant` |
+| 只 boss 关 | `bossLineupMode/bossDeckNo/bossSlots/bossArtifact`、`bossSlotOrder/bossLoopOrder/bossSlotModes/bossWaitAfter`、`boardLate`、`supplyPicks`（补给是 boss 专属） |
+| 整表 | 老行为：内容全拷，表的身份字段（表名/覆盖/levels/色块/头像）不拷 |
+
+**两个必须的固化步骤**（不做就会出现"孤儿植物"，写在这里防回退）：
+
+1. **只拷普通关**：拷之前先 `jobFreezeBossInheritedSlots(cur)` —— 目标表 boss 侧
+   "还在沿用、但棋盘上已有落点"的槽就地固化成显式覆盖。否则 boss 关的植物会跟着
+   新槽位一起变（就是 §10.7-C 那个"分离不彻底"的翻版，只是入口换了）。
+2. **只拷 boss 关**：拷完用 `jobFreezeBossInheritedSlots(cur, cur.boardLate)` ——
+   来源表 boss 侧可能整片是"沿用"（`bossSlots` 里没键），拷过来后若保持沿用，
+   这些落点会被**目标表的普通关槽位**解释 → 植物名对不上。必须用来源 boss 棋盘上
+   的植物固化成覆盖。
+
+> 复制后统一走 `jobAfterCopyRender()`（重绘 + 刷新 boss 阵容下拉 + 存本地缓存 + 状态提示）；
+> 状态提示里会带「已固化 N 个」。
+> 现在有撤销兜底（§10.7-A），复制错了可以直接 Ctrl+Z。
+
+### E. 指定表替换 / 删除植物 + 槽位连续化（2026-10-30，`42-jobset-batch.js`）
+
+> 用户原话：「槽8有植物的时候不能把槽7的植物去掉，期望应该是7植物去掉后
+> 槽8植物变成槽7植物」「boss关的槽位配置还是有槽6到槽9中间会有空着的情况」
+> 「点击编辑替换这个植物的时候，右边有一个替换指定表，然后点击后跳出包含有
+> 这个植物的表（boss和普通关分离），点击后可以进行替换」
+> 「点击删除也是同理，会跳出删除所有表的这个植物还是删除这个表普通关的植物」
+
+> ⚠️ **没有独立按钮**：先做过一版"🔄 批量替换"按钮 + 独立弹窗，用户要求撤掉
+> —— 功能要长在**原本就在用的交互**上：替换挂在植物选择器右侧，删除挂在槽位 ✕ 上。
+
+**① 「替换指定表」= 植物选择器的右栏（`#plantReplacePanel`）**
+
+- 点槽位胶囊的 ✎ 打开选择器，**右栏**列出"这个槽现在用的植物 A"在**所有表**里的分布。
+- **版式（2026-10-31 用户定稿）**：**一张表 = 一个大块，里面「普通关 / boss 关」两个小块左右并排**
+  （早期是"每处一行"的竖向列表，用户明确要求改成左右，理由「方便点击」）。
+  每个小块两行：`☑/☐ + 关别` / `槽 1/3 · 5 株`；右上角 8px 小字标 `编辑`（正在编辑）/ `也在用`（boss 追问候选）。
+  面板 `#plantReplacePanel` 宽度相应从 236px 放宽到 **256px**（`index.html`）。
+  - **boss 小块有没有这株决定能不能勾**（用户要求）：boss 侧只认**显式覆盖**
+    （`jobReplaceSideInfo` / `jobSideUsesPlant(t,'boss',A)`），没有就 `opacity:.45` **灰掉且不挂点击事件**，
+    副标题写「没用·沿用」；有才可勾。纯沿用的不用勾：改普通关它自己会跟着变。
+  - **「正在编辑」那一处默认打勾**（用户要求）：打开选择器 `jobResetReplaceSel()` 就种上这个勾
+    （执行完 `jobApplyReplaceNow` 也会回到这个默认态）。它是 A 的来源，永远**可以**取消勾选。
+- 交互（2026-10-31 起**多选**）：**勾若干处 → 再点左边的植物 = 把这些地方的 A 一起换成它**
+  （勾几处就换几处，不用一张表来一遍）。点小块只 toggle 勾选（`jobToggleReplaceTarget`）。
+  - 状态：`_jobReplaceSel = { '表序号|normal'|'表序号|boss': true }`（对象而非数组，toggle 是 O(1) 且天然去重）。
+    底部按钮 `✕ 只保留正在编辑这一处 / ✕ 全部取消勾选` = `jobCancelReplaceArm()`（一键清空）。
+  - **勾选集合跟着数据走**：`jobRenderReplacePanel` 每次渲染都拿 `jobReplaceCards(A)` 做一次交集，
+    换完/删掉/切槽位之后已经不含 A 的地方自动退出勾选（不会留下指向空处的幽灵目标）；
+    「正在编辑」那一个键永远保留。
+  - 老的单选入口 `jobArmReplaceTarget(table, side)` 保留（只选一处），内部/回归在用。
+- ★ **谁改当前槽**：只勾「正在编辑」这一处时 `jobTryApplyReplaceFlow` **直接返回 false**，
+  点植物照老样子走 `jobConfirmPick`（去重 / 卡条连排 / 落子态 / 关选择器 / boss 固化全在它里面）。
+  一旦还勾了别的表，就先 `jobTryPickCurrentSlot(dst)`（内部再调 `jobConfirmPick`，同样的老流程）
+  再批量替换其它表 —— **两边都不丢语义**。换句话说：勾着它就是"连当前槽一起换"。
+- ★ **boss 关追问**（用户要求「如果 boss 关有就询问 boss 关需不需要替换」）：
+  会被改动的普通关（**含「正在编辑」那一处**）里，同一张表的 boss 关**也在用 A**（显式覆盖）
+  且没被勾时，**不立刻执行**，而是把这次操作挂进 `_jobReplacePending`
+  （`{src, dst, targets, bossExtra, blocked, pickCurrent}`），面板顶部弹一块黄色追问：
+  `✅ 一起替换（含 boss 关 N 处）` / `➡️ boss 关不动（只换普通关）` / `✕ 取消`。
+  - 追问阶段**一个字段都不改**（回归断言盯着），点按钮才落 `jobApplyReplaceNow`。
+  - **只有显式覆盖才算"boss 关自己用了它"**：纯沿用的不用问 —— 换普通关它自动跟着变（问了反而是噪音）。
+  - **反方向不问**（勾 boss 关不动普通关）：用户只要求 boss 侧这一句。
+  - 追问期间点植物 = 重新算一遍（先清 pending）；点任意小块 toggle 也会清 pending。
+- 执行 `jobApplyReplaceNow(src, dst, list, blocked, pickedCurrent)` → 逐处 `jobReplacePlantInTable(t, side, src, dst)`：
+  改该侧槽位 + 同步该侧棋盘落点（非当前表用它自己的 `t.boardEarly/t.boardLate`，见 `jobSideBoardOf`）；
+  汇总成一条状态提示（列出换了哪几处、共几个槽），然后统一走 `jobAfterPlantChange`（重绘 + 存本地 + Ctrl+Z 可撤销）。
+  - ★ 普通关分支会先 `jobFreezeBossInheritedSlots(t, 该表 boss 棋盘)`：普通关槽位一变，
+    纯沿用的 boss 槽会跟着变（§10.7-C 同族），必须先把"沿用 + 已有落点"的槽固化成覆盖。
+- **同一植物不能占两个槽**：`jobSideUsesPlant` 命中的**那一处**跳过（进 `blocked`），其余照换，
+  状态提示里写明「跳过 X（已经在用 Y）」—— 早期是整次拒绝，多选下那样会让人以为全没生效。
+- 数据源：`jobReplaceCards(name)` → `[{table, normal:{uses,slots,placements}, boss:{...}}]`；
+  某类落点计数 `jobCountPlantOnBoard`。（老的 `jobListPlantLocations` 还在，删除弹窗在用。）
+
+**② 「删除这个植物」= 槽位胶囊 ✕ 的二选一（`#plantDeleteModal`）**
+
+- 弹窗里固定两项：
+  1. **只删这张表的这一株（当前关别）** → `jobDeleteSlotHere(ctx)`：
+     清槽位 + 清**该侧**落点 + 压实（普通关清完还会给 boss 侧做一次查漏压实）。
+  2. **删掉所有表里的这一株** → `jobDeletePlantEverywhere(name)`：
+     所有表的普通关槽位 + boss 覆盖槽全清，两侧棋盘按**植物名**清落点
+     （`jobPurgePlantOnBoard`，能顺带清历史孤儿），各表各自压实。
+- 弹窗顶部会列出"这株植物在全部表里的分布"，让用户看清影响面。
+- boss 胶囊的三种状态里，只有**覆盖槽**的 ✕ 走这个弹窗（"删除沿用 / 恢复沿用"
+  是槽位配置操作，不是删植物，保持原样）。
+
+> 🚨 **弹窗必须有 CSS**：本项目的弹窗样式是**按 id 逐条写的**
+> （`#jobPickModal, #tableCopyModal { ... }` 那一大段），新建弹窗只加 HTML
+> 不会自动套上遮罩/面板 —— 表现是"点了没反应"（内容其实渲染在页面最底部）。
+> 新增弹窗时**必须把 id 追加到 `base.css` 那组选择器**里，
+> 并加进 `27-jobset-board.js` 的 `JOB_MODAL_SELECTORS`（键盘闸口）。
+> `#batchReplaceModal` 就是这么漏过一次的（2026-10-30 实锤，现已撤掉）。
+
+**③ 槽位连续化 `jobCompactSlots(t, isBoss, boardArg)`（本文件最重要的函数）**
+
+把"占用中的槽"按原顺序压到 1..n，中间的空槽 / boss 已删除槽被顶掉。
+**槽号被五处数据引用，必须一起搬，漏一处就是孤儿数据**：
+
+| 处 | 普通关 | boss 关 |
+| --- | --- | --- |
+| 槽位 | `t.slots` | `t.bossSlots`（压实后**一律写成显式覆盖**） |
+| 棋盘 | `boardEarly` 里 `it.id='cardN'` | `boardLate` 同理 |
+| 三条链 | `slotOrder/loopOrder/endOrder` 的 `seg.key` | `bossSlotOrder/bossLoopOrder` |
+| 形态 | `slotModes` 的键 `cardN` | `bossSlotModes` |
+| 动作后等待 | `waitAfter` 的键 `once\|cardN\|r,c\|seq` | `bossWaitAfter` |
+
+> 链条段里的 `picked/from,to/order` 是**该槽内部**的落点下标 —— 整槽一起搬，
+> 所以这些下标不用改。被删除槽的段整段丢弃。
+> 压实后清 `jobArmedSlot / jobSeqSel / _jobLastSteps`（都指向旧槽号）。
+
+**④ 四处调用点**
+
+1. 普通关槽位 ✕ → 弹「只删本表 / 删所有表」（见 ②）→ 选"只删本表"时走
+   `清空 → jobClearNormalSlot → 压实`，也就是**槽8 的植物会顶到槽7**（用户要求的行为）。
+   之后顺手给 boss 侧做一次查漏压实（纯沿用时恒等，只有历史空洞会被清理）。
+2. boss 槽位 ✕ 的"覆盖"分支改为弹同一个删除弹窗；"删除沿用 / 恢复沿用"两个分支
+   仍各自补了 `jobCompactSlots(t,true)`。
+3. 删除所有表里的这株（`jobDeletePlantEverywhere`）。
+4. **载入即压实（用户明确要求：不留"压实"按钮）** —— `jobCompactAllTables()`：
+   - `28-jobset-io.js` 的 `jobApplyLoaded`（服务端载入作业集）在 `jobLoadTable(0,true)`
+     **之前**调一次；
+   - `29-jobset-init.js` 的 `jobInit`（刷新恢复本地缓存）在 `jobLoadTable` **之前**调一次。
+   - 它压**所有表**，并显式传各表自己的 `t.boardEarly / t.boardLate`
+     （此刻全局棋盘只是当前表的拷贝，所以 `jobCompactSlots` 才有 `boardArg` 这个参数）。
+   - 旧数据里"中间空槽"因此再也不会进到界面上。
+
+> ⚠️ **boss 覆盖层的坑**：boss 槽位"没写键 = 沿用普通关同槽"。所以压实后
+> **尾部多出来的槽必须显式置 `null`（已删除）**，否则第 n+1 号槽会重新沿用普通关
+> 那一槽的植物 —— 等于删掉的槽自己长回来。这就是"boss 槽位中间空着/乱长"的根因之一。
+>
+> ⚠️ **普通关清槽会牵动 boss**：`jobClearNormalSlot` 会把 boss 侧**所有**
+> "沿用 + 有落点"的槽一次性固化（不只是被清的那一槽）。因为普通关压实时槽号会变，
+> 只固化一槽会让其它沿用槽指到别的植物上 → boss 关静默丢株。
+
+### F. 回归测试（新增，别再删）
+
+```powershell
+node game_assist_tools\endless_setup\tests\repro_undo_boss.js     # 撤销/链条 + boss 分离
+node game_assist_tools\endless_setup\tests\repro_copy_scope.js    # 复制阵容的三种范围
+node game_assist_tools\endless_setup\tests\repro_slot_compact.js  # 槽位压实 + 替换指定表（多选/boss 追问/面板结构） + 删除这株
+```
+
+另外三套回归（`tests/fuzz_drag.js`、`tests/repro_shuipi.js`、`tests/repro_cell_queue.js`）必须一起保持全绿。
+
+### G. 已和用户对齐、但**尚未开工**的优化（下一轮挑着做）
+
+> 2026-10-30 审计结论，按「风险 / 价值」排的，用户已认可这个顺序。
+> ⚠️ 动手前先问一句用户现在要做哪个，别自己全做。
+
+| 级别 | 事项 | 关键位置 | 风险 | 说明 |
+| --- | --- | --- | --- | --- |
+| P0 | **链条段身份从"位置下标"改成"稳定 id"** | `24-jobset-fields.js` 的 `jobSegPlacements`、`27` 的 `jobStepsToSegs/jobSegsToSteps` | **高**（§9.2 修过 6 个同族 bug） | `picked/gidx` 是**该槽内部**的位置下标，任何落点增减都会滑位；这是"拖拽串位/撤销错乱"整族的根。必须用 `tests/fuzz_drag.js` 兜 |
+| P1 | **触摸端可用**（安卓 Web 已适配，但拖拽全废） | 链条块 / 补给卡 / 布局涂抹走 HTML5 `draggable`；全仓零 pointer 事件 | 中 | 轻量版：链条 chip 与补给卡加「↑/↓ 移一位、移到首/尾」（约 80 行，手机立刻能用）。彻底版：改 Pointer Events（约 300 行，跑 fuzz） |
+| P2 | **未保存改动防护** | 全仓无 dirty 标记、无 `beforeunload` | 低 | 本地缓存 300ms 自动存，但**写回作业集文件必须手点 💾**；切作业集/新建/删除前该做 confirm，顶部该显示「● 有未保存改动」 |
+| ~~P3~~ **已做** | ~~**拆分 `27-jobset-board.js`**~~（2026-11-02 已拆成 27a~27f，见 §1）（183KB / 3800+ 行） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器全在一个文件 | 中 | 纯搬移，只减未来 bug；放 P0 之后做，避免在巨型文件里二次改结构 |
+| P4 | boss 关交互小优化 | `27` 的槽位胶囊 | 低 | 给"已独立化的 boss 槽"加个 🔒 角标，让「落子即固化」这件事看得见 |
+
+---
+
+## 10.8 ★★ 格内落子顺序方块窗 + 右键/ Ctrl 键语义（2026-10-31，`43-jobset-cell-queue.js`）
+
+> 用户原话：
+> 「ctrl+左键点击 x 可以直接去除整个多个植物挤占的槽位」
+> 「直接右键点击这个多个格子覆盖的落子位置时，显示的是方块格式的样子，
+> （长得和棋盘差不多，角标保留，按照放置顺序排序，不同链不影响，
+>  可以拖拽修改这个格子的放置顺序，最左上角就是最先放）
+>  **右键去除整个格子则是 ctrl+右键**」
+> 追问后补充：「不同链条做区分，支持跨植物修改，右键点击清空的特性保留」；
+> Ctrl+左键那条是**左侧槽位胶囊的 ✕**（不是棋盘格子）。
+
+### A. 三个新手势（都在现有交互上长出来，没有新增独立按钮）
+
+| 手势 | 位置 | 行为 |
+| --- | --- | --- |
+| **右键**（格内 ≥2 个落子） | 棋盘格子 | 打开「格内落子顺序」方块窗（`#cellQueueModal`） |
+| **右键**（格内 1 个落子） | 棋盘格子 | 直接清空这一格（老行为保留；内部改走安全删除） |
+| **Ctrl+右键** | 棋盘格子 | **直接清空整格**（不弹窗） |
+| **Ctrl+左键** | 左侧槽位胶囊 ✕ | 不问「只删本表 / 删所有表」，**直接删掉本表这一槽**（= 弹窗第一项） |
+
+- 棋盘右键分支在 `08-board-data.js` 的 `contextmenu` 里，改完的判定顺序：
+  `Ctrl → 清空` / `多落点 → 方块窗` / `其余 → 直接清空`。
+- 槽位 ✕ 的 Ctrl 分支在 `27-jobset-board.js`（普通关一处 + boss 覆盖一处），
+  走 `jobDeleteSlotHere({name, side, slot})` + `jobAfterPlantChange()`（42），
+  语义与删除弹窗里的「只删这张表的这一株」完全一致。
+
+### B. 方块窗长什么样（`43-jobset-cell-queue.js` 渲染）
+
+```
+┌ 格内落子顺序   第 (3, 4) 格 · 共 5 项                     ✕ ┐
+│ ［单次］2 项                                        ← 左上最先 │
+│  ┌──────┐ ┌──────┐                                          │
+│  │🫘 ①✕ │ │🌱 ③✕ │   ← 拖拽换顺序；右上角 ✕ 只删这一个        │
+│  └──────┘ └──────┘                                          │
+│ ［循环］1 项                                                 │
+│  ┌──────┐                                                   │
+│  │🌱 ④✕ │                                                   │
+│  └──────┘                                                   │
+│ [☑ 多选删除] [🗑 清空整格]              拖动方块调整顺序…    │
+└──────────────────────────────────────────────────────────────┘
+```
+
+- **按链条顺序排**（不是按棋盘格子数组的"放置先后"）：排序键 = `jobBuildGlobalSeq`
+  的全局序号，跟棋盘上的 `#N` 角标**同源**，所以两边永远一致；拖完一起重编号。
+- **不同链做区分**：单次 / 循环 / 收尾分组（boss 关只有前两组），
+  **拖拽只允许同组内**（跨形态是两条独立的链，先后没有可比性）。
+- 方块样式复用棋盘那套味道：品质底图 `card_bg/rare_N.webp` + 立绘/动作图标 + 角标，
+  动作图标走 `15-board-actions.js` 注册表（`jobBoardActionImg`），新动作自动支持。
+
+### C. 拖拽到底改了什么（★ 最容易搞错的一点）
+
+**执行顺序不存在棋盘格子的数组顺序里**，而在**链条的步骤列表**里
+（`jobResolveSteps`：一株一步，`{kind:'plant', key, gidx}`）。
+所以重排 = 把「本格那几个落点对应的步骤」在步骤列表里换位，再 `jobStoreSteps` 压回段格式：
+
+```js
+// jobCellQueueReorder(which, orderedItems)
+positions = 本格这些步骤在 steps 里的下标（升序，**位置集合不变**）
+want      = 期望顺序对应的步骤对象
+out[positions[i]] = want[i]        // 只换内容，不挪位置
+jobStoreSteps(t, which, board, out)
+```
+
+这样保证：**别的步骤的相对顺序一个都不动**（回归第 1 节断言了
+`['card1#0','card1#1','feed#0','feed#1']` → `['feed#0','card1#1','card1#0','feed#1']`）。
+相邻同槽会自动并回一段，中间被别的槽插开就自动拆段 —— 完全交给 `jobStepsToSegs`，
+**不要去改 `seq` / `picked`**（那是 §9.2 那一族 bug 的入口）。
+
+### D. 删除必须「先钉引用再删」
+
+`jobCellQueueDeleteItems(items)`（单个 ✕ / 多选删除 / 清空整格 都走它）：
+
+1. 三条链各自 `jobResolveSteps` + `jobPinSteps`（把每个步骤钉到**落点对象引用**上）；
+2. 用**删除前**的 `jobPlacementsOf` 把「要删的 item」翻译成 `key#gidx`，标成 victims；
+3. 从棋盘删（按对象身份 `indexOf(item)`，不按 gidx）；
+4. `unpin()` 把 gidx 按引用刷成删除后的编号，恰好 `alive && !victims` 的留下 → `jobStoreSteps`。
+
+顺序反了就会删错下一步（§9.2 fuzz 实锤过），回归第 2 节专门断言
+「两颗豌豆的落点对象没串位、gidx 重排后仍指向原来那两个」。
+
+### E. 上下文失效保护
+
+`_cqCtx = { r, c, board }` 存的是**当时那块棋盘的数组引用**。`jobLoadTable`
+（换表）和 `initTabs`（切普通关/boss 关）都会把全局棋盘换成新数组，所以两处都补了
+`jobCloseCellQueue()`；`jobCellQueueAlive()` 还会现算一次
+`jobCurrentBoard() === _cqCtx.board`，对不上就拒绝一切拖拽（回归第 5 节）。
+
+> ★ 例外：`jobCellQueueClear(r, c)` 是给**棋盘右键**用的，它**不看**弹窗上下文，
+> 按当前棋盘来（临时借一个上下文，做完原样还回去）。
+
+### F. 弹窗登记（踩过的坑，别漏）
+
+新弹窗两处必登记 —— 都做了：
+`base.css` 里独立一块 `#cellQueueModal` 样式（本仓弹窗样式**按 id 逐条写**，没有公共类）＋
+`27-jobset-board.js` 的 `JOB_MODAL_SELECTORS` 补一行 `#cellQueueModal.cq-open`（键盘闸口，
+否则在方块窗里按 W/S/Ctrl+Z 会漏到主界面）。按钮绑定在 `29-jobset-init.js` 的 `jobInit`（`jobBindCellQueue`）。
+
+### G. 回归
+
+```powershell
+node game_assist_tools\endless_setup\tests\repro_cell_queue.js
+```
+
+7 节 51 条断言：本格重排（跨植物/跨动作、别的步骤不动、角标同源、自动拆并段）
+/ 单个删除（gidx 不串位）/ Ctrl+右键清空整格 / 单次循环分组隔离 + 跨链拖拽拒绝 /
+上下文失效保护 / **弹窗 DOM 结构**（分组、方块数、角标、✕ 只删一个、删完自动刷新）/
+**Ctrl+Z 一次就能撤回**（见下面的 H）。
+
+### H. ⚠️ 踩坑实录：Ctrl+右键清空后 Ctrl+Z「按一下没反应」（2026-10-31 用户实锤）
+
+**症状**：Ctrl+右键清空一格 → 按一次 Ctrl+Z，状态栏照常报「↩ 已撤销」，
+**但格子还是空的**；再按一次才真的回来。
+
+**根因**：`jobAfterCellQueueChange` 里把 `jobSaveLocal()`（撤销记录点）写在了
+**渲染之前**。而**渲染不是只读的**：
+
+| 渲染函数 | 它干了什么（会改数据） |
+| --- | --- |
+| `renderBoard`（08） | `jobEnsureSeq` / `jobEnsureOrd` 给落点补 `seq` / `ord` |
+| `jobRenderSeqChains` / `jobBuildGlobalSeq` | `jobGetChainOrder`（23 末尾）会把「覆盖率修复」补出来的段**写回** `t[field]` |
+
+撤销快照（`04-cards.js` 的 `jobUndoSnapshot`）的 sig 是「棋盘 + 整表」算的，
+所以「先存快照 → 再渲染」记下的是**渲染前**的旧状态；等用户按 Ctrl+Z，
+`undoBoard()` 开头那次 `jobUndoRecord()` 发现 sig 变了、又压一条 ——
+于是第一次撤销只是回到"看起来一模一样"的那份旧状态，白按一下。
+
+**规矩（全仓通用，别再犯）**：
+> **改数据 → 重绘 → 最后再 `jobSaveLocal()`。**
+> 撤销记录点必须排在所有「会写盘/写表/写棋盘」的动作**之后**。
+> 参考既有路径：`renderAllBoards(); updatePreview(); jobSaveLocal();`（落子/清盘）、
+> `jobAfterChainChange()`（拖链/删步）、`jobAfterPlantChange()`（替换/删植物）。
+
+**现在**：`jobAfterCellQueueChange()` 的顺序是
+`jobSaveCurrentBoard() → 渲染(jobRenderSeqChains/CurrentBoard/updatePreview/弹窗) → jobSaveLocal()`；
+另外 `jobCellQueueDeleteItems()` 动手**前**还会记一笔（同 `placeOp` 里的 `saveBoardState()`，
+内容没变会被 `jobUndoRecord` 去重，零成本）当保险。
+
+**回归**：`repro_cell_queue.js` 第 7 节用「渲染桩会补 `ord`」模拟这个副作用，
+断言「撤销栈只长一条 + 按一次 Ctrl+Z 就撤回」。
+反向验证过：把记录点挪回渲染之前，这两条立刻红（栈变成 3、格子仍是 0）。
+
+---
+
+## 10.9 ★★ 关卡数播报时机（2026-10-31，用户实报「只有点继续挑战才播报」）
+
+> 用户原话：「使用本地作业集时，关卡数的播报有问题，只有点击继续挑战时才会播报，
+> 但实际上点击继续挑战时已经下一关了，可以把播报的输出日志提前吗？
+> 比如在加载作业集的时候就播报一遍，然后后续点击继续挑战再告诉用户处于第几关」
+
+### 为什么原来会缺
+
+关卡号原来**只有一个播报点**：`JobSetPlan`（挂在 `无尽局内_过关_正赛/训练` 两个节点上）
+写 `focus = 当前关卡：N`。而那个节点是**点完「继续挑战」之后**才跑的，所以：
+
+- 它报的 N 是**下一关**（正要开打的那一关）—— 口径没错，但时机在过关之后；
+- **开局的第一关永远没有播报**（第一关还没过关，Plan 没跑过）；
+- 本地作业集更糟：`option「使用本地作业集」` case 只挂了
+  `无尽模式_重构` / `无尽挑战_选择世界`，**没挂「无尽_起始关卡」**
+  （`assets/resource/task/Endless_ref/Endless_ref.json`），
+  所以 `JobSetLoad` 拿到的计数器是 **0**，开局那一刻根本不知道在第几关。
+
+### 现在的三处播报（都在 `agent/jobset/runtime.py`）
+
+| 时机 | 写在哪 | 文本 | 函数 |
+| --- | --- | --- | --- |
+| 加载作业集（开局） | `无尽挑战_加载作业集代码` | `已加载作业集：xx` + **`当前关卡：N`** + 当前使用块 | `JobSetLoad` + `_focus_level_line` |
+| 自动计数校准后 | `无尽挑战_自动计数` | `当前关卡：N`（真实关卡号） | `JobSetAutoCount` |
+| 过关（继续挑战） | `无尽局内_过关_正赛/训练` | `第N关已过 → 当前关卡：N+1` | `JobSetPlan` + `_plan_level_msg` |
+
+- **`_focus_level_line(lv, known)`**：计数器为 0（本地作业集没配起始关卡）时**不许硬播
+  「当前关卡：1」**，改播 `当前关卡：待识别（等主界面「第X关」自动计数校准）` ——
+  否则用户会以为要打第 1 关。
+- **`JobSetAutoCount` 是「第一关」唯一能报准的地方**：它 OCR 主界面「第X关」之后
+  立刻 `_set_focus(NODE_AUTO_COUNT, ...)`（和 `JobSetPlan` 写自己要播的焦点同一用法：
+  **节点自己的 custom action 里写，节点完成时弹**）。
+  ⚠️ 解析失败的早退分支也**必须**写一遍（按计数器现值）——`focus` 是节点上的
+  **粘滞字段**，不写就会把上一轮的「当前关卡：111」在新一轮开局原样再弹一次。
+- **`_plan_level_msg(lv, before, counted)`**：只有 `计数` 参数为真（= 本节点刚点完
+  继续挑战）才把「第 N 关已过」带上；`before` 取 `tracker.state.last_before_tick`。
+  别在没计数的调用点用它 —— state 里的 `last_before_tick` 会是一笔旧账。
+
+### 验证
+
+`selfcheck.py` §14 新增 4 条断言（已知/未知两种文案 + 过关带「已过」+ 没计数只播当前关卡），
+现共 **全部通过**；播报文案是纯函数拼的，不涉及 pipe。
+
+> ⚠️ 这类改动**没法在无头环境验证渲染时机**（§7）：`focus` 到底在哪一刻弹
+> 只能真机看一眼。若真机上「自动计数」那条没出现，先确认节点有没有被触发
+> （日志里有没有 `📟 自动计数：识别到…`），而不是怀疑 `_set_focus`。
+
+### ★ 2026-11-01 修「关卡播报晚一关」+ 播报文案定稿（用户实报「boss 关在第四关」）
+
+**症状**：用户看到 `第3关已过→当前关卡:4` 紧跟 `boss关`，认定「第4关是 boss 关」；
+且 `过关计数` / `📋 状态行` 都显示 5，三处口径互相打架。
+
+**根因（框架日志实证，不是推断）**：`focus` 是**随事件携带**的 —— 事件发出那一刻
+MaaFW 就把节点当前的 focus 抄进 `details_json`。而 `_set_focus` 是**在动作执行中**
+才覆写的，所以：
+
+```
+21:58:17.129  Node.Action.Starting       focus = "第113关已过 → 114"   ← 旧的
+21:58:17.146  override 写入                 focus = "第114关已过 → 115"
+21:58:17.157  Node.Action.Succeeded      focus = "第113关已过 → 114"   ← 仍旧
+21:58:17.161  Node.PipelineNode.Starting focus = "第114关已过 → 115"   ← 新文案首现
+```
+
+（`assets/debug/maafw.bak.2026.10.30-22.08.43.201.log`，同一次动作内）
+而 App 侧对**整串写法**的 focus 只在 `Node.Action.Starting` 取值
+（`MaaFwApp/.../runner/FocusMessage.kt:107`）→ 每条关卡播报**慢一次过关**才显示。
+boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
+统计：143 次 `过关计数` ↔ 142 条 `[Focus]`，且每条值恒等于真实值 − 1。
+
+**修法**：
+1. `_set_focus` 改写成**字典写法 + 按 `FOCUS_EVENT = "Node.PipelineNode.Starting"`
+   分键**（老版本 MaaFW 不认时退回整串，晚一拍但不至于没播报）。`selfcheck §14`
+   有断言盯着「必须是分键写法」。
+2. 文案按用户 2026-11-01 定稿：`关卡数:2` / boss 关 `关卡数:5-boss关`；
+   不再播「第N关已过 → 当前关卡：N+1」（`_focus_level_line` 是唯一实现，
+   `_plan_level_msg` 委托它、`before`/`counted` 仅为兼容保留）。
+3. 顺带修**区间多一关**：`to_level` 是开区间上界（= 最大关 + 1），以前 6 处
+   播报点原样打印 → 设计 1~30 被报成 1~31。现在统一走
+   `Table.level_range()`（唯一出口，闭区间；图层模式取 levels 的 min~max）。
+
+**教训**：`override_pipeline` 写 focus ≠ 立刻显示。凡是「运行时写 focus」的播报，
+都要问一句「这条事件发出时，focus 是不是已经是我要写的那份？」——不是的话，
+要么换事件分键，要么换播报通道（agent 用户可见行是实时的）。
+
+### ★ 同一轮修的三件「播报口径」小事（2026-11-01）
+
+1. **`判定=snap` 是假的"已修正"痕迹**：`snap_boss()` 无条件先写 `last_verdict="snap"`，
+   于是每个 boss 关都打 `判定=snap`，读起来像刚纠正过 —— 实际 5→5 是空操作
+   （用户据此以为计数器被修正了）。现在 `describe()` 拼 `last_snap` 的结论：
+   `snap(未改动)` / `snap(58→60)` / `snap(跳过)`。
+2. **「自动计数没跑成」那句报错了数**：它用的是本节点 **tick 之后**的计数器，
+   却写成「option 起始关卡 = N」→ 填 1 报 2。现在 `JobSetLoad` 记下
+   `_STATE["option_start"]`（option 原值），警告报「option 原值 + 此刻计数器」两个数。
+3. **起手锚点对账（只读探测，绝不改用户填的值）**：`无尽挑战_自动计数` 只挂在
+   「主界面点开始挑战」那条路径上（`01:45-86`）；任务若已在选卡/结算界面起手，
+   走的是 `无尽挑战_识别开始战斗`（`02:2-23`），**根本不经过它** —— 实测
+   2026-11-01 两局（143 / 72 关）框架日志里该节点出现 **0 次**，计数器全程
+   = option + 过关次数，绝对值从未被核对。
+   现在 `JobSetLoad` 用 `_probe_auto_count()` 照一帧、跑一次该节点的识别：
+   **读到只对账、不改数**（用户 2026-11-01 定稿：手填「起始关卡」时本来就不走
+   自动计数，option 是他给的事实）；读不到就闭嘴（不点击、不改流程、无噪音）。
+
+   > **★ 更正一条容易想错的事**：`±5 的整数倍` 这类整体偏差，**boss 头像、
+   > 补给屏、snap 全都发现不了** —— 因为补给屏跟着**真实**关卡走，偏 5k 时补给
+   > 出现的那一刻计数器上仍是 5 的倍数，两边「看起来一致」。所以别再指望
+   > 「补给屏当第二锚点」能抓它（曾以为能，错了）；**只有绝对读数**（主界面
+   > 「第X关」的 OCR，也就是本节的探测 / 自动计数节点）能戳破。
+
+**「（未校准）」的位置**：只在**开局那一条**播报上带一次（用户要求
+「运行时只弹一次」）：`关卡数:5-boss关（未校准）`；每关的 `关卡数:N` 一律不带。
+
+---
+
+## 10.10 ★★ 预留接口总表（2026-11-01，**只留接口、不写实现**）
+
+> 用户原话：「作业集后续还能适配的选项（**帮我做接口，不要写实际的功能，
+> 做接口存留，给未来做适配**）……全部做预留接口，以后再进行实际开发」。
+
+本轮**一行功能都没实现**，做的是「数据 + 注册表 + 挂钩点 + 门禁」四件事：
+字段存得住、导出得出去、agent 认得出、跑起来**什么都不做**（只播一句「未实现」）。
+
+### A. 两个唯一入口（注册表 = 权威，两边 id 必须一致）
+
+| 侧 | 文件 | 内容 |
+| --- | --- | --- |
+| 网页端 | **`static/js/16-jobset-reserved.js`** ★新增 | 四张注册表 + 默认值 + 导出/读回 + 恒空编译入口 |
+| agent | **`agent/jobset/reserved.py`** ★新增 | 同名镜像 + 解析/归一化 + 恒空编译 + 提示文案 |
+
+> ★ `16` 的加载位置有两条硬要求：**在 15 之后**（往落子动作注册表补一条不可达的
+> 预留动作）、**在 20 之前**（`jobNewTable`/`jobBuild`/`jobApplyLoaded` 都要调它）。
+> 注册表漂移由 `selfcheck.py` §22b 拿**真实 JS 文件**正则比对，改一边不改另一边会红。
+
+### B. 十项功能 × 接口落点（实现时照这张表走）
+
+| # | 功能（用户原话） | 数据字段 | 导出键 | 实现时的挂钩点 | 状态 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 等待（等待指定时间再开） | `t.preBattle[]` `id:'wait'` `ms` | `pre_battle` | 选卡终点→开始战斗之间插链，见 C | 未实现 |
+| 2 | 刷僵尸（技术力未到） | `id:'spawn'` `times` | `pre_battle` | 同上 + coords 新键（手法待实测） | 未实现 |
+| 3 | 切换僵尸场外加速 | `id:'zombieSpeed'` `on` | `pre_battle` | 同上（开关点击/状态识别） | 未实现 |
+| 4 | 自动刷新下一波 | `id:'refreshWave'` `on` | `pre_battle` | 同上 | 未实现 |
+| 5 | 选卡同时标收藏 | `t.pickFavorite` | `pick_favorite` | SelectPlants 的 `custom_action_param` 加开关 + `_inject_lineup` 注入 | 未实现 |
+| 6 | 选卡时自由切换阶数 | `t.pickTiers` `{cardN:1..5}` | `pick_tiers` | 选卡前阶数界面（新链站）+ `_inject_lineup` | 未实现 |
+| 7 | 植物主动技能（从槽位位置拖过去） | 落子动作 `skill`（已进 15 注册表，**不可达**） | 段 `type:'skill'` + `slot` | `compile.build_chain_nodes` 的 `RESERVED_SEG_TYPES` 分支 → 换成 `src = dsl.form_point(coords, seg['slot'])`（坐标 `槽N切换形态` 现成） | 未实现 |
+| 8 | 切换形态更智能（选植物→点几下） | `JOB_INBATTLE_RESERVED` `formSmart` | `ga:form` 段多 `plant` 字段 | `24` 加参数控件类型 `'plant'` + `dsl.generic_dsl` 的 form 分支 | 未实现 |
+| 9 | 世界作业链（导入一次、识别当前世界换阵容） | `jobReservedTop.worldChains` | `world_chains{enable,items[]}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成真替换（当前世界 `_check_world` 已在读） | 未实现 |
+| 10 | 正赛检查（选正赛会检查有没有开） | `jobReservedTop.modeCheck` | `mode_check{enable,expect,on_missing}` | 同上 | 未实现 |
+
+### C. 数据结构（导出长这样）
+
+```jsonc
+{
+  "reserved_version": 1,                 // 预留接口版本（形状变了 +1）
+  "world_chains": {                      // 作业集级（未启用）
+    "enable": false,
+    "items": [{ "world": "海盗港湾", "table": 1, "side": "both",
+                "slots": { "1": "豌豆射手" }, "lineup": [], "squad": null,
+                "artifact": null }]
+  },
+  "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },
+  "tables": [{
+    "pre_battle": [                      // 开局前动作（顺序 = 执行顺序）
+      { "id": "wait",        "side": "both", "ms": 3000 },
+      { "id": "spawn",       "side": "boss", "times": 1 },
+      { "id": "zombieSpeed", "side": "both", "on": 1 },
+      { "id": "refreshWave", "side": "both", "on": 1 }
+    ],
+    "pick_favorite": false,              // 选卡同时标收藏
+    "pick_tiers": { "1": 5, "3": 2 }     // 选卡阶数（0/越界会被丢掉）
+  }]
+}
+```
+
+- `side` = `both`（默认，普通关 + boss 关都执行）/ `normal` / `boss`。
+  **故意不拆两条数组**：拆了 90% 的项两边重复，以后加维度更难。
+- `pick_tiers` 与 `38-jobset-notes.js` 的 `plant_notes.tier` **不是一回事**：
+  前者是**要真去点界面**的配置，后者是**给人看的备注**（运行时不消费），故意分开存。
+
+### D. 「缺省不改变行为」——三条硬约定（都有门禁盯着）
+
+1. **旧作业集没有这些键 → 解析成空/假/未启用**，行为与旧版一字不差
+   （`selfcheck` §22e 旧作业集五条断言 + `repro_reserved` §5）。
+2. **一个界面都不加**（用户要求「不要写实际的功能」）：
+   `implemented:false` 的项一个都进不了面板；预留落子动作 `builtin:false` +
+   `inMore:false` → 左侧看不见、「更多」里没有、W/S 循环不到，也落不了子
+   （`repro_reserved` §7 五条断言）。
+3. **编译入口恒空**，且**绝不退化成别的东西**：
+   - `jobPreBattleCompile()` / `reserved.prebattle_dsl()` 返回
+     `{dsl:'', missing:['…未实现']}`；
+   - `dsl.generic_dsl` 见到 `RESERVED_GENERIC_ACTIONS` 只报「预留」；
+   - `compile.build_chain_nodes` 见到 `RESERVED_SEG_TYPES` **明确告警后跳过**
+     —— 绝不能落到通用起点逻辑变成 `click:格子N_M`（那是静默错动作）。
+
+### E. 运行时只播一句提示（不改 pipeline）
+
+`runtime.py` 的 `_reserved_notice(context, js, table, is_boss)`：
+**只 log，一个 `override_pipeline` 都不写**，去重键 = `代码 + 表 + 关别`，
+两个调用点就是将来真正要动的两个位置：
+
+| 调用点 | 管哪些 |
+| --- | --- |
+| `JobSetLoad`（载入作业集之后） | 作业集级：世界作业链 / 正赛检查 |
+| `_inject_lineup`（每关选卡前） | 表级：开局前动作 / 选卡标收藏 / 选卡自由阶数 |
+
+> ⚠️ 实现「开局前动作」时要注意：它插的是**选卡终点与「开始战斗」之间**，
+> 和神器闸门（`_inject_artifact`）写**同一批节点的 next** —— 必须合起来算，
+> 各自 override 会互相顶掉（§10.5「字段分工」的坑）。
+
+### F. 真要实现某一项时的固定六步
+
+1. 注册表把该项 `implemented` 改 `true`（**两边都改**）；
+2. 要点击的先去 `agent/assets/resource/coords.json` 补坐标键；
+3. 编译：`pre_battle_dsl` / `generic_dsl` / `build_chain_nodes` 对应分支补上；
+4. 注入：`_reserved_notice` 换成真正的 `override_pipeline`（注意 D/E 的约束）；
+5. 界面：**长在现有交互上**（§10.2 A/B 的通用动作、§10.3 的落子动作），
+   **不要加独立按钮/独立弹窗** —— 用户明确讨厌（§8 第 6 条）；
+6. 门禁：`selfcheck` §22 把「恒空」断言换成真实编译断言、
+   `repro_reserved` 同步、本表状态改「已实现」。
+
+### G. 门禁
+
+```powershell
+cd game_assist_tools\endless_setup
+node --check static\js\16-jobset-reserved.js
+node tests\repro_reserved.js          # 8 节 40+ 条：注册表/导出/读回/不可达/编译恒空
+cd ..\..
+.\.venv\Scripts\python.exe -X utf8 agent\jobset\selfcheck.py   # §22 共 38 条（含 JS↔PY 漂移）
+```
+
+### H. 本轮顺带修掉的预存在红灯（**不是本轮引入**）
+
+1. **`selfcheck` §18 一直是红的**：「世界 case 共 16 个」写死 16，而用户后来
+   在 `Endless_ref.json` 加了第 17 个 case「地宫」——它**故意不写 Plan 双节点**
+   （地宫跑 `Secret_realm`、不注入「当前世界」，见 §0 地宫无尽）。
+   现在判据改成：**注入「当前世界」的 case 恰好 16 个** + 任何 case 都不许碰
+   `无尽挑战_加载作业集代码`（那条会造成起始关卡被顶掉）。
+2. **`check_graph.py` 的空 next 从 6 个变成 10 个**（全部预存在，本轮没碰任何
+   pipeline 文件）：`01_Endless_plant_ref.json` 的「检查是否需要选植物」；
+   `0300Endless_fight.json` 的「单次种植 / 循环种植 / 恭喜过关 /
+   继续挑战_守卫 / jumpback_继续挑战 / 完成」；`Endless_End_or_loop.json`
+   的「无尽挑战_结束」；`Endless_html_ref.json` 的「编辑作业集」；
+   `Endless_out.json` 的「提示_返回地图」。退出码 1 属预期。
+
+---
+
+## 10.11 ★★ 移动端 M1「排版收缩」（2026-11-02）
+
+> 用户原话：「手机打开网页端的 UI 可以再优化一下吗…安卓打开现在操作很难受，
+> 可不可以让安卓浏览器打开的和电脑不一样」。
+
+### A. 手机上原来「难受」的四个硬事实（都是查出来的，不是感觉）
+
+| # | 事实 | 位置 | 后果 |
+| --- | --- | --- | --- |
+| 1 | 棋盘列宽**写死 68px**，`.cell{width:68px}` | `08-board-data.js` 的 `gridEl.style.gridTemplateColumns`、`index.html` 两个 `#gridEarly/#gridLate` 行内样式 | 9 列 ≈ **676px**，390px 手机必横向溢出 |
+| 2 | 同格缩略图 9 个定位是硬编码 px（`4/25/35/46/58/27/17/3`） | `base.css` 的 `.job-n1..n9` | **所以不能简单把格子改小**，一改缩略图就错位 |
+| 3 | 两栏是**行内固定宽**（槽位列 `flex:0 0 380px`、棋盘列 `min-width:420px`） | `index.html` | 420 在 390 屏上把整页顶出横向滚动条 |
+| 4 | 全仓 **0 个** `touchstart/pointerdown`，拖拽全靠 HTML5 `draggable`（7 处） | grep | 链条排序 / 补给排序 / 方块窗拖拽在触屏**全废**；另加右键 / Ctrl 手势在手机上根本不存在 |
+
+### B. 本轮做了什么（**只做排版收缩，不碰交互语义**）
+
+1. **棋盘尺寸变量化**（`base.css` 顶部「棋盘尺寸变量」一节）：
+   ```css
+   :root{ --cell:68px; --u:calc(var(--cell)/68);          /* 1 个基准像素 */
+          --thumb-inset:calc(4*var(--u)); --thumb-gap:calc(4*var(--u));
+          --thumb-1:calc(58*var(--u)); --thumb-2:calc(27*var(--u)); --thumb-3:calc(17*var(--u)); }
+   ```
+   `.cell` 的 `width/height/**border-width**/padding` 与 `.job-n1..n9` 的 9 组定位全部改走变量。
+   - **边框与内边距也必须按 `--u` 缩**：缩略图是相对**内边距盒**定位的，
+     边框固定 2px 时，小格子上 3×3 会挤出格边被 `overflow:hidden` 裁掉。
+   - 桌面 `--u` 恒等于 `1px` → **渲染结果与改造前逐像素一致**（4/25/35/46/58/27/17/3 全部原样还原）。
+   - ★ **以后想缩放棋盘只改 `--cell` 一个值**，别在别处再写死这些数字
+     （这跟 §10.3.1「改 `JOB_CELL_MAX_MARKS` 必须同步改 CSS」是同一类坑，现在从结构上消失了）。
+2. **网格列宽走变量**：`08-board-data.js` 的 `repeat(${cols}, 68px)` → `repeat(${cols}, var(--cell))`；
+   `index.html` 两个棋盘的**行内** `grid-template-columns` 同步改成 `var(--cell)`
+   （行内样式优先级高，不改就是死值）。
+3. **窄屏断点 `@media (max-width:900px)`**（`base.css` 末尾「移动端 / 窄屏」）：
+   - `--cell: clamp(28px, calc((100vw - 80px)/9), 46px)` —— 390px 宽 → ≈34px/格，整盘 ≈342px **一屏放下**；
+   - 两栏上下堆叠（`!important` 压行内固定宽）、通用动作条从棋盘右侧**移到棋盘下方横排**；
+   - 局外 80 选卡 6 列 → 3 列；
+   - 弹窗统一**贴底整屏**（`.jp/.cq/.cc/.ja/.lz/.sc/.artp/.gp/.mp/.cp/.sp/.wp/.np/.tp/.rp-panel`），
+     关闭按钮 26px → 34px；`#moreList`/`#boardMoreList` 是贴着按钮小菜单，**故意不动**；
+   - 链条抽屉整屏 + `#seqToggle` 从「右缘竖条」改成**右下角浮动圆角块**（原来会盖住棋盘最后一列）。
+4. **触屏命中区 `@media (pointer: coarse)`**：按钮/tab/勾选框加大到 ≥34px / 18px，去掉点击高亮。
+
+### C. 本轮**没做**（下一批 M2，明确留给后面）
+
+- **长按 = 右键**（格内方块窗）、Ctrl 变体（清空整格 / 删槽）——手机上没有替代入口。
+- 手机版信息架构（底部三格导航：槽位 / 链条 / 棋盘），桌面专属重交互（布局涂抹 / 对照）在手机上提示去电脑改。
+
+> 注：**补给卡排序**已在 §10.12 的表里补上（补给卡下 `←` `→`，走 `jobCommitSupplyOrder`），
+> 这里原先写的「仍然只有拖拽」已过期。
+
+### E. ★ 第一版上机/模拟器反馈与修订（2026-11-02 当天）
+
+用户在电脑上用「DevTools 设备模拟」看的，三条反馈 + 处理：
+
+| 反馈 | 原因 | 处理 |
+| --- | --- | --- |
+| **棋盘太小** | `--cell` 只到 ~34px（页边距/面板内边距/间缝吃掉了 80px） | 手机断点里把页面 chrome 压到最小（页边距 4、面板 8、间缝 **4→2**）→ **~38px/格**；再加一个 `⤢ 放大` 开关 |
+| **按键太大** | 第一版在 `pointer:coarse` 里把 `.btn` 一律 `min-height:34px` + 加大 padding | **全部回退**（只留 `-webkit-tap-highlight-color`）。教训写进 CSS 注释：手机上缺的是**手势**，不是更大的按钮 |
+| **拖拽用不了** | HTML5 `draggable` 在触屏不工作 | 补了按钮替代入口 → 见 **§10.12** |
+
+**`⤢ 放大` 开关**（手机专用，桌面不占位）：
+
+- `index.html` 的「🎯 布阵棋盘」标题行末尾一个 `#boardZoomBtn`，CSS 里默认 `display:none`，
+  **只在 `max-width:900px` 里 `display:inline-flex`** —— 桌面不多一个按钮。
+- 点一下 → `body.board-zoom` → `--cell: 58px` + `.board-main{overflow-x:auto}`：
+  **格子变大、棋盘自己左右滑**（页面整体不横滚）。再点回到「适应屏幕」。
+- 状态存 localStorage（`jobBoardZoom`），刷新保持。函数：`jobApplyBoardZoom` /
+  `jobToggleBoardZoom` / `jobRestoreBoardZoom`（都在 `27-jobset-board.js`，紧邻 `jobRenderSeqChains` 上方），
+  绑定在 `29-jobset-init.js`。
+- 为什么用 `body` 挂变量而不是 `:root`：`--cell` 定义在 `:root`，而 CSS 变量可被后代覆盖 ——
+  `body.board-zoom` 声明的 `--cell` 会让 `#gridEarly` 的行内 `repeat(9, var(--cell))` 直接吃到新值。
+
+### D. 验证（诚实版）
+
+- 门禁：`node --check` 40 个 JS 全过；6 套 `tests\*.js` 全过；`fuzz_drag 200×100` **0 会话首错**。
+- **CSS 无法本环境验证**（§7 无头浏览器跑不了）→ 必须「手机浏览器 / DevTools 响应式 + Ctrl+F5」肉眼确认。
+  要 PC 起服务用手机看，`pvz.py` / `pvz_android.py` 绑的是 `127.0.0.1`（需临时改 `0.0.0.0` 才能局域网访问，
+  且作业集接口无鉴权，别长期开）。
+
+---
+
+## 10.12 ★★ 手机没有拖拽 → 「↑ / ↓ 移一位」按钮（2026-11-02）
+
+> 用户原话：「有些拖拽相关的用不了」（在电脑的 DevTools 设备模拟里看的）。
+
+### A. 为什么会有这块
+
+排序原本只有一条路：HTML5 `draggable`（`27` 的链条块、`43` 的格内方块、`25` 的补给卡）。
+**触屏浏览器不支持 HTML5 draggable** —— 手指按上去根本不触发 `dragstart`，
+于是手机上「种植顺序」「格内执行顺序」都改不了。这是**能力缺失**，不是样式问题。
+
+### B. 做了什么（三条，全部复用拖拽的同一条出口）
+
+| 位置 | 入口 | 内部调用的函数 | 说明 |
+| --- | --- | --- | --- |
+| 链条（单次 / 循环 / 收尾） | **按住块头左侧的拖柄 `⠿` 直接拖** | 同链 `jobApplyDrop()` / 跨链 `jobMoveStepsToChain()` | 见下面 B2：触屏真拖拽（用户实报「手机端链条拖不动」后补的） |
+| 链条（单次 / 循环 / 收尾） | **勾选块 → 抽屉顶部吸附栏的 `↑` `↓`** | `jobNudgeSelected(dir)` → `jobApplyDrop()` | 与「勾选后拖拽」**同一个 drop 出口**，所以整组搬 / 无间隔组跟随 / 摘出再插入的语义完全一致 |
+| 格内方块窗（`#cellQueueModal`） | **每个方块下面 `←` `→`** | `jobCellQueueMove()` | 与拖拽同一个出口（横向排布，所以是左右） |
+| 补给顺序（boss 关） | **每张补给卡下面 `←` `→`**（只在 `body.m-app` 显示） | `jobCommitSupplyOrder(list, sortable)` | 与拖拽同一个出口；`查看` 是开关、不在 sortable 里，所以不会被挪动 |
+
+> ★ **铁律**：以后再加「替代拖拽」的入口，**必须调这几个已有出口**
+> （`jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove`），
+> **不许自己写第二套排序逻辑** —— §9.2 那 6 个结构性 bug 全在「下标换算」上，
+> 第二套就是第二次踩。
+
+#### B2. 触屏真拖拽（2026-11-02 补，用户实报「手机端的链条拖不动」）
+
+⚠️ 上一轮只给了 `↑/↓`，但那要**先勾选**才出现 —— 用户要的是「能拖」。
+`44-jobset-mobile.js` 的 `bindChainTouchDrag()` 用 **Pointer Events** 补了真拖拽：
+
+- **只有拖柄 `.seq-grip` 能发起**：CSS 里单独给它 `touch-action:none`，
+  块体其它地方仍是滚动 —— 整块都禁用滚动的话，链一长就翻不了页。
+  （手机断点里拖柄被做成 26×36 的蓝灰小方块，比桌面那个 `⠿` 小字好抓得多。）
+- 落点判定**全部复用**：`jobNearestBlockInList`（就近插入，块缝里也接得住）、
+  `jobMarkDropTarget` / `jobClearSeqOver`（蓝色落点线）。
+- 提交只有两个出口：同链 `jobApplyDrop`、跨链 `jobMoveStepsToChain`
+  （boss 不许进收尾由下层拦）；勾选多项 → `jobDragGroupFor` 整组搬。
+- 落点就是自己 → **什么都不做**（不产生无意义的撤销点）。
+- 拖到屏幕上下边缘会**自动滚抽屉**（`-14/+14` 每帧）。
+- 指针的 `move/up` 挂在 **window** 上（不是手柄上）：手柄被重渲染、
+  或 `setPointerCapture` 不被支持时也不会「拖到一半丢事件」。
+
+> 需要数据侧配合的一行：`27` 的 `jobRenderOneChain` 给 `.seq-section`
+> 补了 `sec.dataset.which = which` —— 手机端靠它判断「松手落在哪条链」，
+> **不要去解析 class 名**。
+
+细节：
+
+- `jobNudgeSelected(dir)` 作用于**当前勾选项**（没勾 = 空操作、不写盘、不记撤销点）：
+  同一条链勾 N 项 → 整组挪一位；跨链勾选 → **每条链各自在自己链内挪**（链之间不可混排）。
+- 到顶/到底 → 数据不变 + `setStatus('⚠️ 已经是最前面了')`（**不许静默错位**）。
+- 按钮样式 `#seq-selbar-move`（`.seq-selbar-move`），在吸附栏里、`「」无间隔组` 左边；
+  吸附栏本来就「只有勾选了东西才出现」，所以**没勾选时界面上不多任何按钮**。
+- 提示文案同步改了（不然手机上写着"拖动"会误导）：抽屉头 `拖拽排序` → `拖拽 / 勾选后 ↑↓`，
+  抽屉说明补一行「手机 / 触屏不支持拖动」；格内弹窗 `cqHint` 也带上 `← / →`。
+
+### C. 回归（新增，别再删）
+
+```powershell
+node tests\repro_nudge.js      # 5 节 15 条：单块上/下移、到顶到底不动+提示、
+                               # 整组挪（组内顺序不变）、跨链各挪各的、没勾选=空操作
+```
+
+---
+
+## 10.13 ★★ 手机端 UI v2：四屏 App 壳（2026-11-02，推翻前两版）
+
+> 用户原话：「……没怎么改，不好适配，**手机端你直接重新改 ui 吧，按照你想要的样子来，
+> 越顺手越好，最好可以找到别人现成的例子**」。
+
+### A. 为什么前两版白做了（记下来别再犯）
+
+前两版都是「把桌面版压窄」：缩小格子、放大按钮、弹窗贴底。
+问题是——**这个页面同时装着四件不相干的事**（棋盘 / 槽位 / 链条 / 存档），
+手机屏一次只放得下一件。压窄的结果是一条 3000px 长的页面，
+用户每次都得上下翻几百像素找东西。**"适配"这条路本身就不对，得换信息架构。**
+
+### B. 现成的做法（用户要的"别人的例子"）
+
+| 参考 | 借了什么 |
+| --- | --- |
+| [Material Design · Bottom navigation](https://material.io/design/components/bottom-navigation.html) / [M3](https://m3.material.io/) | **底部导航放 3–5 个目的地，图标 + 短文字**；一级导航不要塞进抽屉 |
+| [Apple HIG · Interface essentials](https://developer.apple.com/ios/human-interface-guidelines/overview/interface-essentials/) | 一屏一件事；触控目标别做太小（这也是「按钮别乱放大、要放大的是内容」的依据） |
+| [Best Practices for Mobile App Navigation Menus](https://appinstitute.com/best-practices-for-mobile-app-navigation-menus/) | **底部 tab bar 优于侧边抽屉**；二级功能才进"更多" |
+
+### C. v2 长什么样（`static/js/44-jobset-mobile.js` + `base.css` 末尾一节）
+
+```
+┌───────────────────────────────┐
+│ [◀] 表A（1/3）· 覆盖 40 关 [▶][🧩] │ ← 表条第 1 行：现在哪张表、一键切
+│ [🌱 槽2 · 豌豆射手]  🗑️ 已清空…   │ ← 表条第 2 行：**拿在手上的动作** + setStatus 镜像
+├───────────────────────────────┤
+│  [普通关] [boss关]              │
+│      9 × 5 棋盘（一屏放下）       │ ← 点格子 = 落子；**长按 = 右键**（方块窗/清格）
+│  🌱1 🌱2 🌱3 … 🫘 🧤 👆（动作条）  │
+│  [🧹清空]            [⤢ 放大]    │
+└───────────────────────────────┘
+│  🎯棋盘   🪴槽位   🔗顺序   💾作业集 │ ← 底部导航（4 项，fixed）
+```
+
+| 屏 | 内容 | 实现 |
+| --- | --- | --- |
+| 🎯 棋盘（默认） | 表条 + 普通关/boss关 + 棋盘 + 动作条 + 清空/放大 | `#mTableBar` + `#colBoard` |
+| 🪴 槽位 | 8 槽位配置（点槽 = 选植物） | `#colSlots` |
+| 🔗 顺序 | **复用现有抽屉**（手机上本来就是整屏）+ 勾选后 `↑↓` | `jobOpenSeqDrawer()` |
+| 💾 作业集 | 选择/保存/删除/远程/世界/配置/布局/复制/局外选卡 + 撤销重做 | `#jobsetPanel` + `.toolbar` |
+
+顺手干掉的三处「手机上的坑」：
+- 大标题 + 🌱新手教程 → 隐藏（`body.m-app h1`）；
+- 「✕ 关闭后台」→ 隐藏（手机上太容易误触，见 `20`/`pvz.py` 的端口逻辑）；
+- 右缘的浮动「种植顺序」条 → 隐藏（底部导航已替代，且它原来会盖住棋盘最后一列）。
+
+### D. 实现要点 / 踩点（改这块之前必读）
+
+1. **不搬 DOM**：只给块挂/摘 `.m-hide`（`display:none`）。
+   `appendChild` 搬节点会让 `getBoundingClientRect()`、自动滚动、拖拽命中判定全部
+   按新位置重算 —— 那些地方没一个在手机上验证过，别给自己找事。
+2. **门控是 `body.m-app`**（`44` 在 `matchMedia('(max-width:900px)')` 命中时加）：
+   **桌面一行样式都不会变**。这是硬要求——桌面版是用户实测过的。
+3. **长按 = 右键**：不是"长按自己写一套该干什么"，而是给格子**派发一个真的
+   `contextmenu` 事件**（`ev.__mSynthetic = true`），直接复用
+   `08-board-data.js` 那条右键分支（多落点→方块窗 / 单落点→清格 / Ctrl→清空整格）。
+   三件配套细节：① 长按后紧跟的 click 在**捕获阶段**吞掉（否则又落一次子）；
+   ② 手指滑动 >10px 就取消（那是滚动页面）；③ 记 `_lastNativeCtx`，
+   系统自己弹过 contextmenu 就不再补一次。
+4. **「顺序」屏的闭环**：用户关抽屉有 ✕ / 点遮罩 / Esc 三条路，而 ✕ 的事件是
+   **绑定时就抓住原函数值**的（`addEventListener('click', jobCloseSeqDrawer)`），
+   所以"包一层 jobCloseSeqDrawer"没用 → 用 **MutationObserver 盯
+   `#seqDrawer` 的 class**，一关就 `setTab('board')`。不做这条，
+   用户关掉抽屉后会停在**空白屏**。
+5. **`#mTableBar` 是 `.flex-row` 的 flex 子项**，必须 `flex: 1 1 100%`，
+   否则它会和槽位列并排（一个很隐蔽的排版错）。
+6. `#mTableBar` 第 2 行镜像 `setStatus` 的消息 —— 手机上 `#jobStatus` 在作业集屏里，
+   不镜像的话「已清空 / 已调整顺序 / ⚠️已经是最前面」这些反馈**一个字都看不到**。
+7. ★ **新增一块界面时必须往 `44` 的 `screenGroups()` 里登记**，
+   否则它在手机上要么永远看不见、要么一直挂着。
+
+### E. 回归
+
+```powershell
+node tests\repro_mobile.js     # 11 节 62 条：桌面零影响 / 切屏 / 抽屉关闭回棋盘 /
+                               # setStatus 镜像 / 长按派发 contextmenu / 滑动与空格子不误触
+```
+
+> 注意：这套测试用的是**假 DOM**（不跑浏览器），盯的是"显示哪块、派发什么事件"，
+> 不盯样式。样式仍然只能手机 / DevTools 手机模拟 + Ctrl+F5 眼看。
+
+### F. 还没做（下一步）
+
+- **补给卡排序**仍只有拖拽（`25` 的扇子叠图布局特殊，往卡片里塞按钮有视觉风险）。
+- 槽位 ✕ 的 Ctrl 变体（手机上就是那个二选一确认弹窗，够用）。
+
+### G. ★ 第二轮（2026-11-02 当天接着改，用户说「再适配一轮」）
+
+第一轮做完，手机上还有几处「点下去会骂人」的地方，这轮全补上了：
+
+| # | 问题 | 改法 |
+| --- | --- | --- |
+| 1 | **植物选择器 / 局外 80 选卡**是**行内样式**写死的 1140px / 640px 居中浮层 + 5/6 列网格 + 右侧 256px「替换指定表」栏 → 手机上每格只有 ~70px，右边还挤一条侧栏 | `body.m-app #plantPicker > div:first-child{width:100vw;height:100dvh}`（行内样式只能 `!important` 压）+ 网格改 **3 列** + 替换栏**折到下面**（`max-height:34vh`） |
+| 2 | 选植物得先跳「槽位」屏再跳回「棋盘」，不能直接落子 | 棋盘屏加 **「槽位快选条」**（`#mSlotStrip`，8 个槽一行横滑）：点已配好的槽 = 直接拿它去落子；点空槽 = 直接开选植物 |
+| 3 | 落错子**没法撤销**（手机按不了 Ctrl+Z；撤销按钮在「作业集」屏） | 表条加 **↩ / ↪**（调 `undoBoard()` / `redoBoard()`），排在切表按钮后面 |
+| 4 | 「长按 = 更多」**没有任何提示**，没人会发现 | 表条第二行空态固定显示 `点格子落子 · 长按格子 = 格内顺序 / 清空`（有消息时被消息顶掉，6s 后自动回落） |
+| 5 | **z-index 打架**：植物选择器是 9999、底部导航 10050 → 全屏选择器**底部一条被导航盖住**（关闭按钮正好在那条里） | `body.m-app #plantPicker/#outerPicker{z-index:10060}`；抽屉比导航矮一层，`#seqDrawer{padding-bottom:56px}` 让内容不被压 |
+
+另外两处「顺手」：
+
+- **选完植物自动切回「棋盘」屏**（包一层 `jobConfirmPick`）—— 选植物的目的就是去落子，
+  停在槽位屏等于让用户再点一次导航，而且他会以为没生效。
+- **槽位屏改 2 列大卡**：8 个胶囊原来是 `inline-flex` + 每项后面跟一个
+  `flex-basis:100%` 的换行 `<span>`；手机改成 `grid` 2 列，并且必须
+  `#jobSlots > span{display:none}` —— 那些换行 span 在 grid 里会**占掉格子**。
+
+> ⚠️ 快选条与表条都是 `44` 用 `createElement` 建出来的（不在 `index.html` 里），
+> 所以 **`screenGroups()` 要登记它们**，否则切屏时会留在屏幕上。
+
+回归扩到 **11 节 62 条**（新增：槽位快选条「点槽=拿它 / 点空槽=选植物」、
+表条 ↩↪ 真的调到 `undoBoard`/`redoBoard`、空态提示文案、
+**槽位长按动作单**「替换→`jobOpenPicker` / 删除→`jobOpenPlantDelete(name,'normal',slot)`」、
+空槽长按不长动作单而是直接选植物）。
+
+### H. ★ 槽位长按 = 「✎ 替换植物 / 🗑 删除这株」动作单（2026-11-02）
+
+> 用户原话：「选择植物后长按可以选择替换，或者删除」。
+
+**为什么必须做**：桌面上这两个入口是槽位胶囊里的 ✎ 和 ✕ —— **6px 的小字**，
+手指压根戳不中；而「换一株 / 删掉这一株」是手机上最常干的两件事。
+
+| 动作 | 转调的既有入口 | 等价于桌面上的 |
+| --- | --- | --- |
+| ✎ 替换植物 | `jobOpenPicker(slot)` | 点胶囊里的 ✎ |
+| 🗑 删除这株（普通关） | `jobOpenPlantDelete(name, 'normal', slot)` | 点胶囊里的 ✕ → 「只删本表 / 删所有表」二选一 |
+| 🗑 删除这株（boss 关） | `jobDeleteSlotHere({name, side:'boss', slot})` | Ctrl+点 ✕ |
+
+- 长按位置**两处都支持**：棋盘屏的「槽位快选条」+ 槽位屏的胶囊。
+- **空槽长按不长动作单**，直接开选植物（没有「替换/删除」可言，少一次点击）。
+- 槽号从 `dataset.slot` 读 —— 为此在 `27` 的 `jobRenderSlots` 里补了两行
+  `chip.dataset.slot / chip.dataset.plant`。**不要去解析 `槽N: 名字` 那段文本**。
+- 新弹窗按规矩登记了：`JOB_MODAL_SELECTORS` 补 `'#mSlotSheet.m-open'` +
+  `base.css` 独立 `#mSlotSheet` 样式块（本仓弹窗样式按 id 逐条写，没有公共类）。
+- 事件复用：长按逻辑抽成了 `bindLongPressOn(el, resolve, onLong)`
+  （棋盘格与槽位共用一套：480ms / 滑动 10px 取消 / 吞掉随后的 click / 轻微震动）。
+
+---
+
+## 10.14 ★★ 静态登记检查：把「必须手工同步的表」变成门禁（2026-11-02）
+
+> `tests/repro_registry.js` —— **不开浏览器、只扫源码**。5 节 70 条。
+
+### 为什么要有它
+
+这个项目有几处**约定**，漏一处就**静默失效**：不报错、界面看起来正常，只有用户按下去才发现没反应。
+以前这些全靠读 §10 的警告条 + 人的记性，这轮把它们变成一条命令。
+
+| # | 检查 | 漏了会怎样 |
+| --- | --- | --- |
+| 1 | `index.html` 的**面板型弹窗**（`<div id="X">` + `<div class="Y-panel">`）⟷ `base.css` 有没有 `#X` 样式 ⟷ `JOB_MODAL_SELECTORS` 有没有 `#X.` 条目 | ①没样式 = 「点了没反应」（`#batchReplaceModal` 漏过一次）②没登记 = 弹窗里按 W/S/Ctrl+Z 漏到主界面 |
+| 2 | `44` 的 `screenGroups()` 是否登记了每个屏块；`index.html` 里每个 `id="colXxx"` 是否被登记；`TABS` 里每个屏名是否都有 `data-mtab` 按钮 | 那个块在手机上**永远看不见**，或切屏时一直挂着；某个屏永远进不去 |
+| 3 | `dataset` 契约：`27` 写 `dataset.slot / act / which` ⟷ `44` 读同名 | 手机端长按 / 连点切链 / 拖拽**静默不工作**（桌面完全看不出来） |
+| 4 | `44` **包了一层**的全局函数（`setStatus` / `jobLoadTable` / `jobApplyLoaded` / `jobRenderSlots` / `jobConfirmPick`）在别的文件里是否还有定义 | 被包的函数一改名，44 包了个 null，手机端功能静默消失 |
+| 5 | `08` 的 `JOB_CELL_MAX_MARKS` 是否等于 `base.css` 里最大的 `.job-pN` | 「+N」角标数和实际能摆的位置对不上（§10.3.1 那条老坑） |
+| 6 | **唯一入口**：`jobStoreSteps` / `jobApplyDrop` / `jobMoveStepsToChain` / `jobCellQueueMove` /
+  `jobCommitSupplyOrder` / `jobSaveLocal` / `jobResolveSteps` / `jobSegsToSteps` / `jobStepsToSegs` /
+  `jobPinSteps` / `jobBuild` / `setStatus` **全仓恰好 1 处定义** | 有人复制粘贴出第二份排序/写盘逻辑 = §9.2 那族 bug 重演（AGENTS.md 铁律 9） |
+| 7 | **预算门禁**（只能降不能升）：`index.html` 行内 `style` ≤ 66 · `base.css` 的 `!important` ≤ 46 ·
+  原生 `alert/confirm/prompt` ≤ 16 | 新代码图省事再塞行内样式/`!important`/系统弹窗，样式和体验会重新变脆 |
+| 8 | 落子动作注册表：每个 `imgKey` 在 `JOB_UI_IMG` 里有图 · `armedNo` 不重复且 ≥ 9 | 新动作悄悄回退成铲子占位 / 撞号导致 W/S 选错动作 |
+| 9 | **段字段跨语言契约**：`key/from/to/ms/slot/times/comboMs/comboWatch/noint`
+  在 `agent/jobset/dsl.py`＋`compile.py` 与编辑器 `27a` 两边都还在 | 任一边改字段名 → Python **静默读不到**，编译出的动作少一截，真机才炸 |
+
+### 使用
+
+```powershell
+cd game_assist_tools\endless_setup
+node tests\repro_registry.js      # 5 节 70 条，退出码 0 = 全过
+```
+
+★ **新增任何一处登记点时必须同步跑它**：
+
+- 新弹窗 → 三处登记齐（`index.html` / `base.css` / `JOB_MODAL_SELECTORS`）；
+- 新屏块 → 进 `44` 的 `screenGroups()`；
+- 新 `dataset` 约定 → 写方读方都要有；
+- `44` 新包一个全局函数 → 那个函数必须真实存在（它自己也会被扫出来）。
+
+---
+
+## 10.15 ★ 手机「?」：操作速查 + 自检 `jobMobileDiag()`（2026-11-02）
+
+表条右端一个 `?`（`44` 里动态建的 `#mHelpSheet`），一张卡片两件事：
+
+1. **手势速查**（7 条）：点格子 / 长按格子 / 点槽 / 连点槽 / 长按槽 / 按住拖柄 / 勾选后 ↑↓。
+   为什么要：手机上有一半功能是**手势**，不讲没人会发现（用户就两次踩在「不知道有这个」上）。
+2. **🩺 诊断信息** → `jobMobileDiag()` 的结构化 JSON，显示在卡片里并**尝试复制到剪贴板**：
+
+   ```
+   视口 / 触摸屏 / 手机模式 / 当前屏 / 屏可见（每屏 shown·hidden·missing）/
+   cell变量（--cell 实际值）/ 棋盘放大 / 格子实测宽 / 棋盘总宽 /
+   整页横向溢出 / 打开的弹窗
+   ```
+
+   ★ 用途很实在：**我在这个环境里看不到屏幕**，每次排查手机样式都只能让用户"描述现象"。
+   有了它，用户点一下「?」→「🩺 诊断信息」→ 把 JSON 贴给我，我直接看数。
+   ★ 全程**只读**：不改数据、不写 localStorage、不触发撤销记录点（`repro_mobile` 第 11 节盯着）。
+   ★ 也可以在控制台直接 `jobMobileDiag()`（已挂到 window）。
+
+---
+
+## 10.16 ★★ 未保存改动防护（`45-jobset-dirty.js`，2026-11-02）
+
+> 老账 §10.7-G 的 **P2**，一直没做。这是唯一会**真丢用户数据**的一条。
+
+### 问题
+
+本地缓存（localStorage）是 300ms 自动存的，**但写回作业集文件必须手点 💾**。
+这两件事界面上完全看不出来，于是：换作业集 / 新建 / 删作业集 / 误关标签页 → 改动没了。
+
+### 做法（只加护栏，不改任何既有流程）
+
+| 件 | 实现 |
+| --- | --- |
+| **脏标记** | `JSON.stringify(jobBuild())` 与「基线」比对 —— 口径和保存导出的**完全一致** |
+| 触发 | 包一层 `jobSaveLocal`（全仓改数据的唯一通道，§10.7-A），**延后 700ms 合并**再算 |
+| 基线刷新 | `jobSetCurrent`（`jobSave` 成功后必调它）＋ 三个 guard 成功的入口 |
+| 提示 | 左下角胶囊 `#jobDirtyBadge`「● 有未保存改动」，**点它 = 直接保存**（复用 `jobSave`）；手机上抬到导航上方 |
+| 关页面 | `beforeunload`：脏时 `preventDefault` + `returnValue = ''` |
+| 三个会丢东西的入口 | `jobApplyLoaded`（换作业集）/ `jobResetEditor`（新建）/ `jobDelete`：脏时先 `confirm`，**用户拒绝就一个原函数都不调** |
+
+### ★ 为什么不把脏标记塞进 `jobSaveLocal` 里面
+
+`jobSaveLocal` 也是**渲染副作用**的落点（§10.8-H：渲染会补 seq/ord、回写覆盖率段）。
+在里面直接置脏会把「只是渲染了一下」当成改动 → 满屏误报。
+所以这里**只比签名**：渲染来回补的字段最终值不变，签名就不变，也就不会误报（`repro_dirty` 第 6 节盯着）。
+
+### 回归
+
+```powershell
+node tests\repro_dirty.js      # 6 节 23 条：干净不拦 / 改脏 / beforeunload /
+                               # 三入口拒绝=不执行 + 同意=执行且变干净 / 保存后变干净 / 渲染不误报
+```
+
+> ⚠️ 已知取舍：`jobSetCurrent` 被当成「刚写盘完成」的信号。若将来有地方**只是切换当前作业集、
+> 并没有保存**，基线会被误刷新一次 —— 那种情况下胶囊会晚一点才亮，不会丢数据。
+
+---
+
+## 10.17 ★★ 选卡 / 自定义动作的「识别过程日志」（2026-11-02）
+
+> 用户原话：「给自定义动作，局外局内的选卡加上识别过程中给详细的日志，
+> 现在给的日志只有 ocr 核对那一条，局外选卡又没日志」。
+
+### 为什么要有这一节
+
+原来的日志只打**结论**（「核对 #1: ocr='豌豆射手' … ok=True」「选中 **X**」），
+于是用户看到的现象是：
+
+| 场景 | 旧日志给的 | 缺什么 |
+| --- | --- | --- |
+| 局内 8 槽选卡 | 只有核对那一条 | 每帧找了什么、几个候选、最高分多少、差阈值多少、为什么下滑 |
+| 局外 80 选卡 | **几乎没有** | 同上，而且连「这一轮到底跑没跑」都看不出来 |
+| 编码（编队选择） | 可见数字 + 白字集合 | 每个数字的**近白占比**（判据的原始量）、为什么判不满足 |
+| 自定义动作 | 播报/注入结果 | 「关卡→表」怎么算的、boss 判定哪来的、OCR 候选是哪些 |
+
+排查这类问题真正要看的量是「**这一帧的最高分 vs 阈值**」——
+差 0.01（阈值略紧）和差 0.40（模板/roi 根本不对）是两种完全不同的故障，
+而旧日志两者都只写「没找到」。
+
+### 日志约定
+
+| 项 | 约定 |
+| --- | --- |
+| 前缀 | `[SelectPlants][识别] …`（**结论行也是这个前缀**，方便一条检索） |
+| 逐帧行 | `_ilog()` —— 受开关控制 |
+| 结论行 | `_wlog()` —— **永远打**（不受开关影响）：入口横幅 / 放弃明细 / 完成汇总 |
+| 开关 | `SelectPlants` 的 `custom_action_param` 加 `"详细日志": true`（缺省开） |
+| runtime | `[JobSet] …` 前缀照旧（与原有播报同一路），新增的都是判定依据行 |
+
+典型逐帧行（局外 80 选卡）：
+
+```
+[SelectPlants][识别] 局外 帧7 屏2 目标 #3 **磁力菇**：最高 0.812（阈值 0.90，未过阈值） 最高点=magnetoshroom@(431,712):0.812x1 剩 78 个
+[SelectPlants][识别]   帧7 未命中 -> 下滑 1 步（屏 2->3）
+[SelectPlants][识别]   滑动后相似度 0.412（阈值 0.96，连续『没动静』 0/2）
+```
+
+局内 8 槽：
+
+```
+[SelectPlants][识别] #2 帧4 屏1：候选 2 个（去重 1，已否定 1）最高 0.934（阈值 0.90，过阈值） 最佳=peashooter@(214,601):0.934x1，可用→点击
+[SelectPlants][识别]   核对明细：OCR文本='豌豆射手3'（roi=[258, 100, 312, 46]）名字匹配=True；槽位识别最高分=0.000（阈值 0.90）未走槽位判定（OCR 读到字，以名字为准）
+```
+
+### 关键实现点（改动时别踩）
+
+1. **`plant_match.match_plants(threshold=None)`** = 「不设阈值探针」。
+   阈值只做**结果过滤**，NCC 相关图本来就整幅算完 —— 所以拿最高分**不加任何计算量**。
+   命中判定改成调用方自己比 `score >= threshold`（语义没变，只是把过滤往外挪了一层）。
+2. **`_slot_has` 现在委托 `_slot_score`**（后者返回最高分）；
+   两处判据不再各写一份、不会漂移。
+3. **`_white_ratios` / `_white_digits`** 拆开：`_white_digits` 仍是唯一判据
+   （`ratio=0.10` 常量只在它里面），`_white_ratios` 只提供日志要的占比。
+4. **逐帧日志量**：局外 80 选卡一局几百帧 × 每帧 1~3 行。嫌吵就在 pipe 的
+   `custom_action_param` 里加 `"详细日志": false`（结论行仍保留）。
+5. `frame` / `best_score` / `picked_log` 这三个是**日志专用**累加量，
+   不参与任何判定 —— 改判定逻辑时不要顺手把它们接进条件里。
+
+---
+
+## 10.17 ★★ 拆分 27-jobset-board.js（2026-11-02，只搬代码不改逻辑）
+
+> 老账 §10.7-G 的 **P3**。4025 行、把「链条解析 / 渲染 / 槽位面板 / 快捷键 / 植物选择器 / 导出」
+> 全塞在一个文件里，任何改动都要在巨文件里二次施工。
+
+### 怎么拆的
+
+| 新文件 | 原 27 行号 | 内容 |
+| --- | --- | --- |
+| `27a-jobset-steps.js` | 1~1103 | 步骤模型 / 链解析（`jobResolveSteps` / `jobStoreSteps`）/ `jobApplyDrop` |
+| `27b-jobset-stepcfg.js` | 1104~1624 | 步骤参数弹窗 + 拖拽接线（`jobWireDropTarget`）+ `jobNudgeSelected` + 棋盘缩放 |
+| `27c-jobset-chain-render.js` | 1625~2235 | 链条渲染：一株一块 / 无间隔组 / 通用动作块 |
+| `27d-jobset-slots.js` | 2236~2954 | 槽位面板 `jobRenderSlots` + 拖拽自动滚动 + 链条抽屉 |
+| `27e-jobset-hotkeys.js` | 2955~3516 | 更多列表 + 快捷键 + `JOB_MODAL_SELECTORS` + 植物选择器 |
+| `27f-jobset-export.js` | 3517~4026 | `jobBuild` / `jobSave` / `jobSetCurrent` / 元信息 |
+
+### 三条硬约束（再拆别踩）
+
+1. **只搬代码、一行逻辑都不改**。拆分脚本先做「可逆校验」（把 6 段拼回去必须与原文逐字节相等），
+   再删原文件 —— 这一步过了才敢继续。
+2. **切点只能落在顶层 `function` / `const` 前面**，尤其不能切进 `27d` 里那 4 个顶层的
+   `document.addEventListener(...)`（拖拽自动滚动那段），它一破整页拖拽就废。
+3. **文件是 classic script、共享全局作用域**：函数跨文件互调没问题（调用时才解析），
+   但顶层 `const/let` 只在本文件加载后可用 —— 所以 `index.html` 的 `<script>` 顺序必须 a→f。
+
+### 连带改动
+
+- `index.html`：一个 `27-jobset-board.js` 标签 → 6 个（顺序 a~f），文件清单注释同步。
+- `tests/*.js`（10 个测试）：加载列表里的旧文件名一并换成 6 个（否则沙箱里加载不到，测试会
+  静默变成"空跑"）。
+- `tests/repro_registry.js`：原来是 `J('27-jobset-board.js')` 精确读那个文件，拆分后改成
+  **全仓拼接检索**（`ALL_JS`）—— 同一契约可能落在任意 27x 文件里，按文件名找是脆的。
+- 本文档：§0.1 定位表 / §1 文件树 / P3 标记已更新；**历史章节里的旧文件名不改写**（那是当时的记录）。
+
+### 验证
+
+```
+6 个新文件逐个 node --check        → 全过
+10 套 repro_*.js                   → 全过
+fuzz_drag.js 200 100               → 0 会话首错（拆分的真正护栏）
+```
+
+---
+
+## 10.18 ★ 行内样式搬进 CSS：两个弹层（2026-11-02）
+
+### 做了什么
+
+`#plantPicker`（植物选择器）和 `#outerPicker`（局外 80 选卡）这两个弹层，
+原来把 **60+ 条尺寸全写在 `index.html` 的 `style=""` 里**，后果：
+① 手机端每一项覆盖都得 `!important`（谁改行内样式就一起崩）；② 想统一调尺寸得改 HTML。
+
+现在：
+
+| 项 | 之前 | 之后 |
+| --- | --- | --- |
+| 两个弹层的尺寸/网格/行距 | `index.html` 行内 `style` | **`base.css` 新一节**（`#plantPicker` / `#outerPicker` 按 id 写） |
+| 手机端覆盖 | 逐条 `!important` | **不再需要**（`body.m-app #id` 特异性天然高于 `#id`） |
+| `index.html` 行内样式数 | 92 | **66** |
+| `base.css` 里 `!important` 数 | 77 | **46** |
+
+★ **只有 `display` 保留在行内**：全仓有多处代码读写 `el.style.display` 判断开关状态，
+  改成 CSS 控制会改变语义。所以 `#plantPicker` / `#outerPicker` / `#outerModeMenu`
+  三个元素仍是 `style="display:none"` 开关（CSS 里不再重复写 display）。
+★ 槽位胶囊（`27d` 的 `jobRenderSlots` 生成）**仍是行内样式**，所以手机端「槽位屏 2 列」
+  那几条还保留 `!important` —— 要彻底清干净，得先改 `jobRenderSlots` 的建 DOM 方式。
+
+### 没做的两件（明确留给单独一轮）
+
+| 事项 | 为什么这一轮不做 |
+| --- | --- |
+| **测试公共脚手架**（把 10 个测试各自的假 DOM/桩抽成 `tests/harness.js`） | 只迁一两个文件反而留下两套写法；要一次性迁完 10 个，属于独立一轮的纯重构 |
+| **P0 链条段身份**（位置下标 `picked/gidx` → 稳定 id） | 它会**改段存储格式**，老作业集需要迁移；必须在单独一轮里做，并用真实作业集 + `fuzz_drag` 长时间跑 |
+
+---
+
+## 10.19 ★ 测试公共脚手架 `tests/harness.js`（2026-11-02）
+
+### 做了什么
+
+原来每个测试**各自手写一份假 DOM**（`mkEl` ≈ 30 行）+ 自己的断言函数，10 个测试 = 10 份
+略有差别的副本。后果是「测试桩能力不一致」：有的桩支持「先 createElement 再设 id」，有的不支持，
+排查时会被桩本身的缺陷误导。
+
+现在 `tests/harness.js` 统一提供：
+
+| 导出 | 内容 |
+| --- | --- |
+| `mkEl(tag, reg?)` | 假元素：classList（含 `toggle(name, force)`）、`dataset`、事件（`_h[type]` 是**数组**、配 `listeners(type)`）、`closest`、`querySelector(.tag / .m-tb-txt)`、`querySelectorAll`（走 `__qsa` 白名单）、`appendChild/insertBefore`、`getBoundingClientRect`（68×44）、**id 一赋值就登记进 reg**（与浏览器一致） |
+| `ok / eq / done(title)` | 断言（计数在 harness 内部），`done()` 负责收尾 `process.exit` |
+| `mkClassList` | 独立可复用 |
+
+已迁移 **5 个**自带 `mkEl` 的测试：`repro_cell_queue` / `repro_nudge` / `repro_slot_compact` /
+`repro_mobile` / `repro_dirty`（各自本地实现 → `const mkEl = H.mkEl`）。
+其余 5 个测试本来就没有假 DOM（直接用 `jobNewTable` 之类），不需要动。
+
+### 迁移时踩到并修掉的
+
+- 旧本地桩把事件处理器存成**单个函数**（`el._h.click = fn`），harness 存**数组**（一个元素可能挂多个）。
+  两处测试顺着旧形状写（`firstX._h.click(...)` / `b._h && b._h.click`），已改成 `listeners('click')`。
+  ★ 这条记下来：**以后写测试碰事件，一律走 `el.listeners(type)`**，不要去摸 `_h`。
+
+### 门禁
+
+```
+10 套 repro_*.js   → 全过（迁移前后断言数不变）
+fuzz_drag 200 100  → 0 会话首错
+```
+
+---
+
+## 10.20 ⏳ P0「链条段身份换地基」—— 只写了方案，没动手（2026-11-02）
+
+> 这是 §10.7-G 的 P0，也是历史上「拖完互换 / 撤销错乱」那一整族的**根**。
+> **本轮没有实现**，原因写在第 4 条：它会改**段存储格式**，必须单独一轮 + 用真实作业集验收。
+
+### 1. 现状（为什么会有这族 bug）
+
+链段的持久化形状是 `{key, from, to, picked:[下标], order:[下标], noint, times, ...}`，
+其中 `picked / from / to / order` 都是**「该槽在该链里的第 N 个落点」这种位置下标**。
+只要落点成员一变（删一个、翻转形态、重载），下标就整体滑动 —— 挂在它上面的一切标记
+（`picked/noint/times/uid`）全部跟着滑到别的落点上。§9.2 的 6 个 bug、以及后来 `jobPinSteps`
+那套「先钉对象引用再改」的补丁，全是为了绕开这一点。
+
+### 2. 目标形状
+
+把下标换成**落点自己的稳定身份**：
+
+```jsonc
+// 落点 = 棋盘上的一个 item，它的身份信息本来就有（见 21/08 的 item 形状）
+//   key(cardN/feed/…) + row + col + seq
+// 段：picked 从 [0,2] 变成 ["card1@2,1#1", "card1@2,1#3"]
+{ "key": "card1", "sids": ["card1@2,1#1","card1@2,1#3"], "noint": true }
+```
+
+好处：删/加别的落点**不会改变**任何 sid；跨链搬运也不用再「钉引用」。
+`jobPinSteps` / `jobStepIdentity` / `gidx` 那一套补丁可以整体退役。
+
+### 2.5 ★ 一个关键发现：稳定键**其实已经有了**（2026-11-02 勘察）
+
+`24-jobset-fields.js` 里已经有 `jobPlacementKey(mode, scopeId, r, c, seq)`，
+产出形如 `once|card1|2,1|3` 的**落点稳定键** —— 它现在专门用来挂「动作后等待」
+（`waitAfter` 的键），也就是说「落点身份」这件事项目里早就做对了，
+**只是链段存储没用它**（段里存的仍是 `picked` 位置下标）。
+
+这条让 P0 的成本和风险都降了一档：
+
+- 不需要新设计 id 格式，直接复用 `jobPlacementKey`（口径已经过实测）；
+- 段里加一个 `sids: ["once|card1|2,1|3", …]` 即可，迁移时把 `picked` 逐个翻译成 sids；
+- `waitAfter` 与 `sids` 从此同源 —— 以前「删落点后 waitAfter 键悬空」的问题也会一并消失。
+
+### 2.6 ⚠️ 真正的工作量在「身份解析要拿到棋盘」
+
+`jobStepId(st)` 现在是 `key + '#' + gidx`（纯位置），被 `jobCarryUids` / `jobPickId` /
+`jobApplyDrop` 的兜底匹配 / 勾选集合共用。要改成 sid，就得知道落点在哪一格：
+
+```
+jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
+```
+
+**调用点约 15 处**（27a / 43 / 44 / 测试里都有）。所以 P0 的实际顺序应该是：
+
+1. 先加 `jobSidOfPlacement(which, key, pl)` / `jobSegSids(...)`（纯新增，行为不变）；
+2. 把 `jobStepId` 换成 sid 版并**改全部调用点**（这一步一次性做完，不能半途）；
+3. 段存储改 `sids` + 迁移（读旧写新）；
+4. 退役 `jobPinSteps` / gidx 补丁；
+5. `fuzz_drag` 跑 500×150 + 真实作业集前后对读。
+
+### 3. 实施步骤（建议一次提交一步）
+
+| # | 步骤 | 门禁 |
+| --- | --- | --- |
+| 1 | 加 `jobSidOfPlacement(item)` / `jobSegSids(seg)`：**新旧双读**（有 `sids` 用 sids，没有就把 `picked` 当下标翻译成 sids） | 现有 10 套 + fuzz 全绿（行为不变） |
+| 2 | 所有写入口改成**只写 `sids`**（`picked/from/to/order` 保留写一份给旧运行时？→ 不保留，改 runtime 侧不用它） | + 新增 `repro_sid.js`：删/加落点后 sid 不漂 |
+| 3 | 删掉 `jobPinSteps` / gidx 相关补丁与注释 | fuzz 加长到 500×150 |
+| 4 | 迁移：载入旧作业集时把 `picked` 翻译成 `sids`（`jobMigrateSegs`），并**立刻回写**（存一次就变成新格式） | 用真实作业集跑 `report.py` + 手动对读 |
+| 5 | 文档：§9.2 的教训保留、但补一句「已在 P0 根治」；`AGENTS.md` 铁律 7 之后的提交要求不变 | — |
+
+### 4. 为什么这轮没做（重要）
+
+- 第 4 步是**数据迁移**：你现有的作业集（`assets/resource/jobs/*.json`）会从下标格式换成 sids。
+  迁移写错 = 你辛苦配的链条错位，而且**保存一次就固化**；
+- 它必须在没有别的批次在飞的时候做，并且要有**一份你真实的作业集**做前后对读；
+- 我这一轮的上下文已经不足以「改完 + 反复 fuzz + 真实数据核对」，硬上等于拿你的数据赌。
+
+### 4.5 ★ 已落地：第一步（2026-11-02，段存储未动）
+
+按用户「你试试能不能改」的要求，只做了**能安全收口的那一层**：
+
+| 改了什么 | 位置 |
+| --- | --- |
+| 新增 `jobSidOfPlacement(which, key, pl)` / `jobStepSid(which, st, board)`：直接复用已有的 `jobPlacementKey`（`链\|槽\|行,列\|seq`） | `27a-jobset-steps.js` 顶部 `jobStepId` 上方 |
+| 植物步骤在解析时**盖上 `st.sid`**（两个创建点都盖了：`jobSegsToSteps` 与 `jobResolveSteps` 的「补位」分支） | 同上 |
+| `jobStepId` / `jobStepIdentity`：植物步骤**优先用 sid**，拿不到才退回 `key#gidx`（老数据/兜底不炸） | 同上 |
+| `jobCarryUids` 的植物分支：配对键从 `key#gidx` 换成 **sid** | 同上 |
+
+**没动的**：段存储格式（还是 `picked` 下标）→ **老作业集不需要迁移**，载入即用。
+
+**这一层治好了什么**：删掉/新增别的落点后，`gidx` 前移不再导致步骤「换身份」，
+于是 uid 继承（勾选、拖动配对）跟着稳定 —— §9.2 那族里「删一格后勾选跑到别的株上」
+这一类从根上消失了。
+
+**回归**：`tests/repro_sid.js`（4 节 12 条）——
+①步骤带 sid ②删中间那株后剩下两步的 sid/stepId/uid 全不变
+③新增落点不改已有 sid ④没有 sid 的老步骤仍按 `key#gidx`（兜底不炸）。
+全套 11 套回归 + `fuzz_drag 200×100` 全绿。
+
+**剩下的**（下一轮）：把段存储从 `picked` 下标换成 `sids` + `jobMigrateSegs` 迁移，
+然后退役 `jobPinSteps` 那套「先钉引用再改」的补丁。到那一步才算 P0 收官。
+
+### 4.55 ★ P0 第二步已落地：段里写 `sids`（2026-11-02，老数据零影响）
+
+**关键事实（勘察真实作业集 `火气珊瑚.json` 后确认）**：
+
+- 编辑器真源是表的 `slotOrder / loopOrder / endOrder / boss*Order`，段形如
+  `{key, from:-1, to:-1, picked:[0,1]}` —— **位置下标**（滑位的根就在这）；
+- 导出给运行时的是 `non_boss.*_chain`，形如 `{key, slot, type, label, mode, cells:["格子3_1"]}`
+  —— **格子名**，本来就稳定；
+- 所以 Python 侧读的是 `cells`（+ `noint` 等），**根本不看 `slotOrder`**。
+
+→ 结论：只要**在 `slotOrder` 类段里补一个 `sids`**，Python 完全不用改，
+  旧作业集也不用迁移（没有 `sids` 就走老逻辑）。
+
+| 端 | 改动 |
+| --- | --- |
+| `27a` `jobStepsToSegs` | 段里新增 `sids`（与 `picked` **一一对应**、顺序一致）；`picked/from/to` 照旧写；
+  合并/单元素归一化时同步维护；任一项为空或长度对不上就**整个丢掉 sids**（宁可不写也不写半截） |
+| `24` `jobSegPlacements` | 段带 `sids` 且长度与下标一致时，**按 stable id 找落点**（`jobPlacementKey` 比对）；
+  找不到 = 这株没了 → 丢掉（等价于原来的「严格读棋盘」）；没有 `sids` → 老逻辑一字不改 |
+| Python | **没动** |
+
+**治好的症状**（`repro_sid` 第 5 节是判定性用例）：
+同格放两株、链里只挑了第 2 株，然后把第 1 株删掉 →
+老格式下 `picked:[1]` 越界，这株被当成“新落点”**补到链尾**（顺序错、可能把「」组打散）；
+新格式下它靠 sid 认回自己，**留在原位**。
+
+**真实作业集验证**：把 `火气珊瑚.json` 复制到 `assets/resource/jobs/` 跑 `report.py` ——
+解析正常（该文件没有 `sids`，走的就是老路径，行为不变）；探针文件已删除。
+
+**还没做的**：编辑器**首次保存**后会把 `sids` 写进文件（体积略增），届时可以再观察一轮；
+`jobPinSteps` 仍然保留（等 `sids` 在真实数据上跑过一轮再退役）。
+
+### 4.57 ★ P0 第三步：清理「动作后等待」悬空键（2026-11-02）
+
+`waitAfter` 的键是 `jobPlacementKey`（形如 `once|card1|2,1|3`）。以前删落点 / 清空格子 /
+删槽位时**没有任何地方清理它** —— 文件里会一直攒着指向“不存在的落点”的键。
+现在无害（读时找不到落点自然不生效），但会让作业集越存越胖，也妨碍以后按 key 做校验。
+
+- 新函数：`jobPruneWaitAfter(t, board, which)`（在 `27a`）
+- 清理时机：`jobStoreSteps` 末尾 —— **链条唯一的写盘出口**，不用去改 08 / 42 / 43 那些散落的删除入口
+- 判定：键能拆成 `mode|槽|r,c|seq` 时，在两块棋盘上都找不到该落点就删；**认不出来的键一律保留**（不敢删）
+- 回归：`repro_sid` 第 6 节 —— 悬空键被清、有效键与「认不出来的键」都保留
+
+### 4.6 剩余的收尾工作（下一轮做，含跨语言面）
+
+⚠️ **这不是纯编辑器内部的活** —— 段存储是**编辑器写、Python 读**的共享格式：
+
+| 端 | 文件 | 依赖什么 |
+| --- | --- | --- |
+| 编辑器 | `27a-jobset-steps.js`（`jobSegsToSteps` / `jobStepsToSegs` / `jobStoreSteps`） | 写 `picked/from/to` 下标 |
+| Python | `agent/jobset/dsl.py`（读 `from`/`to`/`key`/`ms`/`slot`/`times`/`comboMs`/`comboWatch`） | 按下标取落点 |
+| Python | `agent/jobset/compile.py`（`noint` 分组等） | 同上 |
+
+所以「段存储换成 sids」这一步必须**两边一起改**：编辑器写 `sids`、Python 优先读 `sids` 且兼容旧 `picked`，
+再补 `selfcheck.py` 的断言。`tests/repro_registry.js` 第 9 节已经把字段名契约钉住了 ——
+**动手时先在那里加 `sids`，再改代码**。
+
+### 4.7 已知边界（先记着，别当没有）
+
+1. **同格同槽两个落点 `seq` 相同** → sid 会撞成同一个。正常数据不会出现（`jobNextSeq` 保证递增），
+   但**手改 JSON** 可能造出来；真遇到时行为是「这两株被当成同一株」（勾选会一起动）。
+   如果要彻底防，得在 sid 里加“同 sid 内第几个”——但那又引入位置依赖，所以**故意不做**，先记录。
+2. **段存储这一轮没动**，所以 `picked/noint/times` 仍是位置下标：
+   「删落点后无间隔组标记滑到别人头上」这一类**仍可能发生**，现在靠 `jobPinSteps`（先钉引用再改）兜着。
+   只做完 4.6 才能退役这个补丁。
+3. `waitAfter` 的键虽然也是 `jobPlacementKey`（同源），但**删落点时仍然没人清理**它 ——
+   等段存储换成 sids 后再一起做「删落点 → 清悬空键」。
+
+### 5. 下次开工前需要准备### 5. 下次开工前需要准备
+
+1. 一份真实作业集文件名（我会先把它复制一份到临时位置做对读）；
+2. 允许我把 `fuzz_drag` 跑到 **500 会话 × 150 操作**（约几分钟）；
+3. 明确「旧格式还要不要兼容」——建议：**读旧写新**，只保留 1 个版本的兼容。
+
+---
 
 ## 11. 最近验证结果（全绿基线）
 
+**2026-11-02 实测（运行时：选卡/自定义动作的识别过程日志，见 §10.17）**：
+
+```
+agent\jobset\selfcheck.py           → 全部通过（exit 0）
+agent\jobset\check_supply_bypass.py → exit 0
+check_resource.py assets\resource   → exit 0
+agent\jobset\check_graph.py         → exit 1，10 条「空 next」
+                                      ★ 全是 **预存在**（v3 布局把 next 交给运行时注入：
+                                        单次/循环种植、恭喜过关、继续挑战_守卫、完成…
+                                        以及 3 个老空壳）。本轮只改 Python，没碰任何 pipe JSON。
+无设备冒烟（临时脚本已删）           → 局外命中/未命中、局内点击即成功/放弃、
+                                     槽位预检查、编队选择、格式化函数全部无异常
+```
+
+本轮改动文件：
+
+```
+agent/select_plant/custom_select_plant.py  ★识别过程日志：_ilog/_wlog/_probe_cands + 逐帧明细
+                                            （局内 8 槽 / 局外 80 / 编队选择）；新参数「详细日志」
+agent/select_plant/plant_match.py           match_plants(threshold=None) 探针模式（日志用，零额外算力）
+agent/jobset/runtime.py                     _sig_text / _reco_digest + Plan/Stage/Fight/AutoCount/
+                                            _apply_outer_pick 的识别依据日志
+assets/resource/pipeline/Endless_ref/06_Endless_80plant_choose/0601_80plant_choose_1.json
+                                            局外选卡 匹配阈值 0.9 -> 0.8（§10.17 追加）
+game_assist_tools/endless_setup/HANDOFF.md  §0 表格 + §10.17 + §11
+```
+
+**2026-11-02 实测（移动端：四屏 App 壳 + 拖拽按钮替代，见 §10.11~§10.13）**：
+
+```
+node --check static\js\*.js        → 41 个文件，0 失败
+tests\repro_*.js（11 套）          → 全过（undo_boss / copy_scope / slot_compact / cell_queue /
+                                     shuipi / reserved / nudge / mobile / registry / **dirty**）
+tests\fuzz_drag.js 200 100         → 200 会话 × 100 操作，0 个会话有首错
+CSS / 外观                          → 本环境**无法验证**（§7），需真机 / Ctrl+F5 / DevTools 手机模拟
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/js/44-jobset-mobile.js  ★新增 手机四屏壳（切屏 / 表条 / 长按 / 触屏拖拽 / 「?」速查+自检）
+game_assist_tools/endless_setup/static/js/45-jobset-dirty.js   ★新增 未保存改动防护（脏标记 / beforeunload / 三入口确认 / 胶囊）
+game_assist_tools/endless_setup/tests/repro_mobile.js          ★新增 壳层回归（12 节 77 条）
+game_assist_tools/endless_setup/tests/repro_nudge.js           ★新增 ↑/↓ 移一位回归（5 节 15 条）
+game_assist_tools/endless_setup/tests/repro_registry.js        ★新增 静态登记检查（9 节 131 条，见 §10.14）
+game_assist_tools/endless_setup/tests/repro_dirty.js           ★新增 未保存防护回归（6 节 23 条，见 §10.16）
+game_assist_tools/endless_setup/static/js/25-jobset-supply.js  补给卡 ← / →（手机改顺序，走 jobCommitSupplyOrder）
+game_assist_tools/endless_setup/static/css/base.css            棋盘尺寸变量化 + 移动端断点 + App 壳 + .sc-nav + 速查卡 + 脏胶囊
+game_assist_tools/endless_setup/static/index.html              棋盘行内 grid -> var(--cell)；#colSlots/#colBoard；
+                                                               #mNav 底部导航；⤢ 按钮；引入 44 / 45
+game_assist_tools/endless_setup/static/js/08-board-data.js      gridTemplateColumns 走 var(--cell)
+game_assist_tools/endless_setup/static/js/27-jobset-board.js    jobNudgeSelected / 棋盘缩放 / 吸附栏 ↑↓ / dataset 契约
+game_assist_tools/endless_setup/static/js/29-jobset-init.js     绑定 #boardZoomBtn + 恢复缩放
+game_assist_tools/endless_setup/static/js/43-jobset-cell-queue.js  方块 ← → + 提示文案
+game_assist_tools/endless_setup/HANDOFF.md                     §10.11 / §10.12 / §10.13 + §0/§0.1/§1/§11 同步
+```
+
+**编辑器（2026-11-01 收工时实测）**：
+
+```
+node --check static\js\*.js            → 40 个文件，0 失败
+node tests\repro_undo_boss.js          → 撤销/链条一致性 + boss 分离（25 条）
+node tests\repro_copy_scope.js         → 复制阵容两侧复选框（含"都不勾=拒绝"）
+node tests\repro_slot_compact.js       → 槽位压实 + 替换指定表 + 删除这株 + 载入压实
+                                          （第 7/7b/8/9a/9b/9c/10 节 = 多选目标 / 正在编辑默认勾
+                                           / boss 追问两分支 / 同植物跳过 / 面板左右并排结构）
+node tests\repro_cell_queue.js         → 格内落子方块窗（§10.8）：本格重排 / 单个删除 /
+                                          Ctrl+右键清空整格 / 单次循环分组隔离 / 上下文失效保护
+                                          / 弹窗 DOM 结构（46 条）
+node tests\repro_shuipi.js             → 水皮场景回归
+node tests\repro_reserved.js           → 预留接口（§10.10）：8 节 —— 注册表齐全 / 全部未实现 /
+                                          导出默认值 / 导出配了值 / 读回(含脏数据) / 摘要+关别过滤
+                                          + 编译恒空 / 预留落子动作不可达
+node tests\fuzz_drag.js 200 100        → 200 会话 × 100 操作，0 个会话有首错
+Get-ChildItem -File . -Filter zz*      → 空（临时脚本必须删干净，见 §8）
+```
+
+**运行时（Python，2026-11-01 实测）**：
 
 ```
 selfcheck.py                       →  全部通过
                                      第 8 节 form 21 条 / 第 9 节 tap 8 条
                                      第 10 节 squad 14 条（含与真实 pipe 对照）
+                                     §18 世界 case（改为「注入当前世界的恰好 16 个」）
+                                     §22 预留接口 38 条（含 JS↔PY 注册表漂移比对）
 check_resource.py assets/resource  →  All directories checked
 check_graph.py                     →  仅预存在空壳告警，无悬挂引用（见下方更正）
-JS 语法                            →  27 个拆分文件 node --check 全部通过
 ```
 
-> **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」。**实测是 6 个**，
-> 且全部为预存在、非本轮引入（`git diff --name-only | grep pipeline` 为空）：
-> `01_Endless_plant_ref.json` 的 `无尽挑战_检查是否需要选植物` / `无尽挑战_选植物`；
-> `0300Endless_fight.json` 的 `无尽局内_单次种植` / `无尽局内_循环种植` /
-> `无尽挑战_训练完成`；`Endless_html_ref.json` 的 `无尽挑战_编辑作业集`。
-> 其中 `无尽挑战_训练完成` 是 `StopTask`（本就该终止），其余是运行时注入的空壳。
+> **更正**：§9 曾写 `check_graph.py` 报「3 个空 next」，后来记成 6 个。**2026-11-01 实测是 10 个**，
+> 且全部为预存在、非本轮引入（本轮没碰任何 pipeline 文件）：
+> `01_Endless_plant_ref.json` 的 `无尽挑战_检查是否需要选植物`；
+> `0300Endless_fight.json` 的 `无尽局内_单次种植` / `无尽局内_循环种植` / `无尽局内_恭喜过关` /
+> `无尽局内_继续挑战_守卫` / `无尽挑战_jumpback_继续挑战` / `无尽挑战_完成`；
+> `Endless_End_or_loop.json` 的 `无尽挑战_结束`；`Endless_html_ref.json` 的 `无尽挑战_编辑作业集`；
+> `Endless_out.json` 的 `无尽挑战_提示_返回地图`。都是运行时注入的空壳 / 自我终止节点。
 > 另注：`check_graph.py` 退出码为 **1**（`sys.exit` 在有问题时），属预期。
+
+本轮（2026-11-01：**预留接口**，见 §10.10）改动文件：
+
+```
+agent/jobset/reserved.py          ★新增  预留接口注册表（解析 / 恒空编译 / 提示文案）
+agent/jobset/engine.py                    Table: pre_battle / pick_favorite / pick_tiers
+                                          JobSet: world_chains / mode_check（一律缺省=不变）
+agent/jobset/dsl.py                       GENERIC_RESERVED 分支：见到预留 id 只报「未实现」
+agent/jobset/compile.py                   RESERVED_SEG_TYPES：预留落子动作告警后跳过
+                                          （绝不退化成 click —— 那是静默错动作）
+agent/jobset/runtime.py                   _reserved_notice（只 log 不 override）+ 两个调用点
+                                          JobSetLoad / _inject_lineup；重置清去重集合
+agent/jobset/selfcheck.py                 §22 预留接口 38 条；§18 世界 case 断言改「注入的 16 个」
+.../static/index.html                     ★ 引入 16-jobset-reserved.js（15 之后、20 之前）
+.../static/js/16-jobset-reserved.js ★新增  四张注册表 + 默认值 + 导出/读回 + 恒空编译入口
+.../static/js/20-jobset-core.js           jobNewTable 调 jobReservedDefaults
+.../static/js/27-jobset-board.js          jobBuild 导出 表级/作业集级预留字段
+.../static/js/28-jobset-io.js             jobApplyLoaded 读回；jobResetEditor 清空
+.../tests/repro_reserved.js       ★新增  预留接口回归（8 节）
+```
 
 本轮（2026-10-01：切换形态 + 点击格子 + 落子动作注册表 + 重复落子）改动文件：
 
@@ -1015,6 +2945,44 @@ static registries = {
 | 无头浏览器 | `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe` |
 | 补给图片素材 | `game_assist_tools\endless_setup\static\supply\` |
 | 退出看门狗 | `agent/exit_watchdog.py`：关闭宿主（MFA/VSCode）时 `AgentServer.join()` 不返回，python.exe 残留。基础路径=**祖先进程监控**（toolhelp32 快照记录祖先链 **最多 6 层** 的 PID 与 exe 名，1.5s 轮询，消失或 PID 被复用即判宿主已关 → 2s 后 `os._exit`；2026-10-07 从 2 层放宽——扩展链路变成 `python <- powershell <- Code.exe`，Code 在第 3 层，2 层够不到导致 dev 模式失效、"停任务即退"不武装）。**VSCode 扩展宿主（祖先含 Code.exe）额外武装停止即退出**，双保险：① `Tasker.Task` 终态事件 sink（客户端是否转发没保证）；② 长动作循环里的协作检查 `_stopped()`（custom_select_plant）观测到停止即 `on_task_stopped()`——**action 运行期间是唯一可靠观测点**（句柄有效；action 外即被回收）。扩展每次 startTask 会 agent start race 重拉死进程 → 停=自杀=下次跑新代码（dev 循环刚需；扩展复用进程导致旧代码驻留，容易误判"改动没生效"）。**桌面端 MFAAvalonia 绝不停止即退**：它停任务后不重拉只复用，自杀后第二次任务 custom 全废（2026-10-04 打包版实测）。轮询 `tasker.running` 路线废弃（句柄 action 结束即回收，报 `tasker not found`/误自杀）。⚠️ `_stopped` 必须查 `stopping` 而不只 `running`——停止期间 running 要等当前 action 返回才变 False（鸡生蛋），SelectPlants 曾因此停任务后还多滑 20s |
+
+---
+
+## 12.1 ★ 作业集目录必须在「包外」（2026-10-30 踩坑）
+
+**现象**：用户更新一版就发现本地作业集全没了。
+
+**成因**：2026-09-30 的 `perf:更换打包目录地址` 把作业集从
+`<根>/assets/resource/jobs` 挪进了 MaaFramework 的资源目录
+`<根>/resource/jobs`。安卓端 `<根>` 是 MaaFwApp 的 **pi 解包树**，而
+`resource/` 是包里带的**根级条目**：
+
+- App 升级时 `versionCode` 与 `pi/pi.version` 标记对不上 →
+  `PiInstaller.install(wipe=false)` 先按上一份包的清单把
+  `resource/`、`agent/`… 整棵 `deleteRecursively()` 再重解；
+- 设置页「重新解压资源」走 `reinstall()`，`wipe=true` 直接把整棵 pi 删掉；
+- 包里又没有作业集（`prepare_android_pi.py` 明确清掉），重解后就是**空白**，不可恢复。
+
+MaaFwApp 自己的契约写在 `Android/MaaFwApp/INTEGRATION.md`：
+> 更新只整体替换新包根目录下有的条目（`resource/`、`tasks/`、`agent/` 这些），
+> 其余不动。所以记录、缓存放 `debug/`、`config/` 这类包里没有的目录。
+
+**现在的位置**（唯一口径：`agent/jobset/engine.py` 的 `jobs_dir_for()`，
+`pvz.py` / `pvz_android.py` 各留一份同口径实现，selfcheck §21 断言不漂移）：
+
+| 布局 | 作业集目录 | 为什么安全 |
+| --- | --- | --- |
+| 安卓（`<根>` = pi 解包树） | `<根>/../jobs` | 与 `pi` 同级；升级只替换包内根级条目，重解资源也不会删它 |
+| 桌面发行包 | `<根>/jobs` | 包里没有 `jobs/` 这一项，差分更新/解压覆盖都不碰 |
+| 开发仓库 | `<根>/assets/resource/jobs` | `.gitignore` 已排除，测试夹具也用它 |
+
+**迁移**：`migrate_legacy_jobs()` 会把历史位置（`<根>/resource/jobs`、
+`<根>/assets/resource/jobs`）里的 `*.json` 搬到新位置，同名不覆盖；
+agent 在 `load_jobset()` 前搬一次，网页端在启动时搬一次。
+
+**以后再加新功能**：**任何用户数据都不要写进 `resource/`、`agent/`、
+`game_assist_tools/` 这三个根级条目**，否则下次更新一起没（`debug/`、
+`config/` 是包外安全区的惯用名）。
 
 ---
 

@@ -36,6 +36,19 @@ async function jobOpenRefPicker() {
         document.getElementById('refTableSel').value = String(jobRef.table);
         document.getElementById('refBoardSel').value = jobRef.board;
         document.getElementById('refModeSel').value = jobRef.mode;
+    } else {
+        // ★ 首次打开：作业集默认「当前正在编辑的作业集」，表下拉默认「编辑器当前表」
+        //   （2026-10-24 用户要求）；超出所选作业集表数时夹到最后一表。
+        const curCode = (typeof jobCurrentCode === 'function') ? jobCurrentCode() : '';
+        if (curCode && Array.prototype.some.call(sel.options, function (o) { return o.value === curCode; })) {
+            sel.value = curCode;
+            jobRefSyncTableOptions();   // 表选项跟着作业集变
+        }
+        const tsel = document.getElementById('refTableSel');
+        const cur = (typeof currentTable === 'number' && Number.isFinite(currentTable))
+            ? currentTable : 0;
+        const max = Math.max(0, tsel.options.length - 1);
+        tsel.value = String(Math.min(cur, max));
     }
     p.classList.add('sp-open');
 }
@@ -70,7 +83,7 @@ async function jobRefApply() {
         const grid = t ? (board === 'late' ? t.boardLate : t.boardEarly) : null;
         if (!Array.isArray(grid) || !grid.length) { setStatus('🔍 那张表的棋盘是空的'); return; }
         jobRef = { code, name: data.job.name || code, table: ti, board, mode, grid };
-        jobRenderRefGhosts();
+        jobRefRepaintAll();
         jobRefSyncBadge();
         jobCloseRefPicker();
         setStatus(`🔍 对照：${jobRef.name} 表${ti + 1}（${board === 'late' ? 'boss关' : '普通关'}，${mode === 'over' ? '覆盖' : '底层透明'}）`);
@@ -81,16 +94,17 @@ async function jobRefApply() {
 
 function jobRefClear() {
     jobRef = null;
-    jobRenderRefGhosts();
+    jobRefRepaintAll();
     jobRefSyncBadge();
     setStatus('🔍 已清除对照');
 }
 
-// ---- 幽灵渲染（每次棋盘重绘后由 jobRenderCurrentBoard 调用）----
-function jobRenderRefGhosts() {
-    document.querySelectorAll('.ref-ghost-wrap').forEach(function (e) { e.remove(); });
+// ---- 幽灵渲染（由 renderBoard 在每次重建格子后调用 —— 与机制层同理：
+//      棋盘是 innerHTML 重建的，只挂在某条路径上就会在换表/切 boss 关
+//      时被抹掉（2026-10-24 用户实锤）；重建即清理，无需先扫旧幽灵）----
+// 参数：gridId = 刚重建的棋盘元素 id。
+function jobRenderRefGhosts(gridId) {
     if (!jobRef || !Array.isArray(jobRef.grid)) return;
-    const gridId = (typeof jobIsBossBoard === 'function' && jobIsBossBoard()) ? 'gridLate' : 'gridEarly';
     const gridEl = document.getElementById(gridId);
     if (!gridEl) return;
     gridEl.querySelectorAll('.cell').forEach(function (cellEl) {
@@ -119,6 +133,15 @@ function jobRenderRefGhosts() {
         if (jobRef.mode === 'under') cellEl.insertBefore(wrap, cellEl.firstChild);
         else cellEl.appendChild(wrap);
     });
+}
+
+// 应用/清除入口用：清掉两块棋盘上的旧幽灵，再按当前 jobRef 重画两块。
+// （不清直接画会重复叠加 —— renderBoard 路径靠 innerHTML 重建天然去重，
+//   而这里是在现有 DOM 上叠加。）
+function jobRefRepaintAll() {
+    document.querySelectorAll('.ref-ghost-wrap').forEach(function (e) { e.remove(); });
+    jobRenderRefGhosts('gridEarly');
+    jobRenderRefGhosts('gridLate');
 }
 
 // ---- 「对照中」徽标（阵容表行） ----

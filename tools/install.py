@@ -156,12 +156,11 @@ def install_resource():
         dirs_exist_ok=True,
     )
 
-    # 作业集目录：源码里被 .gitignore 排除（用户数据 / 本地调试数据），
-    # CI 检出的工作区是干净的 -> 上面这句拷不出它。这里预建空目录，
-    # 让作业集路径在打包后就是 <包根>/resource/jobs（与 agent/pvz.py 的
-    # 运行时判断一致：存在 <根>/resource/ 时就用它），
-    # 避免代码在包根另建一个 <包根>/assets/ 目录。
-    (install_path / "resource" / "jobs").mkdir(parents=True, exist_ok=True)
+    # 作业集（用户数据）在这里**不预建**：正式落点是 <包根>/jobs（包外），
+    # 由 agent / 网页编辑器首次使用时自己创建。口径见
+    # agent/jobset/engine.py 的 jobs_dir_for()。
+    # ★ 千万别让作业集回到 resource/ 下面 —— 那是包根级条目，安卓端 App
+    #   升级会把整棵 resource/ 删掉重解，用户作业集被清空（2026-10-30 事故）。
 
     # 复制 interface.json（只一次）
     shutil.copy2(

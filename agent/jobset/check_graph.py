@@ -18,10 +18,39 @@ PIPE = ROOT / "assets" / "resource" / "pipeline"
 
 
 def strip_comments(s: str) -> str:
-    s = re.sub(r"/\*.*?\*/", "", s, flags=re.S)
-    s = re.sub(r"^[ \t]*//.*$", "", s, flags=re.M)
-    s = re.sub(r",(\s*[}\]])", r"\1", s)
-    return s
+    """真 JSONC 剥离：去掉 // 行注释（含行尾注释）与 /* */ 块注释，
+    字符串值内部的 // 不受影响；顺带容忍尾逗号。
+    （2026-10-25 起 pipe 允许在字段后写行尾注释，如 `//会被覆盖` 标记。）"""
+    out, i, n = [], 0, len(s)
+    in_str = False
+    while i < n:
+        ch = s[i]
+        if in_str:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:          # 转义对原样保留
+                out.append(s[i + 1])
+                i += 2
+                continue
+            if ch == '"':
+                in_str = False
+            i += 1
+        elif ch == '"':
+            in_str = True
+            out.append(ch)
+            i += 1
+        elif ch == "/" and i + 1 < n and s[i + 1] == "/":   # 行注释 -> 吃到换行
+            i += 2
+            while i < n and s[i] != "\n":
+                i += 1
+        elif ch == "/" and i + 1 < n and s[i + 1] == "*":   # 块注释
+            i += 2
+            while i + 1 < n and not (s[i] == "*" and s[i + 1] == "/"):
+                i += 1
+            i += 2
+        else:
+            out.append(ch)
+            i += 1
+    return re.sub(r",(\s*[}\]])", r"\1", "".join(out))
 
 
 def load_all(base: Path):

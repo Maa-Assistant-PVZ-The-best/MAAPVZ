@@ -228,6 +228,8 @@ class ReturnOCR(CustomAction):
 
 # ==================== 新版：CustomRecognition ====================
 
+# ⚠️ 待删（零引用）：识别层数字比较闸门，功能被 DayLatchCheck 覆盖；
+#    pipe/task/interface 全库零引用，可直接删。〔退役清单 2026-10-25〕
 @AgentServer.custom_recognition("returnOCRReco")
 class ReturnOCRRecognition(CustomRecognition):
     """识别层判断：

@@ -72,9 +72,12 @@ const JOB_GENERIC_ACTIONS = [
 //   指纹 / chip 渲染认得 ga:artifact 段）。
 //   插入时【快照】当前阵容表的神器与体型：
 //     段形状 { key:'ga:artifact', ga:'artifact', artName:'葫芦神器',
-//              artType:'click|swipe|hold|special', artBody:'small|mid|big'(仅特殊类) }
+//              artType:'click|swipe|hold|special',
+//              artBody:'small|mid|big'(葫芦) | 'capture|print'(相机，2026-10-25) }
 //   编译（dsl.py）按快照翻坐标：click/hold -> 点/长按「神器_初始化_神器位置」；
-//     special(葫芦) -> 点神器位置 + sleep0.5 + 点「神器_初始化_葫芦X体型」。
+//     special(葫芦) -> 点神器位置 + 点「神器_初始化_葫芦X体型」；
+//     special(相机) 拍照 -> 点神器位置 + 点「相机复制」；
+//     special(相机) 打印 -> 点神器位置 + 点「相机粘贴」 + sleep0.5 + 点「相机粘贴」。
 const JOB_ARTIFACT_ACTION = {
     id: 'artifact', name: '使用神器', icon: '🏺', img: '',
     desc: '使用当前阵容配置的神器一次（按神器类型执行；插入时快照神器与体型）',
@@ -96,7 +99,8 @@ function jobArtifactSummary(seg) {
     if (!seg) return '';
     const nm = seg.artName || '?';
     if (seg.artType === 'special') {
-        return nm + '·' + ({ small: '小体型', mid: '中体型', big: '大体型' }[seg.artBody] || seg.artBody || '');
+        return nm + '·' + ({ small: '小体型', mid: '中体型', big: '大体型',
+                             capture: '拍照', print: '打印' }[seg.artBody] || seg.artBody || '');
     }
     return nm;
 }
@@ -552,6 +556,36 @@ function jobSegPlacements(board, seg, which) {
         const to = (seg.to === null || seg.to === undefined) ? total : seg.to;
         idxs = [];
         for (let g = (seg.from | 0); g < to; g++) idxs.push(g);
+    }
+
+    // ★ P0 第二步（2026-11-02）：段里带 `sids` 时，**按稳定身份找落点**，不再按位置下标。
+    //   为什么：`picked/from-to` 是「该槽在该链里的第 N 个落点」，同格放两株时
+    //   「删掉第 2 株」会让 picked 里的 1 越界被丢掉 —— 表现为**这一株从链里消失**；
+    //   或者删第 1 株时下标前移、步骤「换了人」。
+    //   ★ 老作业集没有 `sids` -> 走下面的老逻辑，行为一字不改（这就是「旧作业集也能跑」）。
+    if (Array.isArray(seg.sids) && seg.sids.length === idxs.length) {
+        const mapped = [];
+        for (let i = 0; i < seg.sids.length; i++) {
+            const want = seg.sids[i];
+            if (!want) { mapped.push(idxs[i]); continue; }      // 没写 sid 的那一项按老口径
+            let hit = -1;
+            for (let k = 0; k < all.length; k++) {
+                let sid = '';
+                try {
+                    sid = jobPlacementKey(which, seg.key, all[k].r, all[k].c, all[k].item.seq);
+                } catch (e) { sid = ''; }
+                if (sid === want) { hit = k; break; }
+            }
+            // 找不到 = 这一株已经不在了 -> 丢掉（等价于老的「严格读棋盘」）
+            if (hit !== -1) mapped.push(hit);
+        }
+        // 去重（同一个 sid 只留一次），保持原顺序
+        const seen2 = {};
+        idxs = mapped.filter(function (g) {
+            if (seen2[g]) return false;
+            seen2[g] = true;
+            return true;
+        });
     }
 
     // ★ 严格读取棋盘：丢掉棋盘上不存在的下标（植物被删掉后，

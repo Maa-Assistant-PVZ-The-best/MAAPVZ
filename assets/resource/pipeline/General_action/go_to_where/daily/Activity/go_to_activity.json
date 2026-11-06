@@ -1,0 +1,16 @@
+{
+    "导航_活动合集": {
+        "recognition": "OCR",
+        "expected": [
+            "活动合集"
+        ],
+        "action": "Click",
+        "roi": [
+            855,
+            416,
+            122,
+            62
+        ],
+        "next": []
+    }
+}

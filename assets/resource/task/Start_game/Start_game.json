@@ -278,6 +278,12 @@
                         "打开pvz_taptap": {
                             "enabled": true
                         },
+                        "打开pvz_识别登录": {
+                            "next": [
+                                "打开pvz_点击登录_taptap",
+                                "[JumpBack]点击登录_jumpback_关闭广告"
+                            ]
+                        },
                         "关闭pvz_taptap": {
                             "enabled": true
                         }

@@ -44,7 +44,7 @@ function jobEndParams(t) {
     return {
         type: type,
         post: Number.isFinite(post) ? post : 15000,
-        loopN: (Number.isFinite(loopN) && loopN >= 1) ? loopN : 3,
+        loopN: (Number.isFinite(loopN) && loopN >= 0) ? loopN : 3,
         settleMs: Number.isFinite(settleMs) ? settleMs : 15000,
         after: after,
         sub: sub
@@ -97,7 +97,7 @@ function jobOnEndParamInput(which) {
     if (!t) return;
     const map = {
         post:   ['earlyEndPostDelay', 'endPostDelay', 15000, 0],
-        loops:  ['earlyEndLoopCount', 'endLoopCount', 3, 1],
+        loops:  ['earlyEndLoopCount', 'endLoopCount', 3, 0],
         settle: ['earlyEndSettleMs', 'endSettleMs', 15000, 0],
     };
     const m = map[which];

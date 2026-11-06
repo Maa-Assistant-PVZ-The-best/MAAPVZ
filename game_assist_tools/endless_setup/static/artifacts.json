@@ -51,7 +51,7 @@
     "name": "相机神器",
     "en": "artifact_camera",
     "desc": "使用相机完成拍照，使用相片完成植物回溯",
-    "type": "click",
+    "type": "special",
     "img": "static/artifact/artifact_camera.webp",
     "has_img": false
   },

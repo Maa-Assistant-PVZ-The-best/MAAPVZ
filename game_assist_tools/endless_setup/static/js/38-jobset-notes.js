@@ -4,14 +4,19 @@
 //
 // 交互（用户定的流程）：
 //   点「📝 配置」→ 弹窗列出本作业集用到的所有神器与植物（总览）。
-//   「调配阶数」模式：先在阶数条里选 1-5 阶（或任意），再点植物 -> 落定。
-//   「佩戴挂件」模式：先在挂件条里选挂件，再点植物 -> 佩戴（每株仅一个，
-//                    再选即替换；选「卸下」再点植物 = 摘除）。
+//   「调配阶数」模式：先在阶数条里选 1-5 阶（或任意），再点植物/神器 -> 落定。
+//                    （2026-10-25 起神器也可调配阶数）
+//   「佩戴挂件」模式：先在挂件条里选挂件，（可选）在挂件阶数条选阶数，
+//                    再点植物 -> 佩戴（每株仅一个，再选即替换；选「卸下」
+//                    再点植物 = 摘除）。挂件阶数 1-5 / 任意（2026-10-25）。
 //   仅作展示与导出，不影响运行时逻辑。
 //
-// 数据：jobPlantNotes = { 植物名: { tier: 1-5, pendant: "挂件中文名" } }
-//   tier 缺省 = 任意阶数可用；pendant 缺省 = 无挂件。
-//   出口：jobGetPlantNotes()（剪掉空备注）/ jobSetPlantNotes(notes)。
+// 数据：jobPlantNotes = { 植物名: { tier: 1-5, pendant: "挂件中文名",
+//                                   pendantTier: 1-5, costume: true } }
+//       jobArtifactNotes = { 神器名: { tier: 1-5 } }
+//   tier 缺省 = 任意阶数可用；pendant 缺省 = 无挂件；pendantTier 缺省 = 任意阶。
+//   出口：jobGetPlantNotes() / jobSetPlantNotes(n)
+//         jobGetArtifactNotes() / jobSetArtifactNotes(n)（都剪掉空备注）
 //
 // 素材：static/pendants/item_*.png（挂件，45 个，有中文名的全收录）
 //       static/ranks/rank1..5.png（卡面阶数角标）
@@ -72,11 +77,13 @@ const JOB_PENDANT_IMG = {};   // 挂件中文名 -> 图标文件
 JOB_PENDANTS.forEach(function (p) { JOB_PENDANT_IMG[p.name] = p.img; });
 
 // ---- 状态（作业集级）----
-let jobPlantNotes = {};          // { 植物名: {tier, pendant, costume:true} }
+let jobPlantNotes = {};          // { 植物名: {tier, pendant, pendantTier, costume:true} }
                                  // costume = 布尔：是否需要装扮（与阶数同款点选配置）
+let jobArtifactNotes = {};       // { 神器名: {tier} }（2026-10-25 神器阶数）
 let npMode = 'view';             // view | tier | pendant | costume
 let npArmTier = 0;               // 阶数条当前武装值（0 = 任意）
 let npArmPendant = null;         // 挂件条当前武装（null = 未选；'' = 卸下）
+let npArmPendantTier = 0;        // 挂件阶数条当前武装（0 = 任意阶）
 
 // 出口：导出/缓存用（剪掉「任意阶 + 无挂件 + 无装扮」的空备注）
 function jobGetPlantNotes() {
@@ -85,11 +92,15 @@ function jobGetPlantNotes() {
         const n = jobPlantNotes[name] || {};
         const tier = parseInt(n.tier) || 0;
         const pendant = (typeof n.pendant === 'string' && n.pendant) ? n.pendant : '';
+        const ptier = parseInt(n.pendantTier) || 0;
         const costume = !!n.costume;
         if (tier >= 1 && tier <= 5 || pendant || costume) {
             out[name] = {};
             if (tier >= 1 && tier <= 5) out[name].tier = tier;
-            if (pendant) out[name].pendant = pendant;
+            if (pendant) {
+                out[name].pendant = pendant;
+                if (ptier >= 1 && ptier <= 5) out[name].pendantTier = ptier;
+            }
             if (costume) out[name].costume = true;
         }
     });
@@ -102,11 +113,35 @@ function jobSetPlantNotes(notes) {
             const n = notes[name] || {};
             const tier = parseInt(n.tier) || 0;
             const pendant = (typeof n.pendant === 'string' && n.pendant) ? n.pendant : '';
+            const ptier = parseInt(n.pendantTier) || 0;
             const costume = !!n.costume;   // 旧版字符串装扮名也视为「需要装扮」
             jobPlantNotes[name] = {};
             if (tier >= 1 && tier <= 5) jobPlantNotes[name].tier = tier;
-            if (pendant) jobPlantNotes[name].pendant = pendant;
+            if (pendant) {
+                jobPlantNotes[name].pendant = pendant;
+                if (ptier >= 1 && ptier <= 5) jobPlantNotes[name].pendantTier = ptier;
+            }
             if (costume) jobPlantNotes[name].costume = true;
+        });
+    }
+    if (document.getElementById('notesPicker')) jobRenderNotesPicker();
+}
+
+// 神器阶数备注（2026-10-25）：结构与植物同款，剪掉「任意阶」的空备注
+function jobGetArtifactNotes() {
+    const out = {};
+    Object.keys(jobArtifactNotes).forEach(function (name) {
+        const tier = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
+        if (tier >= 1 && tier <= 5) out[name] = { tier: tier };
+    });
+    return out;
+}
+function jobSetArtifactNotes(notes) {
+    jobArtifactNotes = {};
+    if (notes && typeof notes === 'object') {
+        Object.keys(notes).forEach(function (name) {
+            const tier = parseInt((notes[name] || {}).tier) || 0;
+            if (tier >= 1 && tier <= 5) jobArtifactNotes[name] = { tier: tier };
         });
     }
     if (document.getElementById('notesPicker')) jobRenderNotesPicker();
@@ -150,12 +185,21 @@ function jobNpSetMode(mode) {
     });
     const hint = document.getElementById('npModeHint');
     if (hint) {
-        hint.textContent = mode === 'tier' ? '先在阶数条选阶数，再点植物落定；再点一次同阶数 = 取消回任意'
-            : mode === 'pendant' ? '先在挂件条选挂件，再点植物佩戴（每株仅一个）；再点已佩戴的同款 = 摘下'
+        hint.textContent = mode === 'tier' ? '先在阶数条选阶数，再点植物或神器落定；再点一次同阶数 = 取消回任意'
+            : mode === 'pendant' ? '先在挂件条选挂件（可在阶数条指定挂件阶数），再点植物佩戴（每株仅一个）；点已佩戴的同款 = 摘下，同款不同阶 = 改阶数'
             : mode === 'costume' ? '点植物 = 标记需要装扮；再点一次 = 取消'
             : '总览本作业集用到的神器与植物';
     }
     jobRenderNpArmBar();
+}
+
+// 武装条滚轮：纵向滚轮 -> 横向滚动（行容器逐个绑）
+function _npBindWheel(row) {
+    row.addEventListener('wheel', function (e) {
+        if (!e.deltaY) return;
+        e.preventDefault();
+        row.scrollLeft += e.deltaY;
+    }, { passive: false });
 }
 
 function jobRenderNpArmBar() {
@@ -166,6 +210,8 @@ function jobRenderNpArmBar() {
     bar.innerHTML = '';
 
     if (npMode === 'tier') {
+        const row = document.createElement('div');
+        row.className = 'np-arm-row';
         const mk = function (tier, label) {
             const b = document.createElement('button');
             b.type = 'button';
@@ -180,12 +226,16 @@ function jobRenderNpArmBar() {
                 b.textContent = '任意';
             }
             b.addEventListener('click', function () { npArmTier = tier; jobRenderNpArmBar(); });
-            bar.appendChild(b);
+            row.appendChild(b);
         };
         mk(0, '任意阶数可用（默认）');
         for (let i = 1; i <= 5; i++) mk(i, i + ' 阶启用');
+        bar.appendChild(row);
+        _npBindWheel(row);
     } else if (npMode === 'costume') {
         // 装扮 = 有/无两种状态，无需选择具体款式：直接点植物切换
+        const row = document.createElement('div');
+        row.className = 'np-arm-row';
         const b = document.createElement('span');
         b.className = 'np-arm-static';
         const im = document.createElement('img');
@@ -193,16 +243,20 @@ function jobRenderNpArmBar() {
         im.alt = '装扮';
         b.appendChild(im);
         b.appendChild(document.createTextNode('点植物 = 穿 / 再点 = 脱'));
-        bar.appendChild(b);
+        row.appendChild(b);
+        bar.appendChild(row);
     } else {
-        // 挂件条：卸下 + 45 个挂件
+        // 挂件模式 = 两行（2026-10-25）：挂件行 + 挂件阶数行
+        // 行1：卸下 + 45 个挂件
+        const row1 = document.createElement('div');
+        row1.className = 'np-arm-row';
         const off = document.createElement('button');
         off.type = 'button';
         off.className = 'np-arm-item' + (npArmPendant === '' ? ' np-armed' : '');
         off.textContent = '✕ 卸下';
         off.title = '选中后点植物 = 摘掉它的挂件';
         off.addEventListener('click', function () { npArmPendant = ''; jobRenderNpArmBar(); });
-        bar.appendChild(off);
+        row1.appendChild(off);
         JOB_PENDANTS.forEach(function (pd) {
             const b = document.createElement('button');
             b.type = 'button';
@@ -213,8 +267,37 @@ function jobRenderNpArmBar() {
             im.alt = pd.name;
             b.appendChild(im);
             b.addEventListener('click', function () { npArmPendant = pd.name; jobRenderNpArmBar(); });
-            bar.appendChild(b);
+            row1.appendChild(b);
         });
+        // 行2：挂件阶数（任意 + 1-5 阶）
+        const row2 = document.createElement('div');
+        row2.className = 'np-arm-row';
+        const lbl = document.createElement('span');
+        lbl.className = 'np-arm-row-label';
+        lbl.textContent = '挂件阶数：';
+        row2.appendChild(lbl);
+        const mkT = function (tier, label) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'np-arm-item' + (npArmPendantTier === tier ? ' np-armed' : '');
+            b.title = label;
+            if (tier >= 1) {
+                const im = document.createElement('img');
+                im.src = RANK_IMG_DIR + 'rank' + tier + '.png';
+                im.alt = label;
+                b.appendChild(im);
+            } else {
+                b.textContent = '任意';
+            }
+            b.addEventListener('click', function () { npArmPendantTier = tier; jobRenderNpArmBar(); });
+            row2.appendChild(b);
+        };
+        mkT(0, '挂件任意阶（默认）');
+        for (let i = 1; i <= 5; i++) mkT(i, '挂件 ' + i + ' 阶');
+        bar.appendChild(row1);
+        bar.appendChild(row2);
+        _npBindWheel(row1);
+        _npBindWheel(row2);
     }
 }
 
@@ -222,7 +305,7 @@ function jobRenderNpArmBar() {
 function jobRenderNotesPicker() {
     const used = jobCollectUsed();
 
-    // 神器行
+    // 神器行（2026-10-25 起神器可调配阶数：tier 模式下可点，带阶数角标）
     const artRow = document.getElementById('npArtRow');
     if (artRow) {
         artRow.innerHTML = '';
@@ -230,8 +313,10 @@ function jobRenderNotesPicker() {
             artRow.innerHTML = '<span class="np-empty">（本作业集未使用神器）</span>';
         }
         used.artifacts.forEach(function (name) {
+            const aTier = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
             const card = document.createElement('div');
-            card.className = 'np-art';
+            card.className = 'np-art' + (npMode === 'tier' ? ' np-clickable' : '');
+            card.title = name + (aTier >= 1 ? ` · ${aTier}阶` : ' · 任意阶数');
             const im = document.createElement('img');
             im.src = _npArtifactImg(name);
             im.alt = name;
@@ -241,6 +326,27 @@ function jobRenderNotesPicker() {
             nd.className = 'np-name';
             nd.textContent = name;
             card.appendChild(nd);
+            if (aTier >= 1 && aTier <= 5) {
+                const tg = document.createElement('img');
+                tg.className = 'np-badge np-badge-tier';
+                tg.src = RANK_IMG_DIR + 'rank' + aTier + '.png';
+                tg.title = aTier + ' 阶';
+                card.appendChild(tg);
+            }
+            card.addEventListener('click', function () {
+                if (npMode !== 'tier') return;
+                const cur = parseInt((jobArtifactNotes[name] || {}).tier) || 0;
+                if (npArmTier >= 1 && cur !== npArmTier) {
+                    jobArtifactNotes[name] = { tier: npArmTier };
+                    setStatus(`🔢 神器 ${name} → ${npArmTier} 阶`);
+                } else {
+                    // 再点同阶数 / 武装「任意」= 取消回任意阶
+                    delete jobArtifactNotes[name];
+                    setStatus(`🔢 神器 ${name} → 任意阶数`);
+                }
+                jobRenderNotesPicker();
+                if (typeof jobSaveLocal === 'function') jobSaveLocal();
+            });
             artRow.appendChild(card);
         });
     }
@@ -256,13 +362,14 @@ function jobRenderNotesPicker() {
         const note = jobPlantNotes[name] || {};
         const tier = parseInt(note.tier) || 0;
         const pendant = note.pendant || '';
+        const ptier = parseInt(note.pendantTier) || 0;
         const costume = !!note.costume;
 
         const card = document.createElement('div');
         card.className = 'np-item' + (npMode !== 'view' ? ' np-clickable' : '');
         card.title = name
             + (tier >= 1 ? ` · ${tier}阶启用` : ' · 任意阶数')
-            + (pendant ? ` · 挂件：${pendant}` : '')
+            + (pendant ? ` · 挂件：${pendant}` + (ptier >= 1 ? `${ptier}阶` : '') : '')
             + (costume ? ' · 需要装扮' : '');
 
         const im = document.createElement('img');
@@ -281,8 +388,16 @@ function jobRenderNotesPicker() {
             const tg = document.createElement('img');
             tg.className = 'np-badge np-badge-pendant';
             tg.src = PENDANT_IMG_DIR + JOB_PENDANT_IMG[pendant];
-            tg.title = '挂件：' + pendant;
+            tg.title = '挂件：' + pendant + (ptier >= 1 ? `（${ptier}阶）` : '');
             card.appendChild(tg);
+            // 挂件阶数迷你角标：挂在挂件徽章正下方（与植物自身阶数角标区分）
+            if (ptier >= 1 && ptier <= 5) {
+                const pt = document.createElement('img');
+                pt.className = 'np-badge np-badge-ptier';
+                pt.src = RANK_IMG_DIR + 'rank' + ptier + '.png';
+                pt.title = `挂件 ${ptier} 阶`;
+                card.appendChild(pt);
+            }
         }
         // 底栏右下那一栏：[装扮][阶数] 并排 —— 只有标记了才显示
         if (costume) {
@@ -321,15 +436,27 @@ function jobRenderNotesPicker() {
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
             } else if (npMode === 'pendant') {
                 const cur = (jobPlantNotes[name] || {}).pendant || '';
+                const curTier = parseInt((jobPlantNotes[name] || {}).pendantTier) || 0;
                 if (npArmPendant === null) { setStatus('💎 先在挂件条里选一个挂件'); return; }
-                if (npArmPendant === '' || cur === npArmPendant) {
-                    // 「卸下」或再点已佩戴的同款挂件 = 摘除
-                    if (jobPlantNotes[name]) delete jobPlantNotes[name].pendant;
+                if (npArmPendant === '' || (cur === npArmPendant && curTier === npArmPendantTier)) {
+                    // 「卸下」或再点已佩戴的同款同阶 = 摘除
+                    if (jobPlantNotes[name]) {
+                        delete jobPlantNotes[name].pendant;
+                        delete jobPlantNotes[name].pendantTier;
+                    }
                     setStatus(`💎 已摘下 ${name} 的挂件`);
+                } else if (cur === npArmPendant) {
+                    // 同款不同阶 = 只改挂件阶数
+                    jobPlantNotes[name] = jobPlantNotes[name] || {};
+                    if (npArmPendantTier >= 1) jobPlantNotes[name].pendantTier = npArmPendantTier;
+                    else delete jobPlantNotes[name].pendantTier;
+                    setStatus(`💎 ${name} 的 ${npArmPendant} → ${npArmPendantTier >= 1 ? npArmPendantTier + ' 阶' : '任意阶'}`);
                 } else {
                     jobPlantNotes[name] = jobPlantNotes[name] || {};
                     jobPlantNotes[name].pendant = npArmPendant;
-                    setStatus(`💎 ${name} 佩戴 ${npArmPendant}`);
+                    if (npArmPendantTier >= 1) jobPlantNotes[name].pendantTier = npArmPendantTier;
+                    else delete jobPlantNotes[name].pendantTier;
+                    setStatus(`💎 ${name} 佩戴 ${npArmPendant}${npArmPendantTier >= 1 ? `（${npArmPendantTier} 阶）` : ''}`);
                 }
                 jobRenderNotesPicker();
                 if (typeof jobSaveLocal === 'function') jobSaveLocal();
@@ -353,7 +480,8 @@ function jobRenderNotesPicker() {
     const tip = document.getElementById('npTip');
     if (tip) {
         const noted = Object.keys(jobGetPlantNotes()).length;
-        tip.textContent = `神器 ${used.artifacts.length} · 植物 ${used.plants.length} · 已标注 ${noted}`;
+        const artNoted = Object.keys(jobGetArtifactNotes()).length;
+        tip.textContent = `神器 ${used.artifacts.length} · 植物 ${used.plants.length} · 已标注 ${noted + artNoted}`;
     }
 }
 
@@ -368,6 +496,8 @@ function jobOpenNotesPicker() {
 function jobCloseNotesPicker() {
     const p = document.getElementById('notesPicker');
     if (p) p.classList.remove('sp-open');
+    // 标签选择弹窗压在这个弹窗上面，一起关掉（41-jobset-tags.js）
+    if (typeof jobCloseTagPicker === 'function') jobCloseTagPicker();
 }
 
 // ---- 「是否查看配置」提示条（载入作业集后由 jobApplyLoaded 调用）----
@@ -397,13 +527,7 @@ function jobNotesInit() {
     document.querySelectorAll('#notesPicker .np-mode').forEach(function (b) {
         b.addEventListener('click', function () { jobNpSetMode(b.dataset.mode); });
     });
-    // 武装条（挂件条一行 45 个）：滚轮上下 -> 横向滚动
-    const arm = document.getElementById('npArmBar');
-    if (arm) arm.addEventListener('wheel', function (e) {
-        if (!e.deltaY) return;
-        e.preventDefault();
-        arm.scrollLeft += e.deltaY;
-    }, { passive: false });
+    // 武装条滚轮：各行容器的滚轮绑定在 jobRenderNpArmBar 里（挂件模式两行）
     // 「是否查看配置」提示条
     const view = document.getElementById('nprView');
     if (view) view.addEventListener('click', function () { _jobHideNotesPrompt(); jobOpenNotesPicker(); });

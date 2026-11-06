@@ -41,10 +41,22 @@ from maa.custom_action import CustomAction
 from maa.custom_recognition import CustomRecognition
 
 from .engine import JobSet, JobSetError, load_jobset, RESOURCE_DIR
+from . import reserved as _reserved
 from .level_tracker import LevelTracker, from_params
 from .level_tracker import BOSS_SNAP as _BOSS_SNAP
 # 链节点名常量（日志打印用）；编译器本体在 compile.py（pvz.py 保存时调用）
 from .compile import CHAIN_NODE_TPL, KIND_CN
+
+# ★ 主界面「第X关」= 本局要打的那一关（2026-10-29 用户实跑确认）
+#
+#   ⚠️ 别再加 +1：曾（同日）误以为主界面显示的是「已通过的那一关」而加了偏移，
+#      实跑日志直接打脸 ——
+#        `✅ 用户确认：识别到「第111关」时，游戏里确实是 111 关`
+#      加偏移后计数器反而多 1（按 112 记账）。已回退。
+#   真实出现过的「计数器落后 1 格（bot 说 107、实际 108）」另有原因，
+#   用户观测：自动计数只在**第 2 关**才打出关卡数，且打的是上一关的数字 ——
+#   即**触发时机 / 取帧偏晚**，不是换算口径问题。待查：把校准挪到
+#   「过关后、选卡前」并在报数时打印识别耗时/帧时间。
 
 # ---------------------------------------------------------------------------
 # 进程级单例状态
@@ -66,6 +78,42 @@ _STATE: Dict[str, Any] = {
 
 def _log(msg: str) -> None:
     print(f"[JobSet] {msg}", file=sys.stderr, flush=True)
+
+
+def _sig_text(sig: Any) -> str:
+    """阵容签名 -> 短文本（日志用，别把 8 个植物名全倒进一行）。"""
+    if not isinstance(sig, tuple) or len(sig) < 2:
+        return str(sig)
+    if sig[0] == "deck":
+        return f"编队{sig[1]}"
+    plants = list(sig[1] or ())
+    head = "、".join(plants[:3])
+    return f"选卡{len(plants)}株[{head}{'…' if len(plants) > 3 else ''}]"
+
+
+def _reco_digest(argv: Any) -> str:
+    """把一次识别详情压成一行摘要（命中框 / OCR 候选文本），日志用。
+
+    ★ 用户要看的是「识别过程」，而不是只有结论：这条给出「这一帧识别
+      命中了哪个框、OCR 候选文本有哪些」，自定义动作里凡是能用上
+      argv.reco_detail 的地方都应该打一条。
+    """
+    reco = getattr(argv, "reco_detail", None)
+    if reco is None:
+        return "（本节点没有识别详情）"
+    parts: List[str] = []
+    box = getattr(reco, "box", None)
+    if box:
+        try:
+            parts.append("命中框=(" + ",".join(str(int(v)) for v in box) + ")")
+        except Exception:
+            parts.append(f"命中框={box}")
+    texts = _reco_all_texts(reco)
+    if texts:
+        parts.append("OCR候选=" + str(texts[:6]))
+    if not parts:
+        parts.append("（识别详情为空）")
+    return " ".join(parts)
 
 
 def _check_world(js: JobSet, cur_world: str) -> str:
@@ -158,7 +206,7 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
 
     # ★ 神器同理：首关必走选神器流程（开局局内装备未知 -> force）。
     #   预热可能被调两次（Load / AutoCount），走签名会被第二次还原，必须 force。
-    _inject_artifact(context, table, _pw_boss, lineup_changed=True, force=True)
+    _inject_artifact(context, table, _pw_boss, force=True)
 
     # ★ 回写「当前关卡」focus：MFA 界面显示的关卡号来自这两个节点的 focus，
     #   而 focus 平时只有 JobSetPlan（过关计数时）才写 —— 打完 149 开新一轮时
@@ -167,7 +215,7 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
     #   ★ 2026-10-22 修复：这三行曾被 v3 fail-fast 的 return 顶成死代码
     #     （10-12 起）—— 自动计数收号后界面永远停在「当前关卡：1」，
     #     且 plan_table_index 不落账导致 Plan 每关保守换阵。
-    _lv_msg = f"当前关卡：{lv}"
+    _lv_msg = _focus_level_line(lv, lv > 0)
     _set_focus(context, NODE_PLAN_NORMAL, _lv_msg)
     _set_focus(context, NODE_PLAN_TRAINING, _lv_msg)
 
@@ -311,8 +359,10 @@ def _reco_all_texts(reco: Any) -> List[str]:
 #   2) 「无尽_选择编队」的 custom_action_param.目标编队 -> 编队号
 #
 # ★ 「确认自己在选卡界面」由「清空卡牌」那个 OCR 节点天然保证：
-#   它认到「清空卡牌」才会 Click 并走 next。认不到 -> OCR 超时 -> 不会误点编队。
+#   它认到「清空卡牌」才走 next。认不到 -> OCR 超时 -> 不会误点编队。
 #   所以这里不需要额外加识别节点。
+#   ⚠️ 2026-10-28 补：这道保证的前提是「recognition 永不覆盖」——
+#     阵容不变时只把 action 翻成 DoNothing（只认不点），不再改 DirectHit。
 #
 # ★★ 2026-10-23 重写：编队选择改为 SelectPlants 的「编队选择」custom 模式
 #   （闭环：整列 OCR -> 点击 -> 白字核对 -> 回弹重试），旧 Or 具名分支节点
@@ -368,6 +418,11 @@ def _apply_outer_pick(context: Context, js) -> None:
     """
     mode = getattr(js, "outer_pick_mode", "auto")
     plants = getattr(js, "outer_pick_plants", []) or []
+    # ★ 识别过程日志：入口先说清「这次走哪条路、有多少株要选」。
+    #   用户报「局外选卡完全没日志」时，这一行就能区分三类情况：
+    #   ① 没走到（看不到这行）；② 走了 oneclick/confirm（不自动选）；
+    #   ③ 走了 auto 但列表为空。
+    _log(f"局外选卡：作业集 outer_pick mode={mode}，植物 {len(plants)} 个（上限 80）")
 
     if mode == "oneclick":
         try:
@@ -424,6 +479,13 @@ def _apply_outer_pick(context: Context, js) -> None:
         _log(f"局外选卡=按列表自动选取：「选择挑战植物」-> 清空 -> 自动选 "
              f"{len(plants)} 个 -> 确定；已注入 {plants[:5]}"
              f"{'...' if len(plants) > 5 else ''}")
+        # ★ 识别过程日志：把「80 选卡界面要用的识别几何」一并打出来 ——
+        #   用户排查「局外选卡认不到/点错」时，第一眼要看的就是这几个值
+        #   （它们来自 pipe 里用户实测的参数，runtime 只做合并、不改）。
+        _log(f"局外选卡识别参数：搜索roi={merged.get('搜索roi')} "
+             f"阈值={merged.get('匹配阈值')} "
+             f"滑动={merged.get('滑动')} 回顶={merged.get('回顶')} "
+             f"（节点 {NODE_OUTER_PICK}）")
     except Exception as e:
         _log(f"局外选卡注入失败（{type(e).__name__}: {e}）")
 
@@ -437,12 +499,29 @@ NODE_BATTLE_START = "无尽挑战_选取植物_开始战斗"
 # 选神器流程里的模板识别节点（pipe：06Endless_god_vessel）——
 #   template 由本 agent 按当前表神器动态覆盖（god_vessel/<en>/ + <en>_1.png）。
 NODE_ARTIFACT_TPL = "无尽挑战_神器"
-# 选神器入口/收尾节点（pipe：06Endless_god_vessel）。
-#   ★ pipe 里没有任何节点指向「选取神器」—— 进出都靠这里 runtime 覆盖：
-#     需要换神器：识别开始战斗.next=[选取神器]，关闭神器界面.next=跟随选卡逻辑；
-#     不需要：    识别开始战斗.next=[清空卡牌]（还原），选取神器 改 DirectHit 兜底。
+# ★ 骨架（2026-10-28 用户定稿：「骨架固定、只翻动作」）——
+#
+#     识别开始战斗(OCR) -> 清空卡牌(OCR) -> 选取植物 -> (选取神器?) -> 开始战斗
+#
+#   这条路线**永远一样**，runtime 只翻每站的动作，不拆节点、不换识别：
+#     · 清空卡牌：recognition 一律不碰（它就是「确实站在选卡界面」的闸口），
+#                 action = 阵容变 ? Click : DoNothing；
+#                 next   = 永远指向选植物（真选不真选由下一站的动作决定）。
+#     · 选取植物：action = 阵容变 ? Custom : DoNothing；
+#                 next   = 神器要换 ? [选取神器] : [开始战斗]。
+#     · 选取神器：**唯一入口 = 选植物终点**，所以它不在链上 = 不换神器；
+#                 节点全程保持 pipe 原样（OCR 认「神器」），runtime 不再覆盖
+#                 它的任何字段（旧版神器没变时改成 DirectHit 兜底，已删）。
+#     · 关闭神器界面：next 固定 [开始战斗] —— 植物在进神器链之前就换完了。
+#     · 补给确定/闸门/首关入口：一律进骨架，不再各自塞一条神器分支。
+#
+#   ⚠️ 字段分工是刻意的（「不冲突」的根）：清空卡牌/选取植物的 next 归
+#      _inject_artifact（要不要接神器），动作归 _inject_lineup（要不要真做），
+#      两个函数各写各的字段，MAA 按字段合并 -> 谁都不会把对方顶掉。
 NODE_ARTIFACT_PICK = "无尽挑战_选取神器"
+# 仅用于文档/断言：pipe 里它的 next 是静态 [开始战斗]，runtime 不碰。
 NODE_ARTIFACT_CLOSE = "无尽挑战_关闭神器界面"
+# 首关入口：next 静态 [清空卡牌]（骨架第一站），runtime 不碰。
 NODE_START_OCR = "无尽挑战_识别开始战斗"
 # ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
 #   两个换阵闸门 + 首关入口 + 补给确定（补给关卡从补给屏回到选卡屏的落点）。
@@ -455,51 +534,97 @@ NODE_SUPPLY_CONFIRM = "神器补给_确定"
 NODE_DONE = "无尽挑战_完成"
 NODE_149 = "无尽挑战_149点击开始挑战"
 # 闸门 next 的尾件（pipe 0300 里用户加的 JumpBack）：识别「继续训练」，
-# 链走完跳回闸门。⚠️ 下面四个清单尾部都必须带它 —— override 是整表替换，
+# 链走完跳回闸门。⚠️ 下面每一份清单尾部都必须带它 —— override 是整表替换，
 # 漏一个 = 那个分支每关把 JumpBack 抹掉（2026-10-23 实锤踩过）。
 NODE_JUMPBACK_CONTINUE = "无尽挑战_jumpback_继续挑战"
 JB_CONTINUE = "[JumpBack]" + NODE_JUMPBACK_CONTINUE
 _JUMP_SAME_ORIG = [NODE_SUPPLY, NODE_BATTLE_START, NODE_149, NODE_DONE, JB_CONTINUE]
 _JUMP_DIFF_ORIG = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_DONE, JB_CONTINUE]
-# 换神器分支的闸门 next（插在 ENTRY 之后、其余同原值）
-_JUMP_SAME_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_149, NODE_DONE, JB_CONTINUE]
-_JUMP_DIFF_ART = [NODE_SUPPLY, NODE_ARTIFACT_PICK, NODE_DONE, JB_CONTINUE]
-_SUPPLY_CONFIRM_ORIG = [NODE_BATTLE_START, NODE_SUPPLY_CONFIRM]
-_ARTIFACT_PICK_ORIG = {
-    "recognition": "OCR",
-    "expected": ["神器"],
-    "roi": [815, 87, 79, 36],
-    "target_offset": [12, 69, -58, -21],
-    "action": "Click",
-    "next": ["无尽挑战_神器界面"],
-}
-
-# 「清空卡牌」节点 pipe 原值照抄（02_Endless_plant_Choose_ref.json）——
-# 阵容不变时 runtime 把它改成 DirectHit+DoNothing 直跳开始战斗（跳过清空/选卡/编队），
-# 阵容变了要还原成这套原值。
-# ⚠️ 改了 pipe 里这个节点的 recognition/roi/action/next，这里必须同步。
+# 换神器分支的闸门 next：多插一站「清空卡牌」（骨架首站），神器由骨架终点接。
+# （未变闸门平时直跳开始战斗 —— 但要换神器就不能直跳，必须先进骨架。）
+_JUMP_SAME_ART = [NODE_SUPPLY, NODE_CLEAR_CARDS, NODE_149, NODE_DONE, JB_CONTINUE]
+# 补给确定：**永远**回「清空卡牌」—— 清不清卡/选不选植物由骨架的动作决定，
+# 不再按阵容/神器分支（「补给屏旁路选卡」那个 bug 由此结构性消失）。
+_SUPPLY_CONFIRM_ORIG = [NODE_CLEAR_CARDS, NODE_SUPPLY_CONFIRM]
+# ★ 快照原则（2026-10-24 用户定稿）：只收录「runtime 自己会改、还原时必须
+#   写回」的字段。MAA override 是同节点按字段合并：没写进 override 的字段
+#   永远保持 pipe 现值 —— expected/roi/template 这类 runtime 从不动的字段
+#   【故意不收】，pipe 随便改都不会被恢复顶掉（旧版全量照抄，pipe 给
+#   「选取神器」加 OCR 单字兜底「神」「器」后被打回只剩「神器」，实锤漂移）。
+#
+#   ⚠️ 清空卡牌的 recognition **不在快照里**（2026-10-28 起 runtime 永不写它）：
+#      它是「确实站在选卡界面」的闸口，换成 DirectHit 等于把闸口拆了
+#      （旧版的错：任何画面都「识别成功」，然后带着 60s 超时去 OCR 开始战斗）。
 _CLEAR_CARDS_ORIG = {
-    "recognition": "OCR",
-    "expected": ["清空卡牌"],
-    "roi": [22, 660, 75, 27],
     "action": "Click",
     "next": [NODE_CHOOSE_PLANTS],
 }
+# 「选取植物」的两个字段分家：action 归 _inject_lineup（要不要真选），
+# next 归 _inject_artifact（要不要接神器）—— 各写各的，互不覆盖。
+#
+# ⚠️ 2026-10-29 实锤事故：只写 `{"action": "Custom"}` 有风险 —— MaaFW 那次跑出
+#    `[ERR] Action is null [node_name=无尽挑战_选取植物] [param.name=]`：
+#    节点 action 是 Custom，但**自定义动作名是空的** → Node.Action.Failed →
+#    Tasker.Task.Failed（整局挂掉，日志里看着像"莫名其妙的任务失败"）。
+#    所以凡是覆盖 action，就把 custom_action 一起写全，绝不依赖合并语义。
+_CHOOSE_PLANTS_ACTION_ORIG = {"action": "Custom", "custom_action": "SelectPlants"}
+_CHOOSE_PLANTS_NEXT_ORIG = [NODE_BATTLE_START]
+# 「无尽_选择编队」（编队模式下的选植物终点）：next 同样归 _inject_artifact
+_SQUAD_PICK_NEXT_ORIG = [NODE_BATTLE_START]
 
 # ---------------------------------------------------------------------------
 # 用户可见 focus 播报（MFAAvalonia 日志面板上用户实际看到的消息）
 #   focus 是普通节点字段（override_pipeline 深合并，不碰 next），
-#   节点完成时由 MAA 弹出。三种播报：
-#     1. 加载作业集：「已加载作业集：xx」+ 当前使用块（JobSetLoad 写在本节点上）
-#     2. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上，只有变化分支才跑）
-#     3. 每关：「当前关卡：N」（JobSetPlan 写在两个「开始战斗」节点上，
-#        替代 pipe 里静态的「boss关」focus）
+#   节点完成时由 MAA 弹出。四种播报：
+#     1. 加载作业集：「已加载作业集：xx」+ **当前关卡** + 当前使用块
+#        （JobSetLoad 写在本节点上）
+#     2. 自动计数校准后：「当前关卡：N」（JobSetAutoCount 写在本节点上；
+#        本地作业集的 option 不带「起始关卡」，关卡号只能等这次 OCR）
+#     3. 换表：当前使用块（JobSetPlan 写在「清空卡牌」节点上；骨架会跑它，
+#        但阵容未变时闸门可能直跳开始战斗 -> 没跑到就并进关卡号消息）
+#     4. 每关：「第N关已过 → 当前关卡：N+1」（JobSetPlan 写在两个「过关」
+#        节点上，替代 pipe 里静态的「boss关」focus）
+#
+#   ★ 2026-10-31 用户实报「关卡数只有点继续挑战才播报」：
+#     原来只有第 4 种播报，而它发生在**已经进入下一关之后** ——
+#     开局的第一关完全没有播报。现在 1、2 把开局这一次补上（见 §10.9 交接）。
 # ---------------------------------------------------------------------------
 NODE_LOAD = "无尽挑战_加载作业集代码"
 
+# ★ focus 用哪条事件渲染（2026-11-01 修「关卡播报晚一关 / boss 关被读成上一关」）：
+#
+#   focus 是**随事件携带**的：事件发出那一刻，MaaFW 就把节点当前的 focus 抄进
+#   details_json 里。而我们是**在这个节点的动作执行中**才覆写它 —— 于是同一拍的
+#   `Node.Action.Starting` / `Node.Action.Succeeded` 携带的仍是**上一次**写进去的
+#   旧文案，新文案第一次出现在动作结束几毫秒后的 `Node.PipelineNode.Starting`。
+#
+#   实测（assets/debug/maafw.bak.2026.10.30-22.08.43.201.log，同一秒）：
+#     21:58:17.129  Node.Action.Starting      focus = "第113关已过 → 114"   ← 旧的
+#     21:58:17.146  override 写入                focus = "第114关已过 → 115"
+#     21:58:17.157  Node.Action.Succeeded     focus = "第113关已过 → 114"   ← 仍旧
+#     21:58:17.161  Node.PipelineNode.Starting focus = "第114关已过 → 115"  ← 新文案首现
+#
+#   而 App 侧对**整串写法**的 focus 只在 `Node.Action.Starting` 取值渲染
+#   （MaaFwApp `FocusMessage.kt:107`）-> 整串写法天生慢一拍：每条「第N关已过」
+#   都要等这个节点**下一次**过关才显示。boss 播报是 pipe 里的静态 focus（实时），
+#   两者永远错位一格 -> 用户读成「第4关是 boss 关」（2026-11-01 实报）。
+#
+#   所以：写**字典写法**、按本事件分键 -> 显示的就是刚写进去的新文案。
+FOCUS_EVENT = "Node.PipelineNode.Starting"
+
 
 def _set_focus(context: Context, node: str, text: str) -> None:
-    """给节点写用户可见 focus 文本；失败只告警，不影响流程。"""
+    """给节点写用户可见 focus 文本；失败只告警，不影响流程。
+
+    ★ 用字典写法按 `FOCUS_EVENT` 分键（原因见上面的长注释）：
+      整串写法只在 `Node.Action.Starting` 渲染，而那条事件携带的是上一次的旧文案。
+    老版本 MaaFW 若不认字典写法，退回整串（晚一拍，但不至于没播报）。
+    """
+    try:
+        context.override_pipeline({node: {"focus": {FOCUS_EVENT: text}}})
+        return
+    except Exception as e:
+        _log(f"⚠️ 写 focus（字典写法）失败，退回整串写法：{type(e).__name__}: {e}")
     try:
         context.override_pipeline({node: {"focus": text}})
     except Exception as e:
@@ -530,44 +655,152 @@ def _focus_lineup_block(table, is_boss: bool) -> str:
     return "\n".join(lines)
 
 
+def _focus_level_line(lv: int, known: bool = True,
+                      uncalibrated: bool = False) -> str:
+    """关卡播报文本（2026-11-01 用户定稿）。
+
+        普通关 -> `关卡数:2`
+        boss 关 -> `关卡数:5-boss关`      # boss 关恒定 5 的倍数（BOSS_SNAP）
+        uncalibrated=True -> `关卡数:5-boss关（未校准）`   # 只用在开局那一条
+
+    ★ `（未校准）` 只在**开局播报**上带一次（用户要求「运行时只弹一次」）：
+      每关的 `关卡数:N` 一律不带，否则就是噪音。
+
+    ★ 为什么不再播「第N关已过 → 当前关卡：N+1」：那条文案在**过关那一刻**显示不出来
+      （晚一拍，见 FOCUS_EVENT 注释），而 boss 播报是实时的 —— 两者错位一格就被读成
+      「第N关是 boss 关」。现在只播「你即将打第几关」，天然和 boss 播报同一时刻、同一口径。
+
+    ★ known=False 的由来（2026-10-31 用户实报「只有点继续挑战才播报关卡数」）：
+      使用**本地作业集**时，option「使用本地作业集」case 只挂了
+      `无尽模式_重构` / `无尽挑战_选择世界`，**没有**「无尽_起始关卡」
+      （见 assets/resource/task/Endless_ref/Endless_ref.json）——
+      于是 JobSetLoad 拿到的计数器是 0，关卡号要等「无尽挑战_自动计数」
+      OCR 主界面「第X关」才知道。这种情况下不能硬播「关卡数:1」，
+      否则用户会以为要打第 1 关，必须明说是「待识别」。
+    """
+    if not known:
+        return "关卡数:待识别（等主界面「第X关」自动计数校准）"
+    boss = "-boss关" if lv > 0 and lv % _BOSS_SNAP == 0 else ""
+    tail = "（未校准）" if uncalibrated else ""
+    return f"关卡数:{lv}{boss}{tail}"
+
+
+def _plan_level_msg(lv: int, before: Optional[int] = None,
+                    counted: bool = False) -> str:
+    """JobSetPlan 的关卡播报文本 = `关卡数:N` / `关卡数:N-boss关`。
+
+    与 `_focus_level_line` 同一口径（唯一实现），`before` / `counted` 只为兼容
+    既有调用点与自测保留 —— 文本不再使用「哪一关已过」（2026-11-01 用户定稿）。
+    """
+    return _focus_level_line(lv, True)
+
+
+# ---------------------------------------------------------------------------
+# ★ 预留接口的运行时挂钩点（2026-11-01，见 HANDOFF §10.10 / reserved.py）
+#
+#   用户要求「先留接口、以后再实现」，所以这个函数**只打日志，一个
+#   override 都不写**。它在两个位置被调用（这两个位置就是将来实现时
+#   真正要动的地方，提前占好位，实现时不用再挤进骨架里改 next）：
+#
+#     JobSetLoad            -> 作业集级的：世界作业链（按世界换阵容）
+#                              + 正赛模式检查
+#     _inject_lineup        -> 表级的：开局前动作（等待/刷僵尸/场外加速/
+#                              自动刷新下一波）+ 选卡标收藏 + 选卡自由阶数
+#
+#   ★ 三个「必须遵守」的约定：
+#     1. 只 log，不 override —— 配了也不会执行（用户明确的要求）；
+#     2. 只对**真的配了东西**的表/作业集说话，没配就一个字都不打（不制造噪音）；
+#     3. 去重（代码 + 表 + 关别），因为 _inject_lineup 每关都会跑。
+#
+#   ★ 实现时的唯一改动点：把函数体换成真正的 override_pipeline。
+#     ⚠️ 「开局前动作」要接的是**选卡终点与「开始战斗」之间**，和神器闸门
+#        （_inject_artifact）写同一批节点的 next —— 必须合起来算，
+#        各自 override 会互相顶掉（§10.5「字段分工」）。
+# ---------------------------------------------------------------------------
+def _reserved_notice(context: Context, js, table=None, is_boss: bool = False) -> None:
+    """把「配了但当前版本不会执行」的预留项提示一遍（只打日志）。"""
+    try:
+        seen = _STATE.get("reserved_seen")
+        if not isinstance(seen, set):
+            seen = set()
+            _STATE["reserved_seen"] = seen
+        lines: List[str] = []
+        code = getattr(js, "code", "") or ""
+        key_job = ("job", code)
+        if js is not None and key_job not in seen:
+            seen.add(key_job)
+            lines.extend(_reserved.jobset_notice_lines(js))
+        if table is not None:
+            key_tb = ("table", code, getattr(table, "index", -1), bool(is_boss))
+            if key_tb not in seen:
+                seen.add(key_tb)
+                lines.extend(_reserved.reserved_notice_lines(table, is_boss))
+        for ln in lines:
+            _log(ln)
+        if lines:
+            _log("（以上为预留接口：字段存得住、导出得出去，但当前版本不会执行；"
+                 "等后续版本实现）")
+    except Exception as e:                      # pragma: no cover
+        _log(f"⚠️ 预留接口提示失败（{type(e).__name__}: {e}）")
+
+
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
 
-    ★ 签名相同（boss 关配置与普通关一致 / 换表后阵容没变）->
-       「清空卡牌」改成 DirectHit + DoNothing 直跳「开始战斗」：
-       不清空卡牌、不重新选卡、不切编队（未来：不重选神器——签名已含神器占位），
-       只换种植链（compiled 注入在调用方，不受影响）。
-       首次进关（签名为 None）永远不跳 —— 局内还没有任何配置。
+    ★ 骨架固定（2026-10-28 用户定稿）：
+      清空卡牌 -> 选取植物 -> (选取神器?) -> 开始战斗 这条路线永远一样。
+      签名相同（boss 关配置与普通关一致 / 换表后阵容没变）时，runtime 只把
+      「清空卡牌」「选取植物」的 **action 翻成 DoNothing**（只认不做）：
+      不清卡、不选卡、不切编队，识别与 next 一个都不动 ——
+      于是「认到『清空卡牌』才往下走」这道闸口一直有效，不会瞎点。
+      只换种植链（compiled 注入在调用方，不受影响）。
+      首次进关（签名为 None）永远不做空动作 —— 局内还没有任何配置。
     """
     sig = table.lineup_sig(is_boss)
+    # ★ 预留接口提示（只打日志、不写 override；表级：开局前动作 /
+    #   选卡标收藏 / 选卡自由阶数）—— 就是将来实现这三项的挂钩位置，见 §10.10
+    _reserved_notice(context, _STATE.get("jobset"), table, is_boss)
     # ★ 神器闸门独立判定（不跟植物签名、不跟训练模式）——必须先跑：
-    #   下面「阵容未变」分支会 early-return，若不在这里调用，换表后的
-    #   同表关卡会留着「选取神器」原值，每关都白跑一次选神器流程。
+    #   它负责把神器唯一入口（选植物终点）接好，且下面「阵容未变」分支会
+    #   early-return，不在这里调用的话换表后的同表关卡会留着上一关的接线。
     _lineup_unchanged = (not _STATE.get("training")
                          and _STATE.get("lineup_sig") is not None
                          and _STATE.get("lineup_sig") == sig)
-    _inject_artifact(context, table, is_boss, lineup_changed=not _lineup_unchanged)
-    # ★ 训练模式永不跳：用户设定「训练 = 每一关都清空卡牌重选阵容」，
+    # ★ 识别/判定过程日志：这次是按「哪套阵容」判的、和局内现行的一致不一致
+    _log(f"阵容判定（{'boss 关' if is_boss else '普通关'}）："
+         f"本关需要 {_sig_text(sig)}，局内现行 "
+         f"{_sig_text(_STATE.get('lineup_sig')) if _STATE.get('lineup_sig') is not None else '（未知）'}"
+         f" -> {'一致，跳过清空/选卡' if _lineup_unchanged else '不一致/未知，走完整清空+选卡'}"
+         f"{'；训练模式强制重选' if _STATE.get('training') and _STATE.get('lineup_sig') == sig else ''}")
+    _inject_artifact(context, table, is_boss)
+    # ★ 训练模式永不 neuter：用户设定「训练 = 每一关都清空卡牌重选阵容」，
     #   闸门（lineup_gate_adjust）挡不住这里 —— 它只翻 next 分支，
-    #   清空卡牌节点本身会不会被改成空跳是这里说了算。
-    if (not _STATE.get("training")
-            and _STATE.get("lineup_sig") is not None
-            and _STATE.get("lineup_sig") == sig):
+    #   节点本身会不会变成空动作是这里说了算。
+    if _lineup_unchanged:
         try:
             context.override_pipeline({
+                # 清空卡牌：只认不点；next 复位成选植物（骨架下一站）
                 NODE_CLEAR_CARDS: {
-                    "recognition": "DirectHit",
                     "action": "DoNothing",
-                    "next": [NODE_BATTLE_START],
+                    "next": [NODE_CHOOSE_PLANTS],
+                },
+                # 选取植物：自定义动作关掉（不真选）。
+                # ⚠️ custom_action 一起写上：只改 action 会留下「action=Custom、
+                #    动作名空」的半截状态（2026-10-29 事故：Action is null）。
+                NODE_CHOOSE_PLANTS: {
+                    "action": "DoNothing",
+                    "custom_action": "SelectPlants",
                 },
             })
-            _log(f"阵容未变 -> 跳过清空卡牌/选卡/编队，直接开始战斗"
+            _log(f"阵容未变 -> 清空卡牌/选取植物只认不做，直接开打"
                  f"（{'boss 关' if is_boss else '普通关'}配置与当前生效阵容一致）")
         except Exception as e:
-            _log(f"跳过选卡注入失败（{type(e).__name__}: {e}）")
+            _log(f"阵容未变注入失败（{type(e).__name__}: {e}）")
+        # 跳过的前提就是「形态与阵容都没变」，所以形态照记（闸门靠它判形态）
+        _STATE["lineup_is_boss"] = bool(is_boss)
         return
 
-    # 阵容变了（或首次进关）：还原清空卡牌节点 + 正常注入选卡/编队
+    # 阵容变了（或首次进关）：两个动作还原成「真清卡 + 真选卡」+ 注入植物/编队
     plants = table.eff_plants(is_boss)
     squad = table.eff_squad(is_boss)
     kind_cn = "boss 关" if is_boss else "普通关"
@@ -575,7 +808,8 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
         context.override_pipeline({
             NODE_CHOOSE_PLANTS: {
                 "custom_action_param": json.dumps(
-                    {"植物列表": plants}, ensure_ascii=False)
+                    {"植物列表": plants}, ensure_ascii=False),
+                **_CHOOSE_PLANTS_ACTION_ORIG,   # action 还原 Custom（next 归神器闸门）
             },
             NODE_CLEAR_CARDS: dict(_CLEAR_CARDS_ORIG),
         })
@@ -584,27 +818,33 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
         _log(f"注入选卡失败（{type(e).__name__}: {e}）")
     _inject_squad(context, squad)
     _STATE["lineup_sig"] = sig
+    # ★ 记下「当前生效卡组是按哪套形态注入的」——闸门用它兜住
+    #   「签名未知/被等价判断吞掉」时 boss 关误用普通关卡组（2026-10-29 实锤）
+    _STATE["lineup_is_boss"] = bool(is_boss)
 
 
 def _inject_artifact(context: Context, table, is_boss: bool,
-                     lineup_changed: bool, force: bool = False) -> None:
-    """按当前表神器覆盖选神器流程（进线/出线/模板三处）。
+                     force: bool = False) -> None:
+    """把「选神器」这一步挂到选植物路线的终点（唯一入口）。
 
-    ★ 闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
+    ★ 2026-10-28 重构（用户定稿「骨架固定、只翻动作」）：
+      神器链不再从 识别开始战斗 / 两个闸门 / 补给确定 四处分别插入 ——
+      那几处一律进骨架（清空卡牌 -> 选取植物），由这里改**选卡终点**的两个
+      next 决定接不接神器：
+        要换   -> 选取植物.next = 无尽_选择编队.next = [选取神器]
+        不换   -> 两者都还原 [开始战斗]
+      于是「选取神器」全程保持 pipe 原样（OCR 认「神器」）：
+        不在链上 = 不换神器；在链上 = 必换神器，没有第三种状态。
+      「关闭神器界面」的 next 是 pipe 静态 [开始战斗] —— 植物在进神器链
+      之前就换完了，关掉神器界面直接开打（runtime 不再碰它）。
+
+    闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
       不管正赛还是训练，只要「当前生效神器 == 上一关的神器」就跳过；
       不同 / 首次 -> 走选取神器流程。与植物分离判定（植物看训练标记）。
     本表不带神器 -> 也跳过（游戏内保留着上一局的装备，没什么可选的）。
-    ★ force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
+    force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
       （预热可能被 Load/AutoCount 调两次 —— 走签名的话第二次会误判
       「相同」而把刚接好的线还原掉。）
-
-    需要换（need=True）：进线挂到**选卡界面的所有入口**——
-      两个换阵闸门（补给后插选取神器）、首关入口「识别开始战斗」、
-      补给关卡的「神器补给_确定」（补给完回到选卡屏，原本直跳开始战斗）；
-      关闭神器界面.next = 跟随选卡逻辑：阵容也变了 -> [清空卡牌]，
-      否则 -> [选取植物_开始战斗]（直接开打）。
-    不需要（need=False）：全部还原 pipe 原值（防上一关覆盖残留），
-      「选取神器」改 DirectHit 直跳清空卡牌兜底。
     """
     art = table.eff_artifact(is_boss)
     en = table.eff_artifact_en(is_boss)
@@ -612,16 +852,13 @@ def _inject_artifact(context: Context, table, is_boss: bool,
     need = bool(art) and bool(en) and (force or prev != art)
     try:
         if not need:
+            # 不换神器：两个选卡终点都回「开始战斗」，闸门/补给/首关入口走原值
             context.override_pipeline({
                 NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ORIG)},
                 NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
-                NODE_START_OCR: {"next": [NODE_CLEAR_CARDS]},
                 NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
-                NODE_ARTIFACT_PICK: {
-                    "recognition": "DirectHit",
-                    "action": "DoNothing",
-                    "next": [NODE_CLEAR_CARDS],
-                },
+                NODE_CHOOSE_PLANTS: {"next": list(_CHOOSE_PLANTS_NEXT_ORIG)},
+                NODE_SQUAD_PICK: {"next": list(_SQUAD_PICK_NEXT_ORIG)},
             })
             if art and not en:
                 _log(f"⚠️ 神器「{art}」没有英文名（artifact_en 缺失）——"
@@ -630,23 +867,20 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 _log(f"神器相同（{art}）-> 跳过选取神器，直接走选卡")
             _STATE["artifact_sig"] = art
             return
-        # 关闭神器界面之后的去向 = 跟随选卡逻辑（和植物的判定同源）：
-        #   阵容也变了 -> 清空卡牌（走完整选卡）；没变 -> 直接开始战斗
-        close_next = [NODE_CLEAR_CARDS if lineup_changed else NODE_BATTLE_START]
+        # 换神器：闸门（未变分支要先进骨架）+ 两个选卡终点接「选取神器」+ 模板
         context.override_pipeline({
             NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ART)},
-            NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ART)},
-            NODE_START_OCR: {"next": [NODE_ARTIFACT_PICK]},
-            NODE_SUPPLY_CONFIRM: {"next": [NODE_ARTIFACT_PICK, NODE_SUPPLY_CONFIRM]},
-            NODE_ARTIFACT_PICK: dict(_ARTIFACT_PICK_ORIG),
+            NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
+            NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
+            NODE_CHOOSE_PLANTS: {"next": [NODE_ARTIFACT_PICK]},
+            NODE_SQUAD_PICK: {"next": [NODE_ARTIFACT_PICK]},
             NODE_ARTIFACT_TPL: {
                 "template": [f"General/god_vessel/{en}/",
                              f"General/god_vessel/{en}/{en}_1.png"],
             },
-            NODE_ARTIFACT_CLOSE: {"next": close_next},
         })
-        _log(f"已注入神器流程：{art}（{en}）-> 选卡入口全部指向 选取神器，"
-             f"关闭后 -> {close_next[0]}")
+        _log(f"已注入神器流程：{art}（{en}）-> 选卡终点接 选取神器，"
+             f"装备后回 开始战斗")
         _STATE["artifact_sig"] = art
     except Exception as e:
         _log(f"注入神器流程失败（{type(e).__name__}: {e}）")
@@ -775,7 +1009,9 @@ def plan_decision(training: bool, used: Optional[int], table_index: int) -> "Tup
 
 
 def lineup_gate_adjust(training: bool, need: bool, table: Any,
-                       upcoming_boss: bool, cur_sig) -> "Tuple[bool, Optional[str]]":
+                       upcoming_boss: bool, cur_sig,
+                       cur_is_boss: Optional[bool] = None,
+                       ) -> "Tuple[bool, Optional[str]]":
     """阵容维度修正闸门判断（纯函数，便于离线自测）。
 
     闸门原来只看「表变没变」（plan_decision）。一张表有普通/boss 两套阵容后：
@@ -786,11 +1022,29 @@ def lineup_gate_adjust(training: bool, need: bool, table: Any,
           跳过清空/选卡/编队直接开打，只换种植链（compiled 照表切换）。
 
     训练模式每关必重选（用户设定），不做任何修正。
-    cur_sig 为 None（首次进关/签名为未知）时不修正 —— 保守走原判断。
+
+    ★ 2026-10-29 日志实锤（第一次进 boss 关走了普通关路线）：
+      旧版「cur_sig 为 None -> 保守不修正」这条规则对 boss 关是**反的**：
+      任务刚起手时签名必然是 None，于是第 5/50/105 关这种 boss 关被判成
+      「未变」，拿上一关的普通关卡组直接开打。所以：
+        · cur_sig 未知 + boss 关 -> 一律重选 boss 卡组；
+        · cur_is_boss（当前生效卡组的形态）与本关形态不同 -> 一律重选。
 
     返回 (need, 修正原因 or None)。
     """
-    if training or cur_sig is None:
+    if training:
+        return need, None
+    # ★ 形态闸门：当前生效卡组是按哪套形态注入的，本关就该用哪套 ——
+    #   不依赖签名（签名可能是 None，也可能被「表变了但阵容相同」吞掉）。
+    if cur_is_boss is not None and bool(cur_is_boss) != bool(upcoming_boss):
+        return True, ("本关形态与当前生效卡组不同（"
+                      + ("boss 关" if upcoming_boss else "普通关")
+                      + "配置）-> 重新选卡")
+    if cur_sig is None:
+        # 普通关：维持原判断（保守沿用）；boss 关：说不清就重选 ——
+        # 「宁多重选一次，也别用错阵容开打」（与 plan_decision 同一原则）。
+        if upcoming_boss:
+            return True, "阵容签名未知 + boss 关 -> 保守重选 boss 卡组"
         return need, None
     target_sig = table.lineup_sig(upcoming_boss)
     if need and cur_sig == target_sig:
@@ -870,9 +1124,31 @@ class JobSetPlan(CustomAction):
         lv = tr.count
         table = js.pick_table(lv)
         training = bool(param.get("训练模式"))
+        # ★ 识别过程日志：关卡 -> 表 是怎么算出来的（用户核对计数器/覆盖区间用）
+        _log(f"选表：关卡{lv} -> 表{table.index + 1}"
+             f"（覆盖 {table.level_range()}；"
+             f"表内普通关植物 {table.plants[:4]}"
+             f"{'…' if len(table.plants) > 4 else ''}，编队={table.squad}）")
         # ★ 记下来给 _inject_lineup 用：训练模式永不跳过清空/选卡
         #   （节点参数只有 JobSetPlan 有，Fight/Stage 的注入路径读不到）。
         _STATE["training"] = training
+
+        # ★ 「自动计数」没跑成时必须喊一声（2026-10-29 日志实锤）：那次全程没有
+        #   `📟 自动计数` 行 —— 节点没被触发（OCR 没认到「第」），计数器就完全是
+        #   option「起始关卡」的值，而日志一个字都不提。用户于是无从判断
+        #   「计数器对不对」，只能靠事后复盘。只提醒一次，不刷屏。
+        # ★ 2026-11-01 修：这里原来打印的 `lv` 是**本节点刚 tick 之后**的计数器，
+        #   却写成「option「起始关卡」= N」—— 填 1 会报成 2（用户实报）。
+        #   现在报 option 原值（JobSetLoad 记下的 `option_start`）+ 此刻计数器，
+        #   两个数一起给，用户一眼能看出差在哪。
+        if not _STATE.get("autocount_seen") and not _STATE.get("autocount_warned"):
+            _STATE["autocount_warned"] = True
+            _opt = _STATE.get("option_start")
+            _opt_txt = (_opt if isinstance(_opt, int) and _opt > 0 else "未填")
+            _log(f"⚠️ 本次任务「自动计数」没跑成（没认到主界面「第X关」）—— "
+                 f"关卡号来自 option「起始关卡」= {_opt_txt}（尚未用画面校准；"
+                 f"此刻计数器 = {lv}）；若它与游戏里显示的关卡不一致，"
+                 f"整局都会偏，请核对")
 
         # ---- 播报（每关都报；两种模式都经过本节点）----
         # ★ 「本关是否 boss」此时还不知道（头像识别在局内才发生），
@@ -908,7 +1184,8 @@ class JobSetPlan(CustomAction):
         #   局外此刻还没有头像识别可用。
         upcoming_boss = lv > 0 and lv % _BOSS_SNAP == 0
         need2, adj = lineup_gate_adjust(
-            training, need, table, upcoming_boss, _STATE.get("lineup_sig"))
+            training, need, table, upcoming_boss, _STATE.get("lineup_sig"),
+            _STATE.get("lineup_is_boss"))
         if adj:
             _log(f"★ 阵容维度修正：{adj}")
             reason = f"{reason}；{adj}"
@@ -931,14 +1208,15 @@ class JobSetPlan(CustomAction):
         else:
             # ★ 阵容不变不走 _apply_table，但神器闸门是独立判定 —— 每关都要评估：
             #   预热 force 注入后、同表的第二关必须把进线还原，否则会每关白跑选神器。
-            _inject_artifact(context, table, upcoming_boss, lineup_changed=False)
+            _inject_artifact(context, table, upcoming_boss)
 
         # ---- 用户可见 focus：关卡号（每关）+ 换表时的「当前使用」块 ----
         #   关卡号挂在 Plan 双节点上（本节点自己，每关精确触发一次 ->
         #   每关恰好一条 [Record]；2026-10-22 起不再挂开始战斗节点 ——
         #   focus 走事件携带制，那边每个识别/动作事件都复读，一关连跳多条）。
-        #   「当前使用」块挂在「清空卡牌」上（只有变化分支才跑到）。
-        #   换表但阵容相同被跳过（未变分支，清空卡牌不跑）时，
+        #   「当前使用」块挂在「清空卡牌」上（2026-10-28 起骨架会跑它，
+        #   但阵容未变的关卡仍可能被闸门直跳开始战斗 -> 不一定跑到）。
+        #   换表但阵容相同被跳过（未变分支）时，
         #   把阵容块并到关卡号消息前面，保证换表一定有提示。
         switched = used is None or used != table.index
         if switched:
@@ -946,7 +1224,8 @@ class JobSetPlan(CustomAction):
             _set_focus(context, NODE_CLEAR_CARDS, block)
         else:
             block = None
-        lv_msg = f"当前关卡：{lv}"
+        lv_msg = _plan_level_msg(lv, tr.state.last_before_tick,
+                                 bool(param.get("计数")))
         if block and not need:
             lv_msg = block + "\n" + lv_msg
         _set_focus(context, NODE_PLAN_NORMAL, lv_msg)
@@ -1022,14 +1301,20 @@ class JobSetLoad(CustomAction):
         if param.get("重置"):
             _STATE["jobset"] = None
             _STATE["tracker"] = None
+            _STATE["option_start"] = None      # option 原值（「自动计数没跑成」警告用）
             _STATE["table_index"] = None
             _STATE["locked_level"] = None     # 锁关卡号也是粘滞状态（2026-10-10：
                                               #   曾残留 147 进新一轮，日志误诊断）
             _STATE["plan_table_index"] = None  # 预热表指针同理
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
+            _STATE["lineup_is_boss"] = None  # 当前生效卡组的形态（boss/普通，闸门用）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
             _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
+            _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）
+            _STATE["autocount_warned"] = None  # 「自动计数没跑成」是否已提醒过
+            # ★ 预留接口提示的去重集合（新任务要重新提示一遍，见 _reserved_notice）
+            _STATE["reserved_seen"] = None
             _log("已重置作业集状态（重新开始任务）")
 
         # ★ 任务起点清 boss 判定残留：它是跨关/跨任务的粘滞状态
@@ -1054,8 +1339,7 @@ class JobSetLoad(CustomAction):
         _STATE["error"] = None
         _log(f"已载入作业集「{js.name}」 code={js.code} 表数={len(js.tables)}")
         for t in js.tables:
-            rng = f"{t.from_level}~{t.to_level if t.to_level is not None else '末'}"
-            _log(f"  表{t.index + 1} 关卡{rng} 植物={t.plants}")
+            _log(f"  表{t.index + 1} 关卡{t.level_range()} 植物={t.plants}")
 
         # ---- 覆盖重叠检查（图层模式）：同一关被多张表覆盖时，**先涂的赢** ----
         #   2026-10-22 事故：表1{1,2} 与 表2{2,3} 都覆盖第 2 关，用户以为
@@ -1083,12 +1367,46 @@ class JobSetLoad(CustomAction):
         #     · 能直接算出该用哪张表（不用等进局内识别）
         #     · 换卡可以发生在**局外**（这就是「不重开」的关键）
         tr = from_params(param)
+        # ★ 记下 option 的**原值**（2026-11-01）：JobSetPlan 的「自动计数没跑成」
+        #   警告要报这个值，不能用 tick 之后的计数器（填 1 报成 2 的实锤）。
+        _STATE["option_start"] = tr.count
         if tr.count > 0:
-            _log(f"起始关卡={tr.count}（由参数给定）")
+            _log(f"起始关卡={tr.count}（由参数给定，填的是「你要打的那一关」，"
+             f"与主界面显示的数字一致）")
         else:
             _log("未给定起始关卡 -> 计数器暂从 0 起；若流程走「自动计数」节点，"
                  "会用主界面识别到的关卡号覆盖，否则请在 option 里填「起始关卡」")
         _STATE["tracker"] = tr
+
+        # ---- ★ 起手锚点对账（2026-11-01，只读、绝不点击、**绝不改用户填的值**）----
+        #   为什么需要：唯一能读出「游戏里到底第几关」的就是这个 OCR。
+        #   而 `无尽挑战_自动计数` 只挂在「主界面点开始挑战」那条路径上
+        #   （01_Endless_plant_ref.json:45-86）；任务若已经在选卡/结算界面起手，
+        #   走的是 `无尽挑战_识别开始战斗`（02:2-23），**根本不经过它** ——
+        #   实测 2026-11-01 两局（143 / 72 关）框架日志里该节点出现 0 次。
+        #
+        #   ★ 为什么只播报不采信（2026-11-01 用户定稿）：
+        #     用户手填「起始关卡」时本来就不走自动计数，option 是**他给的事实**，
+        #     不能被画面覆盖。这里只做对账：
+        #       · 一致 -> 一句「一致」（说明这一局的绝对数是可信的）
+        #       · 不一致 -> 响一声，让他自己改 option
+        #     ★ 这也是**唯一**能发现「计数器整体偏 5 的整数倍」的地方：
+        #       偏 5k 时 boss 头像、补给屏、snap 全都看不出来（补给出现的位置在
+        #       计数器上仍是 5 的倍数），只有绝对读数能戳破。
+        _anchor = _probe_auto_count(context)
+        if _anchor is not None:
+            if tr.count <= 0:
+                _log(f"📟 起手锚点：主界面显示「第{_anchor}关」"
+                     f"（option 未填起始关卡，仅供参考）")
+            elif _anchor == tr.count:
+                _log(f"📟 起手锚点：主界面显示「第{_anchor}关」（与起始关卡一致）")
+            else:
+                _log(f"⚠️ 起手锚点：主界面显示「第{_anchor}关」，而 option"
+                     f"「起始关卡」= {tr.count}（差 {_anchor - tr.count:+d} 关）—— "
+                     f"以 option 为准不改动；若游戏里确实是第{_anchor}关，"
+                     f"请改正「起始关卡」")
+            _STATE["autocount_seen"] = True
+            _set_focus(context, NODE_AUTO_COUNT, _focus_level_line(_anchor))
 
         # ---- 当前阵容（预热） ----
         #
@@ -1104,6 +1422,8 @@ class JobSetLoad(CustomAction):
         # ★ 阵容签名同理保持 None：新任务开局时局内卡牌状态未知，
         #   首次锁定必须走完整的清空+选卡，不能跳过。
         _STATE["lineup_sig"] = None
+        # 形态一律未知：boss 关不许靠「未知」蒙过去（闸门会保守重选）
+        _STATE["lineup_is_boss"] = None
         # 神器签名同理：新任务局内装备未知，首次必须走选神器流程
         _STATE["artifact_sig"] = None
         # 训练标记同理清空，等 JobSetPlan 首跑重写
@@ -1121,15 +1441,64 @@ class JobSetLoad(CustomAction):
         # ---- 无尽局外 80 选卡（作业集级 outer_pick -> 80 选卡 custom 节点）----
         _apply_outer_pick(context, js)
 
-        # ---- 用户可见 focus：已加载作业集 + 当前使用阵容 ----
+        # ---- ★ 预留接口提示（作业集级：世界作业链 / 正赛模式检查）----
+        #   只打日志、不写 override —— 用户要求「先留接口、以后再实现」（§10.10）。
+        #   将来「智能识别当前世界后替换对应阵容」就在这里落地（current_world
+        #   由 option「选择世界」注入，_check_world 已经在读它）。
+        _reserved_notice(context, js)
+
+        # ---- 用户可见 focus：已加载作业集 + 当前关卡 + 当前使用阵容 ----
         #   写在本节点（无尽挑战_加载作业集代码）上，节点完成时弹出；
         #   阵容块按预估表（与预热同口径）生成。
+        #
+        #   ★ 2026-10-31：**关卡号提前到这里播报**（用户要求「加载作业集时
+        #     先播一遍，别等点了继续挑战才说」）。原来只有 JobSetPlan 在过关
+        #     时播，而那时**已经是下一关**了 —— 开局的第一关永远没有播报。
+        #     计数器为 0（本地作业集没配「起始关卡」）时如实播「待识别」，
+        #     真正的关卡号由 JobSetAutoCount 识别后补报。
         table0 = js.pick_table(lv)
+        # ★「（未校准）」只在**开局这一条**播报上带一次（2026-11-01 用户要求），
+        #   每关的 `关卡数:N` 一律不带 —— 免得变成噪音。
+        lv_line = _focus_level_line(lv, tr.count > 0,
+                                    uncalibrated=not _STATE.get("autocount_seen"))
         _set_focus(context, NODE_LOAD,
                    f"已加载作业集：{js.name}\n"
+                   + lv_line + "\n"
                    + _focus_lineup_block(table0, lv > 0 and lv % _BOSS_SNAP == 0))
+        _log(f"📋 开局播报：{lv_line}"
+             f"（预计表{table0.index + 1}，关卡 {table0.from_level} 起）")
 
         return _ok()
+
+
+# ---------------------------------------------------------------------------
+# 起手锚点探测（只读：截一帧 + 跑一次「第X关」识别，绝不点击，绝不改计数器）
+# ---------------------------------------------------------------------------
+
+
+def _probe_auto_count(context: Context) -> Optional[int]:
+    """截一帧、跑一次 `无尽挑战_自动计数` 的识别，读到关卡号就返回。
+
+    ★ 只读：不点击、不改流程。认不到（当前不是主界面 / ROI 里没有「第X关」）
+      返回 None，调用方闭嘴即可。
+
+    ★ 为什么要它：这个节点本身只挂在「主界面点开始挑战/继续挑战」那条路径上
+      （01_Endless_plant_ref.json:45-86）；任务若已经在选卡/结算界面起手，走的是
+      `无尽挑战_识别开始战斗`（02_Endless_plant_Choose_ref.json:2-23），
+      **根本不经过它** —— 实测 2026-11-01 两局（143 / 72 关）框架日志里该节点
+      出现 0 次，计数器全程 = option 起始关卡 + 过关次数，绝对值从未被核对。
+    """
+    try:
+        image = context.tasker.controller.post_screencap().wait().get()
+        reco = context.run_recognition(NODE_AUTO_COUNT, image)
+    except Exception as e:
+        _log(f"起手锚点：跳过（{type(e).__name__}: {e}）")
+        return None
+    for t in _reco_all_texts(reco):
+        lv = _parse_level_text(t)
+        if lv is not None:
+            return lv
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -1181,6 +1550,8 @@ class JobSetAutoCount(CustomAction):
                     _log(f"⚠️ 自动计数：重试 {attempt + 1}/3 识别异常"
                          f"（{type(e).__name__}: {e}）")
                     continue
+                _log(f"自动计数：重试 {attempt + 1}/3 识别过程 "
+                     f"候选文本={_reco_all_texts(reco)[:6]}")
                 for t in _reco_all_texts(reco):
                     text = text or t
                     lv = _parse_level_text(t)
@@ -1192,15 +1563,34 @@ class JobSetAutoCount(CustomAction):
                     break
         if lv is None:
             cur = _STATE.get("tracker")
+            # ★ 播报也要写一遍（2026-10-31）：focus 是节点上的**粘滞字段**，
+            #   这一轮没读到数字就 return 的话，上一轮写进去的「当前关卡：111」
+            #   会在新一轮开局（重置后是第 1 关）原样再弹一次 —— 用户会以为
+            #   计数器没重置。所以失败分支按计数器现值覆盖一遍。
+            _set_focus(context, NODE_AUTO_COUNT,
+                       _focus_level_line(cur.count if cur else 0, bool(cur and cur.count)))
             _log(f"⚠️ 自动计数：识别文本「{text}」里没解析出关卡号（含重试 3 次）"
                  f" -> 保持计数器原值（{cur.count if cur else 0}"
                  f"{'，即 option 起始关卡兜底' if cur and cur.count else ''}）")
+            _log(f"自动计数：识别过程（首帧）{_reco_digest(argv)}")
             return _ok()
 
         tr = _ensure_tracker({})
         old = tr.count
         tr.reset(lv)
-        _log(f"📟 自动计数：识别到「{text}」-> 起始关卡 = {tr.count}")
+        _STATE["autocount_seen"] = True     # 本次任务确实用画面数字校准过
+        _log(f"📟 自动计数：识别到「{text}」-> 计数器 = {tr.count}"
+             f"（主界面这个数字就是本关要打的关卡）")
+        _log(f"自动计数：识别过程 {_reco_digest(argv)} -> 解析出关卡号 {lv}")
+
+        # ★ 用户可见播报（2026-10-31）：关卡号校准完**立刻**播一次，写在本节点上
+        #   （本节点自己的 custom action 里写，节点完成时弹出 —— 与 JobSetPlan
+        #   写自己要播的焦点是同一种用法）。
+        #   为什么要有这一条：本节点是「开局第一关」唯一的关卡播报点 ——
+        #     · 本地作业集没有 option「起始关卡」-> JobSetLoad 播的是「待识别」；
+        #     · JobSetPlan 的「当前关卡」只在**过关之后**播（那时已是下一关）。
+        #   所以真正的「我现在打第几关」只能由这里补上（§10.9）。
+        _set_focus(context, NODE_AUTO_COUNT, _focus_level_line(tr.count))
 
         # ★ 关卡号回落 = 新一轮无尽开始（重置流程走到「重置完毕（第1关）」
         #   会回本节点）。表锁/锁关卡号/阵容签名/神器签名全是上一轮的
@@ -1211,6 +1601,7 @@ class JobSetAutoCount(CustomAction):
             _STATE["table_index"] = None
             _STATE["locked_level"] = None
             _STATE["lineup_sig"] = None
+            _STATE["lineup_is_boss"] = None
             _STATE["artifact_sig"] = None
             _log(f"🏁 关卡回落 {old} -> {tr.count}：新一轮无尽 -> "
                  f"已清表锁与阵容/神器签名（重新走完整选卡）")
@@ -1251,9 +1642,15 @@ def _resolve_is_boss(param: Dict[str, Any], lv: int) -> bool:
         is_boss = bool(param.get("是boss关"))
         _STATE["is_boss"] = is_boss
         _STATE["is_boss_level"] = lv
+        _log(f"boss 判定：参数显式给了「是boss关」={is_boss} -> 钉在本关 {lv}"
+             f"（后续同关的空 param 调用沿用这个值）")
         return is_boss
-    return (bool(_STATE.get("is_boss"))
-            and _STATE.get("is_boss_level") == lv)
+    picked = (bool(_STATE.get("is_boss"))
+              and _STATE.get("is_boss_level") == lv)
+    _log(f"boss 判定：param 没给 -> 读本关 {lv} 已记录的判定 "
+         f"{_STATE.get('is_boss')}（记录时的关卡={_STATE.get('is_boss_level')}）"
+         f" -> {'BOSS关' if picked else '普通关'}")
+    return picked
 
 
 # ---------------------------------------------------------------------------
@@ -1365,11 +1762,20 @@ class JobSetFight(CustomAction):
             loop_node_name = CHAIN_NODE_TPL.format(kind=KIND_CN["loop"])
             _compiled_n = (table.raw.get("compiled") or {}).get("normal") or {}
             if end_node_name in _compiled_n:
+                # ★ N 的语义 = 「首圈之后的额外重复次数」：循环链首圈不经门
+                #   （单次链直灌循环链），跑完首圈回来才第一次进门。
+                #   数到 N+1 次进门掰向收尾 => 总圈数 = N+1。
+                #   N=0 合法：首圈跑完第一次进门就掰向收尾（用户 2026-10-23
+                #   要求：循环链最少执行一次后进行收尾）。
                 try:
-                    n_max = int(table.raw.get("endLoopCount") or 3)
+                    # ★ 不能写 `get(...) or 3`：endLoopCount=0 是合法值，
+                    #   `0 or 3` 会被假值吞成 3（2026-10-24 实测：设 0
+                    #   结果循环链一直跑）—— 只有「缺省 None」才回退 3。
+                    _raw_n = table.raw.get("endLoopCount")
+                    n_max = int(_raw_n) if _raw_n is not None else 3
                 except (TypeError, ValueError):
                     n_max = 3
-                n_max = max(1, n_max)
+                n_max = max(0, n_max)
                 gate_key = f"{table.index}@{lv}"
                 if _STATE.get("loop_gate_key") != gate_key:
                     _STATE["loop_gate_key"] = gate_key
@@ -1677,6 +2083,12 @@ class JobSetStage(CustomAction):
         # ★ boss 关判定仍由 pipeline 侧完成（「无尽挑战_局内识别boss关」）：
         #   调用顺序：进入到局内 -> 识别boss关(命中) -> 无尽挑战_确认阶段_BOSS -> 本动作
         is_boss = bool(param.get("是boss关"))
+        # ★ 识别过程日志：boss 判定是「头像模板匹配」给的，这里把来源讲清楚
+        #   （认错的锅在 pipeline 的「无尽挑战_局内识别boss关」节点，不在本动作）
+        _log(f"阶段识别：参数「是boss关」="
+             f"{param.get('是boss关') if '是boss关' in param else '（未提供）'}"
+             f" -> 本关按 {'BOSS关' if is_boss else '普通关'} 处理；"
+             f"本节点识别详情 {_reco_digest(argv)}")
 
         # ---- 1b) boss 关：计数器对齐到最近的 5 的倍数（唯一的自愈机制）----
         #
@@ -1739,7 +2151,7 @@ class JobSetStage(CustomAction):
             _STATE["locked_level"] = lv
             seen.add(table.index)
 
-            ok = self._apply_table(context, js, table)
+            ok = self._apply_table(context, js, table, is_boss)
 
             # ★ 先重开（退出当前关回到局外），再跳回清空卡牌。
             #   清空卡牌是局外节点，必须先重开退出局内才能工作。
@@ -1766,8 +2178,13 @@ class JobSetStage(CustomAction):
         if prev != table.index:
             _STATE["table_index"] = table.index
             _STATE["locked_level"] = lv
-            self._apply_table(context, js, table)
-            _log(f"锁定表{table.index + 1}（关卡{lv}，植物 {table.plants}）")
+            self._apply_table(context, js, table, is_boss)
+            # ⚠️ 这里必须打**生效**植物（boss 关是 boss 卡组），别打 table.plants
+            #    ——普通关列表在 boss 关打出来会把日志看成人错的
+            #    （2026-10-29 用户就是被「锁定表1（关卡115，植物 […杜英投手…]）」
+            #     这行误导的：实际注入的是 boss 卡组）。
+            _log(f"锁定表{table.index + 1}（关卡{lv}，"
+                 f"植物 {table.eff_plants(is_boss)}）")
         seen.add(table.index)
 
         _log(f"阶段确认完成：{reason or '维持当前表'} -> 表{table.index + 1}")
@@ -1790,10 +2207,19 @@ class JobSetStage(CustomAction):
           「表有没有变」。所有换阵路径都走这里，所以记录不会漏。
 
         is_boss：目标关卡的 boss 形态。局外换阵（JobSetPlan）传「下一关」的
-          计数器预判；局内纠正路径（JobSetStage）不传 -> 用当前关的识别结果。
+          计数器预判；局内阶段确认（JobSetStage）传**它自己刚从管道拿到的**
+          `是boss关`（头像识别结论）。
+
+        ⚠️ 2026-10-29 日志实锤：不给 is_boss 时会回退读 `_STATE["is_boss"]`，
+          而那个 state 只有 JobSetFight 写 —— 阶段确认节点若先于它跑（或那关
+          Fight 走的是普通关变体），就会用 False 去注入，于是**boss 关被按普通关
+          注入/锁定**（日志形态：`boss关，当前关卡数：105` 紧跟
+          `已注入选卡植物（普通关）`）。所以调用方**必须**显式传。
         """
         if is_boss is None:
             is_boss = bool(_STATE.get("is_boss"))
+            _log(f"⚠️ _apply_table 没收到 is_boss，回退读 state（{is_boss}）"
+                 f"—— 调用方必须显式传，否则 boss 关会被按普通关注入")
         try:
             # ★ 阵容注入统一走 _inject_lineup：boss 关取 boss 阵容；
             #   与当前生效阵容相同会跳过清空/选卡/编队直接开打

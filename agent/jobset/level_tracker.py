@@ -280,6 +280,15 @@ class LevelTracker:
                     f"检测到关卡数有误，已自动偏移"
                     f"（{res['before']} → {after}），boss关，当前关卡数：{after}"
                 )
+                # ★ 2026-10-29 用户实测：这一行曾把「计数器漂移」
+                #   **静默掩盖**成「看起来对」——用户只看到「104 关被当成
+                #   boss 关」，看不到计数器被改。偏差必须显式提示，不许默默对齐。
+                lines.append(
+                    f"⚠️ 计数器与 boss 关不符（偏差 {res['offset']:+d}）：已对齐到 "
+                    f"{after}。常见原因：某关没点「继续挑战」（换阵容/收尾重开）、"
+                    f"「起始关卡」填错、或自动计数取帧偏晚 —— 请对照日志里的"
+                    f"「过关计数」逐关核对"
+                )
         return lines
 
     # -- 只读 --------------------------------------------------------------
@@ -288,21 +297,44 @@ class LevelTracker:
         return self.state.to_dict()
 
     def describe(self) -> str:
+        """一行状态（给日志用）：`关卡=90 判定=tick` / `关卡=5 判定=snap(未改动)`。
+
+        ★ 2026-11-01 修「假修正痕迹」：`snap_boss()` 每次都先把 `last_verdict`
+          写成 `snap`（不管改没改），于是 boss 关总会打一行 `判定=snap`，
+          读起来像「刚修正过」。用户据此以为计数器被纠正了 —— 实际 5→5 是空操作。
+          现在把 `last_snap` 的结论拼进去，空跑与真纠偏一眼可分：
+            未改动  -> `snap(未改动)`
+            真纠偏  -> `snap(4→5)`
+            跳过    -> `snap(跳过)`（计数器还没起步）
+        """
         st = self.state
-        return f"关卡={st.count} 判定={st.last_verdict}"
+        verdict = st.last_verdict
+        if verdict == "snap":
+            snap = st.last_snap or {}
+            if snap.get("skipped"):
+                verdict = "snap(跳过)"
+            elif snap.get("snapped"):
+                verdict = f"snap({snap.get('before')}→{snap.get('after')})"
+            else:
+                verdict = "snap(未改动)"
+        return f"关卡={st.count} 判定={verdict}"
 
     def status_line(self, table: Any = None, is_boss: bool = False) -> str:
         """给「日志弹窗」用的一行状态（在点「开始战斗」时刷新）。
 
             当前关卡: 87    当前表: 表2 (50~99)    本关: 普通关
+
+        ★ 区间走 `table.level_range()`（闭区间）—— 以前直接打印 `to_level`
+          （开区间上界 = 最大关 + 1），于是「设计 1~30」被报成「1~31」
+          （2026-11-01 用户实报）。
         """
         lv = self.state.count
         kind = "boss关" if is_boss else "普通关"
         if table is None:
             return f"当前关卡: {lv}    本关: {kind}"
         try:
-            rng = (f"{table.from_level}~{table.to_level}"
-                   if getattr(table, "to_level", None) is not None
+            rng_fn = getattr(table, "level_range", None)
+            rng = (rng_fn() if callable(rng_fn)
                    else f"{table.from_level}~")
             return (f"当前关卡: {lv}    "
                     f"当前表: 表{int(table.index) + 1} ({rng})    "

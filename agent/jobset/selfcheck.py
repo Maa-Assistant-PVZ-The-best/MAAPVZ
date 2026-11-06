@@ -88,7 +88,7 @@ if js:
         t999 = js.pick_table(200)
         check("L=200 仍在有效表内", t999 is not None)
         print(f"  表区间: " + ", ".join(
-            f"表{t.index + 1}[{t.from_level}~{t.to_level if t.to_level is not None else '末'}]"
+            f"表{t.index + 1}[{t.level_range()}]"
             for t in js.tables))
     print(f"  lineup@1   = {js.lineup_at(1)['plants']}")
     print(f"  rules@1    = non_boss seq={len(js.rules_at(1, False)['sequence'])}")
@@ -195,10 +195,27 @@ print(f"  用户可见日志: {_msgs}")
 check("boss 日志含『boss关，当前关卡数：』", "boss关，当前关卡数：60" in _msgs[0], str(_msgs))
 check("未偏移时不输出偏移警告", len(_msgs) == 1, str(_msgs))
 
+# ★ 2026-11-01：`describe()` 不许再把空跑写成「判定=snap」（假的"已修正"痕迹）
+_lt_desc = LevelTracker(start_level=60)
+_lt_desc.snap_boss()                       # 60 已是 5 的倍数 -> 空跑
+check("describe: 空跑写成 snap(未改动)",
+      _lt_desc.describe() == "关卡=60 判定=snap(未改动)", _lt_desc.describe())
+_lt_desc2 = LevelTracker(start_level=58)
+_lt_desc2.snap_boss()                      # 58 -> 60（真纠偏）
+check("describe: 真纠偏写成 snap(58→60)",
+      _lt_desc2.describe() == "关卡=60 判定=snap(58→60)", _lt_desc2.describe())
+_lt_desc3 = LevelTracker(start_level=60)
+_lt_desc3.tick()
+check("describe: tick 原样",
+      _lt_desc3.describe() == "关卡=61 判定=tick", _lt_desc3.describe())
+
 _msgs3 = lt3.snap_boss_message(res3)
 print(f"  用户可见日志(偏移): {_msgs3}")
-check("偏移时输出两行", len(_msgs3) == 2, str(_msgs3))
+check("偏移时输出三行（含不许静默的告警）", len(_msgs3) == 3, str(_msgs3))
 check("偏移日志含『已自动偏移』", "已自动偏移" in _msgs3[1], str(_msgs3[1]))
+# ★ 2026-10-29：偏差被静默对齐曾把「计数器落后 1 格」掩盖成「看起来对」
+check("偏移必须显式告警（不许静默对齐）",
+      "⚠️" in _msgs3[2] and "偏差" in _msgs3[2], str(_msgs3[2]))
 
 # 计数器为 0 时不崩
 lt5 = LevelTracker()
@@ -241,20 +258,21 @@ check("再 reset() 回 0", lt.count == 0, f"count={lt.count}")
 print("\n=== 7b. 状态行（给日志弹窗用） ===")
 lt = LevelTracker(start_level=87)
 
+# ★ 2026-11-01：这里改用**真实 Table** 而不是手搓桩 —— 区间口径由
+#   `Table.level_range()` 唯一决定（闭区间）。to_level=100 是开区间上界
+#   （= 最大关 + 1），播报必须是 50~99，不再是 50~100。
+_T = Table({"from_level": 50, "to_level": 100,
+            "lineup": {"plants": ["大喷菇"]}}, 1)
 
-class _T:
-    index = 1
-    from_level = 50
-    to_level = 100
 
-
-line = lt.status_line(_T(), is_boss=False)
+line = lt.status_line(_T, is_boss=False)
 print(f"  {line}")
 check("状态行含关卡", "当前关卡: 87" in line, line)
-check("状态行含表号与区间", "表2" in line and "50~100" in line, line)
+check("状态行含表号与区间（闭区间 50~99）",
+      "表2" in line and "50~99" in line and "50~100" not in line, line)
 check("状态行含普通关", "普通关" in line, line)
 
-line_b = lt.status_line(_T(), is_boss=True)
+line_b = lt.status_line(_T, is_boss=True)
 check("状态行含 boss 关", "boss关" in line_b, line_b)
 
 line_none = lt.status_line(None, is_boss=False)
@@ -419,6 +437,39 @@ check("贯穿: 编译后 DSL 含 click:槽3切换形态 ×2",
 check("贯穿: 编译日志无「通用动作跳过」",
       not any("通用动作跳过" in m for m in _logs8j), repr(_logs8j))
 
+# 8k. ★ 相机神器（special：capture/print）编译 —— 用户实测步骤（2026-10-25）：
+#     拍照 = 点神器位置 -> 点相机复制；
+#     打印 = 点神器位置 -> 点相机粘贴 -> 隔 0.5s -> 再点相机粘贴。
+_cam_cap = _dsl.generic_dsl("artifact", _coords, None, None, None,
+                            {"artType": "special", "artName": "相机神器",
+                             "artBody": "capture"})
+check("相机拍照: 点神器位置+点相机复制",
+      _cam_cap["dsl"] == "click:神器_初始化_神器位置;click:神器_初始化_相机复制",
+      repr(_cam_cap))
+_cam_pri = _dsl.generic_dsl("artifact", _coords, None, None, None,
+                            {"artType": "special", "artName": "相机神器",
+                             "artBody": "print"})
+check("相机打印: 点神器位置+粘贴+sleep0.5+再粘贴",
+      _cam_pri["dsl"] == ("click:神器_初始化_神器位置;click:神器_初始化_相机粘贴"
+                           ";sleep:0.5;click:神器_初始化_相机粘贴"),
+      repr(_cam_pri))
+# 连击展开：打印 ×2 中间用 comboMs 隔开
+_cam_pri2 = _dsl.generic_dsl("artifact", _coords, None, None, None,
+                             {"artType": "special", "artName": "相机神器",
+                              "artBody": "print", "times": 2, "comboMs": 1000})
+check("相机打印×2: 展开重复+连击间隔",
+      _cam_pri2["dsl"] == ("click:神器_初始化_神器位置;click:神器_初始化_相机粘贴"
+                            ";sleep:0.5;click:神器_初始化_相机粘贴;sleep:1"
+                            ";click:神器_初始化_神器位置;click:神器_初始化_相机粘贴"
+                            ";sleep:0.5;click:神器_初始化_相机粘贴"),
+      repr(_cam_pri2))
+# 葫芦回归：special 体型分支不受影响
+_cal = _dsl.generic_dsl("artifact", _coords, None, None, None,
+                        {"artType": "special", "artName": "葫芦神器", "artBody": "big"})
+check("葫芦回归: 大体型仍编译为点神器+点大体型",
+      _cal["dsl"] == "click:神器_初始化_神器位置;click:神器_初始化_葫芦大体型",
+      repr(_cal))
+
 # ---------------------------------------------------------------------------
 print("\n=== 9. 落子动作「点击格子」===")
 
@@ -515,15 +566,13 @@ try:
           str(sorted(_p_sq.keys())))
 
     # --- ★ 与真实 pipe 对照：新写法（custom 节点）逐项核对 ---
-    # ⚠️ pipe 文件是 **JSONC**（带 // 注释），标准 json 解析不了，先去掉注释。
+    # ⚠️ pipe 文件是 **JSONC**（带 // 注释，含行尾注释），标准 json 解析不了，
+    #    用 check_graph.strip_comments（字符串感知剥离器）。
+    from agent.jobset.check_graph import strip_comments as _strip_jsonc10
     _pipe10 = Path(__file__).resolve().parent.parent.parent / (
         "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
     )
-    _raw10 = _pipe10.read_text(encoding="utf-8")
-    _raw10 = "\n".join(
-        ln for ln in _raw10.splitlines() if not ln.lstrip().startswith("//")
-    )
-    _pj10 = _json10.loads(_raw10)
+    _pj10 = _json10.loads(_strip_jsonc10(_pipe10.read_text(encoding="utf-8")))
     _node10 = _pj10[_rt10.NODE_SQUAD_PICK]
     check("pipe: 选择编队 是 Custom(SelectPlants)",
           _node10.get("action") == "Custom"
@@ -582,8 +631,8 @@ try:
           f"runtime={_rt10b._JUMP_DIFF_ORIG} pipe={_pipe_diff}")
     check("换神器分支清单也带 JumpBack 尾件",
           _rt10b._JUMP_SAME_ART[-1] == _rt10b.JB_CONTINUE
-          and _rt10b._JUMP_DIFF_ART[-1] == _rt10b.JB_CONTINUE,
-          f"{_rt10b._JUMP_SAME_ART} / {_rt10b._JUMP_DIFF_ART}")
+          and _rt10b._JUMP_DIFF_ORIG[-1] == _rt10b.JB_CONTINUE,
+          f"{_rt10b._JUMP_SAME_ART} / {_rt10b._JUMP_DIFF_ORIG}")
     check("pipe: JumpBack 目标节点存在且是 OCR",
           _pj10b[_rt10b.NODE_JUMPBACK_CONTINUE].get("recognition") == "OCR",
           str(_pj10b.get(_rt10b.NODE_JUMPBACK_CONTINUE)))
@@ -673,20 +722,25 @@ try:
     check("全候选全烂 -> 解析不出（走重试/兜底）",
           all(_rt12._parse_level_text(_t) is None
               for _t in _rt12._reco_all_texts(_reco12e)))
+
+    # ★ 2026-10-29：这里曾有 4 条「主界面第X关 -> 计数器 X+1」的断言。
+    #   实跑直接打脸（识别到「第111关」时游戏里确实是 111 关）—— 换算口径
+    #   本来就没问题，已整段删除，别再凭观察给计数器加偏移。
 except Exception as _e12:
     check("自动计数解析", False, f"{type(_e12).__name__}: {_e12}")
 
 
 # ---------------------------------------------------------------------------
-print("\n=== 13. boss 阵容拆分 + 阵容相同跳过选卡 ===")
+print("\n=== 13. boss 阵容拆分 + 骨架固定只翻动作 ===")
 #
 # 设计（2026-10）：
 #   · 每张表可选配 boss_lineup（boss 关独立的植物/编队/神器）；
 #     缺省/未配 -> 完全沿用普通关（boss_lineup 导出的是逐槽沿用后的有效值）。
 #   · 运行时维护「当前生效阵容签名」_STATE["lineup_sig"]：
-#     与目标阵容相同 -> 「清空卡牌」改 DirectHit+DoNothing 直跳「开始战斗」
-#     （不清空、不选卡、不切编队），只换种植链（compiled 注入照旧）；
-#     不同（或首次进关签名未知）-> 还原清空卡牌节点 + 正常注入。
+#     与目标阵容相同 -> 「清空卡牌」「选取植物」的 **action 翻成 DoNothing**
+#     （只认不做：不清卡、不选卡、不切编队），recognition / next 一个都不动
+#     —— 骨架固定（2026-10-28），闸口「认到清空卡牌才往下走」始终有效；
+#     不同（或首次进关签名未知）-> 两个动作还原 Click / Custom + 正常注入。
 try:
     import json as _json13
     from agent.jobset import engine as _eng13
@@ -722,83 +776,214 @@ try:
           str(_t_art.lineup_sig(False)))
     check("神器占位: boss 未配置 -> 沿用", _t_art.eff_artifact(True) == "神器A")
 
-    # --- _CLEAR_CARDS_ORIG 必须与 pipe 原值一致（改了 pipe 要同步 runtime）---
-    _pipe13 = Path(__file__).resolve().parent.parent.parent / (
-        "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
-    )
-    _raw13 = "\n".join(
-        ln for ln in _pipe13.read_text(encoding="utf-8").splitlines()
-        if not ln.lstrip().startswith("//")
-    )
-    _cc_pipe = _json13.loads(_raw13)[_rt13.NODE_CLEAR_CARDS]
+    # --- ★ 快照原则（2026-10-24 定稿）：快照只收 runtime 会动的字段 ---
+    #   MAA override 按字段合并，没写的字段永远保持 pipe 现值 ——
+    #   所以 expected/roi/template 一律【不进】快照，pipe 改了也顶不掉。
+    #   断言两层：①快照字段集恰好是 runtime 会动的那几个（防有人又全量照抄）
+    #            ②这些字段的值与 pipe 一致（还原正确性）
+    #   ⚠️ 2026-10-28「骨架固定、只翻动作」后：
+    #      · 清空卡牌 的 recognition 不在快照里（runtime 永不写它 —— 闸口）；
+    #      · 选取神器 整份快照删除（任何字段都不覆盖：不在链上 = 不换神器）；
+    #      · 首关入口/关闭神器界面 的 next 变成 pipe 静态值（runtime 不碰）。
+    _root13 = Path(__file__).resolve().parent.parent.parent
+
+    def _pipe_node13(rel, name):
+        from agent.jobset.check_graph import strip_comments as _strip13
+        _p = _root13 / rel
+        return _json13.loads(_strip13(_p.read_text(encoding="utf-8")))[name]
+
+    _PICK_PIPE = "assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json"
+    _GOD_PIPE = ("assets/resource/pipeline/Endless_ref/"
+                 "06Endless_god_vessel/0601Endless_god_vessel.json")
+    _SUPPLY_PIPE = "assets/resource/pipeline/Endless_ref/04_Endless_Supply.json"
+
+    _cc_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_CLEAR_CARDS)
     _cc_orig = _rt13._CLEAR_CARDS_ORIG
-    check("跳过选卡: 清空卡牌快照 recognition 与 pipe 一致",
-          _cc_orig.get("recognition") == _cc_pipe.get("recognition"),
-          f"runtime={_cc_orig.get('recognition')} pipe={_cc_pipe.get('recognition')}")
-    check("跳过选卡: 清空卡牌快照 roi 与 pipe 一致",
-          _cc_orig.get("roi") == _cc_pipe.get("roi"),
-          f"runtime={_cc_orig.get('roi')} pipe={_cc_pipe.get('roi')}")
-    check("跳过选卡: 清空卡牌快照 action/next 与 pipe 一致",
-          _cc_orig.get("action") == _cc_pipe.get("action")
-          and _cc_orig.get("next") == _cc_pipe.get("next"),
-          f"runtime next={_cc_orig.get('next')} pipe next={_cc_pipe.get('next')}")
+    check("★快照原则: 清空卡牌快照只含 runtime 会动的字段（action/next）",
+          set(_cc_orig.keys()) == {"action", "next"}, f"keys={sorted(_cc_orig.keys())}")
+    check("★不覆盖: 清空卡牌 recognition 永不被改写（选卡界面闸口）",
+          "recognition" not in _cc_orig and _cc_pipe.get("recognition") == "OCR",
+          f"orig={_cc_orig} pipe={_cc_pipe.get('recognition')}")
+    check("★同步: 清空卡牌快照字段值与 pipe 一致",
+          all(_cc_orig[k] == _cc_pipe.get(k) for k in ("action", "next")),
+          f"runtime={_cc_orig} pipe={_cc_pipe}")
+
+    _cp_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_CHOOSE_PLANTS)
+    check("★同步: 选取植物动作快照与 pipe 一致（action + custom_action）",
+          _rt13._CHOOSE_PLANTS_ACTION_ORIG == {
+              "action": _cp_pipe.get("action"),
+              "custom_action": _cp_pipe.get("custom_action")},
+          f"runtime={_rt13._CHOOSE_PLANTS_ACTION_ORIG} "
+          f"pipe={_cp_pipe.get('action')}/{_cp_pipe.get('custom_action')}")
+    # ★ 2026-10-29 事故：只写 action 会留下「动作名空」→ MAA `Action is null`
+    check("★不覆盖原则: 动作快照必须带 custom_action（防空名）",
+          _rt13._CHOOSE_PLANTS_ACTION_ORIG.get("custom_action") == "SelectPlants",
+          str(_rt13._CHOOSE_PLANTS_ACTION_ORIG))
+    check("★同步: 选取植物 next 快照与 pipe 一致（神器入口还原值）",
+          _rt13._CHOOSE_PLANTS_NEXT_ORIG == _cp_pipe.get("next"),
+          f"runtime={_rt13._CHOOSE_PLANTS_NEXT_ORIG} pipe={_cp_pipe.get('next')}")
+    _sp_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_SQUAD_PICK)
+    check("★同步: 选择编队 next 快照与 pipe 一致",
+          _rt13._SQUAD_PICK_NEXT_ORIG == _sp_pipe.get("next"),
+          f"runtime={_rt13._SQUAD_PICK_NEXT_ORIG} pipe={_sp_pipe.get('next')}")
+
+    check("★不覆盖: 选取神器已彻底退出 runtime 管辖（无快照常量）",
+          not hasattr(_rt13, "_ARTIFACT_PICK_ORIG"))
+    _ap_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_PICK)
+    check("pipe: 选取神器 保持 OCR 原样（不再被改成 DirectHit）",
+          _ap_pipe.get("recognition") == "OCR" and _ap_pipe.get("action") == "Click",
+          str(_ap_pipe))
+    _close_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_CLOSE)
+    check("★同步: 关闭神器界面 next 静态回「开始战斗」（runtime 不碰）",
+          _close_pipe.get("next") == [_rt13.NODE_BATTLE_START],
+          str(_close_pipe.get("next")))
+    _start_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_START_OCR)
+    check("★同步: 首关入口 next 静态进骨架「清空卡牌」（runtime 不碰）",
+          _start_pipe.get("next") == [_rt13.NODE_CLEAR_CARDS],
+          str(_start_pipe.get("next")))
+
+    _sc_pipe = _pipe_node13(_SUPPLY_PIPE, _rt13.NODE_SUPPLY_CONFIRM)
+    check("★同步: 补给确定快照 next 与 pipe 一致",
+          list(_rt13._SUPPLY_CONFIRM_ORIG) == _sc_pipe.get("next"),
+          f"runtime={_rt13._SUPPLY_CONFIRM_ORIG} pipe={_sc_pipe.get('next')}")
 
     # --- _inject_lineup 行为（假 Context 记录 override）---
     class _FakeCtx13:
         def __init__(self): self.overrides = []
         def override_pipeline(self, patch): self.overrides.append(patch)
 
-    def _last_clear13(ctx):
+    def _merged13(ctx, node):
         # override_pipeline 对同一节点是按字段合并的，测试也要合并后再看
         merged = {}
         for p in ctx.overrides:
-            if _rt13.NODE_CLEAR_CARDS in p:
-                merged.update(p[_rt13.NODE_CLEAR_CARDS])
+            if node in p:
+                merged.update(p[node])
         return merged or None
 
+    def _last_clear13(ctx):
+        return _merged13(ctx, _rt13.NODE_CLEAR_CARDS)
+
+    def _choose13(ctx):
+        return _merged13(ctx, _rt13.NODE_CHOOSE_PLANTS)
+
     _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
     _t13 = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
                          "boss_lineup": {"plants": ["大喷菇", "菜问"]}}, 0)
 
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13, False)
     _cl = _last_clear13(_c13)
-    check("跳过选卡: 首次进关不跳（还原 OCR 点击清空）",
-          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
-          str(_cl))
-    check("跳过选卡: 首次进关注入普通关植物",
+    check("骨架: 首次进关必须真清卡 + 真选卡（不 neuter）",
+          _cl and _cl.get("action") == "Click"
+          and _cl.get("next") == [_rt13.NODE_CHOOSE_PLANTS]
+          and (_choose13(_c13) or {}).get("action") == "Custom",
+          f"clear={_cl} plants={_choose13(_c13)}")
+    check("★骨架: recognition 永不进 override（闸口不许被拆）",
+          "recognition" not in (_cl or {}), str(_cl))
+    check("骨架: 首次进关注入普通关植物",
           any("大喷菇" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides))
 
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, True)     # boss 配置相同 -> 跳
+    _rt13._inject_lineup(_c13, _t13, True)     # boss 配置相同 -> 只认不做
     _cl = _last_clear13(_c13)
-    check("★跳过选卡: boss 与普通关相同 -> DirectHit 直跳开始战斗",
-          _cl and _cl.get("recognition") == "DirectHit" and _cl.get("action") == "DoNothing"
-          and _cl.get("next") == [_rt13.NODE_BATTLE_START], str(_cl))
+    check("★骨架: 阵容相同 -> 清空卡牌只认不点（DoNothing），next 仍指选植物",
+          _cl and _cl.get("action") == "DoNothing"
+          and _cl.get("next") == [_rt13.NODE_CHOOSE_PLANTS], str(_cl))
+    check("★骨架: 阵容相同 -> 选取植物动作关掉（DoNothing）",
+          (_choose13(_c13) or {}).get("action") == "DoNothing", str(_choose13(_c13)))
+    check("★不覆盖原则: 关动作时同时写 custom_action（不留半截动作）",
+          (_choose13(_c13) or {}).get("custom_action") == "SelectPlants",
+          str(_choose13(_c13)))
+    check("★骨架: 阵容相同 + 神器不换 -> 选卡终点回「开始战斗」",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_BATTLE_START],
+          str(_choose13(_c13)))
+    check("★骨架: 阵容相同也不把 recognition 改掉",
+          "recognition" not in (_cl or {}), str(_cl))
 
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, True)     # 再来一次还是跳（签名没变）
-    _cl = _last_clear13(_c13)
-    check("★跳过选卡: 连续同阵容仍然跳",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    _rt13._inject_lineup(_c13, _t13, True)     # 再来一次还是只认不做（签名没变）
+    check("★骨架: 连续同阵容仍然只认不做",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
+    check("★形态闸门: 跳过分支也记录当前卡组形态（boss）",
+          _rt13._STATE.get("lineup_is_boss") is True,
+          str(_rt13._STATE.get("lineup_is_boss")))
 
     _t13b = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇", "菜问"]},
                           "boss_lineup": {"plants": ["大嘴花"]}}, 0)
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13b, True)    # boss 配置不同 -> 正常注入 boss 植物
     _cl = _last_clear13(_c13)
-    check("跳过选卡: boss 不同 -> 还原清空 + 注入 boss 植物",
-          _cl and _cl.get("recognition") == "OCR"
-          and any("大嘴花" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, "")) for p in _c13.overrides),
-          str(_cl))
+    check("骨架: 阵容变了 -> 还原清卡 + 选卡，并注入 boss 植物",
+          _cl and _cl.get("action") == "Click"
+          and (_choose13(_c13) or {}).get("action") == "Custom"
+          and any("大嘴花" in str(p.get(_rt13.NODE_CHOOSE_PLANTS, ""))
+                  for p in _c13.overrides),
+          f"clear={_cl} plants={_choose13(_c13)}")
 
-    # 换表但阵容相同（表2 配置 == 当前生效）-> 也跳
+    # 换表但阵容相同（表2 配置 == 当前生效）-> 也只认不做
     _t13c = _eng13.Table({"from_level": 2, "lineup": {"plants": ["大嘴花"]}}, 1)
     _c13 = _FakeCtx13()
     _rt13._inject_lineup(_c13, _t13c, False)   # 当前生效 = boss 的 大嘴花
+    check("★骨架: 换表但阵容相同 -> 只认不做",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
+
+    # --- ★ 神器链唯一入口 = 选卡终点（2026-10-28 重构）---
+    _tArt13 = _eng13.Table({"from_level": 1,
+                            "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                            "artifact_en": "artifact_calabash"}, 0)
+    _rt13._STATE["artifact_sig"] = None
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tArt13, False)
+    check("★神器入口: 要换神器 -> 选取植物/选择编队 next 都接 [选取神器]",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_ARTIFACT_PICK]
+          and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_ARTIFACT_PICK],
+          f"plants={_choose13(_c13)} squad={_merged13(_c13, _rt13.NODE_SQUAD_PICK)}")
+    check("★神器入口: 换神器时未变闸门也进骨架（不再直跳开始战斗）",
+          (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
+          == list(_rt13._JUMP_SAME_ART),
+          str(_merged13(_c13, _rt13.NODE_JUMP_SAME)))
+    check("★不覆盖: 换神器也不碰 选取神器 的任何字段",
+          _merged13(_c13, _rt13.NODE_ARTIFACT_PICK) is None,
+          str(_merged13(_c13, _rt13.NODE_ARTIFACT_PICK)))
+    check("★不覆盖: 换神器也不碰 关闭神器界面 / 首关入口",
+          _merged13(_c13, _rt13.NODE_ARTIFACT_CLOSE) is None
+          and _merged13(_c13, _rt13.NODE_START_OCR) is None)
+    check("★神器入口: 模板按当前表神器注入",
+          any("artifact_calabash" in _json13.dumps(p, ensure_ascii=False)
+              for p in _c13.overrides), str(_c13.overrides))
+
+    _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tArt13, False)
+    check("★神器入口: 神器相同 -> 两个选卡终点还原 [开始战斗]",
+          (_choose13(_c13) or {}).get("next") == [_rt13.NODE_BATTLE_START]
+          and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_BATTLE_START],
+          f"plants={_choose13(_c13)}")
+    check("★神器入口: 神器相同 -> 闸门回原值",
+          (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
+          == list(_rt13._JUMP_SAME_ORIG))
+
+    # --- ★ 合体：阵容相同 + 神器要换（只认不做，但终点接神器）---
+    _tBoth13 = _eng13.Table({"from_level": 1,
+                             "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                             "artifact_en": "artifact_calabash",
+                             "boss_lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                             "boss_artifact_en": "artifact_calabash"}, 0)
+    _rt13._STATE["lineup_sig"] = _tBoth13.lineup_sig(False)
+    _rt13._STATE["artifact_sig"] = None            # 神器要换
+    _c13 = _FakeCtx13()
+    _rt13._inject_lineup(_c13, _tBoth13, False)
     _cl = _last_clear13(_c13)
-    check("★跳过选卡: 换表但阵容相同 -> 跳",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    check("★合体: 阵容相同+神器要换 -> 清卡只认不点，终点接 选取神器",
+          _cl and _cl.get("action") == "DoNothing"
+          and (_choose13(_c13) or {}).get("action") == "DoNothing"
+          and (_choose13(_c13) or {}).get("next") == [_rt13.NODE_ARTIFACT_PICK],
+          f"clear={_cl} plants={_choose13(_c13)}")
+    _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
 
     # --- lineup_gate_adjust（闸门判断的阵容维度修正，纯函数）---
     _ga = _rt13.lineup_gate_adjust
@@ -828,28 +1013,70 @@ try:
     # 训练模式：任何情况都不修正（每关必重选）
     check("闸门修正: 训练模式不修正",
           _ga(True, True, _tSame, False, _sigNormal) == (True, None))
-    # 签名未知（首次进关）：保守，不修正
-    check("闸门修正: 签名未知不修正",
+    # 签名未知 + 普通关：维持原判断
+    check("闸门修正: 签名未知 + 普通关不修正",
           _ga(False, True, _tSame, False, None) == (True, None))
+    # ★ 2026-10-29 日志实锤：签名未知 + boss 关必须重选
+    #   （任务起手第一关就是 boss 关时签名恒为 None，旧版「保守不修正」=
+    #    拿普通关卡组打 boss 关：日志里的「第一次进 boss 关走普通关路线」）
+    _n, _r = _ga(False, False, _tSame, True, None)
+    check("★闸门修正: 签名未知 + boss 关 -> 保守重选",
+          _n is True and _r and "boss" in _r, f"need={_n} reason={_r}")
+    # ★ 形态闸门：当前生效卡组是普通形态，本关是 boss 关 -> 一律重选
+    _n, _r = _ga(False, False, _tSame, True, _sigNormal, False)
+    check("★闸门修正: 卡组形态=普通 + 本关 boss -> 重选",
+          _n is True and _r and "形态" in _r, f"need={_n} reason={_r}")
+    # 形态一致 -> 不额外触发（交回签名判断）
+    check("闸门修正: 卡组形态=boss + 本关 boss -> 不额外触发",
+          _ga(False, False, _tSame, True, _tSame.lineup_sig(True), True) == (False, None))
 
-    # --- ★ 训练模式下 _inject_lineup 永不跳过清空/选卡 ---
-    # （闸门只翻 next 分支，清空卡牌节点会不会被改成空跳是 _inject_lineup 说了算）
+    # --- ★ 补给屏收尾**永远**回骨架（2026-10-24 水皮旁路 bug 的结构性修复）---
+    #   boss 关前必弹补给屏；补给终点「神器补给_确定」一律回「清空卡牌」，
+    #   清不清卡/选不选植物/接不接神器全交给骨架自己判断 ——
+    #   不再按 lineup_changed 分流，旁路选卡的路径从图上消失。
+    def _supply_next(ctx):
+        return (_merged13(ctx, _rt13.NODE_SUPPLY_CONFIRM) or {}).get("next")
+
+    _tNoArt = _eng13.Table({"from_level": 1, "lineup": {"plants": ["大喷菇"]},
+                            "boss_lineup": {"plants": ["菜问"]}}, 0)  # 不配神器
+    _rt13._STATE["artifact_sig"] = None
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tNoArt, True)
+    check("★补给旁路: 神器没变 -> 补给确定回「清空卡牌」走骨架",
+          _supply_next(_c13) == [_rt13.NODE_CLEAR_CARDS, _rt13.NODE_SUPPLY_CONFIRM],
+          str(_supply_next(_c13)))
+    _tArt = _eng13.Table({"from_level": 1,
+                          "lineup": {"plants": ["大喷菇"], "artifact": "葫芦神器"},
+                          "artifact_en": "artifact_calabash",
+                          "boss_lineup": {"plants": ["菜问"], "artifact": "葫芦神器"},
+                          "boss_artifact_en": "artifact_calabash"}, 0)
+    _rt13._STATE["artifact_sig"] = None
+    _c13 = _FakeCtx13()
+    _rt13._inject_artifact(_c13, _tArt, True)
+    check("★补给旁路: 神器也变 -> 补给确定同样回骨架（神器由终点接）",
+          _supply_next(_c13) == [_rt13.NODE_CLEAR_CARDS, _rt13.NODE_SUPPLY_CONFIRM],
+          str(_supply_next(_c13)))
+    _rt13._STATE["artifact_sig"] = None
+
+    # --- ★ 训练模式下 _inject_lineup 永不 neuter ---
+    # （闸门只翻 next 分支，两个节点的 action 会不会变成空动作是 _inject_lineup 说了算）
     _rt13._STATE["training"] = True
     _rt13._STATE["lineup_sig"] = _t13.lineup_sig(False)
+    _rt13._STATE["artifact_sig"] = None
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, False)    # 签名相同但训练模式 -> 不跳
+    _rt13._inject_lineup(_c13, _t13, False)    # 签名相同但训练模式 -> 不 neuter
     _cl = _last_clear13(_c13)
-    check("★训练模式: 阵容相同也不跳（清空卡牌保持 OCR 点击）",
-          _cl and _cl.get("recognition") == "OCR" and _cl.get("action") == "Click",
-          str(_cl))
+    check("★训练模式: 阵容相同也不 neuter（清空卡牌保持 Click）",
+          _cl and _cl.get("action") == "Click"
+          and (_choose13(_c13) or {}).get("action") == "Custom", str(_cl))
     _rt13._STATE["training"] = False
     _c13 = _FakeCtx13()
-    _rt13._inject_lineup(_c13, _t13, False)    # 回正赛 -> 恢复跳过
-    _cl = _last_clear13(_c13)
-    check("★回到正赛: 跳过恢复",
-          _cl and _cl.get("recognition") == "DirectHit", str(_cl))
+    _rt13._inject_lineup(_c13, _t13, False)    # 回正赛 -> 恢复只认不做
+    check("★回到正赛: neuter 恢复",
+          (_last_clear13(_c13) or {}).get("action") == "DoNothing")
     _rt13._STATE["training"] = None
     _rt13._STATE["lineup_sig"] = None
+    _rt13._STATE["artifact_sig"] = None
 except Exception as _e13:
     check("boss阵容/跳过选卡", False, f"{type(_e13).__name__}: {_e13}")
 
@@ -897,6 +1124,97 @@ try:
     _blk = _rt14._focus_lineup_block(_t14, True)
     check("focus块: boss 无专属 -> 沿用普通关",
           _blk.split("\n")[0] == "当前使用：表1" and "大喷菇" in _blk, _blk)
+
+    # ★ 2026-10-31：关卡号播报前置（加载作业集 / 自动计数校准 / 过关）
+    #   用户实报「关卡数只有点继续挑战才播报，而那时已经下一关了」。
+    # ★ 2026-11-01 用户定稿文案：`关卡数:2` / boss 关 `关卡数:5-boss关`
+    check("焦点: 普通关 -> 关卡数:87",
+          _rt14._focus_level_line(87) == "关卡数:87",
+          _rt14._focus_level_line(87))
+    check("焦点: boss 关（5 的倍数）-> 关卡数:85-boss关",
+          _rt14._focus_level_line(85) == "关卡数:85-boss关",
+          _rt14._focus_level_line(85))
+    _unk = _rt14._focus_level_line(1, False)
+    check("焦点: 计数器未知 -> 播「待识别」而不是硬报 1",
+          "待识别" in _unk and "关卡数:1" not in _unk, _unk)
+    check("焦点: 过关播报与开局同一口径（不再带「已过第几关」）",
+          _rt14._plan_level_msg(88, 87, True) == "关卡数:88"
+          and _rt14._plan_level_msg(88, None, False) == "关卡数:88",
+          _rt14._plan_level_msg(88, 87, True))
+    check("焦点: 过关播报 boss 关也带 -boss关",
+          _rt14._plan_level_msg(85, 84, True) == "关卡数:85-boss关",
+          _rt14._plan_level_msg(85, 84, True))
+    # ★ 2026-11-01 用户要求：`（未校准）`只在开局那一条带一次，每关的不带
+    check("焦点: 「（未校准）」只由开局播报带（每关不带）",
+          _rt14._focus_level_line(5, True, True) == "关卡数:5-boss关（未校准）"
+          and _rt14._focus_level_line(5) == "关卡数:5-boss关",
+          _rt14._focus_level_line(5, True, True))
+
+    # ★ 2026-11-01「播报晚一关」根因守卫：focus 必须按 FOCUS_EVENT 分键写（字典写法）。
+    #   整串写法只在 Node.Action.Starting 渲染，而那条事件携带的是上一次的旧文案
+    #   -> 每条关卡播报晚一次过关（用户实报「boss 关在第四关」）。
+    class _FakeCtx14:
+        def __init__(self):
+            self.patches = []
+
+        def override_pipeline(self, patch):
+            self.patches.append(patch)
+
+    _c14 = _FakeCtx14()
+    _rt14._set_focus(_c14, "节点X", "关卡数:5")
+    _p14 = _c14.patches[-1] if _c14.patches else {}
+    check("焦点: 按 Node.PipelineNode.Starting 分键写（不再整串写法）",
+          _p14 == {"节点X": {"focus": {_rt14.FOCUS_EVENT: "关卡数:5"}}}, str(_p14))
+
+    # ★ 2026-11-01 用户实报「设计 1~30 关，agent 报 1~31」：
+    #   区间唯一口径 = Table.level_range()（闭区间）
+    _t30 = _eng14.Table({"from_level": 1, "to_level": 31,
+                         "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: to_level(开区间上界) -> 报闭区间 1~30",
+          _t30.level_range() == "1~30", _t30.level_range())
+    _t30b = _eng14.Table({"from_level": 1, "to_level": 31,
+                          "levels": list(range(1, 31)),
+                          "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: 图层模式 -> 报 levels 真实 min~max",
+          _t30b.level_range() == "1~30", _t30b.level_range())
+    _tnone = _eng14.Table({"from_level": 50, "lineup": {"plants": ["大喷菇"]}}, 0)
+    check("区间: 无 to_level -> 50~末",
+          _tnone.level_range() == "50~末", _tnone.level_range())
+    _line30 = LevelTracker(30).status_line(_t30, False)
+    check("区间: 状态行也是闭区间（表1 (1~30)）",
+          "表1 (1~30)" in _line30, _line30)
+
+    # ★ 2026-11-01 起手绝对锚点探测 `_probe_auto_count`：
+    #   读到「第X关」就返回关卡号；认不到必须**返回 None 而不是抛**
+    #   （它在 JobSetLoad 里跑，抛了会断掉整局）。
+    class _FakeCtl14:
+        def post_screencap(self):
+            return self
+
+        def wait(self):
+            return self
+
+        def get(self):
+            return object()
+
+    class _FakeCtxProbe14:
+        def __init__(self, text):
+            self._text = text
+            self.tasker = type("T", (), {"controller": _FakeCtl14()})()
+
+        def run_recognition(self, node, image):
+            return type("R", (), {
+                "best_result": (type("B", (), {"text": self._text})()
+                                if self._text else None),
+                "filtered_results": [],
+                "all_results": [],
+            })()
+
+    check("起手锚点: 读到「第87关」-> 87",
+          _rt14._probe_auto_count(_FakeCtxProbe14("第87关")) == 87,
+          str(_rt14._probe_auto_count(_FakeCtxProbe14("第87关"))))
+    check("起手锚点: 认不到 -> None（不抛）",
+          _rt14._probe_auto_count(_FakeCtxProbe14(None)) is None)
 except Exception as _e14:
     check("focus播报块", False, f"{type(_e14).__name__}: {_e14}")
 
@@ -964,6 +1282,21 @@ try:
 
     _j16b = _eng16.JobSet({"name": "old", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]}, code="o")
     check("旧作业集 plant_notes 为空 dict", _j16b.plant_notes == {})
+
+    # ---- 作业集标签（2026-10-26）----
+    _j16c = _eng16.JobSet({
+        "name": "tagged",
+        "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}],
+        "tags": ["开僵尸场外加速", "氪佬", "", 123, "  "],
+        "plant_notes": {"冰西瓜": {"tier": 5}},
+    }, code="t")
+    check("标签载入（去空/去非串）",
+          _j16c.tags == ["开僵尸场外加速", "氪佬"], str(_j16c.tags))
+    check("标签不影响植物备注", _j16c.plant_notes == {"冰西瓜": {"tier": 5}}, str(_j16c.plant_notes))
+
+    _j16d = _eng16.JobSet({"name": "notag", "tables": [{"from_level": 1, "lineup": {"plants": ["X"]}}]},
+                          code="nt")
+    check("旧作业集 tags 为空 list", _j16d.tags == [])
 except Exception as _e16:
     check("植物备注", False, f"{type(_e16).__name__}: {_e16}")
 
@@ -1012,10 +1345,8 @@ try:
     _R18 = Path(__file__).resolve().parent.parent.parent
 
     def _jsonc18(p):
-        _raw = p.read_text(encoding="utf-8")
-        _raw = "\n".join(ln for ln in _raw.splitlines()
-                         if not ln.lstrip().startswith("//"))
-        return _json18.loads(_raw)
+        from agent.jobset.check_graph import strip_comments as _strip18
+        return _json18.loads(_strip18(p.read_text(encoding="utf-8")))
 
     # ---- pipe 节点静态 param 索引：node -> 静态 custom_action_param 键集 ----
     _pipe_static: dict = {}
@@ -1040,6 +1371,9 @@ try:
     _KNOWN_BAD18 = {
         ("get_gold_coins.json", "星系_进入世界.next"),        # 装备街机神器 vs 需要刷的关卡
         ("Secret_realm.json", "地宫2无尽_第一关_寻找8槽.template"),  # 藤蔓植物 vs 远程植物
+        # 渠道服 vs 应用宝_登录方式：级联 option（选了 tap 服就没有应用宝登录方式可选），
+        # 运行时互斥不会同时生效，静态扫描感知不到 → 豁免（2026-10-25 用户确认）
+        ("Start_game.json", "打开pvz_识别登录.next"),
     }
     _bad_all: list = []
     _lost_all: list = []
@@ -1093,7 +1427,17 @@ try:
     # ---- 本次事故的定点检查：当前世界/起始关卡 分信道 ----
     _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "Endless_ref.json")
     _cases18 = _t18["option"]["无尽挑战_选择世界"]["cases"]
-    check("世界 case 共 16 个", len(_cases18) == 16, f"got={len(_cases18)}")
+    # ★ 2026-11-01 起「地宫」也是一个 case，但它**故意不写 Plan 双节点**：
+    #   地宫跑的是 Secret_realm 任务、不注入「当前世界」（见 HANDOFF §0 地宫无尽）。
+    #   所以判据从「case 恰好 16 个」放宽成「**注入当前世界的** case 恰好 16 个」，
+    #   另外两条不变量不变：任何 case 都不许碰 JobSetLoad（会把起始关卡顶掉）。
+    _inject18 = [c for c in _cases18
+                 if isinstance(c, dict)
+                 and isinstance(c.get("pipeline_override"), dict)
+                 and "无尽局内_过关_正赛" in c["pipeline_override"]]
+    check("注入「当前世界」的世界 case 共 16 个"
+          f"（另有 {len(_cases18) - len(_inject18)} 个不注入的 case，如「地宫」）",
+          len(_inject18) == 16, f"got={len(_inject18)}/{len(_cases18)}")
 
     _worlds18 = set()
     _shape_ok = True
@@ -1101,6 +1445,8 @@ try:
         _ov = _c.get("pipeline_override", {})
         if "无尽挑战_加载作业集代码" in _ov:
             _shape_ok = False      # 冲突回归：世界 case 又去碰 JobSetLoad
+    for _c in _inject18:
+        _ov = _c.get("pipeline_override", {})
         for _node, _tr in (("无尽局内_过关_正赛", False), ("无尽局内_过关_训练", True)):
             _prm = _ov.get(_node, {}).get("custom_action_param")
             if not isinstance(_prm, dict) \
@@ -1110,8 +1456,8 @@ try:
                 _shape_ok = False
             else:
                 _worlds18.add(_prm["当前世界"])
-    check("16 case 都写 Plan 双节点且带静态键（训练模式/计数）", _shape_ok)
-    check("16 case 当前世界互不相同", len(_worlds18) == 16, str(sorted(_worlds18)))
+    check("16 个世界 case 都写 Plan 双节点且带静态键（训练模式/计数）", _shape_ok)
+    check("16 个世界 case 的当前世界互不相同", len(_worlds18) == 16, str(sorted(_worlds18)))
 except Exception as _e18:
     check("注入信道防冲突", False, f"{type(_e18).__name__}: {_e18}")
 
@@ -1160,6 +1506,381 @@ try:
           repr(_ovr19b.get(_endn19b)))
 except Exception as _e19:
     check("settle 等待结算时长挂载点", False, f"{type(_e19).__name__}: {_e19}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 20. loops 收尾计数门允许 0（0 = 循环链只跑首圈直接收尾）===")
+# 计数语义 = 首圈之后的额外重复次数（循环链首圈不经门，单次链直灌循环链）：
+# 进门 N+1 次掰向收尾 => 总圈数 = N+1。N=0 -> 首圈回来第一次进门就收尾。
+# 改前 runtime/编辑器全是 min=1 钳制，没法表达「只跑一圈」（2026-10-23）。
+try:
+    _seg20 = [{"key": "card1", "slot": "1", "type": "plant",
+               "cells": ["格子2_3"], "waits": []}]
+    _raw20 = {
+        "from_level": 1,
+        "lineup": {"plants": ["大喷菇"]},
+        "slots": {"1": "大喷菇"},
+        "endType": "loops", "endLoopCount": 0,
+        "non_boss": {
+            "once_chain": [], "loop_chain": _seg20, "end_chain": _seg20,
+        },
+    }
+    _ovr20, _cn20 = _cpl8j.build_fight_override(
+        _eng.Table(_raw20, 0), False, _coords, 10, 80, None)
+    _loopn20 = (_cn20.get("loop") or {}).get("node")
+    check("loops收尾: 循环链节点存在", bool(_loopn20), repr(_cn20))
+    _loopnext20 = _ovr20.get(_loopn20, {}).get("next") or []
+    check("loops收尾: 循环链回圈走计数门（循环种植）",
+          bool(_loopn20) and _loopnext20[-1] == "无尽局内_循环种植",
+          repr(_loopnext20))
+    check("loops收尾: 计数门节点灌了 计数门 参数",
+          (_ovr20.get("无尽局内_循环种植", {})
+           .get("custom_action_param", {}).get("计数门")) is True,
+          repr(_ovr20.get("无尽局内_循环种植")))
+    check("loops收尾: 循环链 next 不带收尾检测（数圈说了算）",
+          not any("收尾" in str(x) for x in _loopnext20), repr(_loopnext20))
+    # 钳制回归保护：runtime 计数门不再把 0 钳成 1，
+    # 也不再用 `get(...) or 3` 的假值写法（0 or 3 == 3，0 会被吞掉 ——
+    # 2026-10-24 实测：设 0 结果循环链一直跑）。
+    _rtsrc20 = (Path(__file__).resolve().parent / "runtime.py").read_text(
+        encoding="utf-8")
+    check("runtime 计数门钳制允许 0",
+          "max(0, n_max)" in _rtsrc20 and "max(1, n_max)" not in _rtsrc20)
+    check("runtime 计数门不吃假值（无 `or 3` 吞 0）",
+          'endLoopCount") or 3' not in _rtsrc20)
+    _html20 = (Path(__file__).resolve().parent.parent.parent
+               / "game_assist_tools/endless_setup/static/index.html")
+    check("编辑器 循环链重复 输入框 min=0",
+          'id="earlyEndLoopCount" min="0"' in _html20.read_text(encoding="utf-8"))
+
+    # ★ 功能性真测：驱动 JobSetFight 计数门，验证 N=0 首圈回来即收尾、
+    #   N=1 跑两圈收尾（需要 _STATE 里有作业集 + 锁定表）。
+    from types import SimpleNamespace as _Sns20
+    from agent.jobset import runtime as _rt20
+
+    class _Ctx20:
+        def __init__(self):
+            self.overrides = []
+
+        def override_pipeline(self, o):
+            self.overrides.append(o)
+
+    class _Argv20:
+        custom_action_param = {"计数门": True, "关卡": 5, "是boss关": False}
+
+    def _mk_gate_table20(n):
+        raw = {
+            "from_level": 1,
+            "lineup": {"plants": ["大喷菇"]},
+            "slots": {"1": "大喷菇"},
+            "endType": "loops", "endLoopCount": n,
+            "non_boss": {"once_chain": [], "loop_chain": _seg20,
+                         "end_chain": _seg20},
+            # 计数门分支只要求 compiled.normal 里存在收尾节点名
+            "compiled": {"normal": {"无尽挑战_组合动作_收尾": {},
+                                    "无尽挑战_组合动作_循环": {}}},
+        }
+        return _eng.Table(raw, 0)
+
+    _fight20 = _rt20.JobSetFight()
+    _gate_node20 = "无尽局内_循环种植"
+
+    def _gate_nexts20(n, entries):
+        _rt20._STATE["jobset"] = _Sns20(tables=[_mk_gate_table20(n)])
+        _rt20._STATE["table_index"] = 0
+        _rt20._STATE["locked_level"] = 5
+        _rt20._STATE.pop("loop_gate_key", None)
+        _rt20._STATE.pop("loop_gate_cnt", None)
+        ctx = _Ctx20()
+        for _ in range(entries):
+            _fight20.run(ctx, _Argv20())
+        return [o[_gate_node20]["next"][0] for o in ctx.overrides]
+
+    _seq0 = _gate_nexts20(0, 2)
+    check("★功能: N=0 第一次进门就掰向收尾",
+          _seq0 == ["无尽挑战_组合动作_收尾"] * 2,  # 第2次进门=回圈重数仍收尾
+          str(_seq0))
+    _seq1 = _gate_nexts20(1, 2)
+    check("★功能: N=1 先循环一圈再收尾（总 2 圈）",
+          _seq1 == ["无尽挑战_组合动作_循环", "无尽挑战_组合动作_收尾"],
+          str(_seq1))
+    _seq3 = _gate_nexts20(3, 4)
+    check("功能: N=3 循环三圈后第四圈收尾（总 4 圈）",
+          _seq3 == ["无尽挑战_组合动作_循环"] * 3 + ["无尽挑战_组合动作_收尾"],
+          str(_seq3))
+    for _k in ("jobset", "table_index", "locked_level",
+               "loop_gate_key", "loop_gate_cnt"):
+        _rt20._STATE.pop(_k, None)
+except Exception as _e20:
+    check("loops 收尾计数门 0 语义", False, f"{type(_e20).__name__}: {_e20}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 21. 作业集目录口径（必须在包外 / 三处实现不漂移） ===")
+# 2026-10-30 事故：作业集曾被放进 <根>/resource/jobs（包根级条目），
+# 安卓端每次 App 升级都会整棵删掉 resource/ 再重解 -> 用户作业集全丢。
+# 这里钉住三件事：目录判据、迁移源、网页端与 agent 的口径一致。
+try:
+    import importlib.util as _ilu21
+
+    from agent.jobset import engine as _eng21
+
+    # ---- 21a. 三布局判据（不落盘：用真实存在的 resource/ 子树当"发行包"样本）----
+    _repo21 = _eng21._REPO_ROOT
+    check("开发仓库（<根> 无 resource/）-> <根>/assets/resource/jobs",
+          _eng21.jobs_dir_for(_repo21) == _repo21 / "assets" / "resource" / "jobs",
+          str(_eng21.jobs_dir_for(_repo21)))
+    check("发行包（<根> 有 resource/）-> <根>/jobs（包外）",
+          _eng21.jobs_dir_for(_repo21 / "assets") == _repo21 / "assets" / "jobs",
+          str(_eng21.jobs_dir_for(_repo21 / "assets")))
+    check("安卓 -> <根>/../jobs（与 pi 同级）",
+          _eng21.jobs_dir_for(_repo21, android=True) == _repo21.parent / "jobs",
+          str(_eng21.jobs_dir_for(_repo21, android=True)))
+
+    # ---- 21b. ★ 包内布局下作业集绝不能落在资源树里 ----
+    #   （落进去 = 安卓升级 /「重新解压资源」时被整棵删掉，2026-10-30 的事故）
+    #   开发仓库是唯一例外：那里作业集按设计就在 assets/resource/jobs。
+    def _inside21(child, parent):
+        return Path(parent).resolve() in Path(child).resolve().parents
+
+    check("发行包布局: 作业集不在资源目录内",
+          not _inside21(_eng21.jobs_dir_for(_repo21 / "assets"),
+                        _repo21 / "assets" / "resource"),
+          str(_eng21.jobs_dir_for(_repo21 / "assets")))
+    check("安卓布局: 作业集不在 pi 解包树内",
+          not _inside21(_eng21.jobs_dir_for(_repo21, android=True), _repo21),
+          str(_eng21.jobs_dir_for(_repo21, android=True)))
+    if _eng21.RESOURCE_DIR == _repo21 / "assets" / "resource":
+        print("  [SKIP] 当前实际布局: 开发仓库（作业集按设计就在 assets/resource/jobs）")
+    else:
+        check("当前实际布局: 作业集不在资源目录内",
+              not _inside21(_eng21.DEFAULT_JOBS_DIR, _eng21.RESOURCE_DIR),
+              f"jobs={_eng21.DEFAULT_JOBS_DIR}")
+
+    # ---- 21c. 迁移源：两处历史位置都得在（删了老用户的作业集就找不回来了）----
+    _want21 = [_repo21 / "resource" / "jobs",
+               _repo21 / "assets" / "resource" / "jobs"]
+    check("迁移源含两处历史位置", _eng21.LEGACY_JOBS_DIRS == _want21,
+          str(_eng21.LEGACY_JOBS_DIRS))
+
+    # ---- 21d. 网页端两份实现与 agent 不漂移（三份同口径，靠这条门禁守着）----
+    _srv_dir21 = Path(__file__).resolve().parents[2] / "game_assist_tools" / "endless_setup"
+    for _name21 in ("pvz.py", "pvz_android.py"):
+        try:
+            _spec21 = _ilu21.spec_from_file_location(
+                _name21[:-3] + "_server", _srv_dir21 / _name21)
+            _mod21 = _ilu21.module_from_spec(_spec21)
+            _spec21.loader.exec_module(_mod21)
+            check(f"{_name21}: JOBS_DIR 与 engine 同口径",
+                  Path(_mod21.JOBS_DIR).resolve() == _eng21.DEFAULT_JOBS_DIR.resolve(),
+                  f"{_mod21.JOBS_DIR}")
+            check(f"{_name21}: 迁移源与 engine 同口径",
+                  [Path(p) for p in _mod21.LEGACY_JOBS_DIRS]
+                  == _eng21.LEGACY_JOBS_DIRS,
+                  str(_mod21.LEGACY_JOBS_DIRS))
+        except ImportError as _ie21:
+            # 少了 flask 之类就跳过（编辑器本身跑不起来，没必要卡 agent 门禁）
+            print(f"  [SKIP] {_name21} 口径比对：{_ie21}")
+except Exception as _e21:
+    check("作业集目录口径", False, f"{type(_e21).__name__}: {_e21}")
+
+
+# ---------------------------------------------------------------------------
+print("\n=== 22. 预留接口（reserved.py ↔ 网页端 16-jobset-reserved.js 不漂移）===")
+# 2026-11-01 用户需求：「作业集后续还能适配的选项……帮我做接口，不要写实际的
+# 功能，做接口存留」。所以这一节钉三件事：
+#   1. 两边注册表 id 完全一致（漂移 = 网页端能存、agent 认不出，将来一定踩）；
+#   2. 解析恒「缺省不改变行为」（旧作业集行为一字不差）；
+#   3. 编译入口恒空 —— 有人偷偷把它实现了、却没改 here 的断言，也会 FAIL。
+try:
+    import re as _re22
+
+    from agent.jobset import reserved as _rsv22
+    from agent.jobset import dsl as _dsl22
+    from agent.jobset import compile as _cpl22
+
+    # ---- 22a. 版本号 + 注册表齐全 ----
+    check("预留接口版本号 = 1", _rsv22.RESERVED_VERSION == 1,
+          str(_rsv22.RESERVED_VERSION))
+    check("开局前动作 4 项齐全（等待/刷僵尸/切换场外加速/自动刷新下一波）",
+          set(_rsv22.PREBATTLE_ACTIONS) == {"wait", "spawn", "zombieSpeed", "refreshWave"},
+          str(sorted(_rsv22.PREBATTLE_ACTIONS)))
+    check("选卡预留 2 项齐全（标收藏 / 自由阶数）",
+          set(_rsv22.PICK_FEATURES) == {"favorite", "tiers"},
+          str(sorted(_rsv22.PICK_FEATURES)))
+    check("局内预留 2 项齐全（主动技能 / 智能切换形态）",
+          set(_rsv22.INBATTLE_RESERVED) == {"skill", "formSmart"},
+          str(sorted(_rsv22.INBATTLE_RESERVED)))
+    check("局外预留 2 项齐全（世界作业链 / 正赛检查）",
+          set(_rsv22.OUTER_RESERVED) == {"worldChains", "modeCheck"},
+          str(sorted(_rsv22.OUTER_RESERVED)))
+    check("全部预留项都还没实现（implemented 全 False）",
+          all(spec.get("implemented") is False for spec in _rsv22.catalog()),
+          "实现某一项时必须同时改注册表与本节断言，别偷偷上功能")
+
+    # ---- 22b. ★ 两边 id 不漂移（拿真实 JS 文件比对）----
+    _js22 = (Path(__file__).resolve().parents[2] / "game_assist_tools" / "endless_setup"
+             / "static" / "js" / "16-jobset-reserved.js")
+    if not _js22.is_file():
+        check("网页端预留接口文件存在", False, str(_js22))
+    else:
+        _txt22 = _js22.read_text(encoding="utf-8")
+
+        def _js_ids22(block: str):
+            """从 `const <block> = [ … ];` 里抽全部 `id: 'xxx'`（顶层 const 以 `];` 收尾）。"""
+            m = _re22.search(r"const\s+" + block + r"\s*=\s*\[(.*?)\n\];",
+                             _txt22, _re22.S)
+            if not m:
+                return None
+            return set(_re22.findall(r"id:\s*'([A-Za-z0-9_]+)'", m.group(1)))
+
+        for _jsblk, _pyset, _cn in (
+            ("JOB_PREBATTLE_ACTIONS", set(_rsv22.PREBATTLE_ACTIONS), "开局前动作"),
+            ("JOB_PICK_FEATURES", set(_rsv22.PICK_FEATURES), "选卡选项"),
+            ("JOB_INBATTLE_RESERVED", set(_rsv22.INBATTLE_RESERVED), "局内动作"),
+            ("JOB_OUTER_RESERVED", set(_rsv22.OUTER_RESERVED), "局外选项"),
+        ):
+            _jsids = _js_ids22(_jsblk)
+            check(f"{_cn}：网页端 {_jsblk} 与 agent 侧 id 一致",
+                  _jsids is not None and _jsids == _pyset,
+                  f"js={sorted(_jsids) if _jsids is not None else 'null'} py={sorted(_pyset)}")
+
+    # ---- 22c. 解析：只认登记过的 id / side / 参数夹取 ----
+    _pb22 = _rsv22.parse_pre_battle([
+        {"id": "wait", "side": "boss", "ms": 1500, "垃圾字段": 1},
+        {"id": "spawn", "side": "??", "times": 999},          # side 非法 -> both；次数夹到 99
+        {"id": "不存在的动作", "ms": 1},                        # 未知 id -> 丢
+        "不是对象",                                             # 非 dict -> 丢
+    ])
+    check("parse_pre_battle: 丢掉未知 id / 非对象（3 项 -> 2 项）", len(_pb22) == 2, str(_pb22))
+    check("parse_pre_battle: side 非法回落 both", _pb22[1]["side"] == "both", str(_pb22[1]))
+    check("parse_pre_battle: 次数按 params 夹到 99", _pb22[1]["times"] == 99, str(_pb22[1]))
+    check("parse_pre_battle: 只收声明过的键（不搬「垃圾字段」）",
+          "垃圾字段" not in _pb22[0], str(_pb22[0]))
+    check("pre_battle_applies: both 两侧都跑 / boss 只跑 boss",
+          _rsv22.pre_battle_applies({"side": "both"}, True)
+          and _rsv22.pre_battle_applies({"side": "boss"}, True)
+          and not _rsv22.pre_battle_applies({"side": "boss"}, False))
+    check("pre_battle_for: 普通关只拿到 both+normal",
+          [it["side"] for it in _rsv22.pre_battle_for(
+              [{"side": "both"}, {"side": "boss"}, {"side": "normal"}], False)]
+          == ["both", "normal"])
+
+    # ---- 22d. ★ 编译入口恒空（有人悄悄实现 -> 这里必红）----
+    _r22 = _rsv22.pre_battle_dsl({"id": "wait", "ms": 1000})
+    check("pre_battle_dsl: 现在恒返回空 DSL", _r22["dsl"] == "" and _r22["count"] == 0, str(_r22))
+    check("pre_battle_dsl: 空理由写明「未实现」",
+          any("未实现" in m for m in _r22["missing"]), str(_r22["missing"]))
+    _coords22 = _dsl22.load_coords()
+    _g22 = _dsl22.generic_dsl("ga:skill", _coords22, None, 1, 1, {"slot": 1})
+    check("generic_dsl(预留动作): 不产出任何动作、只报「预留」",
+          _g22["dsl"] == "" and any("预留" in m for m in _g22["missing"]), str(_g22))
+    _cn22 = _cpl22.build_chain_nodes(
+        {"once_chain": [{"key": "skill", "type": "skill", "slot": 1,
+                         "label": "植物主动技能", "cells": ["格子1_1"]}]},
+        _coords22, swipe_ms=80, interval=None, every_n=10, has_end=False)
+    check("build_chain_nodes(预留段): 整段跳过、不编译出 click/swipe",
+          _cn22["once"] is None, str(_cn22["once"]))
+
+    # ---- 22e. 字段解析：缺省 = 行为不变；配了就解析出来 ----
+    _raw22_old = {
+        "code": "t22", "name": "旧作业集（无预留字段）", "max_level": 149,
+        "tables": [{"from_level": 1, "to_level": None,
+                    "lineup": {"plants": ["A"]}, "slots": {"1": "A"}}],
+    }
+    _js22_old = JobSet(_raw22_old, code="t22")
+    _t22_old = _js22_old.tables[0]
+    check("旧作业集: pre_battle = []（不改变行为）", _t22_old.pre_battle == [], str(_t22_old.pre_battle))
+    check("旧作业集: pick_favorite = False", _t22_old.pick_favorite is False)
+    check("旧作业集: pick_tiers = {}", _t22_old.pick_tiers == {}, str(_t22_old.pick_tiers))
+    check("旧作业集: world_chains 未启用",
+          _js22_old.world_chains == {"enable": False, "items": []},
+          str(_js22_old.world_chains))
+    check("旧作业集: mode_check 未启用",
+          _js22_old.mode_check == {"enable": False, "expect": "ranked", "on_missing": "warn"},
+          str(_js22_old.mode_check))
+
+    _raw22_new = {
+        "code": "t22b", "name": "新作业集（带预留字段）", "max_level": 149,
+        "world_chains": {"enable": True, "items": [
+            {"world": "海盗港湾", "table": 2, "side": "boss",
+             "slots": {"1": "X"}, "squad": 3, "artifact": "葫芦神器"}]},
+        "mode_check": {"enable": True, "expect": "ranked", "on_missing": "abort"},
+        "tables": [{"from_level": 1, "to_level": None,
+                    "lineup": {"plants": ["A"]}, "slots": {"1": "A"},
+                    "pre_battle": [{"id": "wait", "side": "both", "ms": 2500}],
+                    "pick_favorite": True,
+                    "pick_tiers": {"1": 5, "2": 0, "9": 3}}],
+    }
+    _js22_new = JobSet(_raw22_new, code="t22b")
+    _t22_new = _js22_new.tables[0]
+    check("新作业集: pre_battle 读回来了",
+          _t22_new.pre_battle == [{"id": "wait", "side": "both", "ms": 2500}],
+          str(_t22_new.pre_battle))
+    check("新作业集: pick_favorite = True", _t22_new.pick_favorite is True)
+    check("新作业集: pick_tiers 丢掉 0 与越界槽（只剩 {1: 5}）",
+          _t22_new.pick_tiers == {1: 5}, str(_t22_new.pick_tiers))
+    check("新作业集: world_chains 启用且条目读回",
+          _js22_new.world_chains["enable"] is True
+          and _js22_new.world_chains["items"][0]["world"] == "海盗港湾"
+          and _js22_new.world_chains["items"][0]["squad"] == 3,
+          str(_js22_new.world_chains["items"][:1]))
+    check("新作业集: mode_check on_missing=abort 读回",
+          _js22_new.mode_check["on_missing"] == "abort", str(_js22_new.mode_check))
+
+    # ---- 22f. 提示：没配 = 一个字都不打；配了 = 带 ⏳ 且写明未实现 ----
+    check("提示: 没配预留项的作业集不产生任何日志",
+          _rsv22.reserved_notice_lines(_t22_old, False) == []
+          and _rsv22.jobset_notice_lines(_js22_old) == [])
+    _ln22 = _rsv22.reserved_notice_lines(_t22_new, False)
+    check("提示: 配了就各出一行（开场前 1 + 标收藏 1 + 阶数 1）、行首 ⏳、含「未实现」",
+          len(_ln22) == 3 and all(x.startswith("⏳") and "未实现" in x for x in _ln22),
+          str(_ln22))
+    _ln22b = _rsv22.reserved_notice_lines(_t22_new, True)
+    check("提示: boss 关别一样能算出（side=both 两侧都算）", len(_ln22b) == 3, str(_ln22b))
+    check("提示: 作业集级两项各一行",
+          len(_rsv22.jobset_notice_lines(_js22_new)) == 2,
+          str(_rsv22.jobset_notice_lines(_js22_new)))
+
+    # ---- 22g. 运行时钩子 _reserved_notice：只 log、不 override、去重 ----
+    from agent.jobset import runtime as _rt22
+
+    class _Ctx22:
+        def __init__(self):
+            self.overrides = []
+
+        def override_pipeline(self, ov):
+            self.overrides.append(ov)
+
+    _logs22: list = []
+    _old_log22 = _rt22._log
+    _rt22._log = lambda m: _logs22.append(m)
+    try:
+        _rt22._STATE["reserved_seen"] = None
+        _ctx22 = _Ctx22()
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 作业集级 2 + 表级 3
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 同一组合 -> 去重
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, True)    # 换关别 -> 新键 3 行
+    finally:
+        _rt22._log = _old_log22
+        _rt22._STATE["reserved_seen"] = None
+    check("运行时钩子: 一个 override 都不写（配了也不执行）",
+          _ctx22.overrides == [], str(_ctx22.overrides))
+    check("运行时钩子: 首次 5 行 + 重复调用去重 + boss 关别 3 行 = 8 行",
+          sum(1 for m in _logs22 if m.startswith("⏳")) == 8, str(_logs22))
+
+    # ---- 22h. 真实作业集（第 1 节载入的那份）不受影响 ----
+    if js:
+        check("真实作业集: 全部表都没有预留配置（= 行为与旧版一致）",
+              all(not t.pre_battle and not t.pick_favorite and not t.pick_tiers
+                  for t in js.tables),
+              str([(t.pre_battle, t.pick_favorite, t.pick_tiers) for t in js.tables])[:160])
+        check("真实作业集: 作业集级预留项均未启用",
+              js.world_chains == {"enable": False, "items": []}
+              and js.mode_check["enable"] is False,
+              str((js.world_chains, js.mode_check)))
+except Exception as _e22:
+    check("预留接口", False, f"{type(_e22).__name__}: {_e22}")
 
 
 # ---------------------------------------------------------------------------

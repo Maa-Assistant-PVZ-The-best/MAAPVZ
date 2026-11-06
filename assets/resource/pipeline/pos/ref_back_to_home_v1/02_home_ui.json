@@ -1,0 +1,123 @@
+{
+    "定位_主界面_ui_商店": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Panni_free/商店.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面_ui_日常": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "plants_explore/日常.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面_ui_竞技": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "pair_duel/竞技.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面_ui_植物": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Detection_Order/植物.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "method": 10001,
+        "roi": [
+            520,
+            611,
+            709,
+            106
+        ]
+    },
+    "定位_主界面_ui_星星": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/ref_backtohome/关卡星星.png",
+            "back_to_home/ref_backtohome/关卡星星(黑).png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "green_mask": true,
+        "roi": [
+            14,
+            216,
+            1242,
+            398
+        ]
+    },
+    "定位_主界面_ui_关闭按钮": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "order_by": "Vertical"
+    },
+    "定位_主界面_ui_关闭按钮_异格": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉_异格.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "order_by": "Vertical"
+    },
+    "定位_主界面_ui_返回按钮": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/返回.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "order_by": "Vertical"
+    },
+    "定位_主界面_ui_返回按钮_异格": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/返回_异格.png"
+        ],
+        "threshold": [
+            0.9
+        ],
+        "order_by": "Vertical"
+    }
+}

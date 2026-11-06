@@ -1,0 +1,132 @@
+{
+    "戴夫杯_前置检查": {
+        "focus": "戴夫杯",
+        "recognition": "DirectHit",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "[JumpBack]定位_主界面_公告类",
+            "戴夫杯_立即前往",
+            "戴夫杯_点击匹配",
+            "导航_戴夫杯"
+        ]
+    },
+    "导航_戴夫杯": {
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "导航_点击日常",
+            "pipe_over": {
+                "导航_点击日常": {
+                    "next": [
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
+                        "导航_活动合集"
+                    ]
+                }
+            }
+        },
+        "next": [
+            "点击戴夫杯"
+        ]
+    },
+    "点击戴夫杯": {
+        "recognition": "OCR",
+        "expected": [
+            "戴夫杯"
+        ],
+        "roi": [
+            58,
+            164,
+            94,
+            57
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "戴夫杯_立即前往"
+        ]
+    },
+    "戴夫杯_立即前往": {
+        "recognition": "OCR",
+        "expected": [
+            "立即前往"
+        ],
+        "roi": [
+            1051,
+            556,
+            162,
+            62
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "戴夫杯_匹配循环"
+        ]
+    },
+    "戴夫杯_匹配循环": {
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "戴夫杯_点击匹配"
+        ]
+    },
+    "戴夫杯_点击匹配": {
+        "recognition": "OCR",
+        "expected": [
+            "匹配"
+        ],
+        "roi": [
+            539,
+            527,
+            134,
+            64
+        ],
+        "timeout": 60000,
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "戴夫杯_按兵不动"
+        ]
+    },
+    "戴夫杯_按兵不动": {
+        "recognition": "OCR",
+        "action": "Click",
+        "roi": [
+            543,
+            490,
+            192,
+            70
+        ],
+        "timeout": 60000,
+        "post_delay": 2000,
+        "expected": [
+            "按兵不动"
+        ],
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "戴夫杯_按兵不动",
+            "戴夫杯_结算"
+        ]
+    },
+    "戴夫杯_结算": {
+        "recognition": "OCR",
+        "expected": [
+            "返回"
+        ],
+        "roi": [
+            525,
+            638,
+            230,
+            73
+        ],
+        "action": "Click",
+        "next": [
+            "戴夫杯_匹配循环"
+        ]
+    }
+}

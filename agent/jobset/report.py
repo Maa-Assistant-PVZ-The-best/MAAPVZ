@@ -34,7 +34,8 @@ def main():
     print("=" * 70)
 
     for t in js.tables:
-        rng = f"{t.from_level} ~ {t.to_level if t.to_level is not None else '末'}"
+        # 区间走 Table.level_range()（闭区间）：to_level 是开区间上界，直接打印会多一关
+        rng = t.level_range()
         print(f"\n{'#' * 70}")
         print(f"# 表{t.index + 1}   关卡 {rng}")
         print(f"# 选卡植物: {t.plants}")

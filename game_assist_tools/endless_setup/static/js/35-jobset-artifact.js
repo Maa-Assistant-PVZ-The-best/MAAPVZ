@@ -64,7 +64,8 @@ function jobLoadArtifacts() {
 }
 
 const ART_TYPE_CN = { click: '点击类', swipe: '滑动类', hold: '长按类', special: '特殊类' };
-const ART_BODY_CN = { small: '小体型', mid: '中体型', big: '大体型' };
+// ★ 特殊类子模式名：葫芦=体型；相机=拍照/打印（2026-10-25）
+const ART_BODY_CN = { small: '小体型', mid: '中体型', big: '大体型', capture: '拍照', print: '打印' };
 const ART_EMPTY_ICON = '/static/artifact/_empty.webp';
 
 // ---- 字段访问（target = 'normal' | 'boss'；boss 空 = 沿用普通关）----

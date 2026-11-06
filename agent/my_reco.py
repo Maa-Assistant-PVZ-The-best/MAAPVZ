@@ -3,6 +3,8 @@ from maa.custom_recognition import CustomRecognition
 from maa.context import Context
 
 
+# ⚠️ 待删（零引用）：MaaFramework 项目模板自带的演示代码（Hello World 脚手架残留），
+#    从未使用；连同本文件与 main.py 的 import 一起直接删。〔退役清单 2026-10-25〕
 @AgentServer.custom_recognition("my_reco_222")
 class MyRecongition(CustomRecognition):
 

@@ -51,10 +51,40 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 .tab-content { display:none; }
 .tab-content.active { display:block; }
 #gridEarly, #gridLate { display:grid; gap:4px; }
-/* 格子固定尺寸：植物绝对定位排布，永远不被撑开/拉伸 */
-.cell { width:68px; height:68px; box-sizing:border-box;
+
+/* ============================================================
+   棋盘尺寸变量（2026-11-02，手机适配的**唯一**缩放入口）
+   ------------------------------------------------------------
+   ★ 想整体缩放棋盘：**只改 --cell**。
+     同格缩略图的 9 个定位/尺寸全部由 --u（= --cell / 68）按原手调值
+     等比推导 → 缩格子时缩略图跟着缩，不会溢出/错位。
+     不要再在别处写死 68 / 58 / 27 / 17 / 46 这些数字 ——
+     那正是「改了格子尺寸，缩略图就散架」的成因
+     （与 §10.3.1「改 JOB_CELL_MAX_MARKS 必须同步改 CSS」是同一类坑）。
+   基准值逐项对应改造前的手调值：
+     cell 68 · 内缩 4 · 单株内缩 3 · 间缝 4 · 单株 58 · 2~4 株 27 · 5~9 株 17
+   桌面渲染结果与改造前**完全一致**（--u 在桌面恒等于 1px）；
+   手机断点只把 --cell 改小（见文件末尾「移动端 / 窄屏」一节）。
+   ============================================================ */
+:root {
+    --cell: 68px;
+    --u: calc(var(--cell) / 68);          /* 1 个「基准像素」 */
+    --thumb-inset: calc(4 * var(--u));    /* 缩略图内缩 */
+    --thumb-inset-1: calc(3 * var(--u));  /* 单株时的内缩 */
+    --thumb-gap: calc(4 * var(--u));      /* 缩略图之间的间缝 */
+    --thumb-1: calc(58 * var(--u));       /* 1 株：满格 */
+    --thumb-2: calc(27 * var(--u));       /* 2~4 株 */
+    --thumb-3: calc(17 * var(--u));       /* 5~9 株 */
+}
+
+/* 格子尺寸跟随 --cell：植物绝对定位排布，永远不被撑开/拉伸
+   ★ 边框与内边距也必须按 --u 缩放 —— 缩略图是相对**内边距盒**定位的，
+     若边框/内边距固定 2px，小格子上 3×3 会挤出格边被 overflow 裁掉。
+     桌面 2*1px = 2px，与改造前完全一致。 */
+.cell { width:var(--cell); height:var(--cell); box-sizing:border-box;
         background:#fff; border:2px dashed #d0d7de; border-radius:6px;
-        padding:2px; cursor:pointer; position:relative;
+        border-width:calc(2 * var(--u));
+        padding:calc(2 * var(--u)); cursor:pointer; position:relative;
         transition:background .15s, border-color .15s, box-shadow .15s;
         overflow:hidden; }
 .cell.has { background:#f0f9ff; border-color:#7dd3fc; border-style:solid; }
@@ -70,35 +100,54 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
     transition:width .16s ease, height .16s ease;
 }
 /* 1 株：占满整格 */
-.cell.job-n1 .tag.plant { left:3px; top:3px; width:58px; height:58px; }
-/* 2 株：左右并排 */
-.cell.job-n2 .tag.plant { width:27px; height:27px; top:50%; transform:translateY(-50%); }
-.cell.job-n2 .job-p1 { left:4px; }
-.cell.job-n2 .job-p2 { left:35px; }
+.cell.job-n1 .tag.plant { left:var(--thumb-inset-1); top:var(--thumb-inset-1);
+                           width:var(--thumb-1); height:var(--thumb-1); }
+/* 2 株：左右并排（X2 = 内缩 + 27 + 间缝 = 35） */
+.cell.job-n2 .tag.plant { width:var(--thumb-2); height:var(--thumb-2); top:50%; transform:translateY(-50%); }
+.cell.job-n2 .job-p1 { left:var(--thumb-inset); }
+.cell.job-n2 .job-p2 { left:calc(var(--thumb-inset) + var(--thumb-2) + var(--thumb-gap)); }
 /* 3~4 株：2×2 */
-.cell.job-n3 .tag.plant, .cell.job-n4 .tag.plant { width:27px; height:27px; }
-.cell.job-n3 .job-p1, .cell.job-n4 .job-p1 { left:4px;  top:4px; }
-.cell.job-n3 .job-p2, .cell.job-n4 .job-p2 { left:35px; top:4px; }
-.cell.job-n3 .job-p3, .cell.job-n4 .job-p3 { left:4px;  top:35px; }
-.cell.job-n4 .job-p4 { left:35px; top:35px; }
-/* 5~9 株：3×3 */
+.cell.job-n3 .tag.plant, .cell.job-n4 .tag.plant { width:var(--thumb-2); height:var(--thumb-2); }
+.cell.job-n3 .job-p1, .cell.job-n4 .job-p1 { left:var(--thumb-inset); top:var(--thumb-inset); }
+.cell.job-n3 .job-p2, .cell.job-n4 .job-p2 {
+    left:calc(var(--thumb-inset) + var(--thumb-2) + var(--thumb-gap)); top:var(--thumb-inset); }
+.cell.job-n3 .job-p3, .cell.job-n4 .job-p3 {
+    left:var(--thumb-inset); top:calc(var(--thumb-inset) + var(--thumb-2) + var(--thumb-gap)); }
+.cell.job-n4 .job-p4 {
+    left:calc(var(--thumb-inset) + var(--thumb-2) + var(--thumb-gap));
+    top:calc(var(--thumb-inset) + var(--thumb-2) + var(--thumb-gap)); }
+/* 5~9 株：3×3（X2 = 4+17+4 = 25，X3 = 4+34+8 = 46，与原手调值逐一对应） */
 .cell.job-n5 .tag.plant, .cell.job-n6 .tag.plant, .cell.job-n7 .tag.plant,
-.cell.job-n8 .tag.plant, .cell.job-n9 .tag.plant { width:17px; height:17px; border-radius:2px; }
+.cell.job-n8 .tag.plant, .cell.job-n9 .tag.plant {
+    width:var(--thumb-3); height:var(--thumb-3); border-radius:2px; }
 .cell.job-n5 .job-p1, .cell.job-n6 .job-p1, .cell.job-n7 .job-p1,
-.cell.job-n8 .job-p1, .cell.job-n9 .job-p1 { left:4px;  top:4px; }
+.cell.job-n8 .job-p1, .cell.job-n9 .job-p1 { left:var(--thumb-inset); top:var(--thumb-inset); }
 .cell.job-n5 .job-p2, .cell.job-n6 .job-p2, .cell.job-n7 .job-p2,
-.cell.job-n8 .job-p2, .cell.job-n9 .job-p2 { left:25px; top:4px; }
+.cell.job-n8 .job-p2, .cell.job-n9 .job-p2 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap)); top:var(--thumb-inset); }
 .cell.job-n5 .job-p3, .cell.job-n6 .job-p3, .cell.job-n7 .job-p3,
-.cell.job-n8 .job-p3, .cell.job-n9 .job-p3 { left:46px; top:4px; }
+.cell.job-n8 .job-p3, .cell.job-n9 .job-p3 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2); top:var(--thumb-inset); }
 .cell.job-n5 .job-p4, .cell.job-n6 .job-p4, .cell.job-n7 .job-p4,
-.cell.job-n8 .job-p4, .cell.job-n9 .job-p4 { left:4px;  top:25px; }
+.cell.job-n8 .job-p4, .cell.job-n9 .job-p4 {
+    left:var(--thumb-inset); top:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap)); }
 .cell.job-n5 .job-p5, .cell.job-n6 .job-p5, .cell.job-n7 .job-p5,
-.cell.job-n8 .job-p5, .cell.job-n9 .job-p5 { left:25px; top:25px; }
+.cell.job-n8 .job-p5, .cell.job-n9 .job-p5 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap));
+    top:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap)); }
 .cell.job-n6 .job-p6, .cell.job-n7 .job-p6, .cell.job-n8 .job-p6,
-.cell.job-n9 .job-p6 { left:46px; top:25px; }
-.cell.job-n7 .job-p7, .cell.job-n8 .job-p7, .cell.job-n9 .job-p7 { left:4px;  top:46px; }
-.cell.job-n8 .job-p8, .cell.job-n9 .job-p8 { left:25px; top:46px; }
-.cell.job-n9 .job-p9 { left:46px; top:46px; }
+.cell.job-n9 .job-p6 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2);
+    top:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap)); }
+.cell.job-n7 .job-p7, .cell.job-n8 .job-p7, .cell.job-n9 .job-p7 {
+    left:var(--thumb-inset);
+    top:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2); }
+.cell.job-n8 .job-p8, .cell.job-n9 .job-p8 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) + var(--thumb-gap));
+    top:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2); }
+.cell.job-n9 .job-p9 {
+    left:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2);
+    top:calc(var(--thumb-inset) + var(--thumb-3) * 2 + var(--thumb-gap) * 2); }
 
 /* ---- 同格超过 9 个：3×3 摆满后不再继续塞，改为右下角「+N」角标 ----
    ★ 放开重复落子后一格可能放十几个。9 个已经占满 3×3，
@@ -131,21 +180,25 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
     background:transparent; z-index:3;
     transition:width .16s ease, height .16s ease;
 }
-/* 尺寸与定位：完全复用植物的 job-n 分档 + job-p 序号 */
+/* 尺寸与定位：完全复用植物的 job-n 分档 + job-p 序号（尺寸走同一批变量） */
 .cell.job-n1 .tag.job-mark,
-.cell.job-n1 .tag.feed, .cell.job-n1 .tag.shovel { left:3px; top:3px; width:58px; height:58px; }
+.cell.job-n1 .tag.feed, .cell.job-n1 .tag.shovel {
+    left:var(--thumb-inset-1); top:var(--thumb-inset-1);
+    width:var(--thumb-1); height:var(--thumb-1); }
 .cell.job-n2 .tag.job-mark,
-.cell.job-n2 .tag.feed, .cell.job-n2 .tag.shovel { width:27px; height:27px; top:50%; transform:translateY(-50%); }
+.cell.job-n2 .tag.feed, .cell.job-n2 .tag.shovel {
+    width:var(--thumb-2); height:var(--thumb-2); top:50%; transform:translateY(-50%); }
 .cell.job-n3 .tag.job-mark, .cell.job-n4 .tag.job-mark,
 .cell.job-n3 .tag.feed, .cell.job-n3 .tag.shovel,
-.cell.job-n4 .tag.feed, .cell.job-n4 .tag.shovel { width:27px; height:27px; }
+.cell.job-n4 .tag.feed, .cell.job-n4 .tag.shovel { width:var(--thumb-2); height:var(--thumb-2); }
 .cell.job-n5 .tag.job-mark, .cell.job-n6 .tag.job-mark, .cell.job-n7 .tag.job-mark,
 .cell.job-n8 .tag.job-mark, .cell.job-n9 .tag.job-mark,
 .cell.job-n5 .tag.feed, .cell.job-n5 .tag.shovel,
 .cell.job-n6 .tag.feed, .cell.job-n6 .tag.shovel,
 .cell.job-n7 .tag.feed, .cell.job-n7 .tag.shovel,
 .cell.job-n8 .tag.feed, .cell.job-n8 .tag.shovel,
-.cell.job-n9 .tag.feed, .cell.job-n9 .tag.shovel { width:17px; height:17px; border-radius:2px; }
+.cell.job-n9 .tag.feed, .cell.job-n9 .tag.shovel {
+    width:var(--thumb-3); height:var(--thumb-3); border-radius:2px; }
 
 /* 格内「落子动作」标记的图片：撑满标记容器
    ★ 必须用**统一类** `job-mark-img` 选择，**不要**写成
@@ -778,6 +831,23 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 .supply-card:hover .sc-del { display: flex; }
 .supply-card .sc-del:hover { background: #dc2626; }
 
+/* ---- ← / → 移一位（手机专用，2026-11-02）----
+   卡片是 position:absolute + left 由 --i 算出来的「扇面」，所以按钮挂在卡片内部、
+   卡名下面一行；桌面默认不显示（桌面拖动更好用），只在 body.m-app 下出现。
+   ★ 代价：手机上扇面要多占约 20px 高 —— 由下面 body.m-app 的 .supply-stage 一并加高。 */
+.supply-card .sc-nav { display: none; }
+body.m-app .supply-card .sc-nav {
+    display: flex; gap: 3px; justify-content: center; margin-top: 3px;
+}
+body.m-app .supply-card .sc-nav-btn {
+    width: 30px; height: 20px; padding: 0; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 5px;
+    background: #fff; color: #475569;
+    font-size: 11px; line-height: 1; font-family: inherit;
+}
+body.m-app .supply-card .sc-nav-btn:active { background: #e2e8f0; }
+body.m-app .supply-stage { min-height: calc(var(--sc-card-w) * var(--sc-card-ratio) + 58px); }
+
 /* ---- 悬停抽牌：位移按「距离」算（变量驱动，无需逐张写规则）----
    左侧卡（--i < --hover-i）：往左退，越远退越多
    右侧卡（--i > --hover-i）：往右退
@@ -842,6 +912,124 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     transition: background .14s ease, border-color .14s ease;
 }
 .supply-add:hover { background: #f1f5f9; border-color: #94a3b8; }
+
+/* ============ 格内落子队列（方块格式）弹窗 ============
+   右键一个「有多个落子」的格子打开（08-board-data.js 的 contextmenu →
+   43-jobset-cell-queue.js）。方块按链条执行顺序排，最左上 = 最先执行，
+   可拖拽改顺序（只在本形态分组内拖）。 */
+#cellQueueModal {
+    position: fixed; inset: 0; z-index: 10075;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#cellQueueModal.cq-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#cellQueueModal .cq-panel {
+    width: min(680px, 94vw); max-height: 84vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column; overflow: hidden;
+    animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
+}
+#cellQueueModal .cq-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 13px 18px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#cellQueueModal .cq-dot { width: 6px; height: 6px; border-radius: 50%; background: #2d7aff; }
+#cellQueueModal .cq-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#cellQueueModal .cq-sub { font-size: 11px; color: #94a3b8; }
+#cellQueueModal .cq-close {
+    margin-left: auto; width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1;
+}
+#cellQueueModal .cq-close:hover { background: #e2e8f0; }
+#cellQueueModal .cq-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+#cellQueueModal .cq-empty { font-size: 12px; color: #94a3b8; text-align: center; padding: 18px 0; }
+
+/* 一条链一组（单次 / 循环 / 收尾） */
+#cellQueueModal .cq-group { margin-bottom: 14px; }
+#cellQueueModal .cq-group:last-child { margin-bottom: 0; }
+#cellQueueModal .cq-ghead { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; }
+#cellQueueModal .cq-gtag {
+    font-size: 10px; font-weight: 700; padding: 1px 7px; border-radius: 5px;
+    background: #e0f2fe; color: #0369a1;
+}
+#cellQueueModal .cq-gtag.k-once { background: #e2e8f0; color: #475569; }
+#cellQueueModal .cq-gtag.k-end { background: #fee2e2; color: #b91c1c; }
+#cellQueueModal .cq-gcount { font-size: 10px; color: #94a3b8; }
+#cellQueueModal .cq-ghint { font-size: 10px; color: #cbd5e1; margin-left: auto; }
+#cellQueueModal .cq-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    min-height: 62px; padding: 8px;
+    background: #f8fafc; border: 1px dashed #e2e8f0; border-radius: 10px;
+}
+
+/* 一个方块：和棋盘落子标记同源（品质底图 + 立绘/动作图标 + 角标） */
+#cellQueueModal .cq-block {
+    width: 68px; flex: 0 0 auto; cursor: grab;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+#cellQueueModal .cq-block.cq-dragging { opacity: .45; }
+#cellQueueModal .cq-frame {
+    position: relative; width: 68px; height: 44px; border-radius: 7px;
+    background: #eef2f7 center/100% 100% no-repeat;
+    box-shadow: 0 1px 3px rgba(15,23,42,.14);
+    overflow: visible;
+}
+#cellQueueModal .cq-img {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    width: 86%; height: 86%; object-fit: contain; pointer-events: none;
+}
+#cellQueueModal .cq-img-act { width: 66%; height: 66%; }
+#cellQueueModal .cq-fallback {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: #475569; padding: 2px; text-align: center; overflow: hidden;
+}
+#cellQueueModal .cq-seq {
+    position: absolute; right: -3px; bottom: -3px;
+    min-width: 15px; height: 15px; padding: 0 3px; box-sizing: border-box;
+    border-radius: 5px; background: #2d7aff; color: #fff;
+    font-size: 9px; line-height: 15px; text-align: center; font-weight: 700;
+    box-shadow: 0 1px 2px rgba(15,23,42,.3);
+}
+#cellQueueModal .cq-seq.k-once { background: #64748b; }
+#cellQueueModal .cq-seq.k-end { background: #dc2626; }
+#cellQueueModal .cq-x {
+    position: absolute; right: -4px; top: -4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #ef4444; color: #fff; font-size: 9px; line-height: 14px; text-align: center;
+    cursor: pointer; box-shadow: 0 1px 2px rgba(15,23,42,.3); opacity: 0;
+    transition: opacity .12s;
+}
+#cellQueueModal .cq-block:hover .cq-x { opacity: 1; }
+#cellQueueModal .cq-x:hover { background: #b91c1c; }
+#cellQueueModal .cq-name {
+    font-size: 9px; color: #64748b; line-height: 1.2; max-width: 68px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* ← / → 移一位（手机没有拖拽，见 43-jobset-cell-queue.js 的 _cqBuildBlock） */
+#cellQueueModal .cq-nav { display: flex; gap: 2px; margin-top: 1px; }
+#cellQueueModal .cq-nav-btn {
+    width: 30px; height: 16px; padding: 0; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 4px; background: #fff;
+    color: #475569; font-size: 10px; line-height: 1; font-family: inherit;
+}
+#cellQueueModal .cq-nav-btn:hover { background: #eef2ff; border-color: #a5b4fc; color: #4338ca; }
+/* 拖拽落点提示（左/右半区） */
+#cellQueueModal .cq-block.cq-over-before .cq-frame { box-shadow: -3px 0 0 0 #2d7aff, 0 1px 3px rgba(15,23,42,.14); }
+#cellQueueModal .cq-block.cq-over-after  .cq-frame { box-shadow:  3px 0 0 0 #2d7aff, 0 1px 3px rgba(15,23,42,.14); }
+
+#cellQueueModal .cq-foot {
+    padding: 10px 18px; border-top: 1px solid #e2e8f0;
+    display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+}
+#cellQueueModal .cq-btn {
+    padding: 6px 14px; cursor: pointer; font-size: 12px;
+    border-radius: 8px; border: 1px solid #cbd5e1; background: #fff; color: #475569;
+}
+#cellQueueModal .cq-btn:hover { background: #f1f5f9; }
+#cellQueueModal .cq-btn.cq-danger { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+#cellQueueModal .cq-btn.cq-danger:hover { background: #fee2e2; }
+#cellQueueModal .cq-hint { font-size: 10px; color: #94a3b8; margin-left: auto; text-align: right; }
 
 /* ============ 取消格内项目（多选）弹窗 ============ */
 #cellCancelPicker {
@@ -1194,6 +1382,25 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
     background: #fffbeb; color: #b45309; font-weight: 600;
 }
 .seq-selbar-noint:hover { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+/* ↑ / ↓ 移一位：**手机上没有 HTML5 拖拽**，这是拖拽的按钮替代入口（§10.12）。
+   桌面也保留 —— 一次挪一格比拖准更容易验证。 */
+.seq-selbar-move {
+    min-width: 26px; padding: 1px 6px; font-size: 12px; font-weight: 700;
+    cursor: pointer; line-height: 1.2;
+    border: 1px solid #a5b4fc; border-radius: 4px;
+    background: #fff; color: #4338ca;
+}
+.seq-selbar-move:hover { background: #4f46e5; border-color: #4f46e5; color: #fff; }
+
+/* 棋盘「⤢ 放大」按钮：**只在手机断点里显示**（桌面棋盘本来就够大，不占位、不多一个按钮） */
+#boardZoomBtn {
+    display: none; align-items: center; justify-content: center;
+    margin-left: auto; padding: 0 7px; height: 20px;
+    font-size: 11px; font-family: inherit; cursor: pointer;
+    border: 1px solid #cbd5e1; border-radius: 6px;
+    background: #fff; color: #475569;
+}
+#boardZoomBtn.on { background: #2563eb; border-color: #2563eb; color: #fff; }
 
 /* 无间隔组「」成员步骤：琥珀色左边条连成一串 + 首尾圆角收拢 */
 .seq-chain.seq-noint {
@@ -1387,32 +1594,36 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 /* 高级设置：识别结算速率输入框右侧的说明文字（原「?」气泡改为直述） */
 .ja-help-text { font-size: 10px; color: #94a3b8; flex: 1; }
 
-/* ============ 作业集选择弹窗（替代原下拉栏） / 复制阵容弹窗（同一套壳） ============ */
-#jobPickModal, #tableCopyModal {
+/* ============ 作业集选择弹窗（替代原下拉栏） / 复制阵容弹窗 / 删除植物弹窗（同一套壳） ============ */
+#jobPickModal, #tableCopyModal, #plantDeleteModal {
     position: fixed; inset: 0; z-index: 10095;
     display: none; align-items: center; justify-content: center;
     background: rgba(15,23,42,.50);
 }
-#jobPickModal.jp-open, #tableCopyModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
-#jobPickModal .jp-panel, #tableCopyModal .jp-panel {
+#jobPickModal.jp-open, #tableCopyModal.jp-open, #plantDeleteModal.jp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobPickModal .jp-panel, #tableCopyModal .jp-panel, #plantDeleteModal .jp-panel {
     width: min(360px, 90vw); max-height: 78vh;
     background: #fff; border-radius: 14px; overflow: hidden;
     display: flex; flex-direction: column;
     box-shadow: 0 20px 60px rgba(15,23,42,.34);
     animation: jobPanelUp .24s cubic-bezier(.22,.61,.36,1) both;
 }
-#jobPickModal .jp-head, #tableCopyModal .jp-head {
+/* 复制阵容现在是「每张表一张卡片 + 普通关/boss 关两个复选框」，需要更宽 */
+#tableCopyModal .jp-panel { width: min(460px, 94vw); max-height: 84vh; }
+/* 删除植物要放两个选项 + 分布说明，单独放宽 */
+#plantDeleteModal .jp-panel { width: min(520px, 94vw); max-height: 84vh; }
+#jobPickModal .jp-head, #tableCopyModal .jp-head, #plantDeleteModal .jp-head {
     display: flex; align-items: center; gap: 8px;
     padding: 13px 16px 10px; border-bottom: 1px solid #e2e8f0;
 }
-#jobPickModal .jp-dot, #tableCopyModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
-#jobPickModal .jp-title, #tableCopyModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
-#jobPickModal .jp-close, #tableCopyModal .jp-close {
+#jobPickModal .jp-dot, #tableCopyModal .jp-dot, #plantDeleteModal .jp-dot { width: 6px; height: 6px; border-radius: 50%; background: #2563eb; }
+#jobPickModal .jp-title, #tableCopyModal .jp-title, #plantDeleteModal .jp-title { font-size: 14px; font-weight: 700; color: #1d4ed8; }
+#jobPickModal .jp-close, #tableCopyModal .jp-close, #plantDeleteModal .jp-close {
     width: 26px; height: 26px; margin-left: auto; border: none; border-radius: 7px;
     background: #f1f5f9; color: #475569; cursor: pointer; font-size: 13px; line-height: 1;
 }
-#jobPickModal .jp-close:hover, #tableCopyModal .jp-close:hover { background: #e2e8f0; }
-#jobPickModal .jp-body, #tableCopyModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
+#jobPickModal .jp-close:hover, #tableCopyModal .jp-close:hover, #plantDeleteModal .jp-close:hover { background: #e2e8f0; }
+#jobPickModal .jp-body, #tableCopyModal .jp-body, #plantDeleteModal .jp-body { padding: 12px 14px 16px; overflow-y: auto; }
 #jobPickModal .jp-item, #tableCopyModal .jp-item {
     display: flex; align-items: center; gap: 10px; width: 100%;
     padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;
@@ -1424,6 +1635,12 @@ select, input[type="text"], input[type="number"] { padding:3px 8px; border:1px s
 #jobPickModal .jp-item .jp-item-ico, #tableCopyModal .jp-item .jp-item-ico { font-size: 16px; }
 #jobPickModal .jp-item .jp-item-name, #tableCopyModal .jp-item .jp-item-name { font-weight: 700; }
 #jobPickModal .jp-item .jp-item-code, #tableCopyModal .jp-item .jp-item-code { font-size: 10px; color: #94a3b8; margin-top: 1px; }
+/* 作业集标签（2026-10-26）：列表项里的小 chip */
+.jp-item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.jp-item-tag {
+    font-size: 10px; color: #4338ca; background: #eef2ff;
+    border: 1px solid #c7d2fe; border-radius: 999px; padding: 0 6px; line-height: 1.6;
+}
 #jobPickModal .jp-item .jp-item-cur, #tableCopyModal .jp-item .jp-item-cur { margin-left: auto; font-size: 10px; color: #1d4ed8; font-weight: 700; }
 /* 空白模板：永远在最上面，虚线框 */
 #jobPickModal .jp-item.jp-blank, #tableCopyModal .jp-item.jp-blank {
@@ -2243,8 +2460,15 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 
 /* 武装条（阶数条 / 挂件条） */
 #notesPicker .np-arm {
-    display: flex; gap: 6px; align-items: center; flex-wrap: nowrap;
-    overflow-x: auto; padding: 10px 18px 0; flex: 0 0 auto;
+    display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+    padding: 10px 18px 0; flex: 0 0 auto;
+}
+/* 武装条里的一行（挂件模式两行：挂件行 + 挂件阶数行；2026-10-25） */
+#notesPicker .np-arm-row {
+    display: flex; gap: 6px; align-items: center; flex-wrap: nowrap; overflow-x: auto;
+}
+#notesPicker .np-arm-row-label {
+    flex: 0 0 auto; font-size: 12px; color: #64748b; font-weight: 700;
 }
 #notesPicker .np-arm-item {
     flex: 0 0 auto; min-width: 40px; height: 40px; padding: 3px 6px;
@@ -2265,10 +2489,17 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 /* 神器行 */
 #notesPicker .np-art-row { display: flex; flex-wrap: wrap; gap: 10px; }
 #notesPicker .np-art {
+    position: relative;   /* 阶数角标定位用（2026-10-25 神器可调配阶数） */
     width: 84px; text-align: center; border: 2px solid #e2e8f0;
     border-radius: 10px; padding: 6px 4px 4px; background: #f8fafc;
 }
+#notesPicker .np-art.np-clickable { cursor: pointer; transition: border-color .14s, background .14s, transform .14s; }
+#notesPicker .np-art.np-clickable:hover { background: #f5f3ff; border-color: #c4b5fd; transform: translateY(-2px); }
 #notesPicker .np-art img { width: 48px; height: 48px; object-fit: contain; }
+#notesPicker .np-art .np-badge-tier {
+    bottom: 22px; right: 4px; width: 16px; height: 16px; padding: 0;
+    border-width: 1px;   /* 神器卡比植物格小，角标跟着缩（默认 24px 太大） */
+}
 
 /* 植物网格（方形缩略格，与棋盘/世界图库同 pattern） */
 #notesPicker .np-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
@@ -2288,6 +2519,10 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 }
 #notesPicker .np-badge-pendant { top: 2px; right: 2px; border: 2px solid #d97706; }
 #notesPicker .np-badge-tier { bottom: 20px; right: 2px; border: 2px solid #7c3aed; }
+/* 挂件阶数迷你角标：挂件徽章正下方，金色描边跟挂件走（2026-10-25） */
+#notesPicker .np-badge-ptier {
+    top: 24px; right: 4px; width: 16px; height: 16px; border: 1px solid #d97706;
+}
 
 #notesPicker .np-foot {
     display: flex; align-items: center; gap: 8px;
@@ -2433,11 +2668,30 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
 .cell.mech-bg-tomb   { background: #e7e5e4; }
 .cell.mech-bg-cart   { background: #fef3c7; }
 .cell.mech-bg-power  { background: #dcfce7; }
-.cell.mech-bg-gold   { background: #fef9c3; }
+/* 阳光砖（失落之城，已实测 5 格）：唯一被要求「要看得出来」的机制格 ——
+   加强只做在底色与边框上（用户不要格子上多出图标），所以未落点格也从灰虚线
+   变黄实线。其余机制格仍是弱提示底色，一条都不动。 */
+.cell.mech-bg-gold   { background: #fde68a; border-color: #f59e0b; border-style: solid; }
+/* 坑道 / 兵马俑（地宫无尽，用户作业集落点标注）：与阳光砖同一套读法 ——
+   底色加深 + 同色系实线框，未落点格也是实线。 */
+.cell.mech-bg-tunnel     { background: #d1d5db; border-color: #6b7280; border-style: solid; }
+.cell.mech-bg-terracotta { background: #c9a06a; border-color: #92400e; border-style: solid; }
+/* 同一格既是坑道又立着兵马俑（2,8 / 3,6 / 4,8）：灰棕斜纹，两种机制都看得见。
+   那三格在 40 的 cells 里各登记了两条，两条 mech-bg-* 类叠在同一格上就是它。 */
+.cell.mech-bg-tunnel.mech-bg-terracotta {
+    background: repeating-linear-gradient(45deg, #d1d5db 0 5px, #c9a06a 5px 10px);
+    border-color: #6b7280;
+}
 .cell.mech-bg-ice    { background: #cffafe; }
 .cell.mech-bg-sewer  { background: #d6d3d1; }
 .cell.mech-bg-arrow  { background: #ede9fe; }
 .cell.mech-bg-fungus { background: #fae8ff; }
+/* 上述「要看得出来」的三种机制格落了植物后：底色不动，边框换回落点蓝，
+   保住「这格已经有东西」的既有读法。放最后 —— 特异性与上面几条相同，
+   靠顺序压住它们（含斜纹那条）。 */
+.cell.has.mech-bg-gold,
+.cell.has.mech-bg-tunnel,
+.cell.has.mech-bg-terracotta { border-color: #7dd3fc; }
 
 /* 「是否查看配置」提示条（载入作业集后弹出） */
 .npr {
@@ -2472,3 +2726,653 @@ body.seq-dragging-on { user-select: none; cursor: grabbing; }
     font-size: 12px; color: #475569; padding: 3px 6px;
 }
 #notesPicker .np-arm-static img { width: 26px; height: 26px; object-fit: contain; }
+
+/* ============ 作业集标签（2026-10-26，41-jobset-tags.js） ============ */
+/* 备注弹窗顶部：「标签：」那一行 —— 已加的标签 +「＋ 选择标签」按钮 */
+#notesPicker .np-tagbar {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 10px 18px 0; flex: 0 0 auto;
+}
+#notesPicker .np-tag-label { font-size: 12px; font-weight: 700; color: #64748b; }
+#notesPicker .np-tag {
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #334155;
+    border-radius: 999px; padding: 3px 12px; font-size: 12px; cursor: default;
+}
+#notesPicker .np-tag.np-tag-on { border-color: #4f46e5; background: #eef2ff; color: #4338ca; font-weight: 700; }
+#notesPicker .np-tag-hint { font-size: 11px; color: #94a3b8; }
+/* 「＋ 选择标签」按钮（点开标签选择弹窗） */
+#notesPicker .np-tag-add {
+    border-style: dashed; border-color: #c7d2fe; color: #4338ca; background: #fff; cursor: pointer;
+}
+#notesPicker .np-tag-add:hover { border-color: #4f46e5; background: #eef2ff; }
+
+/* 标签选择弹窗（压在备注弹窗上面，结构同「选择世界」弹窗） */
+#tagPicker {
+    position: fixed; inset: 0; z-index: 10080;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.50);
+}
+#tagPicker.sp-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#tagPicker .tp-panel {
+    width: min(460px, 92vw); max-height: 86vh;
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(15,23,42,.34);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#tagPicker .tp-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; border-bottom: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#tagPicker .tp-dot { width: 6px; height: 6px; border-radius: 50%; background: #4f46e5; }
+#tagPicker .tp-title { font-size: 14px; font-weight: 700; color: #4f46e5; letter-spacing: 1px; }
+#tagPicker .tp-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#tagPicker .tp-close {
+    width: 26px; height: 26px; border: none; border-radius: 7px;
+    background: #f1f5f9; color: #475569; cursor: pointer; font-size: 15px; line-height: 1; margin-left: 8px;
+}
+#tagPicker .tp-close:hover { background: #e2e8f0; }
+#tagPicker .tp-body { padding: 14px 18px; overflow-y: auto; flex: 1 1 auto; }
+/* 分组（2026-10-27）：一批小标题 + 一行 chip；数据层仍是平铺字符串 */
+#tagPicker .tp-grid { display: flex; flex-direction: column; gap: 14px; }
+#tagPicker .tp-group { display: flex; flex-direction: column; gap: 8px; }
+#tagPicker .tp-group-title {
+    font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 1px;
+    padding-left: 2px;
+}
+#tagPicker .tp-items { display: flex; flex-wrap: wrap; gap: 8px; }
+#tagPicker .tp-item {
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #334155;
+    border-radius: 999px; padding: 6px 16px; font-size: 13px; cursor: pointer;
+    transition: border-color .14s ease, background .14s ease;
+}
+#tagPicker .tp-item:hover { border-color: #93c5fd; background: #eff6ff; }
+#tagPicker .tp-item.tp-item-on {
+    border-color: #4f46e5; background: #eef2ff; color: #4338ca; font-weight: 700;
+}
+#tagPicker .tp-foot {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 18px; border-top: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#tagPicker .tp-tip { font-size: 12px; color: #64748b; margin-right: auto; }
+#tagPicker #tagPickerDone {
+    border: none; border-radius: 8px; padding: 6px 20px;
+    background: #4f46e5; color: #fff; font-size: 13px; cursor: pointer;
+}
+#tagPicker #tagPickerDone:hover { background: #4338ca; }
+
+/* ============================================================
+   移动端 / 窄屏（2026-11-02 · M1「排版收缩」）
+   ------------------------------------------------------------
+   背景：本仓样式全是**桌面优先的固定 px**。手机上（安卓浏览器 ≈390
+   CSS 像素）三处直接顶出横向滚动条，操作「难受」主要来自这里：
+
+     ① 棋盘 9 列 × 68px + 8×4 间缝 ≈ 676px；
+     ② 两栏是**行内固定宽**（槽位列 flex:0 0 380px、棋盘列 min-width:420px）；
+     ③ 局外选卡 6 列、弹窗居中浮层、按钮命中区 30px 上下、字号 10-12px。
+
+   这一节只做**排版收缩**，不改任何交互语义 ——
+   拖拽 / 右键 / Ctrl 仍是桌面专属（HTML5 draggable 在触屏不工作），
+   手势补齐（长按 = 右键、↑/↓ 重排）是下一批 M2，见 HANDOFF §10.7-G。
+   ★ 全部规则都在媒体查询里 → **桌面观感零变化**。
+   ★ 本环境跑不了无头浏览器（§7 踩坑记录）：改这一节必须真机 / Ctrl+F5 眼看。
+   ============================================================ */
+
+/* ---- ① 触屏设备：只做「去掉点击高亮」这类无副作用的事 ----
+   ★ 2026-11-02 第一版把按钮一律放大到 ≥34px，用户实测反馈「按键太大」→ **已回退**。
+     手机上真正缺的是**手势**（拖拽 / 右键），不是更大的按钮；
+     要放大某处请用具体选择器，别再动 `.btn` 全局尺寸。 */
+@media (pointer: coarse) {
+    * { -webkit-tap-highlight-color: transparent; }
+}
+
+/* ---- ② 窄屏：整页收缩到 100% 宽 ---- */
+@media (max-width: 900px) {
+    /* 棋盘缩放 —— 手机上「一屏看全棋盘」的关键。
+       每格 = (100vw − 48px：页边距 16 + 面板内边距 16 + 8 条 2px 间缝) / 9。
+       390px 宽 → 约 38px/格；360px → 约 35px；上限 46px（平板不再放大）。
+       ★ 嫌小就点标题栏的「⤢ 放大」：切到 58px/格 + 棋盘左右滑动（见本节末尾）。
+       ★ 改这里不要动别处：缩略图定位全部由 base.css 顶部 --u 等比推导。 */
+    :root { --cell: clamp(30px, calc((100vw - 48px) / 9), 46px); }
+
+    body { padding: 4px; overflow-x: hidden; }
+    .app { padding: 6px 4px; border-radius: 8px; }
+    h1 { font-size: 17px; gap: 6px; margin-bottom: 8px; }
+    h1 small { font-size: 12px; }
+
+    /* 两栏改上下堆叠（槽位 → 棋盘 → 链条）。
+       这两列在 index.html 上是**行内固定宽**，不加 !important 压不下来：
+       min-width:420px 在 390px 屏上会直接把整页顶出横向滚动条。 */
+    .flex-row > .flex-col {
+        flex: 1 1 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+    }
+    /* 面板内边距压到 8px（左右）：--cell 的算式里就是按这个算的，别随意加宽 */
+    .panel { padding: 6px 8px; margin-bottom: 8px; }
+
+    /* 棋盘 + 右侧通用动作：动作条改到棋盘**下方**横排
+       （竖排在右边会抢棋盘宽度，而棋盘宽度在手机上已经不够用了） */
+    .board-with-actions { flex-wrap: wrap; gap: 8px; }
+    .board-with-actions > .board-main { flex: 1 1 100%; }
+    .gen-actions { flex-direction: row; flex-wrap: wrap; width: 100%; }
+    .gen-act { width: 58px; padding: 5px 3px; }
+
+    /* 棋盘网格兜一层：行内已是 repeat(9, var(--cell))，
+       这里保证任何残留的行内 px 都盖得住；间缝也收窄（4px → 2px）省出格子宽度 */
+    #gridEarly, #gridLate { grid-template-columns: repeat(9, var(--cell)) !important; gap: 2px; }
+
+    /* ★ 「⤢ 放大」：手机上 9 列一屏最多到 ~38px/格，嫌小就切到放大模式 ——
+       格子 58px + 棋盘**自己**左右滑动（页面整体不横滚）。
+       状态记在 localStorage（见 jobApplyBoardZoom / jobToggleBoardZoom）。 */
+    body.board-zoom { --cell: 58px; }
+    body.board-zoom .board-with-actions > .board-main {
+        overflow-x: auto; overflow-y: hidden; padding-bottom: 2px;
+    }
+    #boardZoomBtn { display: inline-flex; }
+
+    /* 局外 80 选卡：6 列 → 3 列（行内 grid-template-columns，必须 !important） */
+    #outerGrid {
+        grid-template-columns: repeat(3, 1fr) !important;
+        padding: 8px !important; gap: 6px !important;
+    }
+
+    /* 链条抽屉：手机上整屏；呼出按钮从「右缘竖条」改成**右下角浮动圆角块**
+       （原来贴右缘会盖住棋盘最后一列，而手机上棋盘正好占满宽度） */
+    #seqDrawer { width: 100vw; max-width: 100vw; }
+    .seq-drawer-body { padding: 8px; }
+    #seqToggle {
+        top: auto; bottom: 14px; right: 10px;
+        flex-direction: row; gap: 5px;
+        padding: 9px 14px; border-radius: 22px;
+        transform: none;
+    }
+    #seqToggle:hover { transform: none; }
+    #seqToggle .seq-toggle-txt {
+        writing-mode: horizontal-tb; letter-spacing: 1px; font-size: 12px;
+    }
+
+    /* 弹窗：桌面那套「居中浮层」在手机上命中区太小、面板还会被软键盘顶走 →
+       统一改成**贴底整屏**（只留上面两个圆角）。
+       注：`#moreList` / `#boardMoreList` 是贴着按钮的小菜单，故意不在此列。 */
+    #jobPickModal, #tableCopyModal, #plantDeleteModal,
+    #cellQueueModal, #cellCancelPicker, #jobAdvModal,
+    #layoutModal, #lzFormulaModal, #stepCfgModal,
+    #artifactPicker, #genPicker, #morePicker, #customPicker,
+    #supplyPicker, #worldPicker, #notesPicker, #tagPicker, #refPicker {
+        align-items: flex-end;
+    }
+    .jp-panel, .cq-panel, .cc-panel, .ja-panel, .lz-panel, .sc-panel,
+    .artp-panel, .gp-panel, .mp-panel, .cp-panel, .sp-panel,
+    .wp-panel, .np-panel, .tp-panel, .rp-panel {
+        width: 100vw !important;
+        max-width: 100vw !important;
+        max-height: 92vh !important;
+        border-radius: 16px 16px 0 0 !important;
+    }
+    /* 注：关闭按钮 / 列表项 / 底部按钮的「放大」第一版也做过，用户反馈「按键太大」→
+       已全部回退成桌面尺寸。手机上要放大的是**格子**（见上面 --cell），不是按钮。 */
+
+    /* 格子只有 ~35-38px 时，12/14px 的角标会盖住大半个格子 → 统一收一档。
+       （5~9 株那一档原本就是 10/7px，不用再动） */
+    .cell .job-seq { min-width:10px; height:10px; line-height:10px; font-size:7px; right:-1px; top:-1px; }
+    .cell .job-overflow { min-width:12px; height:12px; line-height:12px; font-size:8px; }
+}
+
+/* ============================================================
+   手机端 App 壳 v2（2026-11-02）—— 四个屏 + 底部导航
+   ------------------------------------------------------------
+   为什么不继续「压窄桌面版」：这个页面同时装着「棋盘 / 槽位 / 链条 / 存档」
+   四件**不相干**的事，手机屏一次只放得下一件。压窄的结果就是每次都要
+   上下翻几百像素（用户原话：「没怎么改，不好适配」）。
+
+   v2 = 同一套 DOM，按屏做 display 开关，底部一个 4 项导航。
+     🎯 棋盘（默认） / 🪴 槽位 / 🔗 顺序（= 现有抽屉） / 💾 作业集
+
+   ★ 门控全靠 `body.m-app`（由 44-jobset-mobile.js 在 ≤900px 时添加），
+     **桌面浏览器一行都不会变**。见 HANDOFF §10.13。
+   ============================================================ */
+
+/* 导航 / 表条 / 槽位快选条默认不存在于布局；`.m-hide` 是 JS 的「藏起来」开关 */
+#mNav, #mTableBar, #mSlotStrip { display: none; }
+.m-hide { display: none !important; }
+
+body.m-app {
+    padding: 0 0 62px;              /* 给底部导航腾位置 */
+    background: #eef1f5;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+}
+body.m-app .app {
+    padding: 6px 6px 0; border-radius: 0; box-shadow: none; background: transparent;
+    max-width: none;
+}
+/* 手机上去掉这些「桌面才用得上」的东西，省出屏幕高度、也避免误触 */
+body.m-app h1 { display: none; }            /* 大标题 + 🌱 新手教程 */
+body.m-app #shutdownWrap { display: none; } /* 「✕ 关闭后台」在手机上太容易误点 */
+body.m-app #seqToggle { display: none; }    /* 浮动「种植顺序」按钮由底部导航代替 */
+
+/* ---- 底部导航（一级导航，4 项；Material 3 / iOS 同款做法）---- */
+body.m-app #mNav {
+    display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10050;
+    height: 58px; background: #fff; border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -3px 12px rgba(15, 23, 42, .10);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+#mNav .m-nav-item {
+    flex: 1 1 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1px; border: none; background: none; cursor: pointer; padding: 3px 0;
+    font-family: inherit; color: #64748b;
+    -webkit-tap-highlight-color: transparent;
+}
+#mNav .m-ico { font-size: 19px; line-height: 1.15; }
+#mNav .m-txt { font-size: 11px; }
+#mNav .m-nav-item.m-on { color: #2563eb; font-weight: 700; }
+
+/* ---- 棋盘屏顶部「表条」：第一行 切表，第二行 当前动作 + 操作提示 ---- */
+body.m-app #mTableBar {
+    display: flex; flex-direction: column; gap: 4px;
+    flex: 1 1 100%;                 /* 它是 .flex-row 的 flex 子项：必须整行占掉 */
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
+    padding: 5px 6px; margin: 4px 0 8px;
+}
+#mTableBar .m-tb-row { display: flex; align-items: center; gap: 6px; }
+#mTableBar .m-tb-row2 {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px; min-height: 15px;
+}
+#mTableBar .m-tb-btn {
+    flex: 0 0 auto; min-width: 36px; height: 30px; padding: 0 8px;
+    border: 1px solid #cbd5e1; border-radius: 8px; background: #f8fafc;
+    color: #334155; font-size: 13px; font-family: inherit; cursor: pointer;
+}
+#mTableBar .m-tb-btn:active { background: #e2e8f0; }
+#mTableBar .m-tb-txt {
+    flex: 1 1 auto; min-width: 0; text-align: center;
+    font-size: 13px; font-weight: 700; color: #1e293b;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+/* 当前「拿在手上」的动作：不知道这个根本不知道点格子会放什么 */
+#mTableBar .m-tb-armed {
+    flex: 0 1 auto; color: #4338ca; background: #eef2ff;
+    border: 1px solid #c7d2fe; border-radius: 999px; padding: 1px 8px;
+    font-weight: 700; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 62%;
+}
+#mTableBar .m-tb-armed-act { color: #b45309; background: #fffbeb; border-color: #fde68a; }
+/* 操作提示（setStatus 的镜像）：手机上左侧状态栏是藏起来的 */
+#mTableBar .m-tb-status {
+    flex: 1 1 auto; min-width: 0; color: #22a65e;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    opacity: 0; transition: opacity .2s;
+}
+#mTableBar .m-tb-status.m-tb-status-on { opacity: 1; }
+/* 没有提示时显示「怎么用」的一句话（长按=更多 这件事不讲没人会发现） */
+#mTableBar .m-tb-status.m-tb-hint { opacity: 1; color: #94a3b8; }
+
+/* ---- 棋盘屏「槽位快选条」：8 个槽一行横滑，点已配好的槽=直接拿它落子 ---- */
+body.m-app #mSlotStrip {
+    display: flex; gap: 5px; flex: 1 1 100%;
+    overflow-x: auto; overflow-y: hidden;
+    padding: 2px 0 6px; margin: 0 0 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+body.m-app #mSlotStrip::-webkit-scrollbar { display: none; }
+#mSlotStrip .m-slot-btn {
+    position: relative; flex: 0 0 auto; width: 52px; padding: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    border: 2px solid #d0d7de; border-radius: 9px; background: #fff;
+    font-family: inherit; cursor: pointer; overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+#mSlotStrip .m-slot-btn img { width: 34px; height: 34px; object-fit: contain; margin-top: 3px; }
+#mSlotStrip .m-slot-ph {
+    width: 34px; height: 34px; line-height: 34px; text-align: center;
+    font-size: 15px; color: #94a3b8; margin-top: 3px;
+}
+#mSlotStrip .m-slot-no {
+    position: absolute; left: 2px; top: 2px; min-width: 12px; height: 12px; line-height: 12px;
+    border-radius: 6px; background: #1e293b; color: #fff;
+    font-size: 8px; font-weight: 700; text-align: center; padding: 0 1px;
+}
+#mSlotStrip .m-slot-nm {
+    width: 100%; padding: 0 2px; font-size: 9px; color: #475569; text-align: center;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#mSlotStrip .m-slot-btn.m-slot-on { border-color: #2d7aff; box-shadow: 0 0 0 2px rgba(45, 122, 255, .22); }
+#mSlotStrip .m-slot-btn.m-slot-empty { border-style: dashed; color: #94a3b8; }
+/* 形态角标（1× 单次 / ⟳ 循环 / 🚩 收尾）——「重复点击切链条」的结果看得见 */
+#mSlotStrip .m-slot-mode {
+    position: absolute; right: 2px; top: 2px;
+    min-width: 14px; height: 13px; line-height: 13px;
+    padding: 0 2px; border-radius: 6px; box-sizing: border-box;
+    font-size: 8px; font-weight: 700; text-align: center;
+    background: #2563eb; color: #fff;
+}
+#mSlotStrip .m-slot-mode.m-mode-once { background: #94a3b8; }
+#mSlotStrip .m-slot-mode.m-mode-end { background: #dc2626; }
+
+/* 全屏的植物选择器 / 局外选卡必须压在底部导航**上面**
+   （它们原来的 z-index 是 9999，会被导航 10050 盖住一条，关闭按钮就在那条里） */
+body.m-app #plantPicker,
+body.m-app #outerPicker { z-index: 10060 !important; }
+/* 顺序抽屉比导航矮一层，底部留出导航高度，内容不会被压在下面 */
+body.m-app #seqDrawer { padding-bottom: 56px; }
+
+/* ---- 槽位「长按」动作单：✎ 替换植物 / 🗑 删除这株（见 44-jobset-mobile.js）----
+   桌面上这两个入口是胶囊里的 ✎ ✕ 两个 6px 小字，手指戳不中；
+   手机改成「长按槽位 → 贴底动作单」，两个动作都转调已有入口，不新写逻辑。 */
+#mSlotSheet { display: none; }
+#mSlotSheet.m-open {
+    display: flex; position: fixed; inset: 0; z-index: 10070;
+    align-items: flex-end; justify-content: center;
+    background: rgba(15, 23, 42, .45);
+}
+#mSlotSheet .mss-card {
+    width: 100%; max-width: 560px;
+    background: #fff; border-radius: 16px 16px 0 0;
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    display: flex; flex-direction: column; gap: 8px;
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, .25);
+    animation: jobPanelUp .18s cubic-bezier(.22, .61, .36, 1) both;
+}
+#mSlotSheet .mss-title {
+    font-size: 12px; color: #64748b; text-align: center; padding: 2px 0 4px;
+}
+#mSlotSheet .mss-btn {
+    width: 100%; padding: 13px 0; border-radius: 12px; cursor: pointer;
+    font-family: inherit; font-size: 15px; font-weight: 600;
+    border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;
+    -webkit-tap-highlight-color: transparent;
+}
+#mSlotSheet .mss-danger { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+#mSlotSheet .mss-cancel { background: #fff; border-color: #e2e8f0; color: #64748b; font-weight: 500; }
+
+/* ---- 「● 有未保存改动」胶囊（45-jobset-dirty.js）----
+   本地缓存是自动存的，但**写回作业集文件必须手点 💾** —— 界面上原本完全看不出来。
+   点它 = 直接保存（复用 jobSave）。只在脏的时候出现，干净时 display:none。 */
+#jobDirtyBadge {
+    display: none; position: fixed; left: 10px; bottom: 10px; z-index: 10045;
+    align-items: center; gap: 6px; padding: 7px 13px;
+    border-radius: 999px; cursor: pointer; font-family: inherit;
+    background: #fff7ed; border: 1px solid #fdba74; color: #c2410c;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, .18);
+    animation: jobFadeIn .16s ease-out both;
+}
+#jobDirtyBadge.on { display: flex; }
+#jobDirtyBadge:active { background: #ffedd5; }
+/* 手机上让开底部导航 */
+body.m-app #jobDirtyBadge { bottom: 70px; }
+
+/* ============================================================
+   植物选择器 / 局外选卡：行内样式搬进 CSS（2026-11-02）
+   ------------------------------------------------------------
+   这两块原来把 60+ 条尺寸全写在 index.html 的 `style=""` 里，
+   害得手机端每一项覆盖都得 !important（而且谁改了行内样式就一起崩）。
+   这里按 id **原样搬过来，数值一个没改**，只是换了位置。
+   ★ 以后调这两个弹层的尺寸请改这里，**不要再往 HTML 写行内样式**。
+   ============================================================ */
+
+/* ---- 植物选择器 ---- */
+#plantPicker {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, .5); z-index: 9999;
+    justify-content: center; align-items: center;
+}
+#plantPicker > div:first-child {
+    background: #fff; border-radius: 12px;
+    width: 1140px; max-width: 96vw; max-height: 88vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+#plantPicker > div:first-child > div:nth-child(1) {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; border-bottom: 1px solid #e5e7eb;
+}
+#plantPicker > div:first-child > div:nth-child(2) {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 8px 16px; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
+}
+#plantSearch { flex: 1; max-width: none; }
+#plantRarityFilter { display: flex; flex-wrap: wrap; gap: 6px; }
+#plantPickerCount { font-size: 12px; color: #94a3b8; margin-left: auto; }
+#plantPickerBody { flex: 1; display: flex; min-height: 0; }
+#plantGrid {
+    flex: 1; overflow-y: auto; padding: 14px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    align-content: start;
+}
+#plantReplacePanel {
+    width: 256px; flex: 0 0 256px;
+    border-left: 1px solid #e5e7eb; background: #fafbfc;
+    overflow-y: auto; padding: 10px 10px 14px;
+}
+
+/* ---- 局外选卡（无尽 80 选）---- */
+#outerPicker {
+    position: fixed; left: 0; top: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, .5); z-index: 9999;
+    justify-content: center; align-items: center;
+}
+#outerPicker > div:first-child {
+    background: #fff; border-radius: 12px;
+    width: 640px; max-width: 95vw; max-height: 88vh;
+    display: flex; flex-direction: column; overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .3);
+}
+#outerPicker > div:first-child > div:nth-child(1) {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid #e5e7eb;
+}
+#outerPicker > div:first-child > div:nth-child(2) {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 6px 14px; border-bottom: 1px solid #f1f5f9; background: #fafbfc;
+}
+#outerPicker > div:first-child > div:nth-child(3) {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 8px 14px; border-bottom: 1px solid #f1f5f9; background: #fffbeb;
+}
+#outerSearch { flex: 1; max-width: none; }
+#outerRarityFilter { display: flex; flex-wrap: wrap; gap: 6px; }
+#outerSortMode { width: auto; }
+#outerReorderBtn { padding: 2px 10px; font-size: 12px; }
+#outerModeBtn { padding: 3px 12px; font-size: 12px; }
+#outerModeDesc { font-size: 11px; color: #94a3b8; }
+#outerModeMenu {
+    position: absolute; left: 0; top: calc(100% + 4px); z-index: 12001;
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18); min-width: 240px; overflow: hidden;
+}
+#outerGrid {
+    flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px;
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px;
+    align-content: start;
+}
+/* 两个弹层共用的两个小工具类（原来也是行内样式） */
+.jobp-label { font-size: 12px; color: #64748b; }
+.jobp-label-inline {
+    font-size: 12px; color: #64748b;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+.jobp-rel { position: relative; }
+#plantPickerCount, #outerPickCountText { font-size: 12px; color: #94a3b8; margin-left: auto; }
+
+/* ---- 表条上的「?」：手机操作速查 + 诊断信息（见 44-jobset-mobile.js）----
+   手机上有一半功能是手势，不讲没人会发现；诊断信息则专门用来「让用户贴数字给我」。 */
+#mTableBar .m-tb-help {
+    font-weight: 700; color: #4338ca; background: #eef2ff; border-color: #c7d2fe;
+}
+#mHelpSheet { display: none; }
+#mHelpSheet.m-open {
+    display: flex; position: fixed; inset: 0; z-index: 10070;
+    align-items: flex-end; justify-content: center;
+    background: rgba(15, 23, 42, .45);
+}
+#mHelpSheet .mhs-card {
+    width: 100%; max-width: 620px; max-height: 86vh;
+    display: flex; flex-direction: column;
+    background: #fff; border-radius: 16px 16px 0 0;
+    box-shadow: 0 -8px 30px rgba(15, 23, 42, .25);
+    animation: jobPanelUp .18s cubic-bezier(.22, .61, .36, 1) both;
+}
+#mHelpSheet .mhs-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; border-bottom: 1px solid #e2e8f0;
+    font-size: 14px; color: #1d4ed8;
+}
+#mHelpSheet .mhs-close {
+    margin-left: auto; width: 30px; height: 30px; border: none; border-radius: 8px;
+    background: #f1f5f9; color: #475569; font-size: 14px; cursor: pointer;
+}
+#mHelpSheet .mhs-body { flex: 1 1 auto; overflow-y: auto; padding: 10px 14px; }
+#mHelpSheet .mhs-row {
+    display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px dashed #eef2f7;
+    font-size: 12px; line-height: 1.45;
+}
+#mHelpSheet .mhs-row:last-child { border-bottom: none; }
+#mHelpSheet .mhs-k {
+    flex: 0 0 92px; font-weight: 700; color: #4338ca;
+}
+#mHelpSheet .mhs-v { flex: 1 1 auto; color: #334155; }
+#mHelpSheet .mhs-diag {
+    margin: 8px 0 2px; padding: 10px; border-radius: 8px;
+    background: #0f172a; color: #cbd5e1;
+    font-size: 10px; line-height: 1.45; white-space: pre-wrap; word-break: break-all;
+    font-family: Consolas, Menlo, monospace;
+    -webkit-user-select: text; user-select: text;
+}
+#mHelpSheet .mhs-foot {
+    display: flex; gap: 8px; padding: 10px 14px calc(12px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #e2e8f0;
+}
+#mHelpSheet .mhs-btn {
+    flex: 1 1 0; padding: 11px 0; cursor: pointer; font-family: inherit;
+    font-size: 14px; font-weight: 600; border-radius: 10px;
+    border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;
+}
+#mHelpSheet .mhs-ok { background: #2563eb; border-color: #2563eb; color: #fff; }
+
+/* ---- 链条块：手机上把拖柄变成**真正能拖的手柄**（触屏没有 HTML5 draggable）----
+   ★ 只有拖柄设 `touch-action:none`：按手柄拖动 = 搬块，按块体其它地方仍然
+     是滚动抽屉 —— 整块都禁用滚动的话，链一长就没法翻页了。 */
+body.m-app .seq-grip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; min-width: 26px; min-height: 36px;
+    margin: -4px 4px -4px -4px;
+    border-radius: 7px;
+    background: #eef2ff; color: #4f46e5;
+    font-size: 15px; letter-spacing: 1px;
+    touch-action: none;
+    cursor: grab;
+}
+body.m-app .seq-chain-head { min-height: 40px; font-size: 13px; }
+body.m-app .seq-chain.seq-dragging { opacity: .5; }
+body.m-app .seq-drawer-head { padding: 10px 12px; }
+body.m-app .seq-drawer-tip { font-size: 10px; line-height: 1.35; padding: 6px 10px; }
+
+/* ============================================================
+   手机端第二轮：把「最常用的两个弹层」和「槽位屏」真正改对
+   ------------------------------------------------------------
+   ① 植物选择器 / 局外 80 选卡：原来是「1140px / 640px 居中浮层 + 5 列 / 6 列网格
+      + 右侧 256px 替换栏」，手机上就是「一格里塞 70px 的小图标 + 右边一条挤扁的侧栏」。
+      → 全屏 + 3 列 + 替换栏折到下面。
+      ★ 2026-11-02：这两块的尺寸已经**从行内样式搬进 base.css**（见上面
+        「植物选择器 / 局外选卡：行内样式搬进 CSS」一节），所以下面这些覆盖
+        **不再需要 !important** —— `body.m-app #id` 的特异性天然高于 `#id`。
+        以后往这两块加手机规则，同样不要写 !important。
+   ② 槽位屏：8 个胶囊是 flex + 每项后面跟一个 `flex-basis:100%` 的换行 span，
+      手机上应改成 **2 列大卡**（一个手指标 = 一整个槽）。
+      ⚠️ 槽位胶囊的尺寸仍是**行内样式**（27d 的 jobRenderSlots 生成的），
+        所以 ② 这一段还得保留 !important。
+   ============================================================ */
+
+/* ---- ① 植物选择器 / 局外选卡：手机全屏 ---- */
+body.m-app #plantPicker,
+body.m-app #outerPicker {
+    z-index: 10060;                      /* 必须压在底部导航(10050) 上面 */
+    align-items: stretch;
+    justify-content: flex-start;
+}
+/* 面板用 fixed + inset 铺满：不依赖父级是 flex 还是 block，也不会被居中规则挤小。
+   height 先写 100vh（老浏览器兜底），再用 @supports 叠 dvh（避开手机地址栏吃高度）。 */
+body.m-app #plantPicker > div:first-child,
+body.m-app #outerPicker > div:first-child {
+    position: fixed; inset: 0;
+    margin: 0;
+    width: auto; max-width: none;
+    height: 100vh; max-height: 100vh;
+    border-radius: 0;
+}
+@supports (height: 100dvh) {
+    body.m-app #plantPicker > div:first-child,
+    body.m-app #outerPicker > div:first-child {
+        height: 100dvh; max-height: 100dvh;
+    }
+}
+/* ★ 顶部那一行原来是「标题 + 搜索框 + 关闭」挤在 390px 里 → 搜索框只剩几十像素，
+     看起来就是「显示坏了」。改成：标题 + 关闭占第一行，搜索框整行独占第二行。 */
+body.m-app #plantPicker > div:first-child > div:first-child,
+body.m-app #outerPicker > div:first-child > div:first-child {
+    flex-wrap: wrap;
+    gap: 6px 8px;
+    padding: 8px 12px;
+}
+body.m-app #plantSearch,
+body.m-app #outerSearch {
+    flex: 1 1 100%;
+    max-width: none;
+    order: 9;                            /* 换行到第二行 */
+    margin: 0;
+}
+body.m-app #plantPickerClose,
+body.m-app #outerPickerClose {
+    margin-left: auto; padding: 6px 12px; font-size: 13px; flex: 0 0 auto;
+}
+/* 品质筛选行：一行横滑，不要折成三行把卡片挤下去 */
+body.m-app #plantPicker > div:first-child > div:nth-child(2) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px 12px;
+    -webkit-overflow-scrolling: touch;
+}
+body.m-app #plantRarityFilter { flex-wrap: nowrap; }
+/* 主体：卡片网格在上、替换面板折到下面 */
+body.m-app #plantPickerBody { flex-direction: column; }
+/* 卡片网格 5 列 → 3 列（390px 宽时每格约 110px，立绘和名字都看得清） */
+body.m-app #plantGrid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px; padding: 8px;
+    min-height: 0;
+}
+/* 「替换指定表」侧栏：手机上折到下面（侧栏会把网格挤到只剩 100px 宽） */
+body.m-app #plantReplacePanel {
+    width: auto; flex: 0 0 auto;
+    max-height: 34vh;
+    border-left: none;
+    border-top: 2px solid #e2e8f0;
+    background: #fff;
+    padding: 8px 10px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ---- ② 槽位屏：2 列大卡 ---- */
+body.m-app #jobSlots {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+}
+/* 原来每项后面塞的「强制换行」span（flex-basis:100%;height:0）在 grid 里会占掉格子 → 藏掉 */
+body.m-app #jobSlots > span { display: none !important; }
+body.m-app #jobSlots > div {
+    display: flex !important;
+    width: auto !important; min-width: 0 !important;
+    padding: 6px 8px !important; gap: 6px !important;
+    box-sizing: border-box;
+}
+/* 槽名那一截在窄卡里要能省略，不许把 ✎ ✕ 挤出去 */
+body.m-app #jobSlots > div > span:nth-child(2) {
+    min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}

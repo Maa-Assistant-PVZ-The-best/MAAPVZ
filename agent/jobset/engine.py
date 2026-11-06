@@ -13,6 +13,9 @@
       "plant_notes": {               # 植物备注（阶数/挂件标注，仅展示，运行时不消费）
         "冰西瓜": {"tier": 5, "pendant": "闪耀雪花挂坠"}
       },
+      # 作业集标签（2026-10-26 新增，旧作业集无此字段）：打法适配条件，纯标注
+      #   分组只活在网页端（打法开关/账号档位/条件与风险/失败建议）
+      "tags": ["开僵尸场外加速", "氪佬", "需要月卡"],
       "tables": [
         {
           "from_level": 1,
@@ -38,8 +41,16 @@ import json
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+# ★ 预留接口（2026-11-01）：字段的**归一化口径**全部收在 reserved.py，
+#   engine 只负责「读出来挂到对象上」——这样网页端/agent 两边只有一处权威。
+try:                                    # 包内导入（正常路径）
+    from . import reserved as _reserved
+except ImportError:                     # 直接 python agent/jobset/engine.py
+    import reserved as _reserved        # type: ignore[no-redef]
 
 # ---------------------------------------------------------------------------
 # 路径
@@ -50,14 +61,12 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def _pick_resource_dir() -> Path:
-    """定位资源根目录（作业集放在它的 jobs/ 子目录下）。
+    """定位资源根目录（pipeline / 图片 / 模型等；作业集**不**在这里面）。
 
     两种布局并存，运行时自动判断：
       - 发行包：<根>/resource/ 存在（MaaFramework 的正式资源目录，
                 install.py 把 assets/resource 的内容摊平拷到这里）
-                -> 作业集用 <根>/resource/jobs
       - 开发仓库：没有 <根>/resource/，资源在 <根>/assets/resource/
-                -> 作业集用 <根>/assets/resource/jobs
     """
     packaged = _REPO_ROOT / "resource"
     if packaged.is_dir():
@@ -70,12 +79,52 @@ _RESOURCE_DIR = _pick_resource_dir()
 # 公开别名（runtime 等需要定位 pipeline/图片等资源文件时用）
 RESOURCE_DIR = _RESOURCE_DIR
 
-DEFAULT_JOBS_DIR = _RESOURCE_DIR / "jobs"
 
-# 旧版布局的作业集位置：<根>/assets/resource/jobs。
-# 发行包里它只可能是运行时自建的（源码里被 .gitignore 排除、不会被打包），
-# 但老用户的数据就躺在那里，需要迁移到新位置。
-_LEGACY_JOBS_DIR = _REPO_ROOT / "assets" / "resource" / "jobs"
+def _is_android() -> bool:
+    """是否跑在安卓端（与 agent/my_action.py 的 _IS_ANDROID 同一口径）。
+
+    安卓上 <根> 是 MaaFwApp 的 pi 解包树，作业集必须放到它外面 —— 见 jobs_dir_for。
+    """
+    return (
+        os.environ.get("MAA_JOB_EDITOR_ANDROID") == "1"
+        or "ANDROID_ROOT" in os.environ
+        or "ANDROID_DATA" in os.environ
+        or (sys.platform.startswith("linux") and Path("/system/build.prop").is_file())
+    )
+
+
+def jobs_dir_for(root: Path, android: bool = False) -> Path:
+    """作业集目录（用户数据）—— ★ 必须落在「更新不会整棵替换」的位置。
+
+    三种布局，判据与 _pick_resource_dir 同源：
+
+      - 安卓（root = pi 解包树）：root/../jobs
+        MaaFwApp 升级只整体替换包里带的根级条目（resource/、agent/、
+        game_assist_tools/ …），设置里的「重新解压资源」更会把整棵 pi 删了重解。
+        只有与 pi 同级才活得下来（见 Android/MaaFwApp/INTEGRATION.md 的
+        「更新只整体替换新包根目录下有的条目，其余不动」）。
+      - 桌面发行包（root/resource/ 存在）：root/jobs
+        包里没有 jobs/ 这一项 -> 差分更新只覆盖/删除包内文件，不会动它。
+      - 开发仓库：root/assets/resource/jobs（.gitignore 已排除，夹具也放这儿）
+
+    ★ 2026-10-30 之前作业集在 <根>/resource/jobs，那是包根级条目 ——
+      安卓端每次升级都会被清空（用户作业集全丢），才挪到现在的位置。
+    """
+    if android:
+        return root.parent / "jobs"
+    if (root / "resource").is_dir():
+        return root / "jobs"
+    return root / "assets" / "resource" / "jobs"
+
+
+DEFAULT_JOBS_DIR = jobs_dir_for(_REPO_ROOT, _is_android())
+
+# 历史布局的作业集位置（老用户数据可能还躺在这儿，载入前搬到 DEFAULT_JOBS_DIR）。
+# 顺序 = 新 -> 旧；逐个文件搬，目标已有同名文件时不覆盖（新位置优先）。
+LEGACY_JOBS_DIRS = [
+    _REPO_ROOT / "resource" / "jobs",             # 2026-09-30 ~ 2026-10-30：误放进资源目录
+    _REPO_ROOT / "assets" / "resource" / "jobs",  # 更早：包根自建（开发仓库就是这一条）
+]
 
 CURRENT_FILE = "current.json"
 
@@ -85,34 +134,34 @@ class JobSetError(Exception):
 
 
 def migrate_legacy_jobs(dst: Optional[Path] = None) -> int:
-    """把旧布局里的作业集迁移到新位置。返回迁移的文件数。
+    """把历史布局里的作业集搬到 DEFAULT_JOBS_DIR。返回搬动的文件数。
 
-    仅当新旧目录确实不同时才动作（开发仓库里两者相同 -> 直接返回 0）。
-    逐个文件搬：目标已存在同名文件时**不覆盖**（新位置的数据优先）。
+    只搬 .json（含 current.json）；目标已存在同名文件时**不覆盖**（新位置优先）。
+    任一来源读不了就跳过，不抛异常 —— 用户数据问题不该把任务打死。
     """
     dst = Path(dst) if dst is not None else DEFAULT_JOBS_DIR
-    src = _LEGACY_JOBS_DIR
-    if src == dst or not src.is_dir() or not dst.parent.exists():
-        return 0
 
     moved = 0
-    try:
-        entries = sorted(src.iterdir())
-    except OSError:
-        return 0
-    for f in entries:
-        if not f.is_file() or f.suffix != ".json":
-            continue
-        target = dst / f.name
-        if target.exists():
+    for src in LEGACY_JOBS_DIRS:
+        if src == dst or not src.is_dir():
             continue
         try:
-            dst.mkdir(parents=True, exist_ok=True)
-            shutil.move(str(f), str(target))
-            moved += 1
+            entries = sorted(src.iterdir())
         except OSError:
-            # 单个文件失败不影响其它文件；也不阻断启动
             continue
+        for f in entries:
+            if not f.is_file() or f.suffix != ".json":
+                continue
+            target = dst / f.name
+            if target.exists():
+                continue
+            try:
+                dst.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(f), str(target))
+                moved += 1
+            except OSError:
+                # 单个文件失败不影响其它文件；也不阻断启动
+                continue
     return moved
 
 
@@ -144,6 +193,37 @@ def _norm_plants(v: Any) -> List[str]:
             continue
         seen.add(name)
         out.append(name)
+    return out
+
+
+def _parse_plant_notes(pn: Any) -> Dict[str, Dict[str, Any]]:
+    """解析植物备注：{ 植物名: {"tier": 1-5, "pendant": 挂件名, "costume": True} }。
+
+    仅展示用（运行时不消费），所以这里只做结构校验 + 剪空：
+      · 名字不是字符串 / 备注不是 dict -> 跳过
+      · tier 越界、pendant 空串、costume 非真值 -> 剪掉
+      · 剪完一个字都不剩 -> 整个条目跳过
+    旧作业集没有该字段 -> {}。
+    """
+    out: Dict[str, Dict[str, Any]] = {}
+    if not isinstance(pn, dict):
+        return out
+    for name, note in pn.items():
+        if not isinstance(name, str) or not isinstance(note, dict):
+            continue
+        entry: Dict[str, Any] = {}
+        tier = _as_int(note.get("tier"), 0)
+        if tier and 1 <= tier <= 5:
+            entry["tier"] = tier
+        pendant = note.get("pendant")
+        if isinstance(pendant, str) and pendant.strip():
+            entry["pendant"] = pendant.strip()
+        costume = note.get("costume")
+        # 布尔：是否需要装扮（旧版字符串装扮名也视为需要）
+        if costume is True or isinstance(costume, str) and costume.strip():
+            entry["costume"] = True
+        if entry:
+            out[name] = entry
     return out
 
 
@@ -243,6 +323,21 @@ class Table:
         self.non_boss: Dict[str, Any] = self._norm_rules(self.raw.get("non_boss"), self.wait_after)
         # ★ boss 规则用 bossWaitAfter（boss 关的等待与普通关完全独立）
         self.boss: Dict[str, Any] = self._norm_rules(self.raw.get("boss"), self.boss_wait_after)
+
+        # ---- ★ 预留接口字段（2026-11-01，见 HANDOFF §10.10）----
+        #   用户要求「先留接口、以后再实现」，所以这三个字段**只解析不消费**：
+        #     pre_battle    : 开局前额外动作 [{id, side, …参数}]（等待/刷僵尸/
+        #                     切换僵尸场外加速/自动刷新下一波）
+        #     pick_favorite : 选卡同时标收藏
+        #     pick_tiers    : 选卡时自由切换阶数 {槽位号: 1..5}（0 = 不指定，被丢掉）
+        #   ★ 缺省 = 空列表 / False / 空表 —— 旧作业集行为与没有它们时**一字不差**。
+        #   实现时**不要在这里加逻辑**，去 reserved.py 改 implemented + 编译/注入。
+        self.pre_battle: List[Dict[str, Any]] = _reserved.parse_pre_battle(
+            self.raw.get("pre_battle", self.raw.get("preBattle")))
+        self.pick_favorite: bool = (
+            self.raw.get("pick_favorite", self.raw.get("pickFavorite")) is True)
+        self.pick_tiers: Dict[int, int] = _reserved.parse_pick_tiers(
+            self.raw.get("pick_tiers", self.raw.get("pickTiers")))
 
     # -- 规则规范化 --------------------------------------------------------
 
@@ -435,6 +530,24 @@ class Table:
             return False
         return True
 
+    def level_range(self) -> str:
+        """覆盖区间的**闭区间**文本（播报/日志唯一口径）。
+
+        ★ 2026-11-01 用户实报「作业表设计 1~30 关，agent 侧报 1~31 关」：
+          `to_level` 是**开区间上界**（= 最大关 + 1，见 `covers()`）；
+          导出侧也是按「最大关 + 1」写的（`27f-jobset-export.js`），
+          但以前 6 处播报点都把它原样打印，于是每一处都多报一关。
+          这里统一换算成用户看得懂的闭区间：
+            · 图层模式（有 levels）-> 真实 min(levels)~max(levels)
+            · 旧版区间模式        -> from_level~(to_level-1)
+            · to_level 为空        -> from_level~末
+        """
+        if self.levels:
+            return f"{min(self.levels)}~{max(self.levels)}"
+        if self.to_level is None:
+            return f"{self.from_level}~末"
+        return f"{self.from_level}~{max(self.from_level, self.to_level - 1)}"
+
     def rules(self, is_boss: bool) -> Dict[str, Any]:
         """按是否 boss 关取种植规则。"""
         return self.boss if is_boss else self.non_boss
@@ -481,8 +594,7 @@ class Table:
         return ("plants", tuple(self.eff_plants(is_boss)), self.eff_artifact(is_boss))
 
     def __repr__(self) -> str:
-        rng = f"{self.from_level}~{self.to_level if self.to_level is not None else '-'}"
-        return f"<Table#{self.index} {rng} plants={self.plants}>"
+        return f"<Table#{self.index} {self.level_range()} plants={self.plants}>"
 
 
 # ---------------------------------------------------------------------------
@@ -516,28 +628,24 @@ class JobSet:
         ] if isinstance(sub_worlds, (list, tuple)) else []
 
         # ---- 植物备注（网页端「📝 配置」导出，2026-10-13 新增）----
-        #   { 植物名: {"tier": 1-5, "pendant": "挂件中文名", "costume": "装扮名"} }
+        #   { 植物名: {"tier": 1-5, "pendant": "挂件中文名", "costume": true} }
         #   —— 仅展示用，运行时不消费。这里只做结构校验后原样保留
         #   （旧作业集无此字段 -> {}）。costume 的选择功能后做，先透传。
-        pn = raw.get("plant_notes")
-        self.plant_notes: Dict[str, Dict[str, Any]] = {}
-        if isinstance(pn, dict):
-            for name, note in pn.items():
-                if not isinstance(name, str) or not isinstance(note, dict):
-                    continue
-                entry: Dict[str, Any] = {}
-                tier = _as_int(note.get("tier"), 0)
-                if tier and 1 <= tier <= 5:
-                    entry["tier"] = tier
-                pendant = note.get("pendant")
-                if isinstance(pendant, str) and pendant.strip():
-                    entry["pendant"] = pendant.strip()
-                costume = note.get("costume")
-                # 布尔：是否需要装扮（旧版字符串装扮名也视为需要）
-                if costume is True or isinstance(costume, str) and costume.strip():
-                    entry["costume"] = True
-                if entry:
-                    self.plant_notes[name] = entry
+        self.plant_notes: Dict[str, Dict[str, Any]] = _parse_plant_notes(raw.get("plant_notes"))
+
+        # ---- 作业集标签（网页端「＋ 选择标签」导出，2026-10-26 新增）----
+        #   打法的适配条件，网页端分组显示、数据层平铺：
+        #     打法开关（僵尸场外加速 开/关、刷新下一波 开/关）
+        #     账号档位（难民/0氪/微氪/氪佬）
+        #     条件与风险（需要重开/需要月卡/破阵风险高）
+        #     失败建议（失败建议：停止任务/重置后继续打/继续挑战）
+        #   一份作业集可挂多个，纯标注（运行时不消费）；这里不设白名单，
+        #   白名单只在网页端 41-jobset-tags.js 里，只做「非空字符串」透传。
+        raw_tags = raw.get("tags")
+        self.tags: List[str] = [
+            t.strip() for t in raw_tags
+            if isinstance(t, str) and t.strip()
+        ] if isinstance(raw_tags, (list, tuple)) else []
 
         # ---- 无尽局外 80 选卡（作业集级；网页端 32-jobset-outer.js 导出）----
         #   mode:   auto     = 按 plants 列表自动选（runtime 注入到 80 选卡 custom 节点）
@@ -551,6 +659,18 @@ class JobSet:
         self.outer_pick_mode: str = _op_mode if _op_mode in ("auto", "oneclick", "confirm") else "auto"
         # 封顶 80：界面最多选 80 个，多出的从末尾砍（网页端已截，这里兜底）
         self.outer_pick_plants: List[str] = _norm_plants(op.get("plants"))[:80]
+
+        # ---- ★ 预留接口（作业集级，2026-11-01，见 HANDOFF §10.10）----
+        #   world_chains: 「每个世界导入一次、智能识别当前世界后替换对应阵容」
+        #                 -> {"enable": bool, "items": [{world, table, side, slots, …}]}
+        #   mode_check  : 「选择正赛会检查正赛有没有开」
+        #                 -> {"enable": bool, "expect": ranked|training|any,
+        #                     "on_missing": warn|abort}
+        #   ★ 只解析、不消费；缺省 = 未启用 -> 行为与旧作业集完全一致。
+        self.world_chains: Dict[str, Any] = _reserved.parse_world_chains(
+            raw.get("world_chains"))
+        self.mode_check: Dict[str, Any] = _reserved.parse_mode_check(
+            raw.get("mode_check"))
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:
@@ -699,7 +819,7 @@ def load_jobset(
 
     code 为 None/空 -> 用 jobs/current.json 里记录的当前作业集。
     """
-    # 未显式指定目录时，先确保旧布局的数据已迁移到新位置。
+    # 未显式指定目录时，先确保历史布局的数据已迁移到新位置。
     # 放在这里而不是模块导入期：agent 进程可能先于网页端启动。
     if jobs_dir is None:
         try:
@@ -709,9 +829,8 @@ def load_jobset(
 
     d = Path(jobs_dir) if jobs_dir else DEFAULT_JOBS_DIR
     if not d.is_dir():
-        # ★ 打包/CI 发行包里 jobs 是用户数据目录（.gitignore 排除 + 空目录
-        #   进不了 zip），可能整个不存在 —— 本地 install.py 会建，CI 包不会。
-        #   这里自动补上，让后续报「没有作业集」的可操作错误，
+        # ★ 作业集目录是用户数据目录（不在任何发行包里），第一次跑时可能整个
+        #   不存在 —— 这里自动补上，让后续报「没有作业集」的可操作错误，
         #   而不是一句「目录不存在」把任务直接打死。
         try:
             d.mkdir(parents=True, exist_ok=True)
@@ -719,8 +838,8 @@ def load_jobset(
             raise JobSetError(f"作业集目录不存在且无法创建：{d}")
         raise JobSetError(
             f"作业集目录是空的（已自动创建）：{d}\n"
-            "请先把开发仓库 assets/resource/jobs 里的作业集 JSON 拷到这个目录，"
-            "或在网页编辑器里保存一份作业集"
+            "请先在网页编辑器（任务「无尽挑战（重构）」里的「打开作业集编辑器」）"
+            "里保存一份作业集并点「选择作业集」"
         )
 
     code = (code or "").strip() or read_current_code(d)

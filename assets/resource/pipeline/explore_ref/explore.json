@@ -1,0 +1,44 @@
+{
+    "植物探险_前置检查_ref": {
+        "focus": "执行植物探险",
+        "recognition": "DirectHit",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "[JumpBack]定位_主界面_公告类",
+            "导航_植物探险"
+        ]
+    },
+    "导航_植物探险": {
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "导航_点击日常",
+            "pipe_over": {
+                "导航_点击日常": {
+                    "next": [
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
+                        "导航_植物探险_点击"
+                    ]
+                }
+            }
+        },
+        "next": [
+            "植物探险_确认"
+        ]
+    },
+    "植物探险_确认": { //确认自己在植物探险内
+        "recognition": "OCR",
+        "expected": [
+            "植物探险"
+        ],
+        "roi": [
+            543,
+            20,
+            190,
+            58
+        ],
+        "next": []
+    }
+}

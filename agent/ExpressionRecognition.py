@@ -20,6 +20,8 @@ class NodeResolutionError(ValueError):
         self.payload = payload
 
 
+# ⚠️ 待删（零引用）：数值条件闸门（表达式引用 OCR 节点抠数字判分支）；
+#    分支闸门已改用 enabled 注入实现，全库零引用，可直接删（连同本文件与 main.py 的 import）。〔退役清单 2026-10-25〕
 @AgentServer.custom_recognition("ExpressionRecognition")
 class ExpressionRecognition(CustomRecognition):
 

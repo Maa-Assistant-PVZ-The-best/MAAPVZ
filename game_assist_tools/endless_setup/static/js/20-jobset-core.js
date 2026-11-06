@@ -5,7 +5,12 @@
 // 选择世界（2026-10-13）：主适配世界（单选）+ 副世界（多选）。
 // 与 task/Endless_ref 的「选择世界」选项注入值同名对齐
 // （注意 GUI 的「埃及世界」case 注入的是「神秘埃及」）。
-const JOB_WORLDS = ['神秘埃及','海盗港湾','狂野西部','功夫世界','未来世界','黑暗时代','巨浪沙滩','冰河世界','天空之城','失落之城','摇滚年代','恐龙危机','摩登世界','蒸汽时代','复兴时代','童话世界'];
+// ★ 2026-11 追加「地宫无尽」（排最后=童话世界之后）：
+//   地宫是无尽专用地图（不是 16 个常规世界之一），只在编辑器里当适配标注用；
+//   它不是 task/Endless_ref 的「选择世界」case，所以运行时 _check_world 只在
+//   GUI 真的注入了「当前世界」时才比对 —— 地宫作业集一般走 Secret_realm 任务，
+//   没有注入值 -> 不比对 -> 不会误报（见 §5 世界字段说明）。
+const JOB_WORLDS = ['神秘埃及','海盗港湾','狂野西部','功夫世界','未来世界','黑暗时代','巨浪沙滩','冰河世界','天空之城','失落之城','摇滚年代','恐龙危机','摩登世界','蒸汽时代','复兴时代','童话世界','地宫无尽'];
 
 let jobTables = [];          // 行为表数组
 let currentTable = 0;        // 当前编辑的表索引
@@ -72,6 +77,9 @@ function jobNewTable() {
     for (let i = 1; i <= 8; i++) t.slots[i] = '';
     // 默认形态：单次（铺开局为主；要循环再右键/F 切）
     jobAllSlotKeys().forEach(function (k) { t.slotModes[k] = 'once'; });
+    // ★ 预留接口字段（16-jobset-reserved.js）：preBattle / pickFavorite / pickTiers
+    //   只给默认值，不接任何界面（用户要求「只留接口，不写功能」，见 §10.10）。
+    if (typeof jobReservedDefaults === 'function') jobReservedDefaults(t);
     if (last) {
         // ★★ 棋盘与槽位严格对应（用户要求）：新表槽位是全空的，
         //   那么棋盘/链条/落点等待也必须全空 —— 不能只继承 boss 棋盘
@@ -83,7 +91,7 @@ function jobNewTable() {
         //   用户调过的话新表接着用，免得每张表都重调一遍。
         if (last.endType === 'loops') t.endType = 'loops';
         if (typeof last.endPostDelay === 'number') t.endPostDelay = last.endPostDelay;
-        if (typeof last.endLoopCount === 'number' && last.endLoopCount >= 1) t.endLoopCount = last.endLoopCount;
+        if (typeof last.endLoopCount === 'number' && last.endLoopCount >= 0) t.endLoopCount = last.endLoopCount;
         if (last.endAfterAction === 'restart' || last.endAfterAction === 'settle') t.endAfterAction = last.endAfterAction;
         if (typeof last.endSettleMs === 'number') t.endSettleMs = last.endSettleMs;
         if (last.endSubAction === 'once' || last.endSubAction === 'end') t.endSubAction = last.endSubAction;
@@ -173,6 +181,7 @@ function jobSaveCurrentBoard() {
 
 function jobLoadTable(idx, skipSave) {
     if (!skipSave) jobSaveCurrentBoard();        // 先把旧表棋盘存回去
+    const _prevTable = currentTable;
     currentTable = idx;
     const t = jobTables[idx];
     boardEarly = jobBoardOrBlank(t.boardEarly);
@@ -181,6 +190,18 @@ function jobLoadTable(idx, skipSave) {
     jobFillForm();
     jobRenderTabs();
     jobRenderSlots();
+    // ★ 换表 = 换棋盘：格内落子方块窗（43）的上下文失效，直接关掉
+    //   （它的 _cqCtx 存的是当时那块棋盘的**数组引用**，换表后就指向旧数组了）
+    if (typeof jobCloseCellQueue === 'function') {
+        try { jobCloseCellQueue(); } catch (e) { console.warn('[cellqueue] close', e); }
+    }
+    // ★ 换表 = 换上下文：撤销栈必须重置（否则 Ctrl+Z 会把上一张表的棋盘灌进来）。
+    //   同一个表号重载（复制阵容等）不算换上下文 —— 那时**记一笔**就好，
+    //   这样"复制阵容"也能被 Ctrl+Z 撤销。
+    if (typeof jobUndoReset === 'function') {
+        if (_prevTable !== idx) jobUndoReset();
+        else if (typeof jobUndoRecord === 'function') jobUndoRecord();
+    }
 }
 
 // 用存档棋盘，结构不对时退化为空白棋盘（不能只看 .length：空棋盘也是合法数据）

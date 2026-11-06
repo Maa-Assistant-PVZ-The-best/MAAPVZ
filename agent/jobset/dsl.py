@@ -26,6 +26,13 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+# ★ 预留接口（2026-11-01）：预留通用动作 id 的唯一权威在 reserved.py，
+#   这里只查表 —— 见到它们一律只报「预留未实现」，**绝不猜着执行**。
+try:                                    # 包内导入（正常路径）
+    from . import reserved as _reserved
+except ImportError:                     # 直接 python agent/jobset/dsl.py
+    import reserved as _reserved        # type: ignore[no-redef]
+
 # ---------------------------------------------------------------------------
 # 槽位名映射
 # ---------------------------------------------------------------------------
@@ -346,9 +353,18 @@ def generic_dsl(
     parts: List[str] = []
     missing: List[str] = []
 
+    # ★★ 预留动作（2026-11-01，见 HANDOFF §10.10 / agent/jobset/reserved.py）：
+    #    判定必须排在所有真实分支**之前** —— 万一将来某个 id 和真实动作同名，
+    #    「宁可不做」永远优先于「猜着执行」。这些 id 现在也没有界面能插进链里，
+    #    所以这条分支的作用是：手写 JSON 撞上时给出**明确**的解释，而不是
+    #    含糊的「未知通用动作」。
+    if aid in _reserved.RESERVED_GENERIC_ACTIONS:
+        missing.append(
+            f"{_reserved.RESERVED_GENERIC_ACTIONS[aid]}：接口已预留，当前版本未实现")
+
     # ★★ 通用「按槽位点 N 次」动作 —— 数据驱动，见下方 GENERIC_SLOT_CLICK。
     #    新增同类动作（如「滑飞弹」「使用神器」）只需往那张表里加一行。
-    if aid in GENERIC_SLOT_CLICK:
+    elif aid in GENERIC_SLOT_CLICK:
         spec = GENERIC_SLOT_CLICK[aid]
         key = _slot_click_point(coords, spec, merged.get(spec.get("slot_param", "slot")))
         if key is None:
@@ -466,6 +482,10 @@ def generic_dsl(
         #   click   -> 点「神器_初始化_神器位置」
         #   hold    -> 长按神器位置（swipe 到自身，1s）
         #   special -> 葫芦：点神器位置 -> 点「神器_初始化_葫芦X体型」（不等弹窗）
+        #              相机（2026-10-25）：
+        #                拍照 capture -> 点神器位置 -> 点「神器_初始化_相机复制」
+        #                打印 print   -> 点神器位置 -> 点「神器_初始化_相机粘贴」
+        #                                -> sleep0.5 -> 再点「神器_初始化_相机粘贴」
         #   swipe   -> 暂未支持（需要目标格子，等需求再定）
         pos = _coord_any(coords, "神器_初始化_神器位置")
         if pos is None:
@@ -477,20 +497,44 @@ def generic_dsl(
             gap = _clamp_int(merged.get("comboMs"), 0, 10000, 0)
             watch = merged.get("comboWatch", True) is not False
             if atype == "special":
-                body_cn = {"small": "小", "mid": "中", "big": "大"}.get(
-                    str(merged.get("artBody") or "mid"), "中")
-                bk = _coord_any(coords, f"神器_初始化_葫芦{body_cn}体型")
-                if bk is None:
-                    missing.append(
-                        f"artifact：坐标表缺少「神器_初始化_葫芦{body_cn}体型」")
+                abody = str(merged.get("artBody") or "").strip()
+                if abody in ("capture", "print"):
+                    # ---- 相机神器（用户实测步骤）----
+                    ck = _coord_any(coords, "神器_初始化_相机复制")
+                    pk = _coord_any(coords, "神器_初始化_相机粘贴")
+                    need_key = ck if abody == "capture" else pk
+                    if need_key is None:
+                        missing.append(
+                            "artifact：坐标表缺少「神器_初始化_相机"
+                            + ("复制" if abody == "capture" else "粘贴") + "」")
+                    else:
+                        # ★ 多段组合塞不进原生 `动作*n`，连击只能展开重复
+                        #   （watch=False 对 special 无效，仅记日志语义）。
+                        for i in range(n):
+                            if i and gap > 0:
+                                parts.append(f"sleep:{gap / 1000:g}")
+                            if abody == "capture":
+                                # 拍照：点神器 -> 点复制
+                                parts.extend([f"click:{pos}", f"click:{ck}"])
+                            else:
+                                # 打印：点神器 -> 点粘贴 -> 隔 0.5s -> 再点粘贴
+                                parts.extend([f"click:{pos}", f"click:{pk}",
+                                              "sleep:0.5", f"click:{pk}"])
                 else:
-                    # 一次使用 = 2 步（点神器 -> 点体型，中间不等 —— 用户实测不需要等弹窗）；
-                    # ★ 多段组合塞不进原生 `动作*n`，所以连击只能展开重复
-                    #   （watch=False 对 special 无效，仅记日志语义）。
-                    for i in range(n):
-                        if i and gap > 0:
-                            parts.append(f"sleep:{gap / 1000:g}")
-                        parts.extend([f"click:{pos}", f"click:{bk}"])
+                    body_cn = {"small": "小", "mid": "中", "big": "大"}.get(
+                        abody or "mid", "中")
+                    bk = _coord_any(coords, f"神器_初始化_葫芦{body_cn}体型")
+                    if bk is None:
+                        missing.append(
+                            f"artifact：坐标表缺少「神器_初始化_葫芦{body_cn}体型」")
+                    else:
+                        # 一次使用 = 2 步（点神器 -> 点体型，中间不等 —— 用户实测不需要等弹窗）；
+                        # ★ 多段组合塞不进原生 `动作*n`，所以连击只能展开重复
+                        #   （watch=False 对 special 无效，仅记日志语义）。
+                        for i in range(n):
+                            if i and gap > 0:
+                                parts.append(f"sleep:{gap / 1000:g}")
+                            parts.extend([f"click:{pos}", f"click:{bk}"])
             elif atype == "hold":
                 parts.extend(rep_parts(f"swipe:{pos},{pos},1000", n, gap, watch))
             elif atype == "swipe":

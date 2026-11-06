@@ -1,3 +1,6 @@
+// ⚠️ 待删（功能已关停）：定向测序列已下架（小工具界面只剩「暂无工具」），
+//    本文件 ~120 个节点全是死流程（含 9 格 × 8 植物的旧逻辑种植段），
+//    随 agent 侧四件套（ClickAndCount/ResetPlantCount/ResetCounts/TakeCountScreenshot）一起删。〔退役清单 2026-10-25〕
 {
     "检查序列_前置检查": {
         "timeout": 10000,

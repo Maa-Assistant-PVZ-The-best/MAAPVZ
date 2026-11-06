@@ -103,10 +103,44 @@ function jobRenderJobPicker() {
         item.type = 'button';
         const on = (j.code === curCode);
         item.className = 'jp-item' + (on ? ' jp-item-on' : '');
-        item.innerHTML = '<span class="jp-item-ico">📚</span><span>'
-            + '<div class="jp-item-name">' + (j.name || j.code) + '</div>'
-            + '<div class="jp-item-code">' + j.code + '</div></span>'
-            + (on ? '<span class="jp-item-cur">当前</span>' : '');
+
+        const ico = document.createElement('span');
+        ico.className = 'jp-item-ico';
+        ico.textContent = '📚';
+        item.appendChild(ico);
+
+        const mid = document.createElement('span');
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'jp-item-name';
+        nameDiv.textContent = (j.name || j.code);
+        mid.appendChild(nameDiv);
+        const codeDiv = document.createElement('div');
+        codeDiv.className = 'jp-item-code';
+        codeDiv.textContent = j.code;
+        mid.appendChild(codeDiv);
+        // 标签（41-jobset-tags.js 导出；服务端 /list_jobs 顺带带回）
+        const tags = (Array.isArray(j.tags) ? j.tags : []).filter(function (t) {
+            return typeof t === 'string' && t;
+        });
+        if (tags.length) {
+            const tw = document.createElement('div');
+            tw.className = 'jp-item-tags';
+            tags.forEach(function (t) {
+                const chip = document.createElement('span');
+                chip.className = 'jp-item-tag';
+                chip.textContent = t;
+                tw.appendChild(chip);
+            });
+            mid.appendChild(tw);
+        }
+        item.appendChild(mid);
+
+        if (on) {
+            const cur = document.createElement('span');
+            cur.className = 'jp-item-cur';
+            cur.textContent = '当前';
+            item.appendChild(cur);
+        }
         item.addEventListener('click', function () { pick(j.code); });
         body.appendChild(item);
     });
@@ -255,8 +289,14 @@ function jobResetEditor(quiet) {
 
     // 选择世界清空
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI('', []);
+    // 预留接口（作业集级）清空：world_chains / mode_check 回到「未启用」（§10.10）
+    if (typeof jobReservedTopDefaults === 'function') jobReservedTopDefaults();
+    // 标签清空（41-jobset-tags.js）
+    if (typeof jobSetTags === 'function') jobSetTags([]);
     // 植物备注清空
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes({});
+    // 神器备注清空
+    if (typeof jobSetArtifactNotes === 'function') jobSetArtifactNotes({});
 
     // 阵容表表单恢复默认
     const set = function (id, v) { const el = document.getElementById(id); if (el) el.value = v; };
@@ -271,6 +311,8 @@ function jobResetEditor(quiet) {
     jobRenderSeqChains();
     jobHideCellDetail();
 
+    // ★ 清空编辑器 = 换上下文：撤销栈作废（否则撤销会把上一个作业集的棋盘灌回来）
+    if (typeof jobUndoReset === 'function') jobUndoReset();
     if (!quiet) jobSaveLocal();        // 把「空白配置」写进缓存
 }
 
@@ -313,12 +355,17 @@ function jobApplyLoaded(job, code) {
         // 收尾参数（仅普通关；endLastPostDelay 已删除，等待结算改用节点 timeout）
         if (t.endType !== 'loops') t.endType = 'detect';
         if (typeof t.endPostDelay !== 'number') t.endPostDelay = 15000;
-        if (!(typeof t.endLoopCount === 'number' && t.endLoopCount >= 1)) t.endLoopCount = 3;
+        if (!(typeof t.endLoopCount === 'number' && t.endLoopCount >= 0)) t.endLoopCount = 3;
         if (t.endAfterAction !== 'restart' && t.endAfterAction !== 'settle') t.endAfterAction = 'sub';
         if (typeof t.endSettleMs !== 'number') t.endSettleMs = 15000;
         if (t.endSubAction !== 'once' && t.endSubAction !== 'end') t.endSubAction = 'loop';
         // 补给选取：数组（null/缺失都留空，由 jobSupplyList 填默认）
         if (!Array.isArray(t.supplyPicks)) t.supplyPicks = null;
+
+        // ★ 预留接口字段（16-jobset-reserved.js，见 HANDOFF §10.10）：
+        //   pre_battle / pick_favorite / pick_tiers —— 旧作业集没有这些字段，
+        //   走默认值（空列表 / false / 空表），行为与旧版**完全一致**。
+        if (typeof jobReservedImport === 'function') jobReservedImport(t, t);
 
         // ★ 编队切换：squad（1..6）是运行时读的权威字段。
         //   读回来时同步成编辑器的 lineupMode / deckNo，
@@ -408,8 +455,12 @@ function jobApplyLoaded(job, code) {
     currentTable = 0;
     // 选择世界（旧作业集没有该字段 -> 未选择）
     if (typeof jobSetWorldUI === 'function') jobSetWorldUI(job.world, job.sub_worlds);
+    // 标签（旧作业集没有该字段 -> 无标签）
+    if (typeof jobSetTags === 'function') jobSetTags(job.tags);
     // 植物备注（旧作业集没有该字段 -> 空）
     if (typeof jobSetPlantNotes === 'function') jobSetPlantNotes(job.plant_notes);
+    // 神器备注（旧作业集没有该字段 -> 空）
+    if (typeof jobSetArtifactNotes === 'function') jobSetArtifactNotes(job.artifact_notes);
     // 局外选卡（作业集级）：旧作业集没有该字段 -> 空列表 + auto；
     // mode 为 oneclick/confirm 时 JSON 本就不存 plants，读进来也置空
     const _op = (job.outer_pick && typeof job.outer_pick === 'object') ? job.outer_pick : {};
@@ -420,11 +471,25 @@ function jobApplyLoaded(job, code) {
     jobOuterPick.order = (_opm === 'auto' && Array.isArray(_op.order))
         ? _op.order.filter(function (x) { return typeof x === 'string' && x; }) : [];
     jobOuterRefreshBadge();
+    // ★ 预留接口（作业集级）：world_chains（按世界换阵容）/ mode_check（正赛检查）
+    //   旧作业集没有这两个字段 -> 回到「未启用」，行为不变（见 §10.10）。
+    if (typeof jobReservedTopImport === 'function') jobReservedTopImport(job);
+    // ★ 旧作业集里可能带着"中间空槽"（老版本允许卸中间槽 / 手写 JSON）——
+    //   卡槽必须从槽1 起连续（游戏卡条紧排），所以载入即压实（42-jobset-batch.js）。
+    //   ★ 必须在 jobLoadTable 之前：压实要改各表自己的 boardEarly/boardLate。
+    if (typeof jobCompactAllTables === 'function') {
+        try {
+            const _cp = jobCompactAllTables();
+            if (_cp.tables) console.info('[compact] 载入时压实了 ' + _cp.tables + ' 张表（普通关 ' + _cp.normal + ' / boss ' + _cp.boss + ' 个槽）');
+        } catch (e) { console.warn('[compact] 载入压实失败', e); }
+    }
     jobLoadTable(0, true);
     jobRenderTabs();
     jobFillForm();
     jobRenderSlots();
     jobRenderSeqChains();
+    // ★ 载入新的作业集 = 换上下文：撤销栈整体作废（绝不跨作业集撤销）
+    if (typeof jobUndoReset === 'function') jobUndoReset();
     jobSaveLocal();
     // 「是否查看配置」提示条（38-jobset-notes.js；三个载入入口共用本函数，一处挂即可）
     if (typeof jobPromptViewNotes === 'function') jobPromptViewNotes(job.name || code);
