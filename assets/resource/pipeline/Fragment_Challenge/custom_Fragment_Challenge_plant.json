@@ -127,8 +127,9 @@
         "action": "Custom",
         "custom_action": "ResetAllOffsets",
         "next": [
-            "点击日常_碎片挑战",
-            "[JumpBack]检查当前是否在主界面"
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
+            "点击日常_碎片挑战"
         ]
     }
 }

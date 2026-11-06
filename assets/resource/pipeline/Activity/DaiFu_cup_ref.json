@@ -3,11 +3,10 @@
         "focus": "戴夫杯",
         "recognition": "DirectHit",
         "next": [
-            "[JumpBack]定位_全局_菊花",
-            "[JumpBack]定位_全局_服务器通讯中",
-            "[JumpBack]定位_主界面_公告类",
             "戴夫杯_立即前往",
             "戴夫杯_点击匹配",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
             "导航_戴夫杯"
         ]
     },

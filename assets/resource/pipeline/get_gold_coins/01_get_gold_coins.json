@@ -3,7 +3,8 @@
         "timeout": 10000,
         "action": "DoNothing",
         "next": [
-            "[JumpBack]返回主界面",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
             "点击星系"
         ]
     },
