@@ -15,7 +15,7 @@
         ],
         "green_mask": true,
         "threshold": [
-            0.92
+            0.8
         ],
         "method": 10001,
         "action": "DoNothing",

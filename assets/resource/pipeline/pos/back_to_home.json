@@ -77,7 +77,7 @@
         ],
         "green_mask": true,
         "threshold": [
-            0.92
+            0.7
         ],
         "method": 10001,
         "action": "DoNothing",
@@ -97,7 +97,7 @@
         ],
         "green_mask": true,
         "threshold": [
-            0.92
+            0.7
         ],
         "method": 10001,
         "action": "DoNothing",
@@ -137,7 +137,7 @@
         ],
         "green_mask": true,
         "threshold": [
-            0.92
+            0.7
         ],
         "method": 10001,
         "action": "StopTask",
