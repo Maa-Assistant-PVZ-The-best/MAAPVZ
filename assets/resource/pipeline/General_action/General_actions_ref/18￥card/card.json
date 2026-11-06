@@ -1,0 +1,14 @@
+{
+    "免广告卡_文字": {
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ]
+    },
+    "免广告卡_图片": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/看广告领双倍.png"
+        ]
+    }
+}
