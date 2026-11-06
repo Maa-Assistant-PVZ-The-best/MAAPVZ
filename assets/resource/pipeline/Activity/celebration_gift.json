@@ -1,11 +1,11 @@
 {
     "庆典礼包_前置检查": {
         "focus": "庆典礼包",
+        "recognition": "DirectHit",
         "next": [
-            "[JumpBack]定位_全局_菊花",
-            "[JumpBack]定位_全局_服务器通讯中",
-            "[JumpBack]定位_主界面_公告类",
             "庆典礼包_点击入口",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
             "导航_庆典礼包"
         ]
     },
