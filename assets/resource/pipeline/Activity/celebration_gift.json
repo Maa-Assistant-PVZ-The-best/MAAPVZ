@@ -1,0 +1,136 @@
+{
+    "庆典礼包_前置检查": {
+        "focus": "庆典礼包",
+        "next": [
+            "[JumpBack]定位_全局_菊花",
+            "[JumpBack]定位_全局_服务器通讯中",
+            "[JumpBack]定位_主界面_公告类",
+            "庆典礼包_点击入口",
+            "导航_庆典礼包"
+        ]
+    },
+    "导航_庆典礼包": {
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "导航_点击日常",
+            "pipe_over": {
+                "导航_点击日常": {
+                    "next": [
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
+                        "导航_活动合集"
+                    ]
+                }
+            }
+        },
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_点击入口"
+        ]
+    },
+    "庆典礼包_点击入口": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Activity/celebration_gift_entry.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_等待礼包页稳定"
+        ]
+    },
+    "庆典礼包_等待礼包页稳定": {
+        "pre_wait_freezes": {
+            "time": 500,
+            "target": [
+                1002,
+                327,
+                108,
+                24
+            ],
+            "rate_limit": 200
+        },
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_确认礼包页"
+        ]
+    },
+    "庆典礼包_确认礼包页": {
+        "recognition": "OCR",
+        "roi": [
+            1002,
+            327,
+            108,
+            24
+        ],
+        "expected": [
+            "打开庆典礼包"
+        ],
+        "next": [
+            "庆典礼包_立刻前往"
+        ]
+    },
+    "庆典礼包_立刻前往": {
+        "recognition": "OCR",
+        "expected": [
+            "^(立刻|立即)前往$"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_购买免费礼包"
+        ]
+    },
+    "庆典礼包_购买免费礼包": {
+        "pre_wait_freezes": {
+            "time": 500,
+            "target": [
+                287,
+                346,
+                110,
+                37
+            ],
+            "rate_limit": 200
+        },
+        "action": "Click",
+        "target": [
+            287,
+            346,
+            110,
+            37
+        ],
+        "post_delay": 1000,
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_确认购买"
+        ]
+    },
+    "庆典礼包_确认购买": {
+        "action": "Click",
+        "target": [
+            539,
+            511,
+            196,
+            63
+        ],
+        "post_delay": 2000,
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_领取礼包"
+        ]
+    },
+    "庆典礼包_领取礼包": {
+        "action": "Click",
+        "target": [
+            556,
+            601,
+            165,
+            51
+        ],
+        "next": [
+            "定位_在主界面",
+            "定位_不在主界面"
+        ]
+    }
+}
