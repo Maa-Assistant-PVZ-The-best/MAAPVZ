@@ -3,9 +3,9 @@
         "focus": "执行植物探险",
         "recognition": "DirectHit",
         "next": [
-            "[JumpBack]定位_全局_菊花",
-            "[JumpBack]定位_全局_服务器通讯中",
-            "[JumpBack]定位_主界面_公告类",
+            "植物探险_确认",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
             "导航_植物探险"
         ]
     },
