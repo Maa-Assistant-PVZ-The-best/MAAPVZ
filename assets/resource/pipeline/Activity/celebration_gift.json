@@ -1,0 +1,107 @@
+{
+    "庆典礼包_前置检查": {
+        "focus": "庆典礼包",
+        "recognition": "DirectHit",
+        "next": [
+            "庆典礼包_点击入口",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
+            "导航_庆典礼包"
+        ]
+    },
+    "导航_庆典礼包": {
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "导航_点击日常",
+            "pipe_over": {
+                "导航_点击日常": {
+                    "next": [
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
+                        "导航_活动合集"
+                    ]
+                }
+            }
+        },
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_点击入口"
+        ]
+    },
+    "庆典礼包_点击入口": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Activity/celebration_gift_entry.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_确认礼包页"
+        ]
+    },
+    "庆典礼包_确认礼包页": {
+        "recognition": "OCR",
+        "roi": [
+            1002,
+            327,
+            108,
+            24
+        ],
+        "expected": [
+            "打开庆典礼包"
+        ],
+        "next": [
+            "庆典礼包_立刻前往"
+        ]
+    },
+    "庆典礼包_立刻前往": {
+        "recognition": "OCR",
+        "expected": [
+            "立即前往",
+            "立刻前往",
+            "前往"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_购买免费礼包"
+        ]
+    },
+    "庆典礼包_购买免费礼包": {
+        "recognition": "OCR",
+        "expected": [
+            "0元"
+        ],
+        "roi": [
+            297,
+            345,
+            93,
+            43
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_确认购买/领取礼包",
+            "庆典礼包_领取成功"
+        ]
+    },
+    "庆典礼包_确认购买/领取礼包": {
+        "action": "Click",
+        "recognition": "OCR",
+        "expected": [
+            "确定"
+        ],
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "庆典礼包_确认购买/领取礼包"
+        ]
+    },
+    "庆典礼包_领取成功": {
+        "next": [
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
+            "定位_在主界面"
+        ]
+    }
+}
