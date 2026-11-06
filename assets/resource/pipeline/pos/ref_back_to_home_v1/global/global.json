@@ -12,7 +12,8 @@
         "expected": [
             "服务器通讯中",
             "服务",
-            "服"
+            "服",
+            "竞技菜单中"
         ],
         "focus": "服务器通讯",
         "roi": [
@@ -26,8 +27,10 @@
     "定位_全局_确定": {
         "recognition": "OCR",
         "expected": [
-            "确定"
+            "确定",
+            "继续"
         ],
+        "order_by": "Vertical",
         "action": "Click"
     }
 }
