@@ -1,0 +1,119 @@
+{
+    //这里的所有节点，都推荐用rab调用，真的非常推荐用rab
+    "通用动作_使用成功": {},
+    "通用动作_免广告卡": {
+        "recognition": "Or",
+        "any_of": [
+            "免广告卡_文字",
+            "免广告卡_图片"
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": [
+            "通用动作_免广告卡_没有资源",
+            "通用动作_免广告卡_没有广告卡",
+            "通用动作_免广告卡_使用成功"
+        ]
+    },
+    "通用动作_免广告卡_使用成功": {
+        "focus": "使用免广告卡成功(其实也不一定)"
+    },
+    "通用动作_免广告卡_没有资源": {
+        "recognition": "OCR",
+        "expected": [
+            "没有请求到广告"
+        ],
+        "focus": "使用免广告卡失败，没有请求到广告资源",
+        "roi": [
+            504,
+            648,
+            266,
+            32
+        ]
+    },
+    "通用动作_免广告卡_没有广告卡": {
+        "recognition": "OCR",
+        "expected": [
+            "跳过"
+        ],
+        "roi": [
+            1216,
+            31,
+            49,
+            36
+        ],
+        "action": "Click",
+        "focus": "使用免广告卡失败，没有免广告卡",
+        "next": [
+            "通用动作_免广告卡_没有广告卡_退出"
+        ]
+    },
+    "通用动作_免广告卡_没有广告卡_退出": {
+        "recognition": "OCR",
+        "expected": [
+            "退出"
+        ],
+        "roi": [
+            553,
+            468,
+            155,
+            39
+        ],
+        "action": "Click"
+    },
+    "通用动作_使用钻石": {
+        "recognition": "OCR",
+        "expected": [
+            "0钻石"
+        ],
+        "roi": [
+            316,
+            413,
+            601,
+            190
+        ], //默认roi是植物探险的，建议不要直接改这个节点，而是使用rab（run_and_back）的pipe_over替换
+        "action": "Click"
+    },
+    "通用动作_坚不可摧_开始战斗": {
+        "recognition": "OCR",
+        "expected": [
+            "开始战斗"
+        ],
+        "roi": [
+            1001,
+            76,
+            204,
+            79
+        ],
+        "action": "Click"
+    },
+    "通用动作_局内_二倍速": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/加速.png"
+        ],
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "通用动作_局内_点击二倍速(不要调用)",
+            "pipe_over": {
+                "返回主界面_关闭按钮": {
+                    "next": [
+                        "通用动作_局内_点击二倍速(不要调用)"
+                    ]
+                }
+            }
+        }
+    },
+    "通用动作_局内_点击二倍速(不要调用)": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/加速.png"
+        ],
+        "action": "Click",
+        "next": [
+            "返回主界面_关闭按钮", //加速有概率点到充值键，得关掉……
+            "通用动作_使用成功"
+        ]
+    }
+}
