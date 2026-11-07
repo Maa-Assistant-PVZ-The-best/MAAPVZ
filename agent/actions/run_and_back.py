@@ -18,11 +18,9 @@
     链尾无 next）后返回，本 action 返回 True，流程继续走本节点的 next。
   - back 的 next 清空优先级最高：pipe_over 里若给 back 设了 next，会被接管
     并记日志。
-  - pipe_over / back 的 next 清空都**只在子跑期间生效**（run_task 的
-    pipeline_override 是一次性的，不污染已加载的 pipeline，跑完自动还原，
-    不需要快照）。
-    前提：子链内部不得再调 override_pipeline / override_next（那俩是
-    全局持久的，run_task 还不了）；当前 4 个使用点都是纯 pipe_over，安全。
+  - pipe_over / back 的 next 清空都**只在子跑期间生效**，且通过
+    context.clone() 隔离——克隆体上的覆盖不污染原始 context，
+    子跑结束克隆体销毁，天然还原，不需要快照。
 
 注意：
   - back 不在子链上时无法检测，子链会一路跑到自然结束——写 pipe 时自己保证
@@ -101,7 +99,13 @@ class RunAndBack(CustomAction):
             _log(f"子跑：{entry} → 链尾（未设 back）"
                  f"{'，pipe_over 覆盖 ' + str(len(over)) + ' 个节点' if over else ''}")
 
-        detail = context.run_task(entry, override)
+        try:
+            cloned = context.clone()
+        except Exception as e:
+            _log(f"clone 失败：{e}，回退到原始 context（pipe_over 将污染主流程）")
+            cloned = context
+
+        detail = cloned.run_task(entry, override)
         if detail is None:
             _log(f"子跑失败：run_task 未返回任务详情（起点 {entry}）")
             return False
