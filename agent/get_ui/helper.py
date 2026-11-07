@@ -12,6 +12,9 @@ get_ui/helper.py — 工具库
     maa_scale()           算坐标比例（设备像素 → MAA 空间）
     frame_to_maa()        物理像素框 → MAA 认的 (x, y, w, h)
     to_maa_rect()         控件的 bounds → MAA 框（frame_to_maa 的控件版）
+    maa_size()            物理像素框的宽高 → MAA 空间的 (宽, 高)   【尺寸限定用】
+    parse_size_limit()    pipeline 的 size / size_tol → 尺寸区间
+    size_ok()             目标的 (宽, 高) 是否落在尺寸区间内
 
 调用链（记住这一条线，全库就懂了）：
     屏幕 → dump_ui_tree → find_topmost → to_maa_rect → box
@@ -133,6 +136,101 @@ def _pick_index(items: list, index: Any, default: Optional[Any]) -> Optional[Any
     except (TypeError, ValueError):
         return None
     return items[i - 1] if 1 <= i <= len(items) else None
+
+
+# ==============================================================================
+# 尺寸限定：只认"大小对得上"的目标（悬浮球专用）
+# ==============================================================================
+#
+# 为什么需要它：光靠关键词找悬浮球不够牢——同一个关键词往往能命中好几个东西
+# （4399 的 GameAssistWindow 既是小球又是底部大关闭区；控件树通道更狠，
+#  空关键词 `""` = 屏幕上所有可点控件全部算候选）。
+# 加上尺寸这条硬条件之后，大小不对的一律当作"没识别到"，比事后点错划算得多。
+#
+# 单位一律是【MAA 空间】的像素（= 识别拿到的截图尺寸，项目一般 720p，即 1280x720），
+# 不是设备物理像素——物理像素在每台机器上都不同，填不了固定值。
+
+# 默认容差：期望尺寸的 ±10%。
+# 各手机屏幕密度不同，同一颗悬浮球换算到这个空间后宽高会差几个像素，
+# 给 10% 既不会放过别的窗口，也不会把真球判掉。
+_SIZE_TOL_RATIO = 0.10
+
+
+def _parse_wh(value: Any, name: str, allow_zero: bool = False) -> tuple[int, int]:
+    """把各种写法统一成 (宽, 高)：[70,70] / "70x70" / "70,70" / 70（单数字=正方形）。
+
+    写这么宽松是为了 pipeline 里好填：悬浮球几乎都是正方形，直接写一个数字最省事。
+    解析不出来就抛 ValueError——**不能**悄悄当成"不限定"，否则打错一个字母，
+    这道安全门就静默失效了。
+    allow_zero：容差可以写 0（= 要求严丝合缝），尺寸本身不行。
+    """
+    if isinstance(value, bool):                     # bool 是 int 的子类，得先挡掉
+        raise ValueError(f"{name} 不是数字: {value!r}")
+    if isinstance(value, (int, float)):
+        nums = [int(value)]
+    elif isinstance(value, str):
+        parts = [p for p in re.split(r"[xX×,，\s]+", value.strip()) if p]
+        try:
+            nums = [int(float(p)) for p in parts]   # 允许 "70.0" 这种写法
+        except ValueError:
+            raise ValueError(f"{name} 里没有数字: {value!r}") from None
+    elif isinstance(value, (list, tuple)):
+        try:
+            nums = [int(float(v)) for v in value]
+        except (TypeError, ValueError):
+            raise ValueError(f"{name} 里没有数字: {value!r}") from None
+    else:
+        raise ValueError(f"{name} 类型不支持: {type(value).__name__}")
+
+    if len(nums) == 1:
+        w = h = nums[0]                             # 单数字 = 正方形
+    elif len(nums) == 2:
+        w, h = nums
+    else:
+        raise ValueError(f"{name} 只接受 1 个（正方形）或 2 个数字，收到 {value!r}")
+    if w < 0 or h < 0 or (not allow_zero and (w == 0 or h == 0)):
+        kind = "非负" if allow_zero else "正"
+        raise ValueError(f"{name} 必须是{kind}数（MAA 空间像素），收到 {value!r}")
+    return w, h
+
+
+def parse_size_limit(raw_size: Any, raw_tol: Any = None) -> Optional[tuple[int, int, int, int]]:
+    """把 pipeline 的 size / size_tol 解析成【尺寸区间】(宽下限, 高下限, 宽上限, 高上限)。
+
+    raw_size 不给（None）→ 返回 None = 不限定尺寸（老行为，pipeline 不用改也能跑）
+    raw_size 例子：[70, 70] / "70x70" / 70（单数字 = 正方形；单位是 MAA 空间像素）
+    raw_tol  不给       → 容差 = 期望值的 ±10%（_SIZE_TOL_RATIO）
+    raw_tol  例子：[3, 3] / 3 → 绝对容差，宽高各上下放宽这么多像素；
+             给 0 = 严丝合缝（"一定要是某某值"，一个像素都不许差）
+
+    解析失败抛 ValueError（由 nodes.py 转成"没识别到"），不静默失效。
+    """
+    if raw_size is None:
+        return None
+    w, h = _parse_wh(raw_size, "size")
+    if raw_tol is None:
+        tw = max(1, int(round(w * _SIZE_TOL_RATIO)))     # 至少 ±1，否则 70 这种小数会被舍成 0
+        th = max(1, int(round(h * _SIZE_TOL_RATIO)))
+    else:
+        tw, th = _parse_wh(raw_tol, "size_tol", allow_zero=True)
+        tw, th = abs(tw), abs(th)                        # 容差写负数就当正数（宽容但不失效）
+    return (max(1, w - tw), max(1, h - th), w + tw, h + th)
+
+
+def size_ok(size: Optional[tuple[int, int]],
+            limit: Optional[tuple[int, int, int, int]]) -> bool:
+    """目标在 MAA 空间的 (宽, 高) 是否落在尺寸区间内。
+
+    limit=None（pipeline 没写 size）→ 恒 True，等于不设条件。
+    size=None（还不知道多大）→ 有 limit 时判 False，安全优先。
+    """
+    if limit is None:
+        return True
+    if size is None:
+        return False
+    w, h = size
+    lo_w, lo_h, hi_w, hi_h = limit
+    return lo_w <= w <= hi_w and lo_h <= h <= hi_h
 
 
 # ==============================================================================
@@ -282,6 +380,19 @@ def maa_scale(controller, image: Any = None) -> tuple[float, float]:
     if rw <= 0 or rh <= 0 or iw <= 0 or ih <= 0:
         raise RuntimeError(f"无法确定分辨率换算比例: raw=({rw},{rh}) img=({iw},{ih})")
     return iw / rw, ih / rh                        # 如 1280/1920 = 0.667
+
+
+def maa_size(controller, rect: tuple[int, int, int, int],
+             image: Any = None) -> tuple[int, int]:
+    """物理像素框的宽高 → MAA 空间的 (宽, 高)。【不钳制屏幕边界】，专给尺寸限定用。
+
+    为什么尺寸判定要用不钳制的原始宽高：悬浮球半藏在屏幕边缘时
+    （实测 frame=[-52,218][53,323]），frame_to_maa 钳制后的可点框只剩可见的一窄条
+    （宽 53 → 720p 下才 35），按它判尺寸会把真球判掉；窗口自己声明的 105x105
+    才是"球到底多大"的真实答案。
+    """
+    sx, sy = maa_scale(controller, image)
+    return int((rect[2] - rect[0]) * sx), int((rect[3] - rect[1]) * sy)
 
 
 def frame_to_maa(controller, frame: tuple[int, int, int, int], image: Any = None) -> tuple[int, int, int, int]:

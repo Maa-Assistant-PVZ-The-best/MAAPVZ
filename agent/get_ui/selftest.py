@@ -14,7 +14,7 @@ from pathlib import Path
 # 直接 import 同包 helper（纯工具模块，不依赖 maa）
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from helper import _FRAME_RE, _parse_window_frames, frame_to_maa  # noqa: E402
-from helper import DumpNode, find_topmost, valid_box  # noqa: E402
+from helper import DumpNode, find_topmost, maa_size, parse_size_limit, size_ok, valid_box  # noqa: E402
 
 # ---- 真实 fixture（逐行保留关键结构；注意 dumpsys 里 "  Window #" 标题行有两个前导空格）----
 DUMP = """  Window #4 Window{36e6808 u0 ShellDropTarget}:
@@ -130,6 +130,51 @@ check("正常 box 有效", valid_box((0, 145, 35, 70)))
 # 越界窗口钳制后宽变 0 → 也应判无效（球被完全拖出屏幕的场景）
 box_empty = frame_to_maa(_FakeCtrl(), (-200, 218, -120, 323), image=_FakeImg())
 check("完全在屏外的窗口钳制后无效", not valid_box(box_empty), f"box={box_empty}")
+
+print("== 8. 尺寸限定参数解析（单位 = MAA 空间像素，项目 720p） ==")
+check("不给 size = 不限定", parse_size_limit(None) is None)
+check("size=70 → 63~77（默认 ±10%）", parse_size_limit(70) == (63, 63, 77, 77),
+      f"{parse_size_limit(70)}")
+check("size=[70,70] 等价", parse_size_limit([70, 70]) == (63, 63, 77, 77))
+check('size="70x70" 等价', parse_size_limit("70x70") == (63, 63, 77, 77))
+check("size_tol=0 → 严丝合缝", parse_size_limit(70, 0) == (70, 70, 70, 70),
+      f"{parse_size_limit(70, 0)}")
+check("size_tol=[3,5] 宽高各自放宽", parse_size_limit([70, 70], [3, 5]) == (67, 65, 73, 75),
+      f"{parse_size_limit([70, 70], [3, 5])}")
+for bad in ("abc", [1, 2, 3], -5, True):
+    try:
+        parse_size_limit(bad)
+        ok = False
+    except ValueError:
+        ok = True
+    check(f"非法 size 报错而不是静默失效: {bad!r}", ok)
+
+print("== 9. 尺寸判定：悬浮球实测数据（1920x1080 → 720p） ==")
+LIM = parse_size_limit(70)                 # 720p 下悬浮球约 70x70
+check("不限定恒通过", size_ok((1, 1), None))
+check("70x70 通过", size_ok((70, 70), LIM))
+check("大面板 800x400 不通过", not size_ok((800, 400), LIM))
+check("不知道多大 → 不通过（有 size 时）", not size_ok(None, LIM))
+# 半隐藏的球：原始 105x105 → 720p 下 70x70；钳制后的可点框只有 35 宽，不能拿它判尺寸
+s_hidden = maa_size(_FakeCtrl(), (-52, 218, 53, 323), image=_FakeImg())
+check("半隐藏球按原始尺寸判 = 70x70", s_hidden == (70, 70), f"size={s_hidden}")
+check("半隐藏球仍通过尺寸限定", size_ok(s_hidden, LIM))
+check("对照：钳制后的可点框只有 35 宽",
+      frame_to_maa(_FakeCtrl(), (-52, 218, 53, 323), image=_FakeImg())[2] == 35)
+# 同名双窗口里，尺寸限定只留小球 / 只留大面板
+frames_two = _parse_window_frames(DUMP_TWO_PANELS, "Panel:")
+kept = [f for f in frames_two
+        if size_ok(maa_size(_FakeCtrl(), f, image=_FakeImg()), LIM)]
+check("双 Panel 只留小球", kept == [(-52, 218, 53, 323)], f"kept={kept}")
+kept_big = [f for f in frames_two
+            if size_ok(maa_size(_FakeCtrl(), f, image=_FakeImg()),
+                       parse_size_limit([533, 266]))]   # 800x400 物理 → 720p 下 533x266
+check("按大面板尺寸只留大面板", kept_big == [(400, 200, 1200, 600)], f"kept_big={kept_big}")
+# 控件树通道：小米球 [0,499,154,653] → 720p 下 102x102
+xiaomi = maa_size(_FakeCtrl(), (0, 499, 154, 653), image=_FakeImg())
+check("小米球 720p 尺寸 = 102x102", xiaomi == (102, 102), f"size={xiaomi}")
+check("按 103 判通过（±10% 容差吃掉密度差）", size_ok(xiaomi, parse_size_limit(103)))
+check("按 70 判不通过（不会把小米球当 4399 的球）", not size_ok(xiaomi, parse_size_limit(70)))
 
 print()
 if failures:
