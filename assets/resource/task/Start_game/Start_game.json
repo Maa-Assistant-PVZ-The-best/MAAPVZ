@@ -103,6 +103,7 @@
                             "custom_recognition_param": {
                                 "keyword": "win:GameAssistWindow",
                                 "sort": "min",
+                                "size": 60,
                                 "index": 1
                             }
                         },
