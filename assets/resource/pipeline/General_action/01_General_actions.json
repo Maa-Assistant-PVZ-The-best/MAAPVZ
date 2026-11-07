@@ -1,4 +1,4 @@
-{
+{ //已废弃，推荐使用custom的rab，请参考开发文档
     "通用_无尽_识别结算": {
         "recognition": "OCR",
         "roi": [
