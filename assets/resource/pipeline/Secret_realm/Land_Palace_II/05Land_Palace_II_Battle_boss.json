@@ -3,12 +3,12 @@
         "recognition": "TemplateMatch",
         "template": "Land_gong_two/僵王.png",
         "roi": [
-            911,
-            419,
-            346,
-            218
+            746,
+            55,
+            508,
+            635
         ],
-        "threshold": 0.80,
+        "threshold": 0.90,
         "action": "DoNothing",
         "post_delay": 0,
         "pre_delay": 0,
