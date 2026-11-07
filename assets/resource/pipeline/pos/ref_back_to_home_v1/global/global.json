@@ -28,8 +28,8 @@
     "定位_全局_确定": {
         "recognition": "OCR",
         "expected": [
-            "确定",
-            "继续"
+            "^确定$",
+            "^继续$"
         ],
         "order_by": "Vertical",
         "action": "Click"
