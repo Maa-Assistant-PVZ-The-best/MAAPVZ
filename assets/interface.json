@@ -9,12 +9,13 @@
     "mirrorchyan_rid": "MaaPVZ",
     "mirrorchyan_multiplatform": true,
     "agent": {
-        "child_exec": "C:/Users/奇纳金/Desktop/MAAPVZ/.venv/Scripts/python.exe",
+        "child_exec": "../.venv/Scripts/python.exe",
         "child_args": [
             "-u",
-            "C:/Users/奇纳金/Desktop/MAAPVZ/agent/main.py"
+            "../agent/main.py"
         ],
-        "identifier": "3be2c931-9c0d-4d69-9ebd-eed2263e06fd"
+        "identifier": "3be2c931-9c0d-4d69-9ebd-eed2263e06fd",
+        "debug_session": "Agent 调试"
     },
     "controller": [
         {

@@ -1,0 +1,277 @@
+{
+    "碎片挑战_前置检查_ref": {
+        "focus": "执行碎片挑战",
+        "recognition": "DirectHit",
+        "next": [
+            "碎片挑战_确认",
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
+            "导航_碎片挑战"
+        ]
+    },
+    "碎片挑战_确认": {
+        "recognition": "OCR",
+        "expected": [
+            "邪恶入侵"
+        ],
+        "roi": [
+            536,
+            144,
+            216,
+            62
+        ],
+        "next": [
+            "巨人危机_难度选择_ref",
+            "巨人危机_尚未开放_ref"
+        ]
+    },
+    "导航_碎片挑战": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/日常.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击碎片挑战_ref",
+            "导航_碎片挑战"
+        ]
+    },
+    "点击碎片挑战_ref": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/碎片挑战_图标.png"
+        ],
+        "pre_wait_freezes": {
+            "time": 1000,
+            "threshold": 0.95,
+            "timeout": 10000,
+            "target": true,
+            "method": 5
+        },
+        "action": "Click",
+        "next": [
+            "点击碎片挑战_ref",
+            "碎片挑战_确认"
+        ]
+    },
+    ///////////////////////////////
+    //巨人危机模块
+    ///////////////////////////////
+    "巨人危机_难度选择_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "难度选择"
+        ],
+        "roi": [
+            281,
+            587,
+            133,
+            41
+        ],
+        "next": [
+            "巨人危机_识别次数0_ref",
+            "巨人危机_识别次数非0_ref"
+        ]
+    },
+    "巨人危机_识别次数0_ref": {
+        "recognition": "OCR",
+        "roi": [
+            381,
+            529,
+            29,
+            30
+        ],
+        "only_rec": true,
+        "expected": [
+            "^0$"
+        ],
+        "replace": [
+            [
+                "O",
+                "0"
+            ],
+            [
+                "o",
+                "0"
+            ],
+            [
+                "O",
+                "0"
+            ],
+            [
+                "①",
+                "0"
+            ]
+        ],
+        "action": "DoNothing",
+        "next": []
+    },
+    "巨人危机_识别次数非0_ref": {
+        "recognition": "OCR",
+        "roi": [
+            381,
+            529,
+            29,
+            30
+        ],
+        "only_rec": true,
+        "expected": [
+            "^[1-9][0-9]*$"
+        ],
+        "replace": [
+            [
+                "l",
+                "1"
+            ],
+            [
+                "i",
+                "1"
+            ],
+            [
+                "I",
+                "1"
+            ],
+            [
+                "L",
+                "1"
+            ]
+        ],
+        "action": "Click",
+        "target_offset": [
+            -97,
+            55,
+            97,
+            14
+        ],
+        "next": []
+    },
+    "巨人危机_尚未开放_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "尚未开放"
+        ],
+        "roi": [
+            281,
+            587,
+            133,
+            41
+        ],
+        "next": [
+            "邪恶入侵_难度选择_ref",
+            "邪恶入侵_尚未开放_ref"
+        ]
+    },
+    ///////////////////////////////
+    //邪恶入侵模块
+    ///////////////////////////////
+    "邪恶入侵_难度选择_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "难度选择"
+        ],
+        "roi": [
+            580,
+            584,
+            128,
+            42
+        ],
+        "next": [
+            "邪恶入侵_识别次数0_ref",
+            "邪恶入侵_识别次数非0_ref"
+        ]
+    },
+    "邪恶入侵_识别次数0_ref": {
+        "recognition": "OCR",
+        "roi": [
+            681,
+            533,
+            32,
+            27
+        ],
+        "only_rec": true,
+        "expected": [
+            "^0$"
+        ],
+        "replace": [
+            [
+                "O",
+                "0"
+            ],
+            [
+                "o",
+                "0"
+            ],
+            [
+                "O",
+                "0"
+            ],
+            [
+                "①",
+                "0"
+            ]
+        ],
+        "action": "DoNothing",
+        "next": []
+    },
+    "邪恶入侵_识别次数非0_ref": {
+        "recognition": "OCR",
+        "roi": [
+            681,
+            533,
+            32,
+            27
+        ],
+        "only_rec": true,
+        "expected": [
+            "^[1-9][0-9]*$"
+        ],
+        "replace": [
+            [
+                "l",
+                "1"
+            ],
+            [
+                "i",
+                "1"
+            ],
+            [
+                "I",
+                "1"
+            ],
+            [
+                "L",
+                "1"
+            ]
+        ],
+        "action": "Click",
+        "target_offset": [
+            -97,
+            55,
+            97,
+            14
+        ],
+        "next": []
+    },
+    "邪恶入侵_尚未开放_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "尚未开放"
+        ],
+        "roi": [
+            281,
+            587,
+            133,
+            41
+        ],
+        "next": [
+            "返回主界面"
+        ]
+    }
+}
