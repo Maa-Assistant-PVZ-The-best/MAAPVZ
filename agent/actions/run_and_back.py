@@ -21,6 +21,8 @@
   - pipe_over / back 的 next 清空都**只在子跑期间生效**（run_task 的
     pipeline_override 是一次性的，不污染已加载的 pipeline，跑完自动还原，
     不需要快照）。
+    前提：子链内部不得再调 override_pipeline / override_next（那俩是
+    全局持久的，run_task 还不了）；当前 4 个使用点都是纯 pipe_over，安全。
 
 注意：
   - back 不在子链上时无法检测，子链会一路跑到自然结束——写 pipe 时自己保证

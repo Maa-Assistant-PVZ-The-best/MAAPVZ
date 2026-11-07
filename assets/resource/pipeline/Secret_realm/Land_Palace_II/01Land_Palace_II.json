@@ -714,7 +714,7 @@
     },
     "地宫2无尽_第一关_初始寻找机枪": {
         "anchor": {
-            "下一个寻找的植物": ""
+            "下一个寻找的植物": "地宫2无尽_第一关_初始寻找婆罗"
         },
         "recognition": "TemplateMatch",
         "roi": [
@@ -725,6 +725,35 @@
         ],
         "template": [
             "General/plant/机枪射手.png"
+        ],
+        "target_offset": [
+            17,
+            0,
+            0,
+            0
+        ],
+        "action": "Click",
+        "threshold": [
+            0.8
+        ],
+        "post_wait_freezes": 1000,
+        "next": [
+            "滑回最顶上"
+        ]
+    },
+    "地宫2无尽_第一关_初始寻找婆罗": {
+        "anchor": {
+            "下一个寻找的植物": ""
+        },
+        "recognition": "TemplateMatch",
+        "roi": [
+            53,
+            285,
+            796,
+            437
+        ],
+        "template": [
+            "Land_gong_two/婆罗.png"
         ],
         "target_offset": [
             17,
