@@ -1,4 +1,5 @@
-{
+{ //遍历已探险植物：9 个世界各跑一次，每次进探索界面领取「探险完成」并下滑
+    //遍历_探险界面 是枢纽：它自己的 next 负责选下一个世界，子跑里负责领 + 滑
     "植物探险_遍历_海盗/埃及": {
         "action": "Custom",
         "custom_action": "run_and_back",
@@ -134,42 +135,6 @@
             "植物探险_遍历_平安/复兴",
             "植物探险_遍历_海底/月球",
             "植物探险_遍历探险二次检查"
-        ]
-    },
-    "植物探险_遍历_收尾": {},
-    "植物探险_点击探险完成": {
-        "recognition": "OCR",
-        "pre_wait_freezes": 2000,
-        "expected": [
-            "探险完成"
-        ],
-        "action": "Click",
-        "next": [
-            "植物探险_完成探险",
-            "植物探险_点击探险完成"
-        ]
-    },
-    "植物探险_完成探险": {
-        "recognition": "OCR",
-        "expected": [
-            "探险完成"
-        ],
-        "action": "Click",
-        "focus": "[color:darkgray]完成探险[/color]",
-        "post_delay": 500,
-        "next": [
-            "植物探险_遍历_探险界面"
-        ]
-    },
-    "植物探险_使用免广告卡_ref": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "plants_explore_slide_and_click/看广告领双倍.png"
-        ],
-        "action": "Click",
-        "focus": "[color:darkgray]植物探险_使用免广告卡[/color]",
-        "next": [
-            "植物探险_完成探险"
         ]
     }
 }

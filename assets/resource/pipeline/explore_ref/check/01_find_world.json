@@ -1,6 +1,7 @@
 {
     //直接run这里面的pipe节点，大大方方run
     //植物探险里，不管怎么滑动，这俩世界都是可以获取到的，所以可以以这俩世界为锚点，决定自己该怎么滑动
+    //详情可以去看assets\resource\pipeline\explore_ref\check\02explore_aheck.json，已经接线好了
     "植物探险_寻找海盗/埃及": {
         "action": "Custom",
         "custom_action": "run_and_back",
