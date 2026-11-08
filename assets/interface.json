@@ -30,10 +30,6 @@
             "name": "PVZ_2_国服通用",
             "path": [
                 "./resource"
-            ],
-            "option": [
-                "渠道服",
-                "高级设置"
             ]
         }
     ],
@@ -583,5 +579,29 @@
                 }
             }
         }
-    }
+    },
+    "global_option": [
+        "渠道服",
+        "高级设置"
+    ],
+    "setting": [
+        {
+            "name": "渠道服",
+            "label": "渠道服",
+            "description": "选择游戏渠道服与高级设置",
+            "option": [
+                "渠道服"
+            ],
+            "default_expand": true
+        },
+        {
+            "name": "高级设置",
+            "label": "高级设置",
+            "description": "选择高级设置",
+            "option": [
+                "高级设置"
+            ],
+            "default_expand": false
+        }
+    ]
 }

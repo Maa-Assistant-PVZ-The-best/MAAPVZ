@@ -23,17 +23,27 @@ from configure import configure_ocr_model
 
 
 working_dir = Path(__file__).parent.parent.resolve()
-install_path = working_dir / Path("install")
 version = len(sys.argv) > 1 and sys.argv[1] or "v0.0.1"
 
 # the first parameter is self name
 if sys.argv.__len__() < 4:
-    print("Usage: python install.py <version> <os> <arch>")
+    print("Usage: python install.py <version> <os> <arch> [mfa|mxu]")
     print("Example: python install.py v1.0.0 win x86_64")
+    print("         python install.py v1.0.0 win x86_64 mxu")
     sys.exit(1)
 
 os_name = sys.argv[2]
 arch = sys.argv[3]
+# 第四个参数选择发行包形态：mfa（默认，MFAAvalonia）或 mxu（MXU）。
+# 两者共用 resource / agent / 网页工具，只是 UI 宿主和 MaaFramework 的摆放位置不同：
+#   MFA: runtimes/<rid>/native + MaaAgentBinary
+#   MXU: maafw/ + maafw/MaaAgentBinary（目录约定见 https://github.com/MaaXYZ/MXU）
+target = sys.argv[4].lower() if len(sys.argv) > 4 else "mfa"
+if target not in ("mfa", "mxu"):
+    print(f"Unknown install target: {target} (expected 'mfa' or 'mxu')")
+    sys.exit(1)
+
+install_path = working_dir / ("install-mxu" if target == "mxu" else "install")
 
 
 def get_dotnet_platform_tag():
@@ -59,6 +69,25 @@ def get_dotnet_platform_tag():
         sys.exit(1)
 
     return platform_tag
+
+
+def _copy_agent_binary():
+    """把 MaaAgentBinary 放到各 UI 约定的位置。"""
+    deps_dir = working_dir / "deps"
+    share_source = deps_dir / "share" / "MaaAgentBinary"
+    if not share_source.exists():
+        share_source = deps_dir / "MaaAgentBinary"
+    if share_source.exists():
+        # MXU 从 maafw/ 加载运行库，AgentBinary 也跟随放在 maafw 下；
+        # MFA 则沿用包根的 MaaAgentBinary/。
+        dest = install_path / "maafw" / "MaaAgentBinary" if target == "mxu" else install_path / "MaaAgentBinary"
+        shutil.copytree(
+            share_source,
+            dest,
+            dirs_exist_ok=True,
+        )
+    else:
+        print("Warning: MaaAgentBinary not found, skipping.")
 
 
 def install_deps():
@@ -102,6 +131,25 @@ def install_deps():
 
     print(f"[DEBUG] Using binary source: {bin_source}")
 
+    # MXU 直接在项目根目录加载 maafw/ 下的运行库，不走 MFA 的 runtimes/<rid>/native。
+    if target == "mxu":
+        shutil.copytree(
+            bin_source,
+            install_path / "maafw",
+            ignore=shutil.ignore_patterns(
+                "*MaaDbgControlUnit*",
+                "*MaaThriftControlUnit*",
+                "*MaaRpc*",
+                "*MaaHttp*",
+                "*MaaNode*",
+                "*MaaPiCli*",
+                "*.node",
+            ),
+            dirs_exist_ok=True,
+        )
+        _copy_agent_binary()
+        return
+
     # 复制二进制文件
     if os_name == "android":
         shutil.copytree(
@@ -122,18 +170,7 @@ def install_deps():
             dirs_exist_ok=True,
         )
 
-    # 复制 MaaAgentBinary（通常位于 deps/share/MaaAgentBinary）
-    share_source = deps_dir / "share" / "MaaAgentBinary"
-    if not share_source.exists():
-        share_source = deps_dir / "MaaAgentBinary"
-    if share_source.exists():
-        shutil.copytree(
-            share_source,
-            install_path / "MaaAgentBinary",
-            dirs_exist_ok=True,
-        )
-    else:
-        print("Warning: MaaAgentBinary not found, skipping.")
+    _copy_agent_binary()
     if os_name == "macos":
         libs_dir = install_path / "libs"
         libs_dir.mkdir(parents=True, exist_ok=True)
@@ -145,6 +182,7 @@ def install_deps():
             # macOS 动态库需要可执行权限
             dest.chmod(0o755)
         print(f"Copied macOS dynamic libraries to {libs_dir}")
+
         
 def install_resource():
     configure_ocr_model()
@@ -177,15 +215,25 @@ def install_resource():
 
     # 修正 agent 配置
     if "agent" in interface:
-        if os_name == "win":
-            interface["agent"]["child_exec"] = "python\\python.exe"
+        if target == "mxu":
+            # MXU 在项目根目录启动子进程，路径统一用 ./ 前缀；child_args 固定为
+            # “-u ./agent/main.py”，与 MXU 的日志/停止行为对齐。
+            interface["agent"]["child_exec"] = "./python/python.exe" if os_name == "win" else "./python/bin/python3"
+            interface["agent"]["child_args"] = ["-u", "./agent/main.py"]
+            # debug_session 是 MFA 宿主的扩展字段，不在 PI V2 schema 内；
+            # MXU 严格按 schema 解析，输出时去掉，避免未知字段被拒绝。
+            interface["agent"].pop("debug_session", None)
+            interface["title"] = f"MaaPVZ {version} | 植物大战僵尸2小助手"
         else:
-            interface["agent"]["child_exec"] = "python/bin/python3"
-        
-        if "child_args" in interface["agent"] and len(interface["agent"]["child_args"]) >= 2:
-            script_path = interface["agent"]["child_args"][1]
-            if script_path.startswith(".."):
-                interface["agent"]["child_args"][1] = "agent/main.py"
+            if os_name == "win":
+                interface["agent"]["child_exec"] = "python\\python.exe"
+            else:
+                interface["agent"]["child_exec"] = "python/bin/python3"
+
+            if "child_args" in interface["agent"] and len(interface["agent"]["child_args"]) >= 2:
+                script_path = interface["agent"]["child_args"][1]
+                if script_path.startswith(".."):
+                    interface["agent"]["child_args"][1] = "agent/main.py"
 
     with open(interface_path, "w", encoding="utf-8") as f:
         jsonc.dump(interface, f, ensure_ascii=False, indent=4)
