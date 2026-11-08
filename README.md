@@ -8,7 +8,7 @@
 
 ## 快速开始
 
-1. 在 [Release页面](https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ/releases/latest) 下载最新版本。（暂不可用）
+1. 在 [Release页面](https://github.com/Maa-Assistant-PVZ-The-best/MAAPVZ/releases/latest) 下载最新版本（暂不可用）；文件名带 `MXU` 的包使用 **[MXU](https://github.com/MaaXYZ/MXU)** 界面（Windows 解压后运行 `MaaPVZ.exe`），其余包使用 MFAAvalonia。
 2. 在模拟器设置里将分辨率调整为平板 **720p(1280×720)** 或 **1080p(1920×1080)**，并**锁定屏幕旋转**为横屏以达到最佳运行效果。
 3. 调整软件配置，选择对应渠道服与任务，然后启动。
 
@@ -42,7 +42,7 @@
 
 1. 环境依赖：`Python >= 3.12`，参考 `requirements.txt` 安装依赖。
 2. 本项目基于 **[MaaFramework](https://github.com/MaaXYZ/MaaFramework)** 驱动，Pipeline 配置存放于 `assets/resource/pipeline/` 目录。
-3. 本项目前端使用了 **[MFAAvalonia](https://github.com/SweetSmellFox/MFAAvalonia)**。
+3. 本项目前端支持 **[MFAAvalonia](https://github.com/SweetSmellFox/MFAAvalonia)** 与 **[MXU](https://github.com/MaaXYZ/MXU)** 两种宿主；MXU 包由 `tools/install.py <version> <os> <arch> mxu` 生成，目录约定见 MXU 文档。
 4. 提交代码前，请配置 Pre-commit Hooks 以确保代码格式规范（参考 `.pre-commit-config.yaml`）
 
 📚 开发文档（命名规范 / Custom 使用教程 / 文件位置）：

@@ -97,6 +97,13 @@ jobs:
           pattern: MaaPVZ-linux-*-${{ github.ref_name }}
           path: release-assets/desktop
 
+      # MXU 变体单独用 MaaPVZ-MXU-* 前缀，避免与上面的 MFA 包模式冲突
+      - name: Download MXU artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MaaPVZ-MXU-*-${{ github.ref_name }}
+          path: release-assets/desktop
+
       # 两个架构各一份；mapping.txt 是另一组 artifact（带 -mapping-），不下载、不公开
       - name: Download Android APK (arm64-v8a)
         uses: actions/download-artifact@v4

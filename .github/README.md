@@ -52,7 +52,9 @@
 
 1. 环境依赖：`Python >= 3.12`，参考 `requirements.txt` 安装依赖。
 2. 本项目基于 **[MaaFramework](https://github.com/MaaXYZ/MaaFramework)** 驱动，Pipeline 配置存放于 `assets/resource/pipeline/` 目录。
-3. 本项目前端使用了 **[MFAAvalonia](https://github.com/SweetSmellFox/MFAAvalonia)**。
+3. 本项目前端支持 **[MFAAvalonia](https://github.com/SweetSmellFox/MFAAvalonia)** 与 **[MXU](https://github.com/MaaXYZ/MXU)** 两种宿主。
+   - `python tools/install.py <version> <os> <arch>` 生成 `install/`（MFAAvalonia）。
+   - `python tools/install.py <version> <os> <arch> mxu` 生成 `install-mxu/`（MXU，含 `maafw/`、`interface.json`、`resource/`）。
 4. 提交代码前，请配置 Pre-commit Hooks 以确保代码格式规范（参考 `.pre-commit-config.yaml`）。
 5. 版本推送说明
 触发方式说明
