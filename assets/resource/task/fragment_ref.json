@@ -1,0 +1,57 @@
+{
+    "option": {
+        "使用免广告卡_ref": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "option": [
+                        "巨人危机_增加次数",
+                        "邪恶入侵_增加次数"
+                    ]
+                }
+            ]
+        },
+        "巨人危机_增加次数": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "巨人危机_难度选择_ref": {
+                            "custom_action_param": {
+                                "run": "巨人危机_增加次数_ref",
+                                "back": "巨人危机_增加次数_观看广告_ref"
+                            }
+                        }
+                    }
+                }
+            ]
+        },
+        "邪恶入侵_增加次数": {
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "邪恶入侵_难度选择_ref": {
+                            "custom_action_param": {
+                                "run": "邪恶入侵_增加次数_ref",
+                                "back": "邪恶入侵_增加次数_观看广告_ref"
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
