@@ -1,0 +1,1028 @@
+{
+    "option": {
+        "选择探险植物": {
+            "type": "select",
+            "label": "主植物",
+            "default_case": "不指定",
+            "cases": [
+                {
+                    "name": "不指定",
+                    "pipeline_override": {
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "豌豆射手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_豌豆射手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_豌豆射手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "卷心菜投手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_卷心菜投手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_卷心菜投手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "向日葵",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_向日葵": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_向日葵",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "玉米投手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_玉米投手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_玉米投手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "地刺",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_地刺": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_地刺",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "弹簧豆",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_弹簧豆": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_弹簧豆",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "双向射手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_双向射手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_双向射手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "巴豆",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_巴豆": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_巴豆",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "闪电芦苇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_闪电芦苇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_闪电芦苇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "火葫芦",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_火葫芦": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_火葫芦",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "白萝卜",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_白萝卜": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_白萝卜",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "土豆地雷",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_土豆地雷": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_土豆地雷",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "坚果",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_坚果": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_坚果",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "冰冻生菜",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_冰冻生菜": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_冰冻生菜",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "大喷菇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_大喷菇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_大喷菇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "磁力菇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_磁力菇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_磁力菇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "缠绕水草",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_缠绕水草": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_缠绕水草",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "鳄梨",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_鳄梨": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_鳄梨",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "火焰豌豆",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_火焰豌豆": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_火焰豌豆",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "旋转芜菁",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_旋转芜菁": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_旋转芜菁",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "旋涡枇杷",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_旋涡枇杷": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_旋涡枇杷",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "电离红掌",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_电离红掌": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_电离红掌",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "红针花",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_红针花": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_红针花",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "菠萝蜜",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_菠萝蜜": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_菠萝蜜",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "潜伏芹菜",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_潜伏芹菜": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_潜伏芹菜",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "复活萝卜",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_复活萝卜": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_复活萝卜",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "原始豌豆射手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_原始豌豆射手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_原始豌豆射手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "香水蘑菇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_香水蘑菇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_香水蘑菇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "毒影菇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_毒影菇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_毒影菇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "月光花",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_月光花": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_月光花",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "番莲工程师",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_番莲工程师": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_番莲工程师",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "莲藕射手",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_莲藕射手": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_莲藕射手",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "冬瓜守卫",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_冬瓜守卫": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_冬瓜守卫",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "芦荟医师",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_芦荟医师": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_芦荟医师",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "石斛防风网",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_石斛防风网": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_石斛防风网",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "千金藤",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_千金藤": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_千金藤",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "海蘑菇",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_海蘑菇": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_海蘑菇",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "噗噗鱼藤",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_噗噗鱼藤": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_噗噗鱼藤",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "宇宙豌豆",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_宇宙豌豆": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_宇宙豌豆",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "重力树",
+                    "option": [
+                        "使用免广告/钻石"
+                    ],
+                    "pipeline_override": {
+                        "植物探险_植物_重力树": {
+                            "enabled": true
+                        },
+                        "植物探险_执行_主植物": {
+                            "next": [
+                                "植物探险_植物_重力树",
+                                "植物探险_执行_补位"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        "植物探险_补位植物": {
+            "type": "checkbox",
+            "label": "补位植物",
+            "description": "多选。勾中的植物只走旧逻辑：识别到「开始」就点，不用免广告卡也不用钻石。",
+            "cases": [
+                {
+                    "name": "豌豆射手",
+                    "pipeline_override": {
+                        "植物探险_植物_豌豆射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "卷心菜投手",
+                    "pipeline_override": {
+                        "植物探险_植物_卷心菜投手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "向日葵",
+                    "pipeline_override": {
+                        "植物探险_植物_向日葵": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "玉米投手",
+                    "pipeline_override": {
+                        "植物探险_植物_玉米投手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "地刺",
+                    "pipeline_override": {
+                        "植物探险_植物_地刺": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "弹簧豆",
+                    "pipeline_override": {
+                        "植物探险_植物_弹簧豆": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "双向射手",
+                    "pipeline_override": {
+                        "植物探险_植物_双向射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "巴豆",
+                    "pipeline_override": {
+                        "植物探险_植物_巴豆": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "闪电芦苇",
+                    "pipeline_override": {
+                        "植物探险_植物_闪电芦苇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火葫芦",
+                    "pipeline_override": {
+                        "植物探险_植物_火葫芦": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "白萝卜",
+                    "pipeline_override": {
+                        "植物探险_植物_白萝卜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "土豆地雷",
+                    "pipeline_override": {
+                        "植物探险_植物_土豆地雷": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "坚果",
+                    "pipeline_override": {
+                        "植物探险_植物_坚果": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "冰冻生菜",
+                    "pipeline_override": {
+                        "植物探险_植物_冰冻生菜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "大喷菇",
+                    "pipeline_override": {
+                        "植物探险_植物_大喷菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "磁力菇",
+                    "pipeline_override": {
+                        "植物探险_植物_磁力菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "缠绕水草",
+                    "pipeline_override": {
+                        "植物探险_植物_缠绕水草": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "鳄梨",
+                    "pipeline_override": {
+                        "植物探险_植物_鳄梨": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火焰豌豆",
+                    "pipeline_override": {
+                        "植物探险_植物_火焰豌豆": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "旋转芜菁",
+                    "pipeline_override": {
+                        "植物探险_植物_旋转芜菁": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "旋涡枇杷",
+                    "pipeline_override": {
+                        "植物探险_植物_旋涡枇杷": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "电离红掌",
+                    "pipeline_override": {
+                        "植物探险_植物_电离红掌": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "红针花",
+                    "pipeline_override": {
+                        "植物探险_植物_红针花": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "菠萝蜜",
+                    "pipeline_override": {
+                        "植物探险_植物_菠萝蜜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "潜伏芹菜",
+                    "pipeline_override": {
+                        "植物探险_植物_潜伏芹菜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "复活萝卜",
+                    "pipeline_override": {
+                        "植物探险_植物_复活萝卜": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "原始豌豆射手",
+                    "pipeline_override": {
+                        "植物探险_植物_原始豌豆射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "香水蘑菇",
+                    "pipeline_override": {
+                        "植物探险_植物_香水蘑菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "毒影菇",
+                    "pipeline_override": {
+                        "植物探险_植物_毒影菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "月光花",
+                    "pipeline_override": {
+                        "植物探险_植物_月光花": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "番莲工程师",
+                    "pipeline_override": {
+                        "植物探险_植物_番莲工程师": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "莲藕射手",
+                    "pipeline_override": {
+                        "植物探险_植物_莲藕射手": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "冬瓜守卫",
+                    "pipeline_override": {
+                        "植物探险_植物_冬瓜守卫": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "芦荟医师",
+                    "pipeline_override": {
+                        "植物探险_植物_芦荟医师": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "石斛防风网",
+                    "pipeline_override": {
+                        "植物探险_植物_石斛防风网": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "千金藤",
+                    "pipeline_override": {
+                        "植物探险_植物_千金藤": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "海蘑菇",
+                    "pipeline_override": {
+                        "植物探险_植物_海蘑菇": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "噗噗鱼藤",
+                    "pipeline_override": {
+                        "植物探险_植物_噗噗鱼藤": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "宇宙豌豆",
+                    "pipeline_override": {
+                        "植物探险_植物_宇宙豌豆": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "重力树",
+                    "pipeline_override": {
+                        "植物探险_植物_重力树": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

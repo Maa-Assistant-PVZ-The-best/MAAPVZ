@@ -45,7 +45,12 @@
         "./resource/task/test.json",
         "./resource/task/video_card.json",
         // Endless 重构版入口（旧 Endless/* 13 个文件已随重构删除，2026-10-09 清理引用）
-        "./resource/task/Endless_ref/Endless_ref.json" //重构后的无尽入口
+        "./resource/task/Endless_ref/Endless_ref.json", //重构后的无尽入口
+        // 植物探险（重构）：选项按层级拆在 explore 下
+        "./resource/task/explore/explore_select_0_world.json",
+        "./resource/task/explore/explore_select_1_main.json",
+        "./resource/task/explore/explore_select_2_resource.json",
+        "./resource/task/explore/explore_select_3_action.json"
     ],
     "task": [
         {
@@ -87,6 +92,15 @@
                 "海底/月球"
             ],
             "description": "此任务会将上次的植物探险奖励先领取掉，再进行探索任务，探索顺序（从上到下，从左到右）"
+        },
+        {
+            "name": "植物探险(重构)",
+            "entry": "植物探险_前置检查_ref",
+            "option": [
+                "不遍历指定世界",
+                "选择探险植物",
+                "植物探险_补位植物"
+            ]
         },
         {
             "name": "潘妮秘宝（测试）",

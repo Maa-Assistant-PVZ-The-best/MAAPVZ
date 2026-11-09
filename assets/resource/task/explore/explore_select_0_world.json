@@ -1,0 +1,96 @@
+{
+    "option": {
+        "不遍历指定世界": {
+            "description": "选中即代表第一次检查队列时不遍历指定世界，可以开启后选择自己明确知道没有植物探险的世界",
+            "type": "switch",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "option": [
+                        "指定世界"
+                    ]
+                }
+            ]
+        },
+        "指定世界": {
+            "type": "checkbox",
+            "cases": [
+                {
+                    "name": "海盗/埃及",
+                    "pipeline_override": {
+                        "植物探险_寻找海盗/埃及": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "西部/功夫",
+                    "pipeline_override": {
+                        "植物探险_寻找西部/功夫": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "未来/黑暗",
+                    "pipeline_override": {
+                        "植物探险_寻找未来/黑暗": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "海滩/冰河",
+                    "pipeline_override": {
+                        "植物探险_寻找海滩/冰河": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "天空/失落",
+                    "pipeline_override": {
+                        "植物探险_寻找天空/失落": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "摇滚/恐龙",
+                    "pipeline_override": {
+                        "植物探险_寻找摇滚/恐龙": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "摩登/蒸汽",
+                    "pipeline_override": {
+                        "植物探险_寻找摩登/蒸汽": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "平安/复兴",
+                    "pipeline_override": {
+                        "植物探险_寻找平安/复兴": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "海底/月球",
+                    "pipeline_override": {
+                        "植物探险_寻找海底/月球": {
+                            "enabled": false
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}

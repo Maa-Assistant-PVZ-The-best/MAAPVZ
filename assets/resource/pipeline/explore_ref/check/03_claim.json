@@ -17,7 +17,7 @@
     "植物探险_完成探险": {
         "recognition": "OCR",
         "expected": [
-            "探险完成"
+            "完成探险"
         ],
         "action": "Click",
         "focus": "[color:darkgray]完成探险[/color]",

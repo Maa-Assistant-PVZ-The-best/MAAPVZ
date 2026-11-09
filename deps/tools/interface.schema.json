@@ -303,6 +303,18 @@
                             "items": {
                                 "type": "string"
                             }
+                        },
+                        "min_count": {
+                            "type": "integer",
+                            "title": "最少选中数量",
+                            "description": "💡 v2.3.0 可选。至少需要选中的 case 数量，用于防止用户一个都不选",
+                            "minimum": 0
+                        },
+                        "max_count": {
+                            "type": "integer",
+                            "title": "最多选中数量",
+                            "description": "💡 v2.3.0 可选。最多可同时选中的 case 数量",
+                            "minimum": 1
                         }
                     },
                     "required": [
