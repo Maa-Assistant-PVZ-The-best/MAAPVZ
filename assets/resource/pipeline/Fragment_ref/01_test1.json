@@ -75,10 +75,43 @@
             133,
             41
         ],
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {}, //这里空着，option设置选择是否填入增加次数的节点
         "next": [
             "巨人危机_识别次数0_ref",
             "巨人危机_识别次数非0_ref"
         ]
+    },
+    "巨人危机_增加次数_ref": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/加号.png"
+        ],
+        "roi": [
+            409,
+            524,
+            51,
+            44
+        ],
+        "action": "Click",
+        "next": [
+            "巨人危机_增加次数_观看广告_ref"
+        ]
+    },
+    "巨人危机_增加次数_观看广告_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "roi": [
+            563,
+            474,
+            152,
+            68
+        ],
+        "action": "Click",
+        "next": []
     },
     "巨人危机_识别次数0_ref": {
         "recognition": "OCR",
@@ -97,7 +130,10 @@
             "^①$"
         ],
         "action": "DoNothing",
-        "next": []
+        "next": [
+            "邪恶入侵_难度选择_ref",
+            "邪恶入侵_尚未开放_ref"
+        ]
     },
     "巨人危机_识别次数非0_ref": {
         "recognition": "OCR",
@@ -168,10 +204,43 @@
             128,
             42
         ],
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {}, //这里空着，option设置选择是否填入增加次数的节点
         "next": [
             "邪恶入侵_识别次数0_ref",
             "邪恶入侵_识别次数非0_ref"
         ]
+    },
+    "邪恶入侵_增加次数_ref": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Fragment_Challenge/加号.png"
+        ],
+        "roi": [
+            710,
+            524,
+            45,
+            43
+        ],
+        "action": "Click",
+        "next": [
+            "邪恶入侵_增加次数_观看广告_ref"
+        ]
+    },
+    "邪恶入侵_增加次数_观看广告_ref": {
+        "recognition": "OCR",
+        "expected": [
+            "观看广告"
+        ],
+        "roi": [
+            563,
+            474,
+            152,
+            68
+        ],
+        "action": "Click",
+        "next": []
     },
     "邪恶入侵_识别次数0_ref": {
         "recognition": "OCR",
@@ -190,7 +259,11 @@
             "^①$"
         ],
         "action": "DoNothing",
-        "next": []
+        "next": [
+            "[JumpBack]定位_不在主界面",
+            "[JumpBack]定位_主界面_非主界面元素",
+            "定位_在主界面"
+        ]
     },
     "邪恶入侵_识别次数非0_ref": {
         "recognition": "OCR",
@@ -237,10 +310,10 @@
             "尚未开放"
         ],
         "roi": [
-            281,
+            578,
             587,
-            133,
-            41
+            130,
+            44
         ],
         "next": [
             "[JumpBack]定位_不在主界面",
