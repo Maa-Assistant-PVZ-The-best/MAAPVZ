@@ -364,6 +364,9 @@ jobs:
       - name: Verify MXU package
         if: matrix.os != 'android' && matrix.os != 'linux'
         shell: bash
+        env:
+          # Windows 默认控制台编码是 cp1252，直接 print 中文 title 会 UnicodeEncodeError
+          PYTHONIOENCODING: utf-8
         run: |
           test -f "install-mxu/interface.json"
           test -d "install-mxu/resource"
