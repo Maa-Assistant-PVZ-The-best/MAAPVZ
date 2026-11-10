@@ -5,8 +5,9 @@
 
     {
       "run":  "起始节点",        // 可选：从这里开始跑一条子链；不写 = 不跑子链，直接走本节点 next
-      "back": "结束节点",        // 可选：执行完这个节点后结束本子 action
-                                 //       （子跑期间它的 next 被临时清空）；
+      "back": "截断节点",        // 可选：跑到这个节点【之前】就停止子跑
+                                 //       子跑期间它被换成「DirectHit + DoNothing + next=[]」
+                                 //       的停止桩：必中、不执行原动作、无下一跳
                                  //       不写 = 子链跑到自然结束（next 为空）为止
       "pipe_over": {             // 可选：一整个 pipe 片段，按同名节点覆盖其内部字段
           "某节点": {"next": [...], "recognition": {...}}
@@ -21,8 +22,10 @@
     于是遍历发生在**子跑内部**——这是让 pipe_over 生效的唯一办法（任务级
     覆盖管不到父链的 next）；action 被换成 DoNothing，不会重入本 action。
     next 取自本节点当前数据；pipe_over 里若也给了本节点的 next，以 pipe_over 为准。
-  - back 的 next 清空优先级最高：pipe_over 里若给 back 设了 next，会被接管
-    并记日志。
+  - back 是「到了就停」：子跑期间把 back 节点换成 DirectHit + DoNothing + next=[]
+    的停止桩——链条走到它立刻结束，**它的原动作不会被执行**。
+    所以「先点按钮、再由父任务接手」这类拆步骤的写法可以用 back 实现。
+    pipe_over 里若给 back 设了 next / action / recognition，都会被接管并记日志。
   - pipe_over / back 的 next 清空都**只在子跑期间生效**，且通过
     context.clone() 隔离——克隆体上的覆盖不污染原始 context，
     子跑结束克隆体销毁，天然还原，不需要快照。
@@ -123,13 +126,20 @@ class RunAndBack(CustomAction):
                  f"（DirectHit+DoNothing，next {len(nxt)} 个候选），pipe_over 生效")
 
         if back:
+            # back = 「到了就停」：把该节点在本次子跑里换成一个停止桩
+            #   DirectHit + DoNothing + next=[] → 必中、不做动作、无下一跳
+            #   效果：链条走到它立刻结束，既不会执行它的原动作，也不会空等 timeout
             b = dict(override.get(back) or {})
             if "next" in b:
-                _log(f"pipe_over 里对 back 节点「{back}」设了 next，"
-                     f"与回弹语义冲突——next 被接管为 []")
+                _log(f"pipe_over 里对 back 节点「{back}」设了 next，与截断语义冲突——被接管")
+            if "action" in b or "recognition" in b:
+                _log(f"pipe_over 里对 back 节点「{back}」设了 action/recognition，"
+                     f"与截断语义冲突——被接管")
+            b["recognition"] = "DirectHit"
+            b["action"] = "DoNothing"
             b["next"] = []
             override[back] = b
-            _log(f"子跑：{entry} → … → {back}（到 back 为止）"
+            _log(f"子跑：{entry} → … → 到「{back}」之前截断（该节点不执行）"
                  f"{'，pipe_over 覆盖 ' + str(len(over)) + ' 个节点' if over else ''}")
         else:
             _log(f"子跑：{entry} → 链尾（未设 back）"
