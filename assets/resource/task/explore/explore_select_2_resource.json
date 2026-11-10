@@ -3,6 +3,7 @@
         "使用免广告/钻石": {
             "type": "switch",
             "label": "使用免广告/钻石",
+            "description": "只会应用在下拉栏选择的植物上",
             "default_case": "No",
             "cases": [
                 {

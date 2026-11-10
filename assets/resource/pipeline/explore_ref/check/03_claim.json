@@ -22,8 +22,6 @@
         "action": "Click",
         "focus": "[color:darkgray]完成探险[/color]",
         "post_delay": 500,
-        "next": [
-            "植物探险_遍历_探险界面"
-        ]
+        "next": []
     }
 }
