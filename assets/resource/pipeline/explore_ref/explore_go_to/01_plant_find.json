@@ -4,8 +4,8 @@
         "custom_action": "run_and_back",
         "custom_action_param": {},
         "next": [
+            "植物探险_遍历探险二次检查_无空闲队列",
             "植物探险_补位植物"
         ]
-    },
-    "植物探险_补位植物": {}
+    }
 }

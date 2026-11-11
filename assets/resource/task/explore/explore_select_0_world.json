@@ -5,7 +5,36 @@
             "type": "switch",
             "cases": [
                 {
-                    "name": "No"
+                    "name": "No",
+                    "pipeline_override": {
+                        "植物探险_遍历_海盗/埃及": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_西部/功夫": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_未来/黑暗": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_海滩/冰河": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_天空/失落": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_摇滚/恐龙": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_摩登/蒸汽": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_平安/复兴": {
+                            "enabled": true
+                        },
+                        "植物探险_遍历_海底/月球": {
+                            "enabled": true
+                        }
+                    }
                 },
                 {
                     "name": "Yes",
@@ -17,33 +46,79 @@
         },
         "指定世界": {
             "type": "checkbox",
+            "label": "不遍历指定世界",
             "cases": [
                 {
-                    "name": "海盗/埃及"
+                    "name": "海盗/埃及",
+                    "pipeline_override": {
+                        "植物探险_遍历_海盗/埃及": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "西部/功夫"
+                    "name": "西部/功夫",
+                    "pipeline_override": {
+                        "植物探险_遍历_西部/功夫": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "未来/黑暗"
+                    "name": "未来/黑暗",
+                    "pipeline_override": {
+                        "植物探险_遍历_未来/黑暗": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "海滩/冰河"
+                    "name": "海滩/冰河",
+                    "pipeline_override": {
+                        "植物探险_遍历_海滩/冰河": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "天空/失落"
+                    "name": "天空/失落",
+                    "pipeline_override": {
+                        "植物探险_遍历_天空/失落": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "摇滚/恐龙"
+                    "name": "摇滚/恐龙",
+                    "pipeline_override": {
+                        "植物探险_遍历_摇滚/恐龙": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "摩登/蒸汽"
+                    "name": "摩登/蒸汽",
+                    "pipeline_override": {
+                        "植物探险_遍历_摩登/蒸汽": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "平安/复兴"
+                    "name": "平安/复兴",
+                    "pipeline_override": {
+                        "植物探险_遍历_平安/复兴": {
+                            "enabled": false
+                        }
+                    }
                 },
                 {
-                    "name": "海底/月球"
+                    "name": "海底/月球",
+                    "pipeline_override": {
+                        "植物探险_遍历_海底/月球": {
+                            "enabled": false
+                        }
+                    }
                 }
             ]
         }
