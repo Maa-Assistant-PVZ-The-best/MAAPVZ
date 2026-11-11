@@ -9,7 +9,12 @@
                     "name": "No"
                 },
                 {
-                    "name": "Yes"
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "植物探险_定位_增加次数": {
+                            "enabled": true
+                        }
+                    }
                 }
             ]
         },
@@ -23,6 +28,11 @@
                 },
                 {
                     "name": "Yes",
+                    "pipeline_override": {
+                        "植物探险_立即完成": {
+                            "enabled": true
+                        }
+                    },
                     "option": [
                         "立即完成次数"
                     ]
@@ -39,7 +49,12 @@
                     "default": "1",
                     "verify": "[1-9]\\d*$"
                 }
-            ]
+            ],
+            "pipeline_override": {
+                "植物探险_立即完成": {
+                    "max_hit": "{立即完成次数}"
+                }
+            }
         },
         "双倍碎片": {
             "type": "switch",
@@ -63,10 +78,20 @@
             ],
             "cases": [
                 {
-                    "name": "免广告卡"
+                    "name": "免广告卡",
+                    "pipeline_override": {
+                        "通用动作_免广告卡": {
+                            "enabled": true
+                        }
+                    }
                 },
                 {
-                    "name": "使用钻石"
+                    "name": "使用钻石",
+                    "pipeline_override": {
+                        "植物探险_使用钻石": {
+                            "enabled": true
+                        }
+                    }
                 }
             ]
         }
