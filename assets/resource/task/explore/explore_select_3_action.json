@@ -21,6 +21,7 @@
         "立即完成": {
             "type": "switch",
             "label": "立即完成",
+            "description": "只使用免广告卡的话建议将次数设置为1或者2",
             "default_case": "No",
             "cases": [
                 {
@@ -92,6 +93,7 @@
                 },
                 {
                     "name": "使用钻石",
+                    "description": "谨慎开启，会消耗你的钻石资源",
                     "pipeline_override": {
                         "植物探险_使用钻石": {
                             "enabled": true
