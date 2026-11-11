@@ -65,7 +65,12 @@
                     "name": "No"
                 },
                 {
-                    "name": "Yes"
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "植物探险_双倍碎片": {
+                            "enabled": true
+                        }
+                    }
                 }
             ]
         },
