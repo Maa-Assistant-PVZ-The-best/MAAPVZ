@@ -50,9 +50,19 @@
         "./resource/task/explore/explore_select_0_world.json",
         "./resource/task/explore/explore_select_1_main.json",
         "./resource/task/explore/explore_select_2_resource.json",
-        "./resource/task/explore/explore_select_3_action.json"
+        "./resource/task/explore/explore_select_3_action.json",
+        //碎片挑战（重构）：选项层级在 fragment_ref 下
+        "./resource/task/fragment_ref.json"
     ],
     "task": [
+        // {
+        //     "name": "碎片挑战_ref",
+        //     "entry": "碎片挑战_前置检查_ref",
+        //     "option": [
+        //         "使用免广告卡_ref",
+        //         "选择植物碎片_ref"
+        //     ]
+        // },
         {
             "name": "开始登录",
             "entry": "启动游戏_选择渠道服",
