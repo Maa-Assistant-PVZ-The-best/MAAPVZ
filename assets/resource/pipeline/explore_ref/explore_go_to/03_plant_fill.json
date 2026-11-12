@@ -759,7 +759,7 @@
     },
     "植物探险_补位_白萝卜": {
         "enabled": false,
-        "focus": "[color:darkgray]白萐卜[/color]",
+        "focus": "[color:darkgray]白萝卜[/color]",
         "action": "Custom",
         "custom_action": "run_and_back",
         "custom_action_param": {
@@ -1624,7 +1624,7 @@
     },
     "植物探险_补位_复活萝卜": {
         "enabled": false,
-        "focus": "[color:darkgray]复活萐卜[/color]",
+        "focus": "[color:darkgray]复活萝卜[/color]",
         "action": "Custom",
         "custom_action": "run_and_back",
         "custom_action_param": {

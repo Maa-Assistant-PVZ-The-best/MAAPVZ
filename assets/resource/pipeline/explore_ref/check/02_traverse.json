@@ -10,7 +10,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历海盗/埃及[/color]"
     },
     "植物探险_遍历_西部/功夫": {
         "action": "Custom",
@@ -21,7 +22,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历西部/功夫[/color]"
     },
     "植物探险_遍历_未来/黑暗": {
         "action": "Custom",
@@ -32,7 +34,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历未来/黑暗[/color]"
     },
     "植物探险_遍历_海滩/冰河": {
         "action": "Custom",
@@ -43,7 +46,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历海滩/冰河[/color]"
     },
     "植物探险_遍历_天空/失落": {
         "action": "Custom",
@@ -54,7 +58,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历天空/失落[/color]"
     },
     "植物探险_遍历_摇滚/恐龙": {
         "action": "Custom",
@@ -65,7 +70,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历摇滚/恐龙[/color]"
     },
     "植物探险_遍历_摩登/蒸汽": {
         "action": "Custom",
@@ -76,7 +82,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历摩登/蒸汽[/color]"
     },
     "植物探险_遍历_平安/复兴": {
         "action": "Custom",
@@ -87,7 +94,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历平安/复兴[/color]"
     },
     "植物探险_遍历_海底/月球": {
         "action": "Custom",
@@ -98,7 +106,8 @@
         "next": [
             "植物探险_遍历_探险界面"
         ],
-        "max_hit": 1
+        "max_hit": 1,
+        "focus": "[color:cyan]遍历海底/月球[/color]"
     },
     "植物探险_遍历_探险界面": {
         "action": "Custom",

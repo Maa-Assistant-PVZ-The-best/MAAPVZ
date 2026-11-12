@@ -2,6 +2,7 @@
     //直接run这里面的pipe节点，大大方方run
     //植物探险里，不管怎么滑动，这俩世界都是可以获取到的，所以可以以这俩世界为锚点，决定自己该怎么滑动
     //详情可以去看assets\resource\pipeline\explore_ref\check\02explore_aheck.json，已经接线好了
+
     "植物探险_寻找海盗/埃及": {
         "action": "Custom",
         "custom_action": "run_and_back",
@@ -33,7 +34,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找海盗/埃及[/color]"
     },
     "植物探险_寻找西部/功夫": {
         "action": "Custom",
@@ -66,7 +68,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找西部/功夫[/color]"
     },
     "植物探险_寻找未来/黑暗": {
         "action": "Custom",
@@ -99,7 +102,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找未来/黑暗[/color]"
     },
     "植物探险_寻找海滩/冰河": {
         "action": "Custom",
@@ -126,7 +130,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找海滩/冰河[/color]"
     },
     "植物探险_寻找天空/失落": {
         "action": "Custom",
@@ -166,7 +171,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找天空/失落[/color]"
     },
     "植物探险_寻找摇滚/恐龙": {
         "action": "Custom",
@@ -206,7 +212,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找摇滚/恐龙[/color]"
     },
     "植物探险_寻找摩登/蒸汽": {
         "action": "Custom",
@@ -246,7 +253,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找摩登/蒸汽[/color]"
     },
     "植物探险_寻找平安/复兴": {
         "action": "Custom",
@@ -273,7 +281,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找平安/复兴[/color]"
     },
     "植物探险_寻找海底/月球": {
         "action": "Custom",
@@ -306,6 +315,8 @@
                     ]
                 }
             }
-        }
+        },
+        "focus": "[color:lightsteelblue]寻找海底/月球[/color]"
     }
+
 }

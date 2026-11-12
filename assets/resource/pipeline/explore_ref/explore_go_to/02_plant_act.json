@@ -225,18 +225,7 @@
         "enabled": false,
         "recognition": "Or",
         "any_of": [
-            {
-                "recognition": "OCR",
-                "expected": [
-                    "^观看广告$"
-                ],
-                "roi": [
-                    648,
-                    442,
-                    180,
-                    86
-                ]
-            },
+            "免广告卡_文字",
             "免广告卡_图片"
         ],
         "action": "Click",
@@ -244,7 +233,8 @@
             "[JumpBack]定位_全局_服务器通讯中",
             "植物探险_点击探险完成",
             "植物探险_遍历_收尾"
-        ]
+        ],
+        "focus": "[color:lime]使用免广告卡[/color]"
     },
     "植物探险_用钻_立即完成": {
         "enabled": false,
@@ -263,7 +253,8 @@
             "[JumpBack]定位_全局_服务器通讯中",
             "植物探险_点击探险完成",
             "植物探险_遍历_收尾"
-        ]
+        ],
+        "focus": "[color:deepskyblue]使用钻石[/color]"
     },
     "植物探险_自动选择": {
         "recognition": "OCR",
@@ -395,7 +386,8 @@
             "[JumpBack]定位_全局_服务器通讯中",
             "植物探险_行1_点开始",
             "植物探险_遍历_收尾"
-        ]
+        ],
+        "focus": "[color:lime]使用免广告卡[/color]"
     },
     "植物探险_用钻_加次数1": {
         "enabled": false,
@@ -414,7 +406,8 @@
             413,
             601,
             190
-        ]
+        ],
+        "focus": "[color:deepskyblue]使用钻石[/color]"
     },
     "植物探险_关弹窗_加次数1": {
         "recognition": "TemplateMatch",
@@ -451,7 +444,8 @@
             "[JumpBack]定位_全局_服务器通讯中",
             "植物探险_行2_点开始",
             "植物探险_遍历_收尾"
-        ]
+        ],
+        "focus": "[color:lime]使用免广告卡[/color]"
     },
     "植物探险_用钻_加次数2": {
         "enabled": false,
@@ -470,7 +464,8 @@
             413,
             601,
             190
-        ]
+        ],
+        "focus": "[color:deepskyblue]使用钻石[/color]"
     },
     "植物探险_关弹窗_加次数2": {
         "recognition": "TemplateMatch",
@@ -507,7 +502,8 @@
             "[JumpBack]定位_全局_服务器通讯中",
             "植物探险_行3_点开始",
             "植物探险_遍历_收尾"
-        ]
+        ],
+        "focus": "[color:lime]使用免广告卡[/color]"
     },
     "植物探险_用钻_加次数3": {
         "enabled": false,
@@ -526,7 +522,8 @@
             413,
             601,
             190
-        ]
+        ],
+        "focus": "[color:deepskyblue]使用钻石[/color]"
     },
     "植物探险_关弹窗_加次数3": {
         "recognition": "TemplateMatch",
