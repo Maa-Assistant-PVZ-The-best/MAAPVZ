@@ -41,7 +41,7 @@ on:
         type: string
 
 concurrency:
-  group: install-${{ github.workflow }}-${{ github.ref }}
+  group: install-${{ github.workflow_ref }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
