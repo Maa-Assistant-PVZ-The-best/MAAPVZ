@@ -50,8 +50,6 @@ permissions:
 env:
   MFAA_VERSION: v2.16.2
   MAA_FRAMEWORK_VERSION: v5.14.2
-  # MXU 宿主版本；MXU v2.9.0 要求 MaaFramework >= v5.12.1，与当前 v5.14.2 兼容
-  MXU_VERSION: v2.9.0
 
 jobs:
   meta:
@@ -203,36 +201,6 @@ jobs:
           rm -f "${ARCHIVE_FILE_PATH}"
           echo "Archive cleanup command executed for MFAAvalonia."
 
-      - name: Download MXU
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        id: download_mxu
-        uses: robinraju/release-downloader@v1
-        with:
-          repository: MaaXYZ/MXU
-          fileName: "MXU-${{ matrix.os }}-${{ matrix.arch }}*"
-          tag: ${{ env.MXU_VERSION }}
-          out-file-path: "MXU"
-          extract: true
-
-      - name: Clean up MXU archive
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        shell: bash
-        run: |
-          ARCHIVE_FILE_PATH="${{ fromJson(steps.download_mxu.outputs.downloaded_files)[0] }}"
-          rm -f "${ARCHIVE_FILE_PATH}"
-          echo "Archive cleanup command executed for MXU."
-
-      - name: Modify MXU exe icon
-        if: matrix.os == 'win' && matrix.arch == 'x86_64'
-        shell: bash
-        run: |
-          MXU_EXE=$(find MXU -maxdepth 3 -type f -name "mxu.exe" -print -quit)
-          if [ -n "$MXU_EXE" ]; then
-            ./rcedit.exe "$MXU_EXE" --set-icon "docs/imgs/logo.ico"
-          else
-            echo "mxu.exe not found, skipping icon update."
-          fi
-
       - name: Remove built-in runtime in MFA
         if: matrix.os != 'android'
         shell: bash
@@ -324,71 +292,6 @@ jobs:
         shell: bash
         run: |
           python tools/ci/download_deps.py --deps-dir ./install/python/lib/python3.12/site-packages --os ${{ matrix.os }} --arch ${{ matrix.arch }}
-
-      - name: Build MXU package
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        shell: bash
-        run: |
-          cd tools/
-          python -m pip install -r ./requirements.txt
-          python ./install.py ${{ needs.meta.outputs.tag }} ${{ matrix.os }} ${{ matrix.arch }} mxu
-          cd ..
-
-      - name: Bundle embedded Python for MXU
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        shell: bash
-        run: |
-          mkdir -p install-mxu/python
-          cp -R install/python/. install-mxu/python/
-
-      - name: Add MXU executable
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        shell: bash
-        run: |
-          MXU_EXE=$(find MXU -maxdepth 3 -type f -name "mxu.exe" -print -quit)
-          MXU_BIN=$(find MXU -maxdepth 3 -type f -name "mxu" -print -quit)
-          MXU_APP=$(find MXU -maxdepth 3 -type d -name "mxu.app" -print -quit)
-          if [ -n "$MXU_EXE" ]; then
-            cp "$MXU_EXE" "install-mxu/MaaPVZ.exe"
-          elif [ -n "$MXU_APP" ]; then
-            cp -R "$MXU_APP" "install-mxu/MaaPVZ.app"
-          elif [ -n "$MXU_BIN" ]; then
-            cp "$MXU_BIN" "install-mxu/MaaPVZ"
-            chmod +x "install-mxu/MaaPVZ"
-          else
-            echo "MXU executable not found in MXU/"
-            ls -la MXU
-            exit 1
-          fi
-
-      - name: Verify MXU package
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        shell: bash
-        env:
-          # Windows 默认控制台编码是 cp1252，直接 print 中文 title 会 UnicodeEncodeError
-          PYTHONIOENCODING: utf-8
-        run: |
-          test -f "install-mxu/interface.json"
-          test -d "install-mxu/resource"
-          test -d "install-mxu/maafw"
-          test -f "install-mxu/agent/main.py"
-          test -d "install-mxu/python"
-          python - <<'PY'
-          import json
-          data = json.load(open("install-mxu/interface.json", encoding="utf-8"))
-          assert data["version"]
-          assert data["agent"]["child_args"] == ["-u", "./agent/main.py"], data["agent"]
-          assert "debug_session" not in data["agent"], data["agent"]
-          print("MXU package smoke check passed:", data.get("title"))
-          PY
-
-      - uses: actions/upload-artifact@v4
-        if: matrix.os != 'android' && matrix.os != 'linux'
-        with:
-          # 用 MaaPVZ-MXU-* 前缀单独区分 UI 变体，避免与 MFA 包的 artifact 命名空间混在一起
-          name: MaaPVZ-MXU-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}
-          path: "install-mxu"
-          if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
         with:

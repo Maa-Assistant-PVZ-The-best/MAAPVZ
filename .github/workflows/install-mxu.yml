@@ -1,0 +1,289 @@
+name: install-mxu
+
+# MXU 变体的打包工作流，与 install.yml（MFA 变体）各自独立出包。
+# 步骤与拆分前 install.yml 里 MXU 那几段逐条对应，只保留 MXU 相关部分：
+#   差异在宿主可执行文件（MXU 而不是 MFAAvalonia）、MaaFramework 摆放（maafw/ 而不是
+#   runtimes/<rid>/native）、以及 PI 不做 setting[] 裁剪（MXU 设置页要用它）。
+
+on:
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/install-mxu.yml"
+      - ".github/workflows/install.yml"
+      - ".github/cliff.toml"
+      - "assets/**"
+      - "agent/**"
+      - "game_assist_tools/**"
+      - "tools/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/install-mxu.yml"
+      - ".github/workflows/install.yml"
+      - ".github/cliff.toml"
+      - "assets/**"
+      - "agent/**"
+      - "game_assist_tools/**"
+      - "tools/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Artifact version (leave empty to use the CI version)
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Version used in artifact names
+        required: true
+        type: string
+
+concurrency:
+  group: install-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  MAA_FRAMEWORK_VERSION: v5.14.2
+  # MXU 宿主版本；MXU v2.9.0 要求 MaaFramework >= v5.12.1，与当前 v5.14.2 兼容
+  MXU_VERSION: v2.9.0
+
+jobs:
+  meta:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.set_tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: set_tag
+        run: |
+          requested_version="${{ inputs.version }}"
+          if [[ -n "$requested_version" ]]; then
+            echo "tag=$requested_version" | tee -a "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          latest_tag=$(git describe --tags --match "v*" --abbrev=0 2>/dev/null || true)
+          if [[ "$latest_tag" != v* ]]; then
+            latest_tag=$(curl -sX GET "https://api.github.com/repos/${{ github.repository }}/releases/latest" --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' | awk '/tag_name/{print $4}' FS='["]')
+          fi
+          if [[ "$latest_tag" != v* ]]; then
+            latest_tag="v0.0.0"
+          fi
+
+          short_sha=$(git rev-parse --short HEAD)
+          date_str=$(date +%y%m%d)
+          tag="${latest_tag}-ci.${date_str}-${short_sha}"
+
+          echo "tag=$tag" | tee -a "$GITHUB_OUTPUT"
+
+  changelog:
+    name: Generate changelog
+    needs: [meta]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ github.ref }}
+
+      - name: Generate a changelog
+        uses: orhun/git-cliff-action@v4
+        id: git-cliff
+        with:
+          config: .github/cliff.toml
+          args: >-
+            -vv --latest --strip header
+        env:
+          OUTPUT: CHANGES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Write changelog to announcement file
+        run: |
+         mkdir -p announcement
+         cp CHANGES.md announcement/
+
+      - name: Upload announcement artifact
+        uses: actions/upload-artifact@v4
+        with:
+          # 叫 announcement-mxu 而不是 announcement：release.yml 会把本工作流和
+          # install.yml 拉进同一个 run，而 artifact 名在 run 内必须唯一。
+          name: announcement-mxu
+          path: announcement/
+          if-no-files-found: error
+
+  install:
+    needs: [meta, changelog]
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: win
+            arch: x86_64
+            runner: windows-latest
+          - os: macos
+            arch: x86_64
+            runner: macos-15-intel
+          - os: macos
+            arch: aarch64
+            runner: macos-latest
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Download announcement artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: announcement-mxu
+          path: assets/resource/announcement
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Download MaaFramework
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: MaaXYZ/MaaFramework
+          fileName: "MAA-${{ matrix.os }}-${{ matrix.arch }}*"
+          tag: ${{ env.MAA_FRAMEWORK_VERSION }}
+          out-file-path: "deps"
+          extract: true
+
+      - name: Download MXU
+        id: download_mxu
+        uses: robinraju/release-downloader@v1
+        with:
+          repository: MaaXYZ/MXU
+          fileName: "MXU-${{ matrix.os }}-${{ matrix.arch }}*"
+          tag: ${{ env.MXU_VERSION }}
+          out-file-path: "MXU"
+          extract: true
+
+      - name: Clean up MXU archive
+        shell: bash
+        run: |
+          ARCHIVE_FILE_PATH="${{ fromJson(steps.download_mxu.outputs.downloaded_files)[0] }}"
+          rm -f "${ARCHIVE_FILE_PATH}"
+          echo "Archive cleanup command executed for MXU."
+
+      # 改图标要用 rcedit；原来这步是搭 install.yml 里 MFA 那步的程序下的，这里自己下。
+      - name: Modify MXU exe icon
+        if: matrix.os == 'win' && matrix.arch == 'x86_64'
+        shell: bash
+        run: |
+          curl -L https://github.com/electron/rcedit/releases/download/v2.0.0/rcedit-x64.exe -o rcedit.exe
+          MXU_EXE=$(find MXU -maxdepth 3 -type f -name "mxu.exe" -print -quit)
+          if [ -n "$MXU_EXE" ]; then
+            ./rcedit.exe "$MXU_EXE" --set-icon "docs/imgs/logo.ico"
+          else
+            echo "mxu.exe not found, skipping icon update."
+          fi
+
+      - name: Setup Embed Python
+        shell: bash
+        run: |
+          python tools/ci/setup_embed_python.py ${{ matrix.os }} ${{ matrix.arch }}
+          if [[ "${{ matrix.os }}" == "macos" ]]; then
+            EMBED_PYTHON_PATH="./install/python/bin/python3"
+            if [ -f "$EMBED_PYTHON_PATH" ]; then
+              chmod +x "$EMBED_PYTHON_PATH"
+            else
+              echo "Warning: Embedded Python executable not found at $EMBED_PYTHON_PATH. Skipping chmod."
+            fi
+          fi
+
+      - name: Build MXU package
+        shell: bash
+        run: |
+          cd tools/
+          python -m pip install -r ./requirements.txt
+          python ./install.py ${{ needs.meta.outputs.tag }} ${{ matrix.os }} ${{ matrix.arch }} mxu
+          cd ..
+
+      - name: Bundle embedded Python for MXU
+        shell: bash
+        run: |
+          mkdir -p install-mxu/python
+          cp -R install/python/. install-mxu/python/
+
+      - name: Download Python dependencies for MXU
+        shell: bash
+        run: |
+          if [[ "${{ matrix.os }}" == "win" ]]; then
+            python tools/ci/download_deps.py --deps-dir ./install-mxu/python/Lib/site-packages --os ${{ matrix.os }} --arch ${{ matrix.arch }}
+          else
+            python tools/ci/download_deps.py --deps-dir ./install-mxu/python/lib/python3.12/site-packages --os ${{ matrix.os }} --arch ${{ matrix.arch }}
+          fi
+
+      - name: Fix permissions in MXU package
+        if: matrix.os != 'win'
+        shell: bash
+        run: |
+          if [ -d "./install-mxu/python/bin" ]; then
+            chmod +x ./install-mxu/python/bin/* 2>/dev/null || true
+          fi
+          find ./install-mxu -type f -name "*.sh" -exec chmod +x {} \; 2>/dev/null || true
+
+      - name: Add MXU executable
+        shell: bash
+        run: |
+          MXU_EXE=$(find MXU -maxdepth 3 -type f -name "mxu.exe" -print -quit)
+          MXU_BIN=$(find MXU -maxdepth 3 -type f -name "mxu" -print -quit)
+          MXU_APP=$(find MXU -maxdepth 3 -type d -name "mxu.app" -print -quit)
+          if [ -n "$MXU_EXE" ]; then
+            cp "$MXU_EXE" "install-mxu/MaaPVZ.exe"
+          elif [ -n "$MXU_APP" ]; then
+            cp -R "$MXU_APP" "install-mxu/MaaPVZ.app"
+          elif [ -n "$MXU_BIN" ]; then
+            cp "$MXU_BIN" "install-mxu/MaaPVZ"
+            chmod +x "install-mxu/MaaPVZ"
+          else
+            echo "MXU executable not found in MXU/"
+            ls -la MXU
+            exit 1
+          fi
+
+      - name: Verify MXU package
+        shell: bash
+        env:
+          # Windows 默认控制台编码是 cp1252，直接 print 中文 title 会 UnicodeEncodeError
+          PYTHONIOENCODING: utf-8
+        run: |
+          test -f "install-mxu/interface.json"
+          test -d "install-mxu/resource"
+          test -d "install-mxu/maafw"
+          test -f "install-mxu/agent/main.py"
+          test -d "install-mxu/python"
+          python - <<'PY'
+          import json
+          data = json.load(open("install-mxu/interface.json", encoding="utf-8"))
+          assert data["version"]
+          assert data["agent"]["child_args"] == ["-u", "./agent/main.py"], data["agent"]
+          assert "debug_session" not in data["agent"], data["agent"]
+          print("MXU package smoke check passed:", data.get("title"))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          # 用 MaaPVZ-MXU-* 前缀单独区分 UI 变体，避免与 MFA 包的 artifact 命名空间混在一起
+          name: MaaPVZ-MXU-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}
+          path: "install-mxu"
+          if-no-files-found: error

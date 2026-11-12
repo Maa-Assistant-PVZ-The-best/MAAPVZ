@@ -21,6 +21,15 @@ jobs:
     with:
       version: ${{ github.ref_name }}
 
+  # MXU 变体是独立工作流，与上面的 MFA 包各自出包、互不阻塞
+  desktop-mxu:
+    name: Desktop builds (MXU)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/install-mxu.yml
+    with:
+      version: ${{ github.ref_name }}
+
   android:
     name: Android APK
     permissions:
@@ -73,7 +82,7 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    needs: [desktop, android, changelog]
+    needs: [desktop, desktop-mxu, android, changelog]
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -213,6 +213,19 @@ def install_resource():
     # 设置版本
     interface["version"] = version
 
+    # ★ MFA 不支持 PI 的 setting[]（那是 MXU 侧扩展字段；MaaFramework v5.14.2 随包
+    #   发布的 interface.schema.json 根节点 additionalProperties: false，里面没有它）。
+    #   带着它，MFA 一按开始就在命令线程上建分区：CreateSettingItem 用对象初始化器写
+    #   EnableSetting -> RequestSetOption -> TaskQueueView.SetOption 第一句读 DataContext
+    #   -> VerifyAccess 抛异常，任务链初始化中断且 isTaskRunActive 不复位，之后所有
+    #   开始请求被忽略。_Setting_ 合成条目的 InterfaceItem 为 null，SynchronizeTaskItems
+    #   匹配不到它 -> 每次开始都重建 -> 必然复现，不是偶发。
+    #   MFA 靠 global_option 就能渲染"全局选项"行并在提交任务时合并覆盖，所以 MFA 包
+    #   只留 global_option；MXU 的设置页按 setting 分区渲染，必须保留（见 install-mxu.yml）。
+    #   这段长期保留即可：MFA 本来就不需要这个字段，不是等上游修好再删的临时补丁。
+    if target != "mxu" and interface.pop("setting", None) is not None:
+        print("mfa: dropped PI setting[] (unsupported by MFAA; global_option kept)")
+
     # 修正 agent 配置
     if "agent" in interface:
         if target == "mxu":
