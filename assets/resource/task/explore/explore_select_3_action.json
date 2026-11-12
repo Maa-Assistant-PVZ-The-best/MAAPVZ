@@ -11,7 +11,13 @@
                 {
                     "name": "Yes",
                     "pipeline_override": {
-                        "植物探险_定位_增加次数": {
+                        "植物探险_加号1": {
+                            "enabled": true
+                        },
+                        "植物探险_加号2": {
+                            "enabled": true
+                        },
+                        "植物探险_加号3": {
                             "enabled": true
                         }
                     }
@@ -21,7 +27,6 @@
         "立即完成": {
             "type": "switch",
             "label": "立即完成",
-            "description": "只使用免广告卡的话建议将次数设置为1或者2",
             "default_case": "No",
             "cases": [
                 {
@@ -30,7 +35,13 @@
                 {
                     "name": "Yes",
                     "pipeline_override": {
-                        "植物探险_立即完成": {
+                        "植物探险_立即完成1": {
+                            "enabled": true
+                        },
+                        "植物探险_立即完成2": {
+                            "enabled": true
+                        },
+                        "植物探险_立即完成3": {
                             "enabled": true
                         }
                     },
@@ -52,7 +63,13 @@
                 }
             ],
             "pipeline_override": {
-                "植物探险_立即完成": {
+                "植物探险_立即完成1": {
+                    "max_hit": "{立即完成次数}"
+                },
+                "植物探险_立即完成2": {
+                    "max_hit": "{立即完成次数}"
+                },
+                "植物探险_立即完成3": {
                     "max_hit": "{立即完成次数}"
                 }
             }
@@ -86,16 +103,33 @@
                 {
                     "name": "免广告卡",
                     "pipeline_override": {
-                        "植物探险_使用免广告卡_ref": {
+                        "植物探险_用卡_立即完成": {
+                            "enabled": true
+                        },
+                        "植物探险_用卡_加次数1": {
+                            "enabled": true
+                        },
+                        "植物探险_用卡_加次数2": {
+                            "enabled": true
+                        },
+                        "植物探险_用卡_加次数3": {
                             "enabled": true
                         }
                     }
                 },
                 {
                     "name": "使用钻石",
-                    "description": "谨慎开启，会消耗你的钻石资源",
                     "pipeline_override": {
-                        "植物探险_使用钻石": {
+                        "植物探险_用钻_立即完成": {
+                            "enabled": true
+                        },
+                        "植物探险_用钻_加次数1": {
+                            "enabled": true
+                        },
+                        "植物探险_用钻_加次数2": {
+                            "enabled": true
+                        },
+                        "植物探险_用钻_加次数3": {
                             "enabled": true
                         }
                     }

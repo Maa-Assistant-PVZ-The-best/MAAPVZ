@@ -5,36 +5,7 @@
             "type": "switch",
             "cases": [
                 {
-                    "name": "No",
-                    "pipeline_override": {
-                        "植物探险_遍历_海盗/埃及": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_西部/功夫": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_未来/黑暗": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_海滩/冰河": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_天空/失落": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_摇滚/恐龙": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_摩登/蒸汽": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_平安/复兴": {
-                            "enabled": true
-                        },
-                        "植物探险_遍历_海底/月球": {
-                            "enabled": true
-                        }
-                    }
+                    "name": "No"
                 },
                 {
                     "name": "Yes",

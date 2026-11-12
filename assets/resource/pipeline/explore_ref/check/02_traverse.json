@@ -1,103 +1,104 @@
-{ //遍历已探险植物：9 个世界各跑一次，每次进探索界面领取「探险完成」并下滑
-    //遍历_探险界面 是枢纽：它自己的 next 负责选下一个世界，子跑里负责领 + 滑
+{
+    //9 个世界各跑一次：先寻找世界，回枢纽领奖，靠 max_hit 去重。
+
     "植物探险_遍历_海盗/埃及": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找海盗/埃及"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_西部/功夫": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找西部/功夫"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_未来/黑暗": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找未来/黑暗"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_海滩/冰河": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找海滩/冰河"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_天空/失落": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找天空/失落"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_摇滚/恐龙": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找摇滚/恐龙"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_摩登/蒸汽": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找摩登/蒸汽"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_平安/复兴": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找平安/复兴"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_海底/月球": {
         "action": "Custom",
         "custom_action": "run_and_back",
-        "max_hit": 1,
         "custom_action_param": {
             "run": "植物探险_寻找海底/月球"
         },
         "next": [
             "植物探险_遍历_探险界面"
-        ]
+        ],
+        "max_hit": 1
     },
     "植物探险_遍历_探险界面": {
         "action": "Custom",
@@ -137,4 +138,5 @@
             "植物探险_遍历探险二次检查"
         ]
     }
+
 }

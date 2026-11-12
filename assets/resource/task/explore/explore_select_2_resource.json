@@ -11,11 +11,6 @@
                 },
                 {
                     "name": "Yes",
-                    "pipeline_override": {
-                        "植物探险_消耗资源": {
-                            "enabled": true
-                        }
-                    },
                     "option": [
                         "增加次数",
                         "立即完成",

@@ -7,7 +7,7 @@
     ////////////////////////////////
     "植物探险_世界翻页_下翻": {
         "action": "Swipe",
-        "post_wait_freezes": 700,
+        "post_delay": 1000,
         "end_hold": 500,
         "begin": [
             305,
@@ -21,7 +21,7 @@
     //用来滑左边的世界栏的
     "植物探险_世界翻页_上翻": {
         "action": "Swipe",
-        "post_wait_freezes": 700,
+        "post_delay": 1000,
         "end_hold": 500,
         "begin": [
             295,

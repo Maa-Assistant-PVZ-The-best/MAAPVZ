@@ -1,133 +1,252 @@
 {
-    "植物探险_定位_识别开始": {
-        "recognition": "OCR",
-        "expected": [
-            "开始"
-        ],
-        "order_by": "Vertical",
-        "roi": [
-            371,
-            109,
-            689,
-            550
-        ],
+    "植物探险_行1_入口": {
+        "recognition": "DirectHit",
+        "action": "DoNothing",
         "next": [
-            "植物探险_定位_增加次数",
-            "植物探险_定位_点击开始"
+            "植物探险_加号1",
+            "植物探险_行1_点开始",
+            "植物探险_立即完成1",
+            "植物探险_遍历_收尾"
         ]
     },
-    "植物探险_定位_增加次数": {
+    "植物探险_加号1": {
+        "enabled": false,
         "recognition": "TemplateMatch",
         "template": [
             "General/加号.png"
         ],
-        "roi": "植物探险_定位_识别开始",
-        "roi_offset": [
-            -362,
-            -65,
-            72,
-            68
+        "threshold": [
+            0.75
         ],
-        "enabled": false,
+        "roi": [
+            387,
+            171,
+            654,
+            153
+        ],
         "action": "Click",
-        "order_by": "Vertical",
         "next": [
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_消耗资源",
-            "植物探险_定位_点击开始"
+            "植物探险_用卡_加次数1",
+            "植物探险_用钻_加次数1",
+            "植物探险_关弹窗_加次数1",
+            "植物探险_遍历_收尾"
         ]
-        //enble负责gui中的开关
     },
-    "植物探险_消耗资源": {
-        "action": "Custom",
-        "custom_action": "run_and_back",
-        //enble负责gui中的开关
+    "植物探险_行1_点开始": {
+        "recognition": "OCR",
+        "expected": [
+            "开始"
+        ],
+        "roi": [
+            387,
+            171,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_自动选择",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_立即完成1": {
         "enabled": false,
-        "custom_action_param": {
-            "run": "植物探险_消耗资源_接口",
-            "back": "植物探险_执行完毕",
-            "pipe_over": {
-                "免广告卡_文字": {
-                    "roi": [
-                        648,
-                        442,
-                        180,
-                        86
-                    ]
-                },
-                "植物探险_定位_点击开始": { //这个也是走玉米投手的roi
-                    "roi": [
-                        387,
-                        171,
-                        654,
-                        153
-                    ]
-                },
-                "返回主界面_关闭按钮": {
-                    "order_by": "Horizontal",
-                    "next": [
-                        "[JumpBack]定位_全局_服务器通讯中",
-                        "植物探险_定位_点击开始",
-                        "植物探险_点击探险完成",
-                        "植物探险_补位植物"
-                    ]
-                }
-            }
-        },
+        "recognition": "OCR",
+        "expected": [
+            "立即完成"
+        ],
+        "max_hit": 1,
+        "roi": [
+            387,
+            171,
+            654,
+            153
+        ],
+        "action": "Click",
         "next": [
-            "植物探险_定位_点击开始",
-            "植物探险_立即完成",
-            "植物探险_执行完毕"
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_用卡_立即完成",
+            "植物探险_用钻_立即完成",
+            "植物探险_关弹窗_立即完成1",
+            "植物探险_遍历_收尾"
         ]
     },
-    "植物探险_消耗资源_接口": {
+    "植物探险_行2_入口": {
+        "recognition": "DirectHit",
+        "action": "DoNothing",
         "next": [
-            "植物探险_使用免广告卡_ref",
-            "植物探险_使用钻石",
-            "返回主界面_关闭按钮"
+            "植物探险_加号2",
+            "植物探险_行2_点开始",
+            "植物探险_立即完成2",
+            "植物探险_遍历_收尾"
         ]
     },
-    "植物探险_双倍碎片": {
+    "植物探险_加号2": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/加号.png"
+        ],
+        "threshold": [
+            0.75
+        ],
+        "roi": [
+            388,
+            331,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_用卡_加次数2",
+            "植物探险_用钻_加次数2",
+            "植物探险_关弹窗_加次数2",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_行2_点开始": {
+        "recognition": "OCR",
+        "expected": [
+            "开始"
+        ],
+        "roi": [
+            388,
+            331,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_自动选择",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_立即完成2": {
+        "enabled": false,
+        "recognition": "OCR",
+        "expected": [
+            "立即完成"
+        ],
+        "max_hit": 1,
+        "roi": [
+            388,
+            331,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_用卡_立即完成",
+            "植物探险_用钻_立即完成",
+            "植物探险_关弹窗_立即完成2",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_行3_入口": {
+        "recognition": "DirectHit",
+        "action": "DoNothing",
+        "next": [
+            "植物探险_加号3",
+            "植物探险_行3_点开始",
+            "植物探险_立即完成3",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_加号3": {
+        "enabled": false,
+        "recognition": "TemplateMatch",
+        "template": [
+            "General/加号.png"
+        ],
+        "threshold": [
+            0.75
+        ],
+        "roi": [
+            385,
+            488,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_用卡_加次数3",
+            "植物探险_用钻_加次数3",
+            "植物探险_关弹窗_加次数3",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_行3_点开始": {
+        "recognition": "OCR",
+        "expected": [
+            "开始"
+        ],
+        "roi": [
+            385,
+            488,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_自动选择",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_立即完成3": {
+        "enabled": false,
+        "recognition": "OCR",
+        "expected": [
+            "立即完成"
+        ],
+        "max_hit": 1,
+        "roi": [
+            385,
+            488,
+            654,
+            153
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_用卡_立即完成",
+            "植物探险_用钻_立即完成",
+            "植物探险_关弹窗_立即完成3",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用卡_立即完成": {
         "enabled": false,
         "recognition": "Or",
         "any_of": [
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "^观看广告$"
+                ],
+                "roi": [
+                    648,
+                    442,
+                    180,
+                    86
+                ]
+            },
             "免广告卡_图片"
         ],
         "action": "Click",
         "next": [
-            "植物探险_完成探险"
-        ]
-    },
-    "植物探险_使用免广告卡_ref": {
-        "enabled": false,
-        "recognition": "Or",
-        "any_of": [
-            "免广告卡_文字",
-            "免广告卡_图片"
-        ],
-        "action": "Custom",
-        "custom_action": "run_and_back",
-        "custom_action_param": {
-            "run": "通用动作_免广告卡",
-            "pipe_over": {
-                "通用动作_免广告卡_使用成功": {
-                    "next": [
-                        "[JumpBack]定位_全局_服务器通讯中",
-                        "植物探险_定位_点击开始",
-                        "植物探险_点击探险完成"
-                    ]
-                }
-            }
-        },
-        "next": [
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_定位_点击开始",
             "植物探险_点击探险完成",
-            "植物探险_执行完毕"
+            "植物探险_遍历_收尾"
         ]
     },
-    "植物探险_使用钻石": {
-        "action": "Custom",
+    "植物探险_用钻_立即完成": {
         "enabled": false,
         "recognition": "OCR",
         "expected": [
@@ -139,33 +258,11 @@
             601,
             190
         ],
-        "custom_action": "run_and_back",
-        "custom_action_param": {
-            "run": "通用动作_使用钻石"
-        },
-        "next": [
-            "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_定位_点击开始",
-            "植物探险_点击探险完成",
-            "植物探险_执行完毕"
-        ]
-    },
-    "植物探险_定位_点击开始": {
-        "recognition": "OCR",
-        "expected": [
-            "开始"
-        ],
         "action": "Click",
-        "order_by": "Vertical",
-        "roi": [
-            371,
-            109,
-            689,
-            550
-        ],
         "next": [
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_自动选择"
+            "植物探险_点击探险完成",
+            "植物探险_遍历_收尾"
         ]
     },
     "植物探险_自动选择": {
@@ -176,7 +273,8 @@
         "action": "Click",
         "next": [
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_开始探险"
+            "植物探险_开始探险",
+            "植物探险_遍历_收尾"
         ]
     },
     "植物探险_检查植物探索cd": {
@@ -188,7 +286,7 @@
         ],
         "action": "Click",
         "next": [
-            "返回主界面_关闭按钮"
+            "植物探险_遍历_收尾"
         ],
         "focus": "[color:darkgray]当前植物探险失败，有植物正在cd中[/color]"
     },
@@ -202,39 +300,244 @@
         "next": [
             "[JumpBack]植物探险_检查植物探索cd",
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_立即完成",
-            "植物探险_收尾_探险完成"
-            //next接立即完成，立即完成关闭就接补位植物,maxhit接线在立即完成上
+            "植物探险_立即完成1",
+            "植物探险_立即完成2",
+            "植物探险_立即完成3",
+            "植物探险_遍历_收尾"
         ]
     },
     "植物探险_收尾_探险完成": {
-        "action": "Custom",
-        "custom_action": "run_and_back",
-        "custom_action_param": {
-            "run": "植物探险_点击探险完成"
-        },
         "next": [
-            "植物探险_执行完毕"
+            "植物探险_点击探险完成"
         ]
     },
-    "植物探险_立即完成": {
+    "植物探险_双倍碎片": {
+        "enabled": false,
+        "recognition": "Or",
+        "any_of": [
+            "免广告卡_图片"
+        ],
+        "action": "Click",
+        "next": [
+            "植物探险_完成探险"
+        ]
+    },
+    "植物探险_清理探险完成": {
         "recognition": "OCR",
         "expected": [
-            "立即完成"
+            "探险完成"
         ],
-        "max_hit": 1,
-        "enabled": false,
-        //enble负责gui中的开关
-        "roi": [
-            387,
-            171,
-            654,
-            153
-        ],
-        "action": "Click", //立即完成后要点探险完成
+        "action": "Click",
         "next": [
             "[JumpBack]定位_全局_服务器通讯中",
-            "植物探险_消耗资源"
+            "植物探险_双倍碎片",
+            "植物探险_完成探险",
+            "植物探险_清理探险完成",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_关弹窗_立即完成1": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行1_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_关弹窗_立即完成2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行2_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_关弹窗_立即完成3": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行3_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用卡_加次数1": {
+        "enabled": false,
+        "recognition": "Or",
+        "any_of": [
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "^观看广告$"
+                ],
+                "roi": [
+                    648,
+                    442,
+                    180,
+                    86
+                ]
+            },
+            "免广告卡_图片"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行1_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用钻_加次数1": {
+        "enabled": false,
+        "recognition": "OCR",
+        "expected": [
+            "0钻石"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行1_点开始",
+            "植物探险_遍历_收尾"
+        ],
+        "roi": [
+            316,
+            413,
+            601,
+            190
+        ]
+    },
+    "植物探险_关弹窗_加次数1": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行1_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用卡_加次数2": {
+        "enabled": false,
+        "recognition": "Or",
+        "any_of": [
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "^观看广告$"
+                ],
+                "roi": [
+                    648,
+                    442,
+                    180,
+                    86
+                ]
+            },
+            "免广告卡_图片"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行2_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用钻_加次数2": {
+        "enabled": false,
+        "recognition": "OCR",
+        "expected": [
+            "0钻石"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行2_点开始",
+            "植物探险_遍历_收尾"
+        ],
+        "roi": [
+            316,
+            413,
+            601,
+            190
+        ]
+    },
+    "植物探险_关弹窗_加次数2": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行2_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用卡_加次数3": {
+        "enabled": false,
+        "recognition": "Or",
+        "any_of": [
+            {
+                "recognition": "OCR",
+                "expected": [
+                    "^观看广告$"
+                ],
+                "roi": [
+                    648,
+                    442,
+                    180,
+                    86
+                ]
+            },
+            "免广告卡_图片"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行3_点开始",
+            "植物探险_遍历_收尾"
+        ]
+    },
+    "植物探险_用钻_加次数3": {
+        "enabled": false,
+        "recognition": "OCR",
+        "expected": [
+            "0钻石"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行3_点开始",
+            "植物探险_遍历_收尾"
+        ],
+        "roi": [
+            316,
+            413,
+            601,
+            190
+        ]
+    },
+    "植物探险_关弹窗_加次数3": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "back_to_home/global/叉叉.png"
+        ],
+        "action": "Click",
+        "next": [
+            "[JumpBack]定位_全局_服务器通讯中",
+            "植物探险_行3_点开始",
+            "植物探险_遍历_收尾"
         ]
     }
 }
