@@ -1,6 +1,7 @@
 {
     "option": {
         "使用免广告卡_ref": {
+            "label": "使用免广告卡",
             "type": "switch",
             "cases": [
                 {
@@ -26,8 +27,7 @@
                     "pipeline_override": {
                         "巨人危机_难度选择_ref": {
                             "custom_action_param": {
-                                "run": "巨人危机_增加次数_ref",
-                                "back": "巨人危机_增加次数_观看广告_ref"
+                                "run": "巨人危机_增加次数_ref"
                             }
                         }
                     }
@@ -45,13 +45,488 @@
                     "pipeline_override": {
                         "邪恶入侵_难度选择_ref": {
                             "custom_action_param": {
-                                "run": "邪恶入侵_增加次数_ref",
-                                "back": "邪恶入侵_增加次数_观看广告_ref"
+                                "run": "邪恶入侵_增加次数_ref"
                             }
                         }
                     }
                 }
             ]
-        }
+        },
+        ////////////////////////////////////////////
+        /////////////////////////////////////////////
+        ///////////////////////////////////////////
+        //////////////////////////////////////
+        ////////////////////////////////
+        "选择植物碎片_ref": {
+            "label": "选择植物碎片",
+            "type": "checkbox",
+            "description": "优先选择紫卡，其次品质往下",
+            "cases": [
+                //紫卡
+                {
+                    "name": "烈焰菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索烈焰菇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "蚕豆突击队",
+                    "pipeline_override": {
+                        "碎片挑战_检索蚕豆突击队_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "椰子加农炮",
+                    "pipeline_override": {
+                        "碎片挑战_检索椰子加农炮_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "蒲公英",
+                    "pipeline_override": {
+                        "碎片挑战_检索蒲公英_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "胆小菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索胆小菇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "吹风荚兰",
+                    "pipeline_override": {
+                        "碎片挑战_检索吹风荚兰_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "猕猴桃",
+                    "pipeline_override": {
+                        "碎片挑战_检索猕猴桃_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                //紫卡
+                //蓝卡
+                {
+                    "name": "双胞胎向日葵",
+                    "pipeline_override": {
+                        "碎片挑战_检索双胞向日葵_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "潜伏芹菜",
+                    "pipeline_override": {
+                        "碎片挑战_检索潜伏芹菜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "辣椒投手",
+                    "pipeline_override": {
+                        "碎片挑战_检索辣椒投手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "魔音甜菜",
+                    "pipeline_override": {
+                        "碎片挑战_检索魔音甜菜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "橡木射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索橡木射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "龙舌兰",
+                    "pipeline_override": {
+                        "碎片挑战_检索龙舌兰_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "原始向日葵",
+                    "pipeline_override": {
+                        "碎片挑战_检索原始向日葵_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "鳄梨",
+                    "pipeline_override": {
+                        "碎片挑战_检索鳄梨_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "激光豆",
+                    "pipeline_override": {
+                        "碎片挑战_检索激光豆_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "南瓜巫师",
+                    "pipeline_override": {
+                        "碎片挑战_检索南瓜巫师_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "莲小蓬",
+                    "pipeline_override": {
+                        "碎片挑战_检索莲小蓬_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "星星果",
+                    "pipeline_override": {
+                        "碎片挑战_检索星星果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "窝瓜",
+                    "pipeline_override": {
+                        "碎片挑战_检索窝瓜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "双重射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索双重射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "棉小雪",
+                    "pipeline_override": {
+                        "碎片挑战_检索棉小雪_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "孢子菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索孢子菇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火龙果",
+                    "pipeline_override": {
+                        "碎片挑战_检索火龙果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                //蓝卡
+                //绿卡
+                {
+                    "name": "三重射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索三重射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "复活萝卜",
+                    "pipeline_override": {
+                        "碎片挑战_检索复活萝卜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "回旋镖射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索回旋镖射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "钢地刺",
+                    "pipeline_override": {
+                        "碎片挑战_检索钢地刺_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "旋转菠萝",
+                    "pipeline_override": {
+                        "碎片挑战_检索旋转菠萝_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "大王花",
+                    "pipeline_override": {
+                        "碎片挑战_检索大王花_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "火炬树桩",
+                    "pipeline_override": {
+                        "碎片挑战_检索火炬树桩_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "西瓜投手",
+                    "pipeline_override": {
+                        "碎片挑战_检索西瓜投手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "香水蘑菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索香水蘑菇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "棱镜草",
+                    "pipeline_override": {
+                        "碎片挑战_检索棱镜草_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "高坚果",
+                    "pipeline_override": {
+                        "碎片挑战_检索高坚果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "旋涡枇杷",
+                    "pipeline_override": {
+                        "碎片挑战_检索旋涡枇杷_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                // {
+                //     "name": "飞碟瓜",
+                //     "pipeline_override": {
+                //         "碎片挑战_检索飞碟瓜_ref": {
+                //             "enabled": true
+                //         }
+                //     }
+                // },
+                {
+                    "name": "旋风橡果",
+                    "pipeline_override": {
+                        "碎片挑战_检索旋风橡果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "眩晕洋葱",
+                    "pipeline_override": {
+                        "碎片挑战_检索眩晕洋葱_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "闪电芦苇",
+                    "pipeline_override": {
+                        "碎片挑战_检索闪电芦苇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "树脂投手",
+                    "pipeline_override": {
+                        "碎片挑战_检索树脂投手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "机枪石榴",
+                    "pipeline_override": {
+                        "碎片挑战_检索机枪石榴_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "寒冰射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索寒冰射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "竹小弟",
+                    "pipeline_override": {
+                        "碎片挑战_检索竹小弟_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "爆炸坚果",
+                    "pipeline_override": {
+                        "碎片挑战_检索爆炸坚果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                //绿卡
+                //白卡
+                {
+                    "name": "小喷菇",
+                    "pipeline_override": {
+                        "碎片挑战_检索小喷菇_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "卷心菜投手",
+                    "pipeline_override": {
+                        "碎片挑战_检索卷心菜投手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "土豆雷",
+                    "pipeline_override": {
+                        "碎片挑战_检索土豆雷_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "冰冻生菜",
+                    "pipeline_override": {
+                        "碎片挑战_检索冰冻生菜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "氧气海藻",
+                    "pipeline_override": {
+                        "碎片挑战_检索氧气海藻_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "豌豆射手",
+                    "pipeline_override": {
+                        "碎片挑战_检索豌豆射手_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "滴水冰莲",
+                    "pipeline_override": {
+                        "碎片挑战_检索滴水冰莲_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "白萝卜",
+                    "pipeline_override": {
+                        "碎片挑战_检索白萝卜_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "竹笋",
+                    "pipeline_override": {
+                        "碎片挑战_检索竹笋_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "坚果",
+                    "pipeline_override": {
+                        "碎片挑战_检索坚果_ref": {
+                            "enabled": true
+                        }
+                    }
+                },
+                // {
+                //     "name": "地刺",
+                //     "pipeline_override": {
+                //         "碎片挑战_检索地刺_ref": {
+                //             "enabled": true
+                //         }
+                //     }
+                // },
+                {
+                    "name": "大丽菊",
+                    "pipeline_override": {
+                        "碎片挑战_检索大丽菊_ref": {
+                            "enabled": true
+                        }
+                    }
+                }
+                //白卡
+            ]
+        },
     }
 }
