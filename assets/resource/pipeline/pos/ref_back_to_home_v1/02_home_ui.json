@@ -18,7 +18,7 @@
     "定位_主界面_ui_日常": {
         "recognition": "TemplateMatch",
         "template": [
-            "plants_explore/日常.png"
+            "General/home/日常.png"
         ],
         "threshold": [
             0.9
