@@ -1,0 +1,254 @@
+{
+    "option": {
+        "每日分享奖励": {
+            // 【开关关闭时不改 next，而是把分享链入口置为 enabled:false】
+            // 这样两种刷取模式都能用分享，且不会和「使用收藏关卡」争抢
+            // 创意庭院_确认自己在创意庭院.next —— 后者会把 next 覆盖成
+            // [分享_前置检查, 使用收藏的关卡]，只要分享入口是禁用状态，
+            // 框架识别 next 时就会跳过它，自然落到 使用收藏的关卡。
+            // 依据：框架在 run_next 里对候选做 enabled 校验，
+            // next 全被禁用时输出 "no valid/enabled node"；本仓库已有 205 处用这个开关。
+            "type": "switch",
+            "label": "每日分享奖励",
+            "description": "先创建并发布一个名为「分享」的关卡，完成一次渠道分享领取每日奖励（10 钻石 + 1000 水晶），然后删掉该关卡，之后再执行所选的刷币 / 刷赞。每次任务只执行一次，具体用哪个 App 由「分享渠道」决定（无需登录，但需要模拟器内已安装该 App）。",
+            "default_case": "No",
+            "cases": [
+                {
+                    "name": "No",
+                    "pipeline_override": {
+                        "创意庭院_分享_前置检查": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "创意庭院_确认自己在创意庭院": {
+                            // 先跑分享链，分享完成后 分享_完成 会把流程交回本节点，
+                            // 此时 分享_前置检查 的 max_hit 已用尽而被跳过，
+                            // 自然落到后面的刷赞/刷币节点，继续原本流程。
+                            "next": [
+                                "创意庭院_分享_前置检查",
+                                "创意庭院_刷赞_创建关卡",
+                                "创意庭院_创建关卡",
+                                "创意庭院_创建关卡_滑动"
+                            ]
+                        },
+                        "创意庭院_分享_前置检查": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "分享渠道": {
+            // 两个渠道各有一个识别节点（渠道_抖音 / 渠道_QQ），roi 和 expected 各写各的。
+            // 面板上六个渠道图标同时都在，两个节点都能命中，所以只能靠 option
+            // 把没选中的那个 enabled 置 false —— 既不会误点，也一个字都不动 roi。
+            // 关闭节点一起禁用：它只被对应的渠道节点引用，禁用后没有任何路径能走到。
+            "type": "select",
+            "label": "分享渠道",
+            "description": "选择用哪个 App 完成分享。需要模拟器内已安装该 App（抖音 / QQ），不需要登录。抖音和 QQ 各有一个识别节点，未选中的那个会被直接禁用，不会误点。",
+            "default_case": "抖音",
+            "cases": [
+                {
+                    "name": "抖音",
+                    "pipeline_override": {
+                        "创意庭院_分享_渠道_QQ": {
+                            "enabled": false
+                        },
+                        "创意庭院_分享_关闭QQ": {
+                            "enabled": false
+                        }
+                    }
+                },
+                {
+                    "name": "QQ",
+                    "pipeline_override": {
+                        "创意庭院_分享_渠道_抖音": {
+                            "enabled": false
+                        },
+                        "创意庭院_分享_关闭抖音": {
+                            "enabled": false
+                        }
+                    }
+                }
+            ]
+        },
+        "刷取类型": {
+            "type": "select",
+            "cases": [
+                {
+                    "name": "刷游玩币",
+                    "option": [
+                        "使用收藏关卡"
+                    ],
+                    "pipeline_override": {
+                        "创意庭院_刷币_点击游玩": {
+                            "enabled": true
+                        },
+                        "创意庭院_游玩_可刷取的代币已达上限": {
+                            "enabled": true
+                        },
+                        "创意庭院_刷币_删完关卡_退出": {
+                            "enabled": true
+                        }
+                    }
+                },
+                {
+                    "name": "刷点赞",
+                    "option": [
+                        "点赞几次",
+                        "CreateYardLevelName"
+                    ],
+                    "pipeline_override": {
+                        "创意庭院_刷赞_删除关卡": {
+                            "enabled": true
+                        },
+                        "创意庭院_刷赞_创建关卡": {
+                            "enabled": true
+                        }
+                    }
+                }
+            ]
+        },
+        "点赞几次": {
+            "type": "input",
+            "inputs": [
+                {
+                    "name": "点赞次数",
+                    "pipeline_type": "int",
+                    "default": "1",
+                    "verify": "[1-9]\\d*$"
+                }
+            ],
+            "pipeline_override": {
+                "创意庭院_刷赞_重新创建关卡检测次数": {
+                    "max_hit": "{点赞次数}"
+                }
+            }
+        },
+        "CreateYardLevelName": {
+            "type": "input",
+            "label": "自建关卡名",
+            "description": "自建关卡时使用的关卡名称。刷点赞模式总是生效；刷游玩币模式仅在「使用收藏关卡 = No」时生效。建议使用纯英数字，`adb shell input text` 对中文支持较差",
+            "inputs": [
+                {
+                    "name": "LevelName",
+                    "label": "关卡名",
+                    "default": "砸罐子",
+                    "verify": "^.{1,20}$",
+                    "pattern_msg": "关卡名长度需为 1~20 个字符"
+                }
+            ],
+            "pipeline_override": {
+                "创意庭院_选择砸罐子_输入名字": {
+                    "action": {
+                        "type": "Shell",
+                        "param": {
+                            "cmd": "input text {LevelName}"
+                        }
+                    }
+                },
+                "创意庭院_砸罐子_输入名字_确认": {
+                    "recognition": {
+                        "param": {
+                            "expected": [
+                                "{LevelName}"
+                            ]
+                        }
+                    }
+                },
+                "创意庭院_砸罐子_关卡名": {
+                    "recognition": {
+                        "param": {
+                            "expected": [
+                                "{LevelName}"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "OCR关卡ID": {
+            "type": "switch",
+            "default_case": "No",
+            "description": "开启后，发布关卡时自动 OCR 记录关卡 ID，搜索关卡时用该 ID 直接输入，替代剪贴板粘贴（无需再保证剪贴板内容）。仅在不使用收藏关卡时生效",
+            "cases": [
+                {
+                    "name": "No"
+                },
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "创意庭院_砸罐子_发布_确定2": {
+                            "next": [
+                                "创意庭院_砸罐子_发布_确定2",
+                                "创意庭院_OCRID"
+                            ]
+                        },
+                        "创意庭院_点击输入": {
+                            "next": [
+                                "创意庭院_InputID"
+                            ]
+                        },
+                        "创意庭院_点击输入_搜索": {
+                            "next": [
+                                "创意庭院_点击输入_搜索_选择关卡",
+                                "创意庭院_InputID"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        "使用收藏关卡": {
+            "type": "switch",
+            "default_case": "No",
+            "description": "使用第一个收藏的关卡",
+            "cases": [
+                {
+                    "name": "Yes",
+                    "pipeline_override": {
+                        "创意庭院_确认自己在创意庭院": {
+                            // 保留分享入口，这样 刷游玩币 + 使用收藏关卡=Yes 时
+                            // 分享开关仍然生效（分享开关关闭时该节点是 enabled:false，
+                            // 框架会跳过它，自然落到 使用收藏的关卡）。
+                            "next": [
+                                "创意庭院_分享_前置检查",
+                                "创意庭院_使用收藏的关卡"
+                            ]
+                        },
+                        "创意庭院_游玩_点赞_确定2": {
+                            "next": [
+                                "创意庭院_游玩_等待结算"
+                            ]
+                        },
+                        "创意庭院_刷币_点击游玩": {
+                            "next": [
+                                "创意庭院_使用收藏的关卡"
+                            ]
+                        },
+                        "创意庭院_游玩_点赞": {
+                            "next": [
+                                "创意庭院_游玩_等待结算"
+                            ]
+                        },
+                        "创意庭院_游玩_可刷取的代币已达上限": {
+                            "next": [
+                                "创意庭院_游玩_收藏_可刷取的代币已达上限"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "No",
+                    "option": [
+                        "CreateYardLevelName"
+                    ]
+                }
+            ]
+        }
+    }
+}
