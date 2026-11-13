@@ -673,7 +673,7 @@ def _focus_level_line(lv: int, known: bool = True,
     ★ known=False 的由来（2026-10-31 用户实报「只有点继续挑战才播报关卡数」）：
       使用**本地作业集**时，option「使用本地作业集」case 只挂了
       `无尽模式_重构` / `无尽挑战_选择世界`，**没有**「无尽_起始关卡」
-      （见 assets/resource/task/Endless_ref/Endless_ref.json）——
+      （见 assets/resource/task/Endless_ref/endless_ref.json）——
       于是 JobSetLoad 拿到的计数器是 0，关卡号要等「无尽挑战_自动计数」
       OCR 主界面「第X关」才知道。这种情况下不能硬播「关卡数:1」，
       否则用户会以为要打第 1 关，必须明说是「待识别」。

@@ -34,25 +34,25 @@
         }
     ],
     "import": [
-        // 根目录 task 下的通用功能
-        "./resource/task/plants_explore_debris.json",
-        "./resource/task/fragment_challenge.json",
-        "./resource/task/get_gold_coins.json",
-        "./resource/task/Start_game/Start_game.json",
-        "./resource/task/Secret_realm.json",
-        "./resource/task/pair_duel.json",
-        "./resource/task/mini_tools.json",
-        "./resource/task/test.json",
-        "./resource/task/video_card.json",
-        // Endless 重构版入口（旧 Endless/* 13 个文件已随重构删除，2026-10-09 清理引用）
-        "./resource/task/Endless_ref/Endless_ref.json", //重构后的无尽入口
-        // 植物探险（重构）：选项按层级拆在 explore 下
-        "./resource/task/explore/explore_select_0_world.json",
-        "./resource/task/explore/explore_select_1_main.json",
-        "./resource/task/explore/explore_select_2_resource.json",
-        "./resource/task/explore/explore_select_3_action.json",
-        //碎片挑战（重构）：选项层级在 fragment_ref 下
-        "./resource/task/fragment_ref.json"
+        // 每个任务一个目录，目录名与 pipeline 同名；单片段为 option.json
+        "./resource/task/explore/plants_explore.json",
+        "./resource/task/Fragment_Challenge/fragment_challenge.json",
+        "./resource/task/get_gold_coins/gold_coins.json",
+        "./resource/task/star_game/start_game.json",
+        "./resource/task/Secret_realm/secret_realm.json",
+        "./resource/task/pair_duel/pair_duel.json",
+        "./resource/task/mini_tools/mini_tools.json",
+        "./resource/task/misc/logs.json",
+        "./resource/task/video_card/video_card.json",
+        // Endless 重构版入口
+        "./resource/task/Endless_ref/endless_ref.json",
+        // 植物探险（重构）：按层级拆分，序号即合并顺序
+        "./resource/task/explore_ref/world.json",
+        "./resource/task/explore_ref/plant.json",
+        "./resource/task/explore_ref/source.json",
+        "./resource/task/explore_ref/action.json",
+        // 碎片挑战（重构）
+        "./resource/task/Fragment_ref/fragment_ref.json"
     ],
     "task": [
         // {

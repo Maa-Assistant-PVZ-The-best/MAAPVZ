@@ -1369,11 +1369,11 @@ try:
     # 已确认的历史隐患（用户 2026-10-22 决定「不用管」）——留着扫描能力，
     # 只豁免这两条已知项；新的异值多写照样 FAIL。
     _KNOWN_BAD18 = {
-        ("get_gold_coins.json", "星系_进入世界.next"),        # 装备街机神器 vs 需要刷的关卡
-        ("Secret_realm.json", "地宫2无尽_第一关_寻找8槽.template"),  # 藤蔓植物 vs 远程植物
+        ("get_gold_coins/gold_coins.json", "星系_进入世界.next"),        # 装备街机神器 vs 需要刷的关卡
+        ("Secret_realm/secret_realm.json", "地宫2无尽_第一关_寻找8槽.template"),  # 藤蔓植物 vs 远程植物
         # 渠道服 vs 应用宝_登录方式：级联 option（选了 tap 服就没有应用宝登录方式可选），
         # 运行时互斥不会同时生效，静态扫描感知不到 → 豁免（2026-10-25 用户确认）
-        ("Start_game.json", "打开pvz_识别登录.next"),
+        ("star_game/start_game.json", "打开pvz_识别登录.next"),
     }
     _bad_all: list = []
     _lost_all: list = []
@@ -1387,6 +1387,7 @@ try:
         if not isinstance(_opts, dict):
             continue
         _scanned += 1
+        _rel = _tf.relative_to(_R18 / "assets" / "resource" / "task").as_posix()
         _writes: dict = {}        # (node, field) -> {写入组: 规范化写入值}
         _param_writes: list = []  # (node, 写入组, 写入键集)
         for _oname, _o in _opts.items():
@@ -1410,22 +1411,22 @@ try:
         for (_nd, _fld), _groups in sorted(_writes.items()):
             # 同值多写 = 无害冗余（replace 后值不变）；**异值多写** 才是事故同款
             if len(_groups) > 1 and len(set(_groups.values())) > 1 \
-                    and (_tf.name, f"{_nd}.{_fld}") not in _KNOWN_BAD18:
-                _bad_all.append(f"{_tf.name}: {_nd}.{_fld} <- {sorted(_groups)}")
+                    and (_rel, f"{_nd}.{_fld}") not in _KNOWN_BAD18:
+                _bad_all.append(f"{_rel}: {_nd}.{_fld} <- {sorted(_groups)}")
         for _nd, _wg, _keys in _param_writes:
             _need = _pipe_static.get(_nd)
             if _need:
                 _miss = _need - _keys
                 if _miss:
                     _lost_all.append(
-                        f"{_tf.name}: {_wg} 写 {_nd} 丢了静态键 {sorted(_miss)}")
+                        f"{_rel}: {_wg} 写 {_nd} 丢了静态键 {sorted(_miss)}")
     check(f"全 task（{_scanned} 个文件）：(节点,字段) 无异值多写入者",
           not _bad_all, "；".join(_bad_all[:5]))
     check("option 写 custom_action_param 均保住 pipe 静态键",
           not _lost_all, "；".join(_lost_all[:5]))
 
     # ---- 本次事故的定点检查：当前世界/起始关卡 分信道 ----
-    _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "Endless_ref.json")
+    _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "endless_ref.json")
     _cases18 = _t18["option"]["无尽挑战_选择世界"]["cases"]
     # ★ 2026-11-01 起「地宫」也是一个 case，但它**故意不写 Plan 双节点**：
     #   地宫跑的是 Secret_realm 任务、不注入「当前世界」（见 HANDOFF §0 地宫无尽）。
