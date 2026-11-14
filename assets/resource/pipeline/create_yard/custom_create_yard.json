@@ -1,6 +1,5 @@
 {
     "创意庭院_点击输入_粘贴": {
-        "max_hit": 3,
         "action": {
             "type": "Custom",
             "param": {
@@ -13,7 +12,6 @@
         ]
     },
     "创意庭院_InputID": {
-        "max_hit": 3,
         "recognition": {
             "type": "DirectHit"
         },

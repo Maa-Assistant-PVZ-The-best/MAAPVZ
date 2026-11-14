@@ -91,7 +91,6 @@
         ]
     },
     "创意庭院_选择砸罐子_确定": {
-        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "确定"
@@ -201,7 +200,6 @@
         ]
     },
     "创意庭院_选择砸罐子_输入名字": {
-        "max_hit": 3,
         "action": {
             "type": "Shell",
             "param": {
@@ -674,12 +672,10 @@
     "创意庭院_游玩_等待15s": {
         "post_delay": 15000,
         "next": [
-            "创意庭院_游玩_点赞", //只有「刷点赞」才启用；刷游玩币时被跳过，直接点罐子
-            "创意庭院_游玩_点罐子"
+            "创意庭院_游玩_点赞"
         ]
     },
     "创意庭院_游玩_点赞": {
-        "enabled": false,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/点赞.png"
