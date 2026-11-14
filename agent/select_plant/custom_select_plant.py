@@ -548,6 +548,10 @@ class SelectPlants(CustomAction):
             slot_limit = max(1, int(param.get("槽位上限", 8)))
             scales = param.get("尺度") or param.get("scales")
             endless_click_gap = int(param.get("局外点击间隔", 150))
+            # 单株模式：列表第 1 株落在「起始槽位」，后续依次 +1
+            start_slot = max(1, int(param.get("起始槽位", 1)))
+            # 选完后是否自己回顶（关掉则保持当前滚动位置）
+            backtop_after = self._to_bool(param.get("选后回顶", True))
 
             # 解析每个目标 -> (中文名, 英文名, 品质, 模板列表, 有效槽位roi)
             targets = []
@@ -614,12 +618,15 @@ class SelectPlants(CustomAction):
                 return CustomAction.RunResult(success=ok)
 
             # ---- 槽位状态：-1=跳过/未用 0=未就绪 1=已就绪 ----
-            slot_done = [False] * min(slot_limit, len(targets))
+            # 单株模式下 targets[0] 对应的是「起始槽位」，所以索引统一加偏移 off。
+            off = start_slot - 1
+            slot_done = [False] * min(slot_limit, off + len(targets))
 
             # ---- 可选：先在选卡界面检查 1..8 槽是否已是对应植物 ----
             if check_slots_first:
                 self._precheck_slots(context, ctl, targets, slot_rois,
-                                     threshold, slot_done, slot_limit, scales)
+                                     threshold, slot_done, slot_limit, scales,
+                                     slot_offset=off)
 
             # ---- 主循环：逐个植物 ----
             # prev_slides = 上一个植物结束时列表下滑了几屏：本植物先看当前帧，
@@ -629,21 +636,22 @@ class SelectPlants(CustomAction):
             prev_slides = 0
             seen_depth = {}
             for i, tgt in enumerate(targets):
-                if i >= slot_limit:
+                si = off + i                      # 绝对槽位下标（0-based）
+                if si >= slot_limit:
                     break
                 if self._stopped(context):
                     return CustomAction.RunResult(success=False)
                 # 已被槽位检查确认就绪 -> 跳过
-                if slot_done[i]:
-                    print(f"[SelectPlants] #{i+1} **{tgt['zh']}** 已在槽位，跳过",
+                if si < len(slot_done) and slot_done[si]:
+                    print(f"[SelectPlants] #{si+1} **{tgt['zh']}** 已在槽位，跳过",
                           file=sys.stderr, flush=True)
                     continue
 
                 # ★ 踩点命中且在上方 -> 先回顶（它在上面，往下滑是纯浪费）
-                if i in seen_depth:
-                    d = seen_depth.pop(i)
+                if si in seen_depth:
+                    d = seen_depth.pop(si)
                     if d < prev_slides:
-                        print(f"[SelectPlants] #{i+1} **{tgt['zh']}** "
+                        print(f"[SelectPlants] #{si+1} **{tgt['zh']}** "
                               f"之前在第 {d} 屏出现过（当前在第 {prev_slides} 屏）"
                               f"-> 先回顶再找", file=sys.stderr, flush=True)
                         self._do_swipe_backtop(ctl, backtop, prev_slides)
@@ -656,32 +664,45 @@ class SelectPlants(CustomAction):
                 #   轮到它时丢「先回顶」提示白滑很多屏；
                 #   盯 3 个每帧多 3 次模板匹配，开销仍可忽略）。
                 watch_targets = []
-                for j in range(i + 1, min(len(targets), slot_limit)):
-                    if not slot_done[j]:
-                        watch_targets.append({"idx": j, "zh": targets[j]["zh"],
+                for j in range(i + 1, min(len(targets), slot_limit - off)):
+                    sj = off + j
+                    if sj < len(slot_done) and not slot_done[sj]:
+                        watch_targets.append({"idx": sj, "zh": targets[j]["zh"],
                                               "templates": targets[j]["templates"]})
                         if len(watch_targets) >= 3:
                             break
 
                 placed, prev_slides = self._find_and_place(
-                    context, ctl, tgt, i, search_roi, verify_roi,
-                    slot_rois[i] if i < len(slot_rois) else None,
-                    slot_xy[i] if i < len(slot_xy) else None,
+                    context, ctl, tgt, si, search_roi, verify_roi,
+                    slot_rois[si] if si < len(slot_rois) else None,
+                    slot_xy[si] if si < len(slot_xy) else None,
                     backtop, swipe, threshold, post_swipe_wait,
                     post_click_wait, sim_threshold, backoff_frames,
                     max_retry, max_slides, verify, scales,
                     start_slide_count=prev_slides,
                     watch_targets=watch_targets, watch_seen=seen_depth)
                 if placed:
-                    slot_done[i] = True
+                    if si < len(slot_done):
+                        slot_done[si] = True
                 else:
                     # ★ 核验失败（放弃）= 直接停止任务（2026-10-07 改）：
                     #   拿错植物硬打还不如立刻失败，让用户去查原因。
-                    print(f"[SelectPlants] #{i+1} **{tgt['zh']}** 核验失败放弃，"
+                    print(f"[SelectPlants] #{si+1} **{tgt['zh']}** 核验失败放弃，"
                           f"直接停止任务", file=sys.stderr, flush=True)
                     return CustomAction.RunResult(success=False)
 
             # ---- 占位填充：滑回最顶后填剩余位置 ----
+            # ---- 选后回顶：单株模式下让下一次调用从列表顶部重新开始找 ----
+            if backtop_after:
+                _ilog(f"选后回顶：按第 {prev_slides} 屏回顶（选后回顶=开）")
+                self._do_swipe_backtop(ctl, backtop, prev_slides)
+                prev_slides = 0
+                if self._stopped(context):
+                    return CustomAction.RunResult(success=False)
+            else:
+                print("[SelectPlants] 选后回顶已关闭，保持当前滚动位置",
+                      file=sys.stderr, flush=True)
+
             # ---- 占位填充：滑回最顶后，依次快速点击填充位置 ----
             # 填充位置 = 用户传入的「填充位置」，未传则用内置默认 DEFAULT_FILL_POSITIONS。
             if not fill_enabled:
@@ -692,9 +713,13 @@ class SelectPlants(CustomAction):
                       file=sys.stderr, flush=True)
             else:
                 # 填充前要回到列表最顶：按最后一个植物的下滑屏数回顶
-                _ilog(f"占位填充：先按第 {prev_slides} 屏回顶，再依次点 "
-                      f"{len(fill_positions) if isinstance(fill_positions, (list, tuple)) else 1} 个填充点")
-                self._do_swipe_backtop(ctl, backtop, prev_slides)
+                # （选后回顶已开时上面已经回过了，这里就不用重复滑）
+                if prev_slides > 0 or not backtop_after:
+                    _ilog(f"占位填充：先按第 {prev_slides} 屏回顶，再依次点 "
+                          f"{len(fill_positions) if isinstance(fill_positions, (list, tuple)) else 1} 个填充点")
+                    self._do_swipe_backtop(ctl, backtop, prev_slides)
+                else:
+                    _ilog("占位填充：列表已在顶部，直接点填充位")
                 if self._stopped(context):
                     return CustomAction.RunResult(success=False)
                 pts = fill_positions if isinstance(fill_positions, (list, tuple)) else [fill_positions]
@@ -917,26 +942,28 @@ class SelectPlants(CustomAction):
 
     # ---- 预先检查 1..N 槽 ----
     def _precheck_slots(self, context, ctl, targets, slot_rois, threshold,
-                        slot_done, slot_limit=8, scales=None):
+                        slot_done, slot_limit=8, scales=None, slot_offset=0):
         img = self._screen(ctl)
         if img is None:
             return
-        _ilog(f"槽位预检查：一帧截图里逐个比 1..{min(slot_limit, len(targets))} 槽"
+        _ilog(f"槽位预检查：一帧截图里逐个比 1..{min(slot_limit, slot_offset + len(targets))} 槽"
               f"（阈值 {threshold:.2f}，尺度 {_fmt_scales(scales)}）")
         for i, tgt in enumerate(targets):
-            if i >= slot_limit:
+            si = slot_offset + i
+            if si >= slot_limit:
                 break
             if self._stopped(context):
                 return
-            sr = slot_rois[i] if i < len(slot_rois) else None
+            sr = slot_rois[si] if si < len(slot_rois) else None
             # 识别过程日志：每槽都打最高分，认不到才知道差多少
             score = self._slot_score(img, tgt["templates"], sr, scales=scales)
             hit = score >= threshold
-            _ilog(f"  槽{i+1}（roi={sr}）**{tgt['zh']}** 最高分 {score:.3f}"
+            _ilog(f"  槽{si+1}（roi={sr}）**{tgt['zh']}** 最高分 {score:.3f}"
                   f"（阈值 {threshold:.2f}）-> {'已就绪' if hit else '未就绪'}")
             if hit:
-                slot_done[i] = True
-                print(f"[SelectPlants] 槽位检查: #{i+1} 已是 **{tgt['zh']}**",
+                if si < len(slot_done):
+                    slot_done[si] = True
+                print(f"[SelectPlants] 槽位检查: #{si+1} 已是 **{tgt['zh']}**",
                       file=sys.stderr, flush=True)
 
     # ---- 关键: 寻找+点击+核对+重试 单个植物 ----
