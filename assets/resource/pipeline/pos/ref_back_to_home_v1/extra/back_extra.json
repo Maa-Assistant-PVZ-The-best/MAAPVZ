@@ -157,6 +157,12 @@
         "expected": [
             "开始游戏"
         ],
+        "roi": [
+            548,
+            550,
+            177,
+            60
+        ],
         "action": "Click",
         "next": [
             "[JumpBack]定位_全局_菊花",
