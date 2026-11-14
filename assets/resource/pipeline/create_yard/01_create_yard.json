@@ -1,43 +1,37 @@
 {
     "创意庭院_前置检查": {
-        "timeout": 10000,
-        "action": "DoNothing",
-        "max_hit": 3,
+        "focus": "创意庭院",
+        "recognition": "DirectHit",
         "next": [
-            "创意庭院点击竞技",
             "创意庭院_确认自己在创意庭院",
             "[JumpBack]定位_不在主界面",
-            "[JumpBack]定位_主界面_非主界面元素"
+            "[JumpBack]定位_主界面_非主界面元素",
+            "导航_创意庭院"
         ]
     },
-    "创意庭院": {
-        "action": "DoNothing",
-        "next": [
-            "创意庭院点击竞技"
-        ]
-    },
-    "创意庭院点击竞技": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "create_yard/竞技.png"
-        ],
-        "action": "Click",
-        "next": [
-            "点击创意庭院",
-            "创意庭院点击竞技"
-        ]
-    },
-    "点击创意庭院": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "create_yard/创意庭院.png"
-        ],
-        "action": "Click",
+    "导航_创意庭院": { //rab：点竞技 → 点创意庭院入口 → 回确认
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "导航_点击竞技",
+            "pipe_over": {
+                "导航_点击竞技": {
+                    "next": [
+                        "[JumpBack]定位_全局_菊花",
+                        "[JumpBack]定位_全局_服务器通讯中",
+                        "导航_创意庭院_点击"
+                    ]
+                }
+            }
+        },
         "next": [
             "创意庭院_确认自己在创意庭院"
         ]
     },
     "创意庭院_确认自己在创意庭院": {
+        // 每轮入口：清零自重试节点的命中次数，让它们的 max_hit 变成「单轮上限」（agent/create_yard_hits.py）
+        "action": "Custom",
+        "custom_action": "CreateYardResetHits",
         "recognition": "OCR",
         "expected": [
             "创作关卡"
@@ -97,6 +91,7 @@
         ]
     },
     "创意庭院_选择砸罐子_确定": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "确定"
@@ -170,6 +165,7 @@
         ]
     },
     "创意庭院_选择砸罐子_设置名字": {
+        "max_hit": 5,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/设置名字.png"
@@ -181,6 +177,7 @@
         ]
     },
     "创意庭院_选择砸罐子_输入名字_点击白框": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "关卡名称设置"
@@ -204,6 +201,7 @@
         ]
     },
     "创意庭院_选择砸罐子_输入名字": {
+        "max_hit": 3,
         "action": {
             "type": "Shell",
             "param": {
@@ -381,6 +379,7 @@
         ]
     },
     "创意庭院_砸罐子_局内_点罐子": {
+        "max_hit": 40,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/罐子.png"
@@ -413,6 +412,7 @@
         ]
     },
     "创意庭院_砸罐子_局内_结算": {
+        "max_hit": 10,
         "recognition": "OCR",
         "expected": [
             "继续"
@@ -431,6 +431,7 @@
         ]
     },
     "创意庭院_砸罐子_发布_点击关卡": {
+        "max_hit": 5,
         "recognition": {
             "type": "And",
             "param": {
@@ -449,6 +450,7 @@
         ]
     },
     "创意庭院_砸罐子_发布": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "发布"
@@ -466,6 +468,7 @@
         ]
     },
     "创意庭院_砸罐子_发布_确定": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "确定"
@@ -483,6 +486,7 @@
         ]
     },
     "创意庭院_砸罐子_发布_确定2": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "确定"
@@ -522,6 +526,7 @@
         ]
     },
     "创意庭院_砸罐子_发布_关闭": {
+        "max_hit": 5,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/叉叉.png"
@@ -539,6 +544,7 @@
         ]
     },
     "创意庭院_点击游玩": {
+        "max_hit": 5,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/创意庭院_游玩.png"
@@ -556,6 +562,7 @@
         ]
     },
     "创意庭院_点击搜索": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "搜索"
@@ -589,6 +596,7 @@
         ]
     },
     "创意庭院_点击输入_搜索": {
+        "max_hit": 3,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/搜索_放大镜.png"
@@ -606,6 +614,7 @@
         ]
     },
     "创意庭院_点击输入_搜索_选择关卡": {
+        "max_hit": 5,
         "action": "Click",
         "recognition": "OCR",
         "expected": [
@@ -623,6 +632,7 @@
         ]
     },
     "创意庭院_点击输入_搜索_选择关卡_挑战": {
+        "max_hit": 5,
         "recognition": "OCR",
         "expected": [
             "挑战"
@@ -664,10 +674,12 @@
     "创意庭院_游玩_等待15s": {
         "post_delay": 15000,
         "next": [
-            "创意庭院_游玩_点赞"
+            "创意庭院_游玩_点赞", //只有「刷点赞」才启用；刷游玩币时被跳过，直接点罐子
+            "创意庭院_游玩_点罐子"
         ]
     },
     "创意庭院_游玩_点赞": {
+        "enabled": false,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/点赞.png"
@@ -733,6 +745,7 @@
         ]
     },
     "创意庭院_游玩_点罐子": {
+        "max_hit": 40,
         "recognition": "TemplateMatch",
         "template": [
             "create_yard/罐子.png"
@@ -783,6 +796,7 @@
         ]
     },
     "创意庭院_游玩_结算": {
+        "max_hit": 10,
         "recognition": "OCR",
         "expected": [
             "继续",
