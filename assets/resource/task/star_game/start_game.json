@@ -1,6 +1,8 @@
 {
     "option": {
-        "存档覆盖进度": {
+        "全局_存档覆盖进度": {
+            "label": "存档覆盖进度",
+            "description": "影响你的存档覆盖进度",
             "type": "select",
             "cases": [
                 {
