@@ -317,7 +317,7 @@
             "description": "选择游戏渠道服与高级设置",
             "option": [
                 "渠道服",
-                "全局_存档覆盖进度",
+                "全局_存档覆盖进度"
             ],
             "default_expand": true
         },

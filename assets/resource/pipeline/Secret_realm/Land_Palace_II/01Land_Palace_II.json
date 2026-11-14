@@ -95,24 +95,14 @@
         ]
     },
     "地宫2无尽_检查天数_选向日葵": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "land_gong_one/向日葵.png"
-        ],
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "植物列表": [
+                "向日葵"
+            ]
+        },
         "focus": "请不要关闭任务，这一步是在检查天数！",
-        "roi": [
-            139,
-            330,
-            610,
-            365
-        ],
-        "target_offset": [
-            0,
-            0,
-            -20,
-            -20
-        ],
-        "action": "Click",
         "next": [
             "地宫2无尽_识别_开始战斗"
         ]

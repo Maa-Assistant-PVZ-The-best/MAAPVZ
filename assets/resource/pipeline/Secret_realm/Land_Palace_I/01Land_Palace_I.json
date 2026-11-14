@@ -121,24 +121,14 @@
         ]
     },
     "地宫1无尽_检查天数_选向日葵": {
-        "recognition": "TemplateMatch",
-        "template": [
-            "land_gong_one/向日葵.png"
-        ],
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "植物列表": [
+                "向日葵"
+            ]
+        },
         "focus": "请不要关闭任务，这一步是在检查天数！",
-        "roi": [
-            139,
-            330,
-            610,
-            365
-        ],
-        "target_offset": [
-            0,
-            0,
-            -20,
-            -20
-        ],
-        "action": "Click",
         "next": [
             "地宫1无尽_识别_开始战斗"
         ]
@@ -242,155 +232,24 @@
             -20,
             -20
         ],
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找双发"
-        },
         "pre_wait_freezes": 500,
         "action": "Click",
         "next": [
-            "滑回最顶上"
+            "地宫1无尽_第一关_寻找植物"
         ]
     },
-    "地宫1无尽_第一关_寻找双发": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找蓓蕾"
+    "地宫1无尽_第一关_寻找植物": {
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "植物列表": [
+                "双重射手",
+                "阳光豆",
+                "变身茄子",
+                "机枪豌豆",
+                "草垛"
+            ]
         },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/双发.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找蓓蕾": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找茄子"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/阳光蓓蕾.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找茄子": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_初始寻找机枪"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/变身茄子.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_初始寻找机枪": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_初始寻找草垛"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "General/plant/机枪射手.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_初始寻找草垛": {
-        "anchor": {
-            "下一个寻找的植物": ""
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "General/plant/草皮.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
         "post_wait_freezes": 1000,
         "next": [
             "地宫1无尽_点击开始战斗"
@@ -480,243 +339,27 @@
             104,
             35
         ],
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找机枪"
-        },
         "threshold": 0.75,
         "action": "Click",
         "next": [
-            "滑回最顶上"
+            "地宫1_选植物_切换配置"
         ]
     },
-    "地宫1无尽_第一关_寻找机枪": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找双发2"
+    "地宫1_选植物_切换配置": {
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "植物列表": [
+                "机枪豌豆",
+                "双重射手",
+                "向日葵",
+                "火炬树桩",
+                "南瓜头",
+                "草垛",
+                "变身茄子",
+                "黄金蓓蕾"
+            ]
         },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/机枪.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找双发2": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找3槽位"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/双发.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找3槽位": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找火炬"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "Land_gong_two/向日葵.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找火炬": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找南瓜罩"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "land_gong_one/树桩.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找南瓜罩": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找草垛"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "land_gong_one/南瓜罩.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找草垛": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找茄子草垛"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "land_gong_one/种植草皮.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找茄子草垛": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找蓓蕾1"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "land_gong_one/变身茄子.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
-        "next": [
-            "滑回最顶上"
-        ]
-    },
-    "地宫1无尽_第一关_寻找蓓蕾1": {
-        "anchor": {
-            "下一个寻找的植物": "地宫1无尽_第一关_寻找蓓蕾1"
-        },
-        "recognition": "TemplateMatch",
-        "roi": [
-            53,
-            285,
-            796,
-            437
-        ],
-        "template": [
-            "land_gong_one/阳光蓓蕾.png"
-        ],
-        "target_offset": [
-            17,
-            0,
-            0,
-            0
-        ],
-        "action": "Click",
-        "threshold": [
-            0.8
-        ],
-        "post_wait_freezes": 1000,
         "next": [
             "地宫1无尽_识别_开始战斗"
         ]
