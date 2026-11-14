@@ -1,4 +1,5 @@
 {
+    //存留仅仅是因为双人对决还需要这玩意，还有旧版的碎片挑战
     "返回主界面": {
         "timeout": 30000,
         "recognition": "TemplateMatch",
@@ -69,7 +70,7 @@
             "确认当前是否在主界面"
         ]
     },
-    "检查当前是否在主界面": {
+    "检查当前是否在主界面": { //排查完毕，剩下需要改的都是task或者已经废弃的task
         "timeout": 5000,
         "recognition": "TemplateMatch",
         "template": [
