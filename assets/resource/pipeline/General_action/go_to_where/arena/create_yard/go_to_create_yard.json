@@ -1,0 +1,10 @@
+{
+    "导航_创意庭院_点击": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "create_yard/创意庭院.png"
+        ],
+        "action": "Click",
+        "next": []
+    }
+}

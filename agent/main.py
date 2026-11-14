@@ -36,6 +36,8 @@ import select_plant
 import create_yard_id  # noqa: F401
 # 创意庭院「分享到抖音」：点开关卡卡片并发布（ShareClickLevelPublish）
 import share_publish  # noqa: F401
+# 创意庭院：每轮入口清零自重试节点的命中次数（CreateYardResetHits）
+import create_yard_hits  # noqa: F401
 # 无尽挑战重构：作业集运行时（JobSetLoad / JobSetLevel / JobSetSlot ...）
 import jobset.runtime  # noqa: F401
 # 自动获取广告的ui位置，采用获取控件树的方式

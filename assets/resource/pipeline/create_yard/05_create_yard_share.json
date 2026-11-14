@@ -10,139 +10,56 @@
         "enabled": true,
         "max_hit": 1,
         "next": [
-            "创意庭院_分享_创建关卡",
-            "创意庭院_分享_创建关卡_滑动"
+            "创意庭院_分享_建关"
         ]
     },
 
-    "创意庭院_分享_创建关卡_滑动": {
-        // 沿用普通创建的滑动参数，滑动后仍进入分享链，避免跳到刷币或刷赞流程。
-        "action": "Swipe",
-        "begin": [660, 557, 7, 1],
-        "end": [634, 205, 7, 4],
-        "repeat": 10,
-        "duration": 10,
-        "post_wait_freezes": 500,
-        "max_hit": 1,
-        "next": ["创意庭院_分享_创建关卡"]
-    },
-
-    "创意庭院_分享_创建关卡": {
-        "recognition": "TemplateMatch",
-        "template": ["create_yard/创建关卡.png"],
-        "action": "Click",
-        "post_delay": 1000,
-        "next": ["创意庭院_分享_选择砸罐子"]
-    },
-
-    "创意庭院_分享_选择砸罐子": {
-        "recognition": "TemplateMatch",
-        "template": ["create_yard/砸罐子.png"],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 1000,
-        "next": ["创意庭院_分享_选择砸罐子_确定"]
-    },
-
-    "创意庭院_分享_选择砸罐子_确定": {
-        "recognition": "OCR",
-        "expected": ["确定"],
-        "roi": [590, 523, 129, 48],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 800,
-        "next": ["创意庭院_分享_选择植物"]
-    },
-
-    "创意庭院_分享_选择植物": {
-        "action": "Click",
-        "target": [209, 97, 9, 13],
-        "post_delay": 800,
-        "next": ["创意庭院_分享_选择植物_植物"]
-    },
-
-    "创意庭院_分享_选择植物_植物": {
-        "action": "Click",
-        "target": [632, 396, 16, 14],
-        "post_delay": 800,
-        "next": ["创意庭院_分享_选择植物_坚果"]
-    },
-
-    "创意庭院_分享_选择植物_坚果": {
-        "recognition": "TemplateMatch",
-        "template": ["create_yard/植物_坚果_新版.png"],
-        "roi": [381, 328, 539, 273],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 800,
-        "next": ["创意庭院_分享_选择植物_坚果_确定"]
-    },
-
-    "创意庭院_分享_选择植物_坚果_确定": {
-        "recognition": "OCR",
-        "expected": ["确定"],
-        "roi": [567, 547, 152, 75],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 800,
-        "next": ["创意庭院_分享_设置名字"]
-    },
-
-    "创意庭院_分享_设置名字": {
-        "recognition": "TemplateMatch",
-        "template": ["create_yard/设置名字.png"],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 800,
-        "next": ["创意庭院_分享_点击名字白框"]
-    },
-
-    "创意庭院_分享_点击名字白框": {
-        // 限制重复输入，避免回跳后把关卡名追加到已有文字后面。
-        "recognition": "OCR",
-        "expected": ["关卡名称设置"],
-        "roi": [525, 165, 230, 50],
-        "action": "Click",
-        "target": [523, 342, 3, 8],
-        "timeout": 8000,
-        "max_hit": 1,
-        "post_delay": 800,
-        "next": ["创意庭院_分享_输入名字"]
-    },
-
-    "创意庭院_分享_输入名字": {
-        // 使用英文关卡名以兼容 Android input text；保留键盘确认的回跳分支。
-        "action": {
-            "type": "Shell",
-            "param": {
-                "cmd": "input text share"
+    "创意庭院_分享_建关": {
+        // 复用主流程的建关链（创建关卡 → 选砸罐子 → 选坚果 → 起名 → 关配置窗），
+        // 只在这次子跑里把关卡名换成 share；走到「创意庭院_砸罐子_挑战」之前截断，
+        // 回到本节点后由分享链自己找 share 卡片（share.png）继续。
+        // 不给本节点加 max_hit：run 指向自己时子跑会再进一次本节点；防重入靠 前置检查 的 max_hit。
+        "action": "Custom",
+        "custom_action": "run_and_back",
+        "custom_action_param": {
+            "run": "创意庭院_分享_建关",
+            "back": "创意庭院_砸罐子_挑战",
+            "pipe_over": {
+                "创意庭院_分享_建关": {
+                    "next": [
+                        "创意庭院_创建关卡",
+                        "创意庭院_创建关卡_滑动"
+                    ]
+                },
+                "创意庭院_选择砸罐子_输入名字": {
+                    // 使用英文关卡名以兼容 Android input text
+                    "action": {
+                        "type": "Shell",
+                        "param": {
+                            "cmd": "input text share"
+                        }
+                    }
+                },
+                "创意庭院_砸罐子_输入名字_确认": {
+                    "recognition": {
+                        "param": {
+                            "expected": [
+                                "share"
+                            ]
+                        }
+                    }
+                },
+                "创意庭院_选择砸罐子_关闭": {
+                    // 关窗后给「自动配置」提示一点出现的时间，否则截断桩会先命中
+                    "post_delay": 1500
+                }
             }
         },
-        "post_delay": 800,
         "next": [
-            "创意庭院_分享_输入名字_确认",
-            "创意庭院_分享_点击名字白框",
-            "[JumpBack]创意庭院_Input_AndroidConfirm"
+            "创意庭院_分享_卡片_点分享_挑战",
+            "创意庭院_分享_回到列表页",
+            "创意庭院_分享_系统提示_自动配置"
         ]
-    },
-
-    "创意庭院_分享_输入名字_确认": {
-        // 输入成功后直接进入确认链，避免回跳再次输入。
-        "recognition": "OCR",
-        "expected": ["share"],
-        "roi": [425, 281, 441, 123],
-        "post_delay": 500,
-        "next": ["创意庭院_分享_输入名字_点确定"]
-    },
-
-    "创意庭院_分享_输入名字_点确定": {
-        "recognition": "OCR",
-        "expected": ["确定"],
-        "roi": [416, 447, 140, 66],
-        "action": "Click",
-        "timeout": 8000,
-        "post_delay": 1200,
-        "next": ["创意庭院_分享_关闭设置窗"]
     },
 
     "创意庭院_分享_系统提示_自动配置": {
@@ -238,9 +155,9 @@
         "template": ["create_yard/罐子.png"],
         "roi": [1126, 79, 136, 586],
         "action": "Click",
-        "timeout": 15000,
+        "timeout": 7000,
         "max_hit": 6,
-        "post_delay": 1200,
+        "post_delay": 250,
         "next": [
             "创意庭院_分享_挑战_点罐子",
             "创意庭院_分享_挑战_等待结算"
@@ -269,22 +186,6 @@
         "next": [
             "创意庭院_分享_挑战_结算",
             "创意庭院_分享_点关卡并发布"
-        ]
-    },
-
-    "创意庭院_分享_关闭设置窗": {
-        "recognition": "OCR",
-        "expected": ["当前配置"],
-        "roi": [300, 120, 680, 60],
-        "action": "Click",
-        "target": [1066, 30, 24, 16],
-        "timeout": 8000,
-        "max_hit": 2,
-        "post_delay": 1500,
-        "next": [
-            "创意庭院_分享_卡片_点分享_挑战",
-            "创意庭院_分享_回到列表页",
-            "创意庭院_分享_系统提示_自动配置"
         ]
     },
 

@@ -22,7 +22,6 @@ open_wait    点卡片后等详情页出现的秒数，默认 6
 confirm_wait 点发布后等「确定」弹窗的秒数，默认 6
 """
 
-import json
 import sys
 import time
 from pathlib import Path
@@ -32,6 +31,8 @@ from maa.agent.agent_server import AgentServer
 from maa.context import Context
 from maa.custom_action import CustomAction
 
+from create_yard_id import _parse_param
+
 
 def _log(msg: str) -> None:
     print(f"[SharePublish] {msg}", file=sys.stderr, flush=True)
@@ -40,27 +41,6 @@ def _log(msg: str) -> None:
 # ===========================================================================
 # 参数与结果解析
 # ===========================================================================
-
-def _parse_param(raw: Any) -> Dict[str, Any]:
-    """宽松解析 custom_action_param（dict / JSON 串 / 双层 JSON 串 / 空）。"""
-    if isinstance(raw, dict):
-        return raw
-    if isinstance(raw, str):
-        s = raw.strip()
-        if len(s) >= 2 and s.startswith('"') and s.endswith('"'):
-            s = s[1:-1]
-        for _ in range(2):
-            try:
-                data = json.loads(s)
-            except Exception:
-                return {}
-            if isinstance(data, dict):
-                return data
-            if not isinstance(data, str):
-                return {}
-            s = data
-    return {}
-
 
 def _get(res: Any, name: str) -> Any:
     """同时兼容对象属性与 dict 取值。"""
@@ -270,7 +250,6 @@ class ShareClickLevelPublish(CustomAction):
             if img is None:
                 continue
             # 先看「已发布」，避免「已发布」被当成「发布」
-            detail = self._ocr(context, img, f"{self.NAME}_Btn", publish_roi)
             joined = "".join(self._texts(context, img, f"{self.NAME}_Btn", publish_roi))
             if "已发布" in joined:
                 state = "已发布"
