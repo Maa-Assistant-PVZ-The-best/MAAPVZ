@@ -115,6 +115,14 @@
 | **runtime** | `_need_plant_fill()` + `_inject_artifact` 里改写 `无尽_选择编队.next` / `无尽挑战_植物补位.next`（补位后仍能接神器） |
 | **每次换表检查** | 判定放在 `_inject_artifact` —— 它是 `_apply_table → _inject_lineup → _inject_artifact` 这条换表必经链的末点 |
 
+**2026-11-02 追加（P0 收官：`jobPinSteps` 身份换 sid ＋ 等待撤回 ＋ 文档订正）**：
+
+| 改动 | 说明 |
+| --- | --- |
+| **`jobPinSteps` 身份换地基** | 从「钉落点对象引用」改成「钉稳定 `sid`」，对象引用只作 sid 算不出来时的兜底 → `gidx` 彻底降级为「写兼容字段 `picked` 的下标」。§4.7 那两条边界（标记滑位 / 悬空键）全部关闭，**P0 正式收官**。验证 `fuzz_drag 500×150` 0 首错 |
+| **「等待」预留项撤回** | 上一轮把它实现成 `pre_delay` 注入能跑通，但**用户决定先不要**（2026-11-02），代码已整体回滚：`implemented` 回到 `false`、`pre_battle_dsl` 回到恒空、`_inject_pre_battle_wait` 删除。两条实现路子记在 §10.10-B 第 1 行备查 |
+| **文档订正 4 处** | ①§5 键列表补上 `special_tables`（原写「5 个键」）②§4.6「sids 必须两边一起改」被 §4.55 推翻（Python 不用改）③§10.7-G 的 P0 标「全部收官」、P1 轻量版已做/彻底版未做、P2 P3 已做、P4 不做 ④§10.21-F 的 5 条未验证 → 用户实测「没啥问题」（原文保留备查） |
+
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
 | 功能 | 说明 | 位置 |
@@ -492,20 +500,27 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   //   分组（「选择标签」弹窗的小标题）只活在网页端界面。
   //   ★ 纯标注：不参与运行时、也不给植物备注分套
   "tags": ["开僵尸场外加速", "氪佬", "需要月卡"],
-  // ★★ 预留接口（2026-11-01，只留接口不写实现，详见 §10.10）——
-  //   下面这 5 个键**现在恒为默认值**（还没做界面能改它们），
-  //   旧作业集没有它们，读进来 = 未启用 = 行为不变。
+  // ★★ 预留接口（2026-11-01 建，2026-11-02 追加 special_tables —— 详见 §10.10）——
+  //   **作业集级 4 个 + 表级 3 个**（表级见下面 tables 里）；**全部恒为默认值**
+  //   （还没有界面能改它们），旧作业集没有它们，读进来 = 未启用 = 行为不变。
+  //   ⚠️ 「开局前动作 → 等待」曾实现过（pre_delay 方案），用户决定先不要、已回滚，
+  //      所以这里仍然是「存得住但不会执行」。
   "reserved_version": 1,
   "world_chains": { "enable": false, "items": [] },        // 世界作业链（按世界换阵容）
   "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },  // 正赛检查
+  "special_tables": {                                       // 特殊表（满足触发条件 -> 换表）
+    "enable": false,
+    "triggers": { "restart": 0, "fail": 0 },                // 0 = 该条件不参与
+    "table": 0, "side": "both", "use": "once"               // once = 打一次就回原表
+  },
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
     "slots": { "1": "粉丝心...", ... },
-    // ---- 表级预留字段（同上：接口在、功能不在；side = both|normal|boss）----
-    "pre_battle": [{ "id": "wait", "side": "both", "ms": 3000 }],  // 开局前额外动作
-    "pick_favorite": false,                                        // 选卡同时标收藏
-    "pick_tiers": { "1": 5 },                                      // 选卡时自由切换阶数
+    // ---- 表级预留字段（side = both|normal|boss；全部「存得住但不执行」）----
+    "pre_battle": [{ "id": "wait", "side": "both", "ms": 3000 }],  // 开局前额外动作（未实现）
+    "pick_favorite": false,                                        // 选卡同时标收藏（未实现）
+    "pick_tiers": { "1": 5 },                                      // 选卡时自由切换阶数（未实现）
     // 三条链的顺序（拖动 chip 调整）
     "slotOrder": [{key, from, to, picked?, order?}],
     "loopOrder": [...], "endOrder": [...],
@@ -1620,13 +1635,13 @@ node game_assist_tools\endless_setup\tests\repro_slot_compact.js  # 槽位压实
 > 2026-10-30 审计结论，按「风险 / 价值」排的，用户已认可这个顺序。
 > ⚠️ 动手前先问一句用户现在要做哪个，别自己全做。
 
-| 级别 | 事项 | 关键位置 | 风险 | 说明 |
+| 级别 | 事项 | 关键位置 | 状态 | 说明 |
 | --- | --- | --- | --- | --- |
-| P0 | **链条段身份从"位置下标"改成"稳定 id"** | `24-jobset-fields.js` 的 `jobSegPlacements`、`27` 的 `jobStepsToSegs/jobSegsToSteps` | **高**（§9.2 修过 6 个同族 bug） | `picked/gidx` 是**该槽内部**的位置下标，任何落点增减都会滑位；这是"拖拽串位/撤销错乱"整族的根。必须用 `tests/fuzz_drag.js` 兜 |
-| P1 | **触摸端可用**（安卓 Web 已适配，但拖拽全废） | 链条块 / 补给卡 / 布局涂抹走 HTML5 `draggable`；全仓零 pointer 事件 | 中 | 轻量版：链条 chip 与补给卡加「↑/↓ 移一位、移到首/尾」（约 80 行，手机立刻能用）。彻底版：改 Pointer Events（约 300 行，跑 fuzz） |
-| P2 | **未保存改动防护** | 全仓无 dirty 标记、无 `beforeunload` | 低 | 本地缓存 300ms 自动存，但**写回作业集文件必须手点 💾**；切作业集/新建/删除前该做 confirm，顶部该显示「● 有未保存改动」 |
-| ~~P3~~ **已做** | ~~**拆分 `27-jobset-board.js`**~~（2026-11-02 已拆成 27a~27f，见 §1）（183KB / 3800+ 行） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器全在一个文件 | 中 | 纯搬移，只减未来 bug；放 P0 之后做，避免在巨型文件里二次改结构 |
-| P4 | boss 关交互小优化 | `27` 的槽位胶囊 | 低 | 给"已独立化的 boss 槽"加个 🔒 角标，让「落子即固化」这件事看得见 |
+| ~~P0~~ **已做** | ~~**链条段身份从"位置下标"改成"稳定 id"**~~ | `24` 的 `jobSegPlacements`、`27a` 的 `jobStepsToSegs/jobSegsToSteps` | ✅ **全部收官**：步骤带 `sid` + 段里写 `sids`（§10.20 第一/二步）＋ 清 `waitAfter` 悬空键（第三步）＋ `jobPinSteps` 身份换成 sid（§4.6）。`fuzz_drag 500×150` 0 首错 | — |
+| P1 | **触摸端可用**（安卓 Web 已适配，但拖拽全废） | 链条块 / 补给卡 / 布局涂抹走 HTML5 `draggable`；全仓零 pointer 事件 | **轻量版 ✅ 已做**（§10.12 的 `↑/↓`、`←/→`，已覆盖链条与补给卡）；**彻底版未做** | 彻底版 = 改 Pointer Events（约 300 行，要跑长 fuzz）。属于单独一轮 |
+| ~~P2~~ **已做** | ~~**未保存改动防护**~~ | ~~全仓无 dirty 标记、无 `beforeunload`~~ | ✅ `45-jobset-dirty.js`（§10.16） | 脏标记 / `beforeunload` / 三入口确认 / 顶部胶囊 |
+| ~~P3~~ **已做** | ~~**拆分 `27-jobset-board.js`**~~（2026-11-02 已拆成 27a~27f，见 §1） | 链条 / 落子 / 快捷键 / 自动滚动 / 植物选择器 | ✅ | 纯搬移，只减未来 bug |
+| P4 | boss 关交互小优化 | `27d` 的槽位胶囊 | **不做**（2026-11-02 用户明确说「那不需要加 🔒」） | 原设想：给「已独立化的 boss 槽」加 🔒 角标让「落子即固化」看得见；用户评估后认为不需要 |
 
 ---
 
@@ -1909,7 +1924,7 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 
 | # | 功能（用户原话） | 数据字段 | 导出键 | 实现时的挂钩点 | 状态 |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 等待（等待指定时间再开） | `t.preBattle[]` `id:'wait'` `ms` | `pre_battle` | 选卡终点→开始战斗之间插链，见 C | 未实现 |
+| 1 | 等待（等待指定时间再开） | `t.preBattle[]` `id:'wait'` `ms` | `pre_battle` | 两条路任选：**a)** 注入「开始战斗」节点的 `pre_delay`（不碰 next、与神器闸门零冲突，只能表达「开战前等 N 毫秒」）；**b)** 按 §10.10-E 在选卡终点与开始战斗之间插一条链。<br>⚠️ 2026-11-02 把 a) **完整实现过并过了门禁，但用户决定先不要，已整体回滚**（见 §11） | 未实现 |
 | 2 | 刷僵尸（技术力未到） | `id:'spawn'` `times` | `pre_battle` | 同上 + coords 新键（手法待实测） | 未实现 |
 | 3 | 切换僵尸场外加速 | `id:'zombieSpeed'` `on` | `pre_battle` | 同上（开关点击/状态识别） | 未实现 |
 | 4 | 自动刷新下一波 | `id:'refreshWave'` `on` | `pre_battle` | 同上 | 未实现 |
@@ -2747,30 +2762,30 @@ jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
 - 判定：键能拆成 `mode|槽|r,c|seq` 时，在两块棋盘上都找不到该落点就删；**认不出来的键一律保留**（不敢删）
 - 回归：`repro_sid` 第 6 节 —— 悬空键被清、有效键与「认不出来的键」都保留
 
-### 4.6 剩余的收尾工作（下一轮做，含跨语言面）
+### 4.6 剩余的收尾工作（⚠️ 本节已被 §4.55 修正，别再照原计划做）
 
-⚠️ **这不是纯编辑器内部的活** —— 段存储是**编辑器写、Python 读**的共享格式：
+> **2026-11-02 订正**：本节原先写着「段存储换成 sids 必须**两边一起改**
+> （Python 优先读 `sids` 且兼容旧 `picked`）」—— **这个判断是错的**，已被
+> **§4.55** 的勘察推翻：Python 侧读的是导出后的 `non_boss.*_chain[*].cells`
+> （格子名，本来就稳定），**根本不看 `slotOrder` / `picked`**。
+> 所以 `sids` 只需编辑器写、Python 一字不动（§4.55 已落地并验过真实作业集）。
 
-| 端 | 文件 | 依赖什么 |
-| --- | --- | --- |
-| 编辑器 | `27a-jobset-steps.js`（`jobSegsToSteps` / `jobStepsToSegs` / `jobStoreSteps`） | 写 `picked/from/to` 下标 |
-| Python | `agent/jobset/dsl.py`（读 `from`/`to`/`key`/`ms`/`slot`/`times`/`comboMs`/`comboWatch`） | 按下标取落点 |
-| Python | `agent/jobset/compile.py`（`noint` 分组等） | 同上 |
+**真正剩下的只有一件 —— 已做（2026-11-02）**：
 
-所以「段存储换成 sids」这一步必须**两边一起改**：编辑器写 `sids`、Python 优先读 `sids` 且兼容旧 `picked`，
-再补 `selfcheck.py` 的断言。`tests/repro_registry.js` 第 9 节已经把字段名契约钉住了 ——
-**动手时先在那里加 `sids`，再改代码**。
+| 事项 | 结果 |
+| --- | --- |
+| **`jobPinSteps` 身份换地基** | ✅ **已完成**：实现从「钉落点对象引用」换成「钉稳定 sid」（`jobSidOfPlacement` = 链\|槽\|r,c\|seq），对象引用只留作 sid 算不出来时的兜底。<br>**函数本身保留**（3 个调用点仍需要「变动后按身份把步骤对回落点 + 剔除失效步骤」这个能力），退役的是**它背后那套 gidx/引用身份**：现在 `gidx` 退化成「写兼容字段 `picked` 用的下标」，算错也不影响身份（`jobSegPlacements` 见到 `sids` 就按 sid 找落点）→ §4.7 边界 2「删落点后无间隔组标记滑到别人头上」从根上消失。<br>验证：11 套 `repro_*.js` 全绿 + `fuzz_drag 500×150` 0 首错。 |
 
 ### 4.7 已知边界（先记着，别当没有）
 
 1. **同格同槽两个落点 `seq` 相同** → sid 会撞成同一个。正常数据不会出现（`jobNextSeq` 保证递增），
    但**手改 JSON** 可能造出来；真遇到时行为是「这两株被当成同一株」（勾选会一起动）。
    如果要彻底防，得在 sid 里加“同 sid 内第几个”——但那又引入位置依赖，所以**故意不做**，先记录。
-2. **段存储这一轮没动**，所以 `picked/noint/times` 仍是位置下标：
-   「删落点后无间隔组标记滑到别人头上」这一类**仍可能发生**，现在靠 `jobPinSteps`（先钉引用再改）兜着。
-   只做完 4.6 才能退役这个补丁。
-3. `waitAfter` 的键虽然也是 `jobPlacementKey`（同源），但**删落点时仍然没人清理**它 ——
-   等段存储换成 sids 后再一起做「删落点 → 清悬空键」。
+2. ~~**段存储这一轮没动**，所以 `picked/noint/times` 仍是位置下标…~~
+   **✅ 2026-11-02 已解决**：段里已写 `sids`（§4.55），`jobPinSteps` 的身份也换成 sid（§4.6）——
+   `picked` 现在只是**兼容字段**，算错也不影响身份。「删落点后无间隔组标记滑到别人头上」不再可能。
+3. ~~`waitAfter` 的键虽然也是 `jobPlacementKey`（同源），但**删落点时仍然没人清理**它~~
+   **✅ 2026-11-02 已解决**：`jobPruneWaitAfter()` 在 `jobStoreSteps`（链条唯一写盘出口）里清悬空键，见 §4.57。
 
 ### 5. 下次开工前需要准备
 
@@ -2874,6 +2889,13 @@ NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中";  JB_COMM = "[JumpBack]"
 
 ### F. ⚠️ 未验证 / 待实测（真机跑了才知道）
 
+> **2026-11-02 用户实测反馈：下面 5 条「基本上都测了，没啥问题」。**
+> 保留原文备查（这些坑在**新增神器 / 改文案 / 加卡片**时会再次出现）：
+> ①`artifacts.json` 是手抄的 → 以后加新神器仍要顺手核对 desc 与游戏文案；
+> ② 长句折行 → 若将来某件神器文案更长，再给算法加「超 10 字追加中心切片」；
+> ③ 全局「服务器通讯中」含单字「服」的误命中 → 真抖动就新建严格版节点；
+> ④ 局内两个开关与开局前是否同一处；⑤ 编队满 8 + 作业集只写 3 株时占位填充会不会乱点。
+
 1. **`artifacts.json` 的 `desc` 与游戏内实际文案是否一致** —— 对不上的神器会一直认不到，
    表现为走「神器_未找到」兜底（保持原装备开打，不换）。逐条实测后可能要校正 desc。
 2. **长句可能被折行切断**（棱镜塔 17 字、全息 18 字）。若实测认不到，再给
@@ -2964,6 +2986,59 @@ def _need_plant_fill(table, is_boss) -> bool:
 ---
 
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（P0 收官：`jobPinSteps` 身份换 sid ＋ 等待撤回）**：
+
+```
+node --check static\js\27a-jobset-steps.js     → OK
+编辑器 11 套 repro_*.js                        → 全过
+node tests\fuzz_drag.js 500 150                → **500 会话 × 150 操作，0 个会话有首错**（P0 收官的判定性验证）
+node tests\repro_reserved.js                   → 全过（等待已撤回：implemented 全 false / 编译恒空）
+selfcheck.py §22                               → 全 OK（同上，回到「全部未实现」口径）
+⚠️ selfcheck 全局仍 exit 1，唯一 FAIL 是**预存在**的「异值多写入者」
+   （create_yard.json + secret_realm.json，用户近期 pipe）
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/js/27a-jobset-steps.js   ★jobPinSteps 改「sid 优先 + 引用兜底」
+game_assist_tools/endless_setup/tests/repro_registry.js         登记说明同步（不再是「P0 后可退役」）
+game_assist_tools/endless_setup/static/js/16-jobset-reserved.js wait 撤回（implemented=false / 编译恒空）
+game_assist_tools/endless_setup/tests/repro_reserved.js         同步回滚
+agent/jobset/reserved.py          wait 撤回（implemented=False / pre_battle_dsl 恒空 / 删 pre_battle_wait_ms）
+agent/jobset/runtime.py           删 _inject_pre_battle_wait / _BATTLE_START_ORIG
+agent/jobset/selfcheck.py         §22 断言回滚
+game_assist_tools/endless_setup/HANDOFF.md   §0 / §4.6 / §4.7 / §10.7-G / §10.10-B / §11
+```
+
+**2026-11-02 实测（预留接口 ① 等待落地 + 文档订正）**：
+
+```
+node --check static\js\16-jobset-reserved.js   → OK
+node tests\repro_reserved.js                   → 全过（wait 已实现 / 其余 3 项仍空壳 /
+                                                 jobPreBattleCompile 真编译 sleep / 0ms=空 / 混配只编译已实现项）
+selfcheck.py §22                               → 全 OK：pre_battle_dsl(wait)=sleep:1.5、0ms=空、未实现项仍空、
+                                                 pre_battle_wait_ms 累加+关别过滤、提示不再报 wait 未实现（3→2/6→5/9→7）、
+                                                 注入 pre_delay=2500 / 没配回 0 / 快照原值 0
+⚠️ selfcheck 全局仍 exit 1，唯一 FAIL 是**预存在**的「异值多写入者」
+   （create_yard.json + secret_realm.json，用户近期 pipe，本轮未碰）
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/js/16-jobset-reserved.js  wait.implemented=true；
+                                                                jobPreBattleCompile 真编译 wait（sleep）
+game_assist_tools/endless_setup/tests/repro_reserved.js          同步断言（wait 已实现 / 其余未实现）
+agent/jobset/reserved.py          PREBATTLE_ACTIONS.wait.implemented=True；pre_battle_dsl 真编译 wait；
+                                 新增 pre_battle_wait_ms()（累加 + 关别过滤 + 跳过未实现项）；
+                                 reserved_notice_lines 跳过已实现项
+agent/jobset/runtime.py           ★新增 _BATTLE_START_ORIG / _inject_pre_battle_wait()
+                                 （在 _inject_lineup 里、early-return 之前调用，写「开始战斗」pre_delay）
+agent/jobset/selfcheck.py         §22 断言改写 + 新增等待注入 3 条
+game_assist_tools/endless_setup/HANDOFF.md   §0 / §5 / §4.6 / §10.7-G / §10.10-B / §10.21-F / §11
+```
 
 **2026-11-02 实测（★★ 编队植物补位，见 §10.22）**：
 

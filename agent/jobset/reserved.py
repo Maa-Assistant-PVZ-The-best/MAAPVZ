@@ -50,6 +50,9 @@ RESERVED_SIDES = ("both", "normal", "boss")
 PREBATTLE_ACTIONS: Dict[str, Dict[str, Any]] = {
     "wait": {
         "name": "等待",
+        # ★ 2026-11-02 曾试做过一版（agent 侧把总毫秒注入「开始战斗」的 pre_delay，
+        #   不碰任何 next、与神器闸门零冲突，门禁能过），但用户决定**先不要**，
+        #   已整体撤回。将来实现的两条路子见 HANDOFF §10.10-B 第 1 行。
         "implemented": False,
         "desc": "开始战斗前先等指定时长（毫秒）",
         "params": {"ms": {"type": "int", "def": 3000, "min": 0, "max": 600000}},
@@ -297,8 +300,12 @@ def pre_battle_dsl(item: Dict[str, Any], coords: Optional[Dict[str, Any]] = None
     返回形状与 ``dsl.generic_dsl`` 完全一致（``{"dsl", "missing", "count"}``），
     所以将来接编译时调用方一行都不用改。
 
-    实现提示：
-      · ``wait``  -> ``f"sleep:{ms / 1000:g}"``（BatchSwipe 原生支持小数秒）
+    实现提示（2026-11-02 试做过 wait 的 pre_delay 版本，用户决定先不要，已撤回）：
+      · ``wait``  -> 两条路任选：
+          a) 注入「开始战斗」节点的 ``pre_delay``（不碰 next、与神器闸门零冲突，
+             只能表达「开战前等 N 毫秒」，我们试过的是这条）
+          b) 按 §10.10-E 在选卡终点与开始战斗之间插一条链，段里放 sleep
+             （spawn / zombieSpeed / refreshWave 必须走 b，届时 wait 一起搬）
       · ``spawn`` / ``zombieSpeed`` / ``refreshWave``
         -> 先在 ``coords.json`` 里加开关坐标键，再翻成 ``click:键名``；
            认不到坐标时**必须记 missing 跳过**（宁可不动，也不点错位置）。

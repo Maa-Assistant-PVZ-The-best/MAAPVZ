@@ -194,7 +194,7 @@ const UNIQUE = [
     ['jobResolveSteps', '链 → 步骤解析（唯一真相来源）'],
     ['jobSegsToSteps', '段 → 步骤'],
     ['jobStepsToSegs', '步骤 → 段'],
-    ['jobPinSteps', '落点引用钉住（P0 根治后可退役）'],
+    ['jobPinSteps', '变动后按 sid 重定位落点（身份靠 sid，gidx 只写兼容字段）'],
     ['jobBuild', '导出 JSON（唯一真源）'],
     ['setStatus', '状态提示（唯一通道）'],
 ];

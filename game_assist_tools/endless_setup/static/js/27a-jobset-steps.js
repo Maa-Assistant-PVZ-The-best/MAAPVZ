@@ -891,30 +891,51 @@ function jobApplyDrop(drag, target) {
 // ★ boss 关没有收尾链（运行时永不执行），boss 棋盘上禁止搬入 end。
 // ============================================================
 
-// 棋盘成员变动（mode 翻转 / 落点删除）会让同槽落点重排，所有 gidx 全漂。
-// 这个助手在**变动前**给每个植物步骤钉上落点的**对象引用**，
-// 变动后按引用刷回新 gidx —— 引用找不到的步骤（已搬走/已删除）
-// alive=false，由调用方剔除。
-//   为什么必须这么做：段存储里的 picked/noint/times 全靠 gidx 指认落点，
-//   变动后若按新 gidx 重排旧段，标记会「滑」到别的落点上
-//   （2026-10-24 fuzz 实锤：跨链搬走一株后，无间隔组标记滑到下一株头上）。
+// 棋盘成员变动（mode 翻转 / 落点删除）会让同槽落点重排。这个助手在**变动前**
+// 记下每个植物步骤的身份，变动后按身份把它对回落点（顺带刷新 gidx，gidx 现在
+// 只用于写兼容字段 picked），对不上的步骤打 alive=false 让调用方剔除。
+//
+// ★★ 2026-11-02（P0 收官）：身份从「落点对象引用」换成 **稳定 sid**
+//    （`jobSidOfPlacement` = 链|槽|r,c|seq，跨渲染稳定）。
+//    为什么必须换：对象引用只在同一次渲染里有效，而且**它本身就是 gidx 那套
+//    身份机制的延伸** —— 只要还靠引用，gidx 就仍是事实上的身份，
+//    「删落点后无间隔组标记滑到别人头上」（§4.7 边界 2）就随时可能复发。
+//    换成 sid 之后：
+//      · 段里的 `sids` 与这里的 sid 同源 -> 读回、存盘、勾选配对全用同一把尺；
+//      · gidx 退化成「写 picked 用的下标」，算错了也不影响身份
+//        （`jobSegPlacements` 见到 sids 就按 sid 找落点）。
+//    ⚠️ 保留「对象引用兜底」：sid 算不出来（老数据 / 落点已经变了）时
+//       退回引用比对，绝不静默把整串步骤判死。
 function jobPinSteps(steps, board, which) {
     const pins = (steps || []).map(function (s) {
         if (!s || s.kind !== 'plant') return null;
-        const p = jobPlacementsOf(board, s.key, which)[s.gidx];
-        return p ? p.item : null;
+        const list = jobPlacementsOf(board, s.key, which);
+        const pl = list[s.gidx];
+        return {
+            sid: pl ? jobSidOfPlacement(which, s.key, pl) : '',   // 首选身份
+            item: pl ? pl.item : null,                            // 兜底身份
+        };
     });
     return function () {
         const alive = [];
         (steps || []).forEach(function (s, i) {
             if (!s || s.kind !== 'plant') { alive.push(true); return; }
             const list = jobPlacementsOf(board, s.key, which);
-            let g = -1;
-            for (let k = 0; k < list.length; k++) {
-                if (list[k].item === pins[i]) { g = k; break; }
+            const pin = pins[i] || {};
+            let hit = -1;
+            if (pin.sid) {
+                for (let k = 0; k < list.length; k++) {
+                    if (jobSidOfPlacement(which, s.key, list[k]) === pin.sid) { hit = k; break; }
+                }
             }
-            if (g === -1) alive.push(false);
-            else { s.gidx = g; alive.push(true); }
+            if (hit === -1 && pin.item) {
+                for (let k = 0; k < list.length; k++) {
+                    if (list[k].item === pin.item) { hit = k; break; }
+                }
+            }
+            if (hit === -1) { alive.push(false); return; }   // 这株已经不在棋盘上了
+            s.gidx = hit;
+            alive.push(true);
         });
         return alive;
     };
