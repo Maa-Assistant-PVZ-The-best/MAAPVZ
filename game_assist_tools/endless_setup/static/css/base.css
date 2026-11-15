@@ -1919,6 +1919,13 @@ body.m-app .supply-stage { min-height: calc(var(--sc-card-w) * var(--sc-card-rat
 }
 #jobAdvModal .ja-help:hover { background: #cbd5e1; }
 #jobAdvModal .ja-hint { font-size: 11px; color: #94a3b8; margin-top: 10px; line-height: 1.6; }
+/* ★ 2026-11-02：阵容表表单行里的「失败后」下拉（每张表单独设）。
+   用类而不是行内样式 —— index.html 的行内 style 有 66 条预算，只能降不能升。 */
+#jobTableForm .tf-lbl {
+    font-size: 12px; margin-left: 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+}
+#jobTableForm .tf-sel { max-width: 148px; }
 
 /* ============================================================
    通用动作按钮：次数角标 + 「更多动作」占位

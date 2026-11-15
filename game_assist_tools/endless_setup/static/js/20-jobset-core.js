@@ -19,6 +19,35 @@ let currentSlotEditing = -1; // 正在编辑的槽位号
 let jobArmedSlot = 0;        // 已选中待落子的槽位（0=未选中）
 let jobLastDrop = null;      // 最近一次落子位置 {r,c,id}：用于只播一次入场动画
 
+// ------------------------------------------------------------
+// ★ 失败后行为（2026-11-02，**每张表单独设**）
+// ------------------------------------------------------------
+//   把 MAA option「失败后选项」搬进网页。机制很简单：
+//   那个 option 做的**唯一**一件事，就是覆盖
+//   `无尽挑战_提示_返回地图` 的 next（见 task/Endless_ref/endless_ref.json）：
+//       停止任务      -> next = []
+//       重置后继续打  -> next = ['无尽挑战_方案1_失败后重置']
+//       继续挑战      -> next = ['无尽挑战_方案2_失败后继续']
+//   runtime 换表时做同一件事（运行时 override 覆盖 GUI 那份）。
+//
+//   ★ 2026-11-02 用户定稿：**不要「跟随 MAA 全局选项」这一档** ——
+//     默认就是 stop，他自己会把 MAA 那边那个 option 删掉。
+//     （默认 stop 注入的 next=[] 正好等于 pipe 原值，所以旧作业集行为不变。）
+//   ⚠️ 失败**计数**（特殊表用）是另一件事，现在还没做；这里只改行为。
+const JOB_FAIL_AFTER_DEFAULT = 'stop';
+const JOB_FAIL_AFTER_OPTIONS = [
+    { id: 'stop',     name: '停止任务',     next: [] },
+    { id: 'reset',    name: '重置后继续打', next: ['无尽挑战_方案1_失败后重置'] },
+    { id: 'continue', name: '继续挑战',     next: ['无尽挑战_方案2_失败后继续'] }
+];
+
+// 归一化：只认上面三个 id；undefined / null / 空串 / 旧数据 / 手写垃圾一律 -> 默认 stop
+function jobNormFailAfter(v) {
+    const s = (v === undefined || v === null) ? '' : String(v);
+    return JOB_FAIL_AFTER_OPTIONS.some(function (o) { return o.id === s; })
+        ? s : JOB_FAIL_AFTER_DEFAULT;
+}
+
 function jobNewTable() {
     // ★ 新建之前先把「当前正在编辑的棋盘」存回它所属的表。
     //   否则新表会把全局 boardEarly 覆盖，上一个阵容的布阵就丢了。
@@ -70,6 +99,9 @@ function jobNewTable() {
         bossSlotModes: {},        // boss 关槽位形态
         bossWaitAfter: {},        // boss 关动作后等待
         supplyPicks: null,        // 补给选取顺序（每个阵容独立；null -> 首次渲染时填默认）
+        // ★ 失败后行为（2026-11-02，**每张表单独设**）：把 MAA option「失败后选项」
+        //   搬进网页。三档 stop / reset / continue，默认 stop（= 注入 []，与 pipe 原值一致）。
+        failAfter: JOB_FAIL_AFTER_DEFAULT,
         // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         boardEarly: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => [])),
         boardLate: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))

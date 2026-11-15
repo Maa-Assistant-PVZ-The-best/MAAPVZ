@@ -123,6 +123,15 @@
 | **「等待」预留项撤回** | 上一轮把它实现成 `pre_delay` 注入能跑通，但**用户决定先不要**（2026-11-02），代码已整体回滚：`implemented` 回到 `false`、`pre_battle_dsl` 回到恒空、`_inject_pre_battle_wait` 删除。两条实现路子记在 §10.10-B 第 1 行备查 |
 | **文档订正 4 处** | ①§5 键列表补上 `special_tables`（原写「5 个键」）②§4.6「sids 必须两边一起改」被 §4.55 推翻（Python 不用改）③§10.7-G 的 P0 标「全部收官」、P1 轻量版已做/彻底版未做、P2 P3 已做、P4 不做 ④§10.21-F 的 5 条未验证 → 用户实测「没啥问题」（原文保留备查） |
 
+**2026-11-02 追加（★ 失败后选项搬进网页 · 每张表单独设；特殊表 UI 撤回）**：
+
+| 改动 | 说明 |
+| --- | --- |
+| **★ 失败后选项搬进网页** | 每张阵容表一个 **`fail_after`**（`stop` 默认 / `reset` / `continue`），UI 在**阵容表表单行** `#tfFailAfter`（挨着「boss 关」下拉）。runtime 换表时覆盖 `无尽挑战_提示_返回地图.next`（那个 option 本来做的就是这件事）→ **这张表说了算**。★ 用户已把 MAA 那边那个 option **删掉**，所以不再有「跟随全局」这一档；默认 `stop` 注入 `next=[]`，与 pipe 原值一致。见 §10.23 |
+| **特殊表 UI 已撤回** | 上一版做的「🔀 特殊表」按钮 + `#specialTableModal` + `46-jobset-special.js` **全删**（用户：「特殊表是啥玩意啊，先不要做这一步」）。数据接口（`special_tables`）保留在 16 / reserved.py，仍是「存得住但不执行」，**界面看不到** |
+
+**2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
+
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
 | 功能 | 说明 | 位置 |
@@ -283,6 +292,9 @@ static/
     └── 44-jobset-mobile.js ★                     # 手机端 App 壳（四屏 + 底部导航 + 长按=右键）
                                                   # 必须最后加载（要包 jobLoadTable 等）；桌面零影响
                                                   # 见 §10.13
+    └── 45-jobset-dirty.js ★                      # 未保存改动防护（脏标记 / beforeunload / 三入口确认）
+                                                  # 见 §10.16
+                                                  # （46 = 特殊表弹窗，2026-11-02 已按用户要求撤回，编号不复用）
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -521,6 +533,9 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
     "pre_battle": [{ "id": "wait", "side": "both", "ms": 3000 }],  // 开局前额外动作（未实现）
     "pick_favorite": false,                                        // 选卡同时标收藏（未实现）
     "pick_tiers": { "1": 5 },                                      // 选卡时自由切换阶数（未实现）
+    // ★ 失败后行为（2026-11-02，**每张表单独**）：stop（默认）/ reset / continue
+    //   runtime 换表时覆盖「无尽挑战_提示_返回地图.next」；默认 stop = 注入 []（= pipe 原值）
+    "fail_after": "stop",
     // 三条链的顺序（拖动 chip 调整）
     "slotOrder": [{key, from, to, picked?, order?}],
     "loopOrder": [...], "endOrder": [...],
@@ -1934,7 +1949,7 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 | 8 | 切换形态更智能（选植物→点几下） | `JOB_INBATTLE_RESERVED` `formSmart` | `ga:form` 段多 `plant` 字段 | `24` 加参数控件类型 `'plant'` + `dsl.generic_dsl` 的 form 分支 | 未实现 |
 | 9 | 世界作业链（导入一次、识别当前世界换阵容） | `jobReservedTop.worldChains` | `world_chains{enable,items[]}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成真替换（当前世界 `_check_world` 已在读） | 未实现 |
 | 10 | 正赛检查（选正赛会检查有没有开） | `jobReservedTop.modeCheck` | `mode_check{enable,expect,on_missing}` | 同上 | 未实现 |
-| 11 | **特殊表**（满足触发条件 → 换一张特殊阵容表） | `jobReservedTop.specialTables` | `special_tables{enable,triggers{restart,fail},table,side,use}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成 `reserved.special_table_decide()` 真判定，命中后改 `_STATE["table_index"]` 走下一次选卡；**计数要自己埋**（见下） | 未实现 |
+| 11 | **特殊表**（满足触发条件 → 换一张特殊阵容表） | `jobReservedTop.specialTables` | `special_tables{enable,triggers{restart,fail},table,side,use}` | **只有接口，无界面**（2026-11-02 用户：「特殊表是啥玩意啊，先不要做这一步」→ 做过一版 UI 已**整体撤回**）。<br>实现分两步：**① 只数「换阵容重开」**（`JobSetStage` 里 `run_task(restart_node)` 之前 +1，Python 钩子现成、**零 pipe 改动**）；**② 失败计数**（`无尽挑战_提示_返回地图.next` 插一个 CustomAction 计数节点）。<br>⚠️ 收尾超时重开（`JobSetEndRestart`）已 pipe 化、**没有 Python 钩子**，要数它只能走 ② | 未实现 |
 | 12 | **局内切换自动点波** | `JOB_INBATTLE_RESERVED` `autoWaveIn` | 通用动作 id `autoWaveIn` | `dsl.generic_dsl` 的 `RESERVED_GENERIC_ACTIONS` 分支 → 换真编译（开关坐标待拆包） | 未实现 |
 | 13 | **局内切换僵尸场外加速** | 同上 `zombieSpeedIn` | 同上 | 同上 | 未实现 |
 
@@ -2983,9 +2998,102 @@ def _need_plant_fill(table, is_boss) -> bool:
 - 旧作业集没有 `squad` → `eff_squad` 为 None → 永远不补位，行为与改动前一字不差。
 - 生效：runtime 改动要**重启 agent/MAA**；pipe 改动要**重载资源**。
 
+## 10.23 ★★ 失败后选项搬进网页（每张表单独设，2026-11-02）
+
+> 用户需求：「要不尝试把 maa option 里面的失败后选项改到网页的 option 里面？」
+> 后续定稿：「就留一个失败后选项在网页上，**每个表单独设置**失败后选项」
+
+### A. 为什么这件事很便宜（机制真相）
+
+MAA option「失败后选项」（`task/Endless_ref/endless_ref.json`）做的**唯一**一件事，就是给
+`无尽挑战_提示_返回地图` 写 `pipeline_override`：
+
+| GUI 选项 | 生效的覆盖 |
+| --- | --- |
+| 停止任务（默认） | `next = []`（pipe 原值） |
+| 重置后继续打 | `next = ["无尽挑战_方案1_失败后重置"]` + `focus` |
+| 继续挑战 | `next = ["无尽挑战_方案2_失败后继续"]` + `focus` |
+
+**所以 runtime 用同一招就能接管**：运行时 `override_pipeline` 发生在 GUI option 之后 → **后盖赢**。
+不用改 interface、不用改 GUI，「作业集这张表 > MAA 全局选项」。
+
+### B. 数据与 UI
+
+| 项 | 内容 |
+| --- | --- |
+| 字段 | **表级** `t.failAfter`（`stop` 默认 / `reset` / `continue`），导出成表里的 `fail_after` |
+| 默认 | **`stop`** —— 注入 `next=[]`，与 pipe 原值一致 → 旧作业集行为不变 |
+| UI | **阵容表表单行** `#tfFailAfter`（挨着「boss 关」下拉，不新开按钮）；回填 `jobFillForm`、写回 `jobSyncForm` |
+| 归一化 | `jobNormFailAfter()`（`20-jobset-core.js`）：非法值 / 中文显示名 / `''` / `undefined` **一律 → `stop`** |
+| ★ 没有「跟随全局」这一档 | 2026-11-02 用户定稿：他**自己把 MAA 里那个 option 删掉了**，默认改由网页定。所以 runtime **每次都注入**三档之一，绝不"不碰"（否则那个节点会被上一张表的值粘住） |
+
+### C. runtime（`_inject_fail_after`，在 `_inject_lineup` 里每关调用）
+
+```python
+NODE_FAIL_BACK = "无尽挑战_提示_返回地图"
+_FAIL_BACK_ORIG = {"next": [], "focus": "恭喜你！无尽坠机了！"}   # pipe 原值（快照）
+FAIL_BACK_PLANS = {"stop": ([], …), "reset": (["方案1"], …), "continue": (["方案2"], …)}
+```
+
+两条行为：
+
+1. **每次都注入**（`want` 归一到三档，缺省 stop），`next` + `focus` 一起写。
+2. **幂等**：`_STATE["fail_after"]` 记住上次注入的值，同一张表再调**一个 override 都不写**
+   （所以只有换表时才真正动 pipeline、不刷日志）。
+
+`_STATE["fail_after"]` 在 `JobSetLoad` 的重置块里一起清空（新任务重新注入）。
+
+### D. 门禁
+
+- `selfcheck.py` §13 新增 6 条：快照与 pipe 一致 / 三个方案节点名真实存在 /
+  配了 reset 就接方案1 且 focus 跟着换 / 幂等 / 换到没配的表按默认 stop 注入 /
+  首次也照样注入 stop / `Table` 层非法值归一成 stop
+- `repro_undo_boss.js` D 节 5 条：新建表默认 `stop` / 三个合法值原样 /
+  空串·非法值·中文名 → `stop` / `undefined`·`null` → `stop` / **两张表各自独立互不覆盖**
+
+> ⚠️ 与「特殊表」的 `fail` **计数**没关系 —— 那是另一件事（要插 CustomAction 节点），现在没做。
+> ⚠️ 你删掉 MAA 那个 option 之后，`无尽挑战_提示_返回地图` 的 next 会回落到 pipe 原值 `[]`；
+> runtime 默认注入的也是 `[]`，所以**删与不删行为一致**，不用担心顺序。
+
 ---
 
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（★ 失败后选项搬进网页 · 每表单独设；特殊表 UI 撤回）**：
+
+```
+node --check 20 / 21 / 27e / 27f / 28 / 29 / 31     → OK
+agent 侧 import runtime / engine                     → OK
+编辑器 11 套 repro_*.js                              → 全过（含 repro_registry：行内样式 66 条预算没破）
+repro_undo_boss.js                                  → 新增 D 节 5 条「failAfter 每表独立」断言全过
+                                                      （默认 stop / 三值原样 / 空串·非法·中文名→stop / undefined·null→stop / 两表独立）
+selfcheck.py §13                                    → 新增 6 条「失败后行为」断言全 OK：
+                                                      快照=pipe原值 / 方案节点存在 / reset 注入 + focus / 幂等 /
+                                                      换到没配的表按默认 stop 注入 / 首次也照样注入 / 非法值归一成 stop
+⚠️ selfcheck 全局仍 exit 1，唯一 FAIL 是**预存在**的「异值多写入者」
+   （create_yard.json + secret_realm.json，用户近期 pipe）
+⚠️ UI 外观（阵容表表单行多出来的「失败后」下拉）本环境无法验证 —— 请 Ctrl+F5 看一眼
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/index.html            「失败后」下拉（#tfFailAfter，无新增行内 style）
+game_assist_tools/endless_setup/static/css/base.css          #jobTableForm .tf-lbl / .tf-sel（替代行内样式）
+game_assist_tools/endless_setup/static/js/20-jobset-core.js  ★JOB_FAIL_AFTER_OPTIONS / jobNormFailAfter；newTable 默认 ''
+game_assist_tools/endless_setup/static/js/21-jobset-levels.js  jobFillForm 回填 + jobSyncForm 写回
+game_assist_tools/endless_setup/static/js/27f-jobset-export.js 每表导出 fail_after
+game_assist_tools/endless_setup/static/js/28-jobset-io.js     读回时按表归一化（fail_after / failAfter 都认）
+game_assist_tools/endless_setup/static/js/29-jobset-init.js   tfFailAfter 进表单绑定列表
+game_assist_tools/endless_setup/tests/repro_undo_boss.js     D 节 5 条断言
+agent/jobset/engine.py             ★Table.fail_after（stop/reset/continue，其余归一成 ''）
+agent/jobset/runtime.py            ★NODE_FAIL_BACK / _FAIL_BACK_ORIG / FAIL_BACK_PLANS
+                                   ＋ _inject_fail_after()（幂等 + 残留还原）+ JobSetLoad 重置 fail_after
+agent/jobset/selfcheck.py          §13 新增 6 条断言
+撤回：static/js/46-jobset-special.js（删除）、#specialTableModal、工具栏按钮、.stm-* 样式、
+     27e 的登记条目、29 的 jobSpecialInit 与 specialTables 缓存、16 的 ToForm/FromForm
+game_assist_tools/endless_setup/HANDOFF.md   §0 / §1 / §5 / §10.10-B 第 11 行 / §10.23 / §11
+```
 
 **2026-11-02 实测（P0 收官：`jobPinSteps` 身份换 sid ＋ 等待撤回）**：
 

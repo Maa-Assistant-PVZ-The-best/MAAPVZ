@@ -268,7 +268,7 @@ function jobInit() {
     // 布局配置弹窗（🗺 按钮 -> 1-149 关图层覆盖）
     if (typeof jobBindLayout === 'function') jobBindLayout();
 
-    ['tfLineupMode','tfDeckNo','tfBossLineupMode','tfBossDeckNo'].forEach(function (id) {
+    ['tfLineupMode','tfDeckNo','tfBossLineupMode','tfBossDeckNo','tfFailAfter'].forEach(function (id) {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', jobSyncForm);

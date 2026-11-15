@@ -322,6 +322,13 @@ class Table:
         self.boss_artifact_verify: List[str] = _norm_plants(
             self.raw.get("boss_artifact_verify"))
 
+        # ★ 失败后行为（**每张表单独**，2026-11-02）：把 MAA option「失败后选项」
+        #   搬进网页。三档 stop / reset / continue；
+        #   缺失 / 空 / 非法一律 **stop**（注入 next=[]，与 pipe 原值一致 -> 旧作业集行为不变）。
+        #   ★ 用户已决定把 MAA 那边那个 option 删掉，所以这里不再有「跟随全局」这一档。
+        _fa = str(self.raw.get("fail_after") or "").strip()
+        self.fail_after: str = _fa if _fa in ("stop", "reset", "continue") else "stop"
+
         # 动作后等待：{ "once|card2|2,1|2": 2, ... }（网页端 jobPlacementKey 的键）
         # ★ 普通关与 boss 关各自独立（bossWaitAfter 缺省 -> 空表）
         wa = self.raw.get("waitAfter")

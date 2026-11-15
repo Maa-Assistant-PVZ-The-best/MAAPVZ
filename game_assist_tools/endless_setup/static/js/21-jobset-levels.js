@@ -23,6 +23,12 @@ function jobFillForm() {
     // boss 关阵容（沿用普通关 / 单独选卡 / 切换编队）—— 选项由槽位数据驱动
     const bdn = document.getElementById('tfBossDeckNo');
     if (bdn) bdn.value = t.bossDeckNo || 1;
+    // ★ 失败后行为（每张表单独设，2026-11-02）：'' = 跟随 MAA 全局选项
+    const fa = document.getElementById('tfFailAfter');
+    if (fa) {
+        fa.value = (typeof jobNormFailAfter === 'function')
+            ? jobNormFailAfter(t.failAfter) : '';
+    }
     jobRefreshBossLineupUI();
 }
 
@@ -86,6 +92,10 @@ function jobSyncForm() {
     if (bm) t.bossLineupMode = (bm.value === 'plants' || bm.value === 'deck') ? bm.value : '';
     const bdn = document.getElementById('tfBossDeckNo');
     if (bdn) t.bossDeckNo = Math.min(6, Math.max(1, parseInt(bdn.value) || 1));
+    // ★ 失败后行为（每张表单独设）：'' = 跟随 MAA 全局选项（runtime 不注入）
+    const faSel = document.getElementById('tfFailAfter');
+    if (faSel) t.failAfter = (typeof jobNormFailAfter === 'function')
+        ? jobNormFailAfter(faSel.value) : '';
     jobRefreshBossLineupUI();   // 顺带校正 mode 合法性 + 编队号显隐
     jobRenderTabs();
 }

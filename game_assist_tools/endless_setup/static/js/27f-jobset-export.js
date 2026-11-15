@@ -282,6 +282,12 @@ function jobBuild() {
                 ? jobArtifactVerifyText(t.artifact) : [],
             boss_artifact_verify: (_bArt && typeof jobArtifactVerifyText === 'function')
                 ? jobArtifactVerifyText(_bArt) : [],
+            // ★ 失败后行为（**每张表单独**，2026-11-02）：把 MAA option「失败后选项」搬进网页。
+            //   '' = 跟随 MAA 全局选项 -> runtime **不注入**（旧作业集行为一字不差）
+            //   stop / reset / continue -> runtime 换表时盖掉
+            //   「无尽挑战_提示_返回地图」的 next（GUI option 做的是同一件事，后盖赢）
+            fail_after: (typeof jobNormFailAfter === 'function')
+                ? jobNormFailAfter(t.failAfter) : '',
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢

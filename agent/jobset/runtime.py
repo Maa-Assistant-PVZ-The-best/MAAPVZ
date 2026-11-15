@@ -555,6 +555,23 @@ NODE_FILL = "无尽挑战_植物补位"                 # SelectPlants：选后�
 _FILL_NEXT_ORIG = [NODE_BATTLE_START]
 # 卡槽数：不足 8 个正赛就开不了（用户实测口径）
 PLANT_SLOT_COUNT = 8
+
+# ★ 失败后行为（**每张表单独**，2026-11-02）：把 MAA option「失败后选项」搬进网页。
+#   机制看清了很省 —— GUI 那个 option 做的**唯一**一件事，就是覆盖下面这个节点的 next
+#   （见 task/Endless_ref/endless_ref.json）：
+#       停止任务      -> next = []
+#       重置后继续打  -> next = ["无尽挑战_方案1_失败后重置"]
+#       继续挑战      -> next = ["无尽挑战_方案2_失败后继续"]
+#   runtime 换表时做同一件事（运行时 override 后盖赢）->「这张表 > MAA 全局选项」。
+NODE_FAIL_BACK = "无尽挑战_提示_返回地图"
+#   pipe 原值（Endless_out.json）：focus「恭喜你！无尽坠机了！」+ next []
+_FAIL_BACK_ORIG = {"next": [], "focus": "恭喜你！无尽坠机了！"}
+# 三个方案 -> (next, focus)。focus 与 GUI option 里写的文案保持一致（用户看日志对得上）
+FAIL_BACK_PLANS = {
+    "stop": ([], "恭喜你！无尽坠机了！"),
+    "reset": (["无尽挑战_方案1_失败后重置"], "当前方案：失败后重置"),
+    "continue": (["无尽挑战_方案2_失败后继续"], "当前方案：失败后继续"),
+}
 # 首关入口：next 静态 [清空卡牌]（骨架第一站），runtime 不碰。
 NODE_START_OCR = "无尽挑战_识别开始战斗"
 # ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
@@ -778,6 +795,32 @@ def _reserved_notice(context: Context, js, table=None, is_boss: bool = False) ->
         _log(f"⚠️ 预留接口提示失败（{type(e).__name__}: {e}）")
 
 
+def _inject_fail_after(context: Context, table) -> None:
+    """按**当前表**的 `fail_after` 覆盖「失败后」分支（默认 stop）。
+
+    ★ 2026-11-02 用户定稿：不做「跟随 MAA 全局选项」这一档 —— MAA 那边那个
+      option 他会删掉，所以这里**每次都归一到三档之一**（缺省 stop）。
+      默认 stop 注入的就是 `next=[]`，与 pipe 原值一致 -> 旧作业集行为不变。
+    ★ 幂等：同一张表同一方案不重复写（`_STATE["fail_after"]` 记上次的值），
+      所以换表时才真正动 pipeline、不刷日志。
+    """
+    want = str(getattr(table, "fail_after", "") or "")
+    if want not in FAIL_BACK_PLANS:
+        want = "stop"
+    if want == str(_STATE.get("fail_after") or ""):
+        return
+    try:
+        nxt, focus = FAIL_BACK_PLANS[want]
+        context.override_pipeline({
+            NODE_FAIL_BACK: {"next": list(nxt), "focus": focus},
+        })
+        _log(f"失败后行为：{want}（本表配置）-> "
+             f"{NODE_FAIL_BACK}.next = {nxt}")
+        _STATE["fail_after"] = want
+    except Exception as e:
+        _log(f"注入失败后行为失败（{type(e).__name__}: {e}）")
+
+
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
 
@@ -794,6 +837,8 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     # ★ 预留接口提示（只打日志、不写 override；表级：开局前动作 /
     #   选卡标收藏 / 选卡自由阶数）—— 就是将来实现这三项的挂钩位置，见 §10.10
     _reserved_notice(context, _STATE.get("jobset"), table, is_boss)
+    # ★ 失败后行为（每张表单独，2026-11-02）：换表就跟着换，'' 则跟随 MAA 全局选项
+    _inject_fail_after(context, table)
     # ★ 神器闸门独立判定（不跟植物签名、不跟训练模式）——必须先跑：
     #   它负责把神器唯一入口（选植物终点）接好，且下面「阵容未变」分支会
     #   early-return，不在这里调用的话换表后的同表关卡会留着上一关的接线。
@@ -1444,6 +1489,7 @@ class JobSetLoad(CustomAction):
             _STATE["lineup_sig"] = None     # 当前生效阵容签名（跳过选卡判定）
             _STATE["lineup_is_boss"] = None  # 当前生效卡组的形态（boss/普通，闸门用）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
+            _STATE["fail_after"] = None     # 已注入的失败后方案（'' = 跟随 MAA 全局）
             _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
             _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
             _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）

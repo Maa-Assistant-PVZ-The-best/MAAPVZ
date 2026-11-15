@@ -258,6 +258,45 @@ var afterClear = {
     eq(r.afterClear.normalBoardCount, 0, 'C3 普通关棋盘已清空');
 }
 
+// ============================================================
+// D. 失败后行为：**每张表单独设**（2026-11-02）
+//    缺省 '' = 跟随 MAA 全局选项（runtime 不注入 -> 旧作业集行为一字不差）
+// ============================================================
+console.log('D. 失败后行为（failAfter 每表独立）');
+{
+    const s = mkSandbox();
+    const r = vm.runInContext(`
+      jobTables.length = 0; jobNewTable(); jobNewTable();
+      var dft = jobTables[0].failAfter;
+      var norm = {
+        empty: jobNormFailAfter(''),
+        stop:  jobNormFailAfter('stop'),
+        reset: jobNormFailAfter('reset'),
+        cont:  jobNormFailAfter('continue'),
+        bad:   jobNormFailAfter('乱写'),
+        cn:    jobNormFailAfter('重置后继续打'),
+        undef: jobNormFailAfter(undefined),
+        nul:   jobNormFailAfter(null)
+      };
+      // 两张表互不影响
+      jobTables[0].failAfter = 'reset';
+      jobTables[1].failAfter = 'continue';
+      ({ dft: dft, norm: norm,
+         t0: jobTables[0].failAfter, t1: jobTables[1].failAfter });
+`, s);
+    ok(r.dft === 'stop', 'D1 新建表默认「停止任务」（MAA 那个 option 已删，默认由网页定）');
+    ok(JSON.stringify([r.norm.stop, r.norm.reset, r.norm.cont])
+        === JSON.stringify(['stop', 'reset', 'continue']),
+        'D2 三个合法值原样保留（实际=' + JSON.stringify([r.norm.stop, r.norm.reset,
+            r.norm.cont]) + '）');
+    ok(r.norm.empty === 'stop' && r.norm.bad === 'stop' && r.norm.cn === 'stop',
+        'D3 空串 / 非法值 / 中文显示名 -> 一律归一成 stop（绝不落非法值进 JSON）');
+    ok(r.norm.undef === 'stop' && r.norm.nul === 'stop',
+        'D4 undefined / null（旧作业集没这个字段）-> stop = 与旧行为一致');
+    ok(r.t0 === 'reset' && r.t1 === 'continue',
+        'D5 每张表各自独立，互不覆盖');
+}
+
 console.log('');
 if (fails) {
     console.log('❌ 共 ' + fails + ' 条断言失败');

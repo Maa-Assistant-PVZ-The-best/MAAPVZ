@@ -328,6 +328,11 @@ function jobApplyLoaded(job, code) {
     jobTables = Array.isArray(job.tables) ? job.tables : [];
     jobTables.forEach(function (t) {
         if (!t.slots) t.slots = {};
+        // ★ 失败后行为（每张表单独，2026-11-02）：旧作业集没有该字段 ->
+        //   '' = 跟随 MAA 全局选项（runtime 不注入，行为与旧版一字不差）
+        t.failAfter = (typeof jobNormFailAfter === 'function')
+            ? jobNormFailAfter(t.fail_after !== undefined ? t.fail_after : t.failAfter)
+            : '';
         for (let i = 1; i <= 8; i++) if (t.slots[i] === undefined) t.slots[i] = '';
         if (!Array.isArray(t.boardEarly)) t.boardEarly = [];
         if (!Array.isArray(t.boardLate)) t.boardLate = [];

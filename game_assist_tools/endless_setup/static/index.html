@@ -671,6 +671,19 @@
                     <option value="deck">切换编队</option>
                 </select>
             </label>
+            <!-- ★ 失败后行为（2026-11-02，**每张表单独设**）：把 MAA option「失败后选项」搬进网页。
+                 机制：那个 option 做的唯一一件事就是覆盖「无尽挑战_提示_返回地图」的 next
+                 （停止→[] / 重置→[方案1] / 继续→[方案2]），runtime 换表时做同一件事即可。
+                 ★ 默认「停止任务」= 注入 []，与 pipe 原值一致；用户已把 MAA 那边那个 option 删掉。 -->
+            <label class="tf-lbl" for="tfFailAfter"
+                   data-tooltip="这张表失败（无尽坠机）之后怎么做：停止任务 / 重置后继续打 / 继续挑战"
+                   data-tooltip-delay="1000">失败后
+                <select id="tfFailAfter" class="tf-sel">
+                    <option value="stop">停止任务</option>
+                    <option value="reset">重置后继续打</option>
+                    <option value="continue">继续挑战</option>
+                </select>
+            </label>
             <span id="tfBossDeckBox" style="display:none;">
                 <label style="font-size:12px;">编队号
                     <select id="tfBossDeckNo" style="width:auto;"
@@ -1018,4 +1031,5 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
      ★ 依赖 jobBuild（导出用的同一份口径）、jobSaveLocal（改数据的唯一通道）、
        jobApplyLoaded / jobResetEditor / jobDelete / jobSetCurrent —— 必须最后加载。 -->
 <script src="/static/js/45-jobset-dirty.js"></script>
+<!-- 46 = （2026-11-02 已撤销）特殊表弹窗已按用户要求回退；编号留空不复用 -->
 </body></html>

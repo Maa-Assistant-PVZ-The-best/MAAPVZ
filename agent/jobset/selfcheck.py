@@ -1074,6 +1074,54 @@ try:
           == [_rt13.NODE_FILL_RETURN],
           str(_merged13(_cFillArt13, _rt13.NODE_SQUAD_PICK)))
 
+    # ---- ★ 失败后行为（每张表单独，2026-11-02，把 MAA option「失败后选项」搬进网页）----
+    _FAIL_PIPE = "assets/resource/pipeline/Endless_ref/Endless_out.json"
+    _fb_pipe = _pipe_node13(_FAIL_PIPE, _rt13.NODE_FAIL_BACK)
+    check("★失败后: 快照与 pipe 一致（next=[] / focus 原文案）",
+          _rt13._FAIL_BACK_ORIG.get("next") == _fb_pipe.get("next")
+          and _rt13._FAIL_BACK_ORIG.get("focus") == _fb_pipe.get("focus"),
+          f"runtime={_rt13._FAIL_BACK_ORIG} pipe={_fb_pipe.get('next')}/{_fb_pipe.get('focus')}")
+    from agent.jobset.check_graph import strip_comments as _strip_fb13
+    _fb_nodes = _json13.loads(_strip_fb13((_root13 / _FAIL_PIPE).read_text(encoding="utf-8")))
+    check("★失败后: 三个方案节点名在 pipe 里真实存在（改名要同步常量）",
+          all(n in _fb_nodes
+              for n in (_rt13.FAIL_BACK_PLANS["reset"][0][0],
+                        _rt13.FAIL_BACK_PLANS["continue"][0][0])),
+          str(_rt13.FAIL_BACK_PLANS))
+    _tFaReset = _eng13.Table({"from_level": 1, "lineup": {"plants": ["A"]},
+                              "fail_after": "reset"}, 0)
+    _rt13._STATE["fail_after"] = None
+    _cFa13 = _FakeCtx13()
+    _rt13._inject_fail_after(_cFa13, _tFaReset)
+    check("★失败后: 本表配 reset -> next 接方案1 + focus 跟着换",
+          (_merged13(_cFa13, _rt13.NODE_FAIL_BACK) or {}).get("next")
+          == ["无尽挑战_方案1_失败后重置"]
+          and (_merged13(_cFa13, _rt13.NODE_FAIL_BACK) or {}).get("focus")
+          == "当前方案：失败后重置",
+          str(_merged13(_cFa13, _rt13.NODE_FAIL_BACK)))
+    check("★失败后: 幂等（同一张表再注一次不重复写）",
+          (lambda c: (  # 第二次调用不该再产生 override
+              _rt13._inject_fail_after(c, _tFaReset), c.overrides)[1])(_FakeCtx13()) == [])
+    _tFaNone = _eng13.Table({"from_level": 1, "lineup": {"plants": ["A"]}}, 0)
+    _cFa2 = _FakeCtx13()
+    _rt13._inject_fail_after(_cFa2, _tFaNone)         # 换到没配的表 -> 默认 stop
+    check("★失败后: 换到没配的表 -> 按默认 stop 注入 []（与 pipe 原值一致）",
+          (_merged13(_cFa2, _rt13.NODE_FAIL_BACK) or {}).get("next") == [],
+          str(_merged13(_cFa2, _rt13.NODE_FAIL_BACK)))
+    _rt13._STATE["fail_after"] = None
+    _cFa3 = _FakeCtx13()
+    _rt13._inject_fail_after(_cFa3, _tFaNone)         # 从没注入过 + 没配
+    check("★失败后: 首次也照样注入默认 stop（MAA 那个 option 已删，不能靠它兜底）",
+          len(_cFa3.overrides) == 1
+          and (_merged13(_cFa3, _rt13.NODE_FAIL_BACK) or {}).get("next") == [],
+          str(_cFa3.overrides))
+    check("★失败后: 非法值 / 缺字段在 Table 层归一成 stop（手写 JSON 塞垃圾不生效）",
+          _eng13.Table({"from_level": 1, "fail_after": "乱写"}, 0).fail_after == "stop"
+          and _eng13.Table({"from_level": 1}, 0).fail_after == "stop"
+          and _eng13.Table({"from_level": 1, "fail_after": "reset"}, 0).fail_after == "reset",
+          str([_eng13.Table({"from_level": 1, "fail_after": v}, 0).fail_after
+               for v in ("乱写", None, "reset", "stop", "continue")]))
+
     _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
     _c13 = _FakeCtx13()
     _rt13._inject_artifact(_c13, _tArt13, False)
