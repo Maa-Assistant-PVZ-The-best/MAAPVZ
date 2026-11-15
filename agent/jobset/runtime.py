@@ -537,6 +537,24 @@ _ARTIFACT_HIT_NODES = ("无尽挑战_选择神器_滑动", "无尽挑战_确认�
 # 必须让它优先吃掉这一帧（2026-11-02 用户定：放最顶上，不是放末尾）。
 NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中"
 JB_COMM = "[JumpBack]" + NODE_JUMPBACK_COMM
+
+# ★ 植物补位（2026-11-02 用户定稿，见 HANDOFF §10.22）：
+#   编队模式 + 这张表（该关别）的植物**不足 8 个** -> 卡槽不满 -> 正赛开不了。
+#   处理方式是**串联不是替换**（用户原话：「先去使用编队，然后编队选完后再切回
+#   植物界面补」）：`无尽_选择编队.next` 接下面两个节点 —— 点回「植物」页签，
+#   再用 SelectPlants 的 **0 植物 + 占位填充**（pipe 里写的 `选后回顶`/`占位填充`）
+#   把空槽填满。
+#   ★ 判定纯靠作业集数据（`eff_squad` / `eff_plants` 长度），不做任何识别；
+#     正赛与训练**一致**，不分开判。
+#   ★ 用户要求「每次切换表的时候都检查一次」：`_inject_artifact` 是所有换表路径的
+#     必经点（_apply_table -> _inject_lineup -> 这里），所以判定放这里天然满足。
+NODE_FILL_RETURN = "无尽挑战_植物补位_返回"     # 点回「植物」页签（pipe OCR「植物」）
+NODE_FILL = "无尽挑战_植物补位"                 # SelectPlants：选后回顶 + 占位填充
+#   补位节点的 next 归 runtime 管（要换神器 -> 接选取神器，否则 -> 开始战斗），
+#   否则「编队 + 补位 + 换神器」三者同时发生时会绕过神器。
+_FILL_NEXT_ORIG = [NODE_BATTLE_START]
+# 卡槽数：不足 8 个正赛就开不了（用户实测口径）
+PLANT_SLOT_COUNT = 8
 # 首关入口：next 静态 [清空卡牌]（骨架第一站），runtime 不碰。
 NODE_START_OCR = "无尽挑战_识别开始战斗"
 # ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
@@ -855,6 +873,44 @@ def _clear_artifact_hits(context: Context) -> None:
             return                      # 方法不存在/不可用：整组放弃，别刷日志
 
 
+def _need_plant_fill(table, is_boss: bool) -> bool:
+    """这张表在当前关别下要不要「编队选完再切回植物界面补位」。
+
+    判定（用户 2026-11-02 定，纯作业集数据、零识别）：
+      用编队（`eff_squad` 有值）**且** 该关别的植物数 < 8 -> 要补位。
+
+    ★ 为什么不看游戏画面：正赛只要求「卡槽满 8 格」，而作业集里这张表配了几株
+      是已知的 —— 不够 8 个就一定不满，没必要去识别。
+    ★ 正赛 / 训练一致，不分开判（与神器闸门那种「分开判」不同）。
+    ★ 每次换表都会重新算一次（本函数在所有换表路径的必经点被调用）。
+    """
+    try:
+        if table.eff_squad(is_boss) is None:
+            return False                      # 不是编队模式 -> 走正常选卡，无需补位
+        return len(table.eff_plants(is_boss)) < PLANT_SLOT_COUNT
+    except AttributeError:                    # 自测桩 / 旧 Table 对象
+        return False
+
+
+def _log_plant_fill(table, is_boss: bool) -> None:
+    """补位播报：同一张表 + 同一关别只打一次，避免每关刷屏。"""
+    key = f"{getattr(table, 'index', -1)}|{'boss' if is_boss else 'normal'}"
+    seen = _STATE.get("plant_fill_seen")
+    if not isinstance(seen, set):
+        seen = set()
+        _STATE["plant_fill_seen"] = seen
+    if key in seen:
+        return
+    seen.add(key)
+    try:
+        n = len(table.eff_plants(is_boss))
+    except Exception:
+        n = -1
+    _log(f"⚠️ 表{getattr(table, 'index', 0) + 1} 植物只有 {n} 个"
+         f"（不足 {PLANT_SLOT_COUNT}，{'boss 关' if is_boss else '普通关'}）"
+         f"-> 编队选完后切回植物界面占位补位")
+
+
 def _inject_artifact(context: Context, table, is_boss: bool,
                      force: bool = False) -> None:
     """把「选神器」这一步挂到选植物路线的终点（唯一入口）。
@@ -882,11 +938,22 @@ def _inject_artifact(context: Context, table, is_boss: bool,
       ① 注入「核对神器」的 OCR expected（表里的 artifact_verify，取描述中间句）
          —— 没配就退回 pipe 的 ['神器']（不核对也不卡死）；
       ② 清掉带 max_hit 的两个节点的命中次数（任务累计，不清第二关就滑不动）。
+
+    ★ 2026-11-02 编队补位（见 HANDOFF §10.22）：本函数是**所有换表路径的必经点**，
+      所以「用编队且该关别植物不足 8 个」的判定放在这里 = 每次换表都检查一次。
+      命中时编队终点改接「切回植物页签 + 占位填充」，补位节点自己再接神器/开始战斗。
     """
     art = table.eff_artifact(is_boss)
     en = table.eff_artifact_en(is_boss)
     prev = _STATE.get("artifact_sig")          # 上一关生效的神器（zh 名，None=没记过）
     need = bool(art) and bool(en) and (force or prev != art)
+    # ★ 编队补位（2026-11-02）：换表必经这里 -> 每次换表都重新判一次
+    fill = _need_plant_fill(table, is_boss)
+    if fill:
+        _log_plant_fill(table, is_boss)
+    # 编队模式下的「选卡终点」：要补位就先去补位链（补位节点自己再接神器/开始战斗），
+    # 不补位才按神器需求直连（这是唯一写 NODE_SQUAD_PICK.next 的地方）
+    squad_pick_fill = [NODE_FILL_RETURN]
     try:
         if not need:
             # 不换神器：两个选卡终点都回「开始战斗」，闸门/补给/首关入口走原值
@@ -895,7 +962,10 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
                 NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
                 NODE_CHOOSE_PLANTS: {"next": list(_CHOOSE_PLANTS_NEXT_ORIG)},
-                NODE_SQUAD_PICK: {"next": list(_SQUAD_PICK_NEXT_ORIG)},
+                NODE_SQUAD_PICK: {"next": (list(squad_pick_fill) if fill
+                                           else list(_SQUAD_PICK_NEXT_ORIG))},
+                # 补位链终点：不换神器 -> 关掉补位就是开始战斗
+                NODE_FILL: {"next": list(_FILL_NEXT_ORIG)},
             })
             if art and not en:
                 _log(f"⚠️ 神器「{art}」没有英文名（artifact_en 缺失）——"
@@ -929,7 +999,11 @@ def _inject_artifact(context: Context, table, is_boss: bool,
             NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
             NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
             NODE_CHOOSE_PLANTS: {"next": [NODE_ARTIFACT_PICK]},
-            NODE_SQUAD_PICK: {"next": [NODE_ARTIFACT_PICK]},
+            # 编队终点：要补位 -> 先进补位链（补位后再接选取神器）；否则直连选取神器
+            NODE_SQUAD_PICK: {"next": (list(squad_pick_fill) if fill
+                                      else [NODE_ARTIFACT_PICK])},
+            # 补位链终点：换神器 -> 接选取神器
+            NODE_FILL: {"next": [NODE_ARTIFACT_PICK]},
             NODE_ARTIFACT_TPL: {
                 "template": [f"General/god_vessel/{en}/",
                              f"General/god_vessel/{en}/{en}_1.png"],

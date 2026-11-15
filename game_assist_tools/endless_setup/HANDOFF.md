@@ -105,6 +105,16 @@
 | **滑动上限 + 兜底** | `选择神器_滑动` 加 `max_hit 6`；新增 `无尽挑战_神器_未找到`（播报后关界面，绝不空链） |
 | **max_hit 清零** | `runtime._clear_artifact_hits()`：`max_hit` 是任务累计的，不清零第二关就滑不动 |
 
+**2026-11-02 追加（★★ 编队植物补位，见 §10.22）**：
+
+| 改动 | 说明 |
+| --- | --- |
+| **判定** | 编队模式 **且** 该关别植物 `<8` → 卡槽不满、正赛开不了（纯作业集数据，零识别；正赛/训练一致） |
+| **做法** | **串联不是替换**：编队照常选完 → 点回「植物」页签 → SelectPlants 的 **0 植物 + 占位填充**把空槽填满 |
+| **pipe（用户亲写）** | `02_Endless_plant_Choose_ref.json` 新增 `无尽挑战_植物补位_返回` / `无尽挑战_植物补位` |
+| **runtime** | `_need_plant_fill()` + `_inject_artifact` 里改写 `无尽_选择编队.next` / `无尽挑战_植物补位.next`（补位后仍能接神器） |
+| **每次换表检查** | 判定放在 `_inject_artifact` —— 它是 `_apply_table → _inject_lineup → _inject_artifact` 这条换表必经链的末点 |
+
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
 | 功能 | 说明 | 位置 |
@@ -2877,7 +2887,106 @@ NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中";  JB_COMM = "[JumpBack]"
 
 ---
 
+## 10.22 ★★ 编队植物补位：编队选完再切回植物界面补满 8 格（2026-11-02）
+
+> 需求原话：「使用编队时检测到植物不全时切回去补位（正赛植物没满开不了）」
+> 口径确认：「植物不全，这个表的植物不足 8 个并且使用编队模式的时候就是不全」
+> 「**先去使用编队，然后编队选完后再切回植物界面补**」「训练和正赛一致」
+> 「**每次切换表的时候都检查一次**」
+
+### A. 关键点：**串联，不是替换编队**
+
+```
+清空卡牌 → 切换编队(点配队) → 过滤编队颜色 → 确认在编队界面
+        → 无尽_选择编队（SelectPlants 编队选择，注入目标编队 N）
+        → ★ 无尽挑战_植物补位_返回（点回「植物」页签）
+        → ★ 无尽挑战_植物补位（SelectPlants：0 植物 + 占位填充）
+        → (选取神器?) → 开始战斗
+```
+
+编队**照常选**，选完再补一刀把空槽填满 —— 编队功能不受影响。
+（早期我把这条理解成「植物 <8 就放弃编队」，是错的；`plants: []` 的纯编队表也因此不会被误判。）
+
+### B. 判定（纯数据，零识别）
+
+```python
+def _need_plant_fill(table, is_boss) -> bool:
+    if table.eff_squad(is_boss) is None:            # 不是编队模式 -> 走正常选卡
+        return False
+    return len(table.eff_plants(is_boss)) < PLANT_SLOT_COUNT   # = 8
+```
+
+- **只用作业集字段**，不看游戏画面（正赛只要求「卡槽满 8 格」，作业集配了几株是已知的）
+- **按本关别判**（普通关看 `lineup.plants`、boss 关看 `boss_lineup.plants`）—— 允许「普通关补位、boss 关不补」
+- **正赛 / 训练一致**，不分开判（与神器闸门那种「分开判」不同）
+- ★ 判定放在 `_inject_artifact` 里 → 该函数是**所有换表路径的必经点**
+  （`_apply_table` → `_inject_lineup` → `_inject_artifact`；预热 `force=True` 也走它），
+  所以天然满足「每次切换表都检查一次」。命中时播报一次（同表+同关别只播一次）。
+
+### C. pipe 侧（用户 2026-11-02 亲自写的两个节点，在 `02_Endless_plant_Choose_ref.json`）
+
+| 节点 | 识别 / 动作 | next |
+| --- | --- | --- |
+| `无尽挑战_植物补位_返回` | OCR `["植物"]`，`roi [729,96,79,601]`，Click，`post_delay 2000` | `[无尽挑战_植物补位]` |
+| `无尽挑战_植物补位` | Custom `SelectPlants`，param `{选后回顶: true, 占位填充: true}`（**不给植物列表** = 不选具体卡，直接占位填满） | `[无尽挑战_选取植物_开始战斗]`（runtime 会按神器需求改写） |
+
+> 「植物列表为空 → 跳过选卡、滑回顶部、依次点填充位」是 SelectPlants **现成能力**
+> （`custom_select_plant.py` L475 那条注释就是为它写的），所以补位不用改 agent 选卡代码。
+
+### D. runtime 侧（`_inject_artifact`，唯一写 `无尽_选择编队.next` 的地方）
+
+| 场景 | `无尽_选择编队.next` | `无尽挑战_植物补位.next` |
+| --- | --- | --- |
+| 不补位 + 不换神器 | `[开始战斗]`（`_SQUAD_PICK_NEXT_ORIG`，原样） | `[开始战斗]`（`_FILL_NEXT_ORIG`） |
+| 不补位 + 换神器 | `[选取神器]` | `[选取神器]` |
+| **补位** + 不换神器 | **`[植物补位_返回]`** | `[开始战斗]` |
+| **补位** + 换神器 | **`[植物补位_返回]`** | `[选取神器]` |
+
+- **为什么补位节点的 next 也归 runtime**：`植物补位.next` 在 pipe 里写死 `[开始战斗]`，
+  若不接管，「编队 + 补位 + 换神器」三者同时发生时会**绕过神器**。
+- 新常量：`NODE_FILL_RETURN` / `NODE_FILL` / `_FILL_NEXT_ORIG` / `PLANT_SLOT_COUNT = 8`。
+- 顺序固定为 **先补位、后神器**（对齐骨架 `选卡 → 神器 → 开始战斗`）。
+
+### E. 门禁（`selfcheck.py` §13 新增 9 条，全绿）
+
+`_FILL_NEXT_ORIG` 与 pipe 一致 / 返回节点点「植物」页签且接补位节点 /
+补位节点是 SelectPlants + 占位填充且不给植物列表 /
+`_need_plant_fill` 三态（编队+3 要补、编队+8 不补、无编队不补）/
+补位注入两态（编队终点、补位终点）/ 补位+神器组合两态（神器不被绕过、先补位后神器）。
+
+### F. 注意
+
+- **卡槽满 8 后不换阵容就跳过选卡**：下一关阵容签名相同 → 骨架直跳开始战斗，
+  卡槽保持上一关那 8 格（本来是满的），**不需要每关都补**。
+- 旧作业集没有 `squad` → `eff_squad` 为 None → 永远不补位，行为与改动前一字不差。
+- 生效：runtime 改动要**重启 agent/MAA**；pipe 改动要**重载资源**。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（★★ 编队植物补位，见 §10.22）**：
+
+```
+check_resource.py assets\resource   → All directories checked（exit 0）
+agent\jobset\check_graph.py         → 无新增告警（补位两节点都被引用且都有 next）
+selfcheck.py §13                    → 新增 9 条补位断言全 OK；全局 exit 1 的 FAIL 有 2 条，均**非本轮引入**：
+                                      ① 至少一张表有植物列表或编队号 —— 当前 current.json 指向刚存的
+                                         jobs/test.json，三张表 plants 都空、squad 都 None（**数据**问题，
+                                         给任意一张表配植物/编队号即绿）
+                                      ② create_yard / secret_realm 的异值多写入者（用户近期 pipe，预存在）
+```
+
+本轮改动文件：
+
+```
+assets/resource/pipeline/Endless_ref/02_Endless_plant_Choose_ref.json   ← 用户亲写两个补位节点
+agent/jobset/runtime.py            ★NODE_FILL_RETURN / NODE_FILL / _FILL_NEXT_ORIG / PLANT_SLOT_COUNT
+                                    ＋ _need_plant_fill() / _log_plant_fill()（同表+同关别只播一次）
+                                    ＋ _inject_artifact 两个分支改写编队终点与补位终点
+agent/jobset/selfcheck.py          §13 新增 9 条补位断言
+game_assist_tools/endless_setup/HANDOFF.md   §0 / §10.22 / §11
+```
 
 **2026-11-02 实测（★★ 神器链加固：jumpback 置顶 + OCR 核对 + 装完复核，见 §10.21）**：
 

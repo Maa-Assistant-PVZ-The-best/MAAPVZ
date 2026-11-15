@@ -126,6 +126,34 @@
             "无尽挑战_选取植物_开始战斗"
         ]
     },
+    "无尽挑战_植物补位_返回": {
+        "recognition": "TemplateMatch",
+        "template": [
+            "Endless/植物.png"
+        ],
+        "roi": [
+            729,
+            96,
+            79,
+            601
+        ],
+        "action": "Click",
+        "post_delay": 2000,
+        "next": [
+            "无尽挑战_植物补位"
+        ]
+    },
+    "无尽挑战_植物补位": {
+        "action": "Custom",
+        "custom_action": "SelectPlants",
+        "custom_action_param": {
+            "选后回顶": true,
+            "占位填充": true
+        },
+        "next": [
+            "无尽挑战_选取植物_开始战斗"
+        ]
+    },
     "无尽挑战_选取植物_开始战斗": {
         "recognition": "OCR",
         "expected": "开始战斗",

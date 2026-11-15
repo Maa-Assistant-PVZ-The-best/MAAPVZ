@@ -1018,6 +1018,62 @@ try:
           == ["罐子里会随机掉出僵尸"],
           str(_merged13(_cVase13, _rt13.NODE_ARTIFACT_VERIFY)))
 
+    # ---- ★ 编队植物补位（2026-11-02，见 HANDOFF §10.22）----
+    #   用户口径：**用编队** 且 这张表（该关别）植物**不足 8 个** -> 卡槽不满、正赛开不了
+    #   -> 编队选完后**再切回植物界面**占位补满（串联，不是替换编队）。正赛/训练一致。
+    _fill_ret_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_FILL_RETURN)
+    _fill_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_FILL)
+    check("★补位: 快照 next 与 pipe 一致（补位终点 = 开始战斗）",
+          _rt13._FILL_NEXT_ORIG == _fill_pipe.get("next"),
+          f"runtime={_rt13._FILL_NEXT_ORIG} pipe={_fill_pipe.get('next')}")
+    check("★补位: 返回节点 = 点「植物」页签 -> 补位节点",
+          _fill_ret_pipe.get("action") == "Click"
+          and _fill_ret_pipe.get("next") == [_rt13.NODE_FILL],
+          str(_fill_ret_pipe))
+    check("★补位: 补位节点 = SelectPlants + 占位填充（不指定植物列表）",
+          _fill_pipe.get("custom_action") == "SelectPlants"
+          and (_fill_pipe.get("custom_action_param") or {}).get("占位填充") is True
+          and "植物列表" not in (_fill_pipe.get("custom_action_param") or {}),
+          str(_fill_pipe.get("custom_action_param")))
+    _tSquadShort = _eng13.Table({"from_level": 1, "squad": 2,
+                                 "lineup": {"plants": ["A", "B", "C"]}}, 0)
+    _tSquadFull = _eng13.Table({"from_level": 1, "squad": 2,
+                                "lineup": {"plants": list("ABCDEFGH")}}, 0)
+    _tPlantsOnly = _eng13.Table({"from_level": 1,
+                                 "lineup": {"plants": ["A", "B", "C"]}}, 0)
+    check("★补位判定: 编队 + 3 个植物 -> 要补",
+          _rt13._need_plant_fill(_tSquadShort, False) is True)
+    check("★补位判定: 编队 + 满 8 个 -> 不补",
+          _rt13._need_plant_fill(_tSquadFull, False) is False)
+    check("★补位判定: 没编队（纯选卡表）-> 不补",
+          _rt13._need_plant_fill(_tPlantsOnly, False) is False)
+    _rt13._STATE["artifact_sig"] = None
+    _cFill13 = _FakeCtx13()
+    _rt13._inject_artifact(_cFill13, _tSquadShort, False)
+    check("★补位注入: 编队终点 -> [植物补位_返回]",
+          (_merged13(_cFill13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_FILL_RETURN],
+          str(_merged13(_cFill13, _rt13.NODE_SQUAD_PICK)))
+    check("★补位注入: 补位终点 -> [开始战斗]（不换神器时）",
+          (_merged13(_cFill13, _rt13.NODE_FILL) or {}).get("next")
+          == list(_rt13._FILL_NEXT_ORIG),
+          str(_merged13(_cFill13, _rt13.NODE_FILL)))
+    _tSquadArt = _eng13.Table({"from_level": 1, "squad": 2,
+                               "lineup": {"plants": ["A", "B"],
+                                          "artifact": "投罐神器"},
+                               "artifact_en": "artifact_vase"}, 0)
+    _rt13._STATE["artifact_sig"] = None
+    _cFillArt13 = _FakeCtx13()
+    _rt13._inject_artifact(_cFillArt13, _tSquadArt, False)
+    check("★补位+换神器: 补位终点 -> [选取神器]（神器不被补位绕过）",
+          (_merged13(_cFillArt13, _rt13.NODE_FILL) or {}).get("next")
+          == [_rt13.NODE_ARTIFACT_PICK],
+          str(_merged13(_cFillArt13, _rt13.NODE_FILL)))
+    check("★补位+换神器: 编队终点仍是补位链（先补位再换神器）",
+          (_merged13(_cFillArt13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
+          == [_rt13.NODE_FILL_RETURN],
+          str(_merged13(_cFillArt13, _rt13.NODE_SQUAD_PICK)))
+
     _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
     _c13 = _FakeCtx13()
     _rt13._inject_artifact(_c13, _tArt13, False)
