@@ -85,6 +85,15 @@
 | **运行时只播提示** | `runtime._reserved_notice()`：只 log 不 override，去重；两个调用点 = 将来真正要动的位置 |
 | **顺带修预存在红灯** | `selfcheck` §18「世界 case 共 16 个」写死 16（用户后加了第 17 个 case「地宫」）→ 改成「**注入当前世界的** case 恰好 16 个」 |
 
+**2026-11-02 追加（★ 预留接口 3 项，见 §10.10-B 第 11~13 行）**：
+
+| 追加项 | 说明 |
+| --- | --- |
+| **特殊表**（`special_tables`） | 满足触发条件 → 换成另一张特殊阵容表。**只登记两个条件**（重开累计 / 失败累计），`use='once'` = 打一次就回原表；判定入口 `special_table_decide()` **恒不换表** |
+| **局内切换自动点波**（`autoWaveIn`） | 战斗中拨「自动点波」开关（与开局前的 `refreshWave` 是否同一开关**未验证**） |
+| **局内切换僵尸场外加速**（`zombieSpeedIn`） | 战斗中拨「僵尸场外加速」（与开局前的 `zombieSpeed` 是否同一处**未验证**） |
+| 顺手 | §10 那四条「未来要加的东西」**全部已实现**（复核见 §10 的状态表） |
+
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
 | 功能 | 说明 | 位置 |
@@ -673,10 +682,26 @@ cd D:\maapvz\MAAPVZ
 
 ---
 
-## 10. 未来要加的东西
+## 10. 原「未来要加的东西」——**四条已全部落地**（2026-11-02 逐条复核代码）
 
-> 以下为**已登记但未开工**的需求。2026-10-01 之后，其中两条**已经有了现成的扩展通道**
-> （见 §10.2 通用动作 / §10.3 落子动作），实现成本大幅降低。
+> 本节原是 2026-10-01 登记的「已登记但未开工」。**2026-11-02 复核（编辑器 JS + agent Python 两边都 grep 过）：
+> 四条都已实现**，落点见下表；下面的原文需求描述保留作留档，别再当成「还没做」重提一遍。
+
+| # | 需求 | 状态 | 落点 |
+| --- | --- | --- | --- |
+| 1 | HTML 适配无尽局外选 80 个植物 | ✅ 已实现 | 编辑器 `static/js/32-jobset-outer.js`（`#outerPicker`，`index.html` L715 起）＋ `base.css` 的 `#outerPicker` 段（行内样式已搬出，含手机全屏版）；字段 `outer_pick`，存取链路 `27f`（导出 L360）/ `28`（读回 L464）/ `29`（缓存 L42）；运行时侧 `_apply_outer_pick`（§13.2）。含收藏（与局内**分开算**）、稀有度页签、三种排序、调整顺序、补齐空选；导出时校验「`auto` 模式必须够 80 个」（`27f` L420） |
+| 2 | 使用神器 | ✅ 已实现 | 通用动作 `ga:artifact`（`24` 的 `JOB_ARTIFACT_ACTION`，插入时**快照** `artName/artType/artBody`）＋ 落子动作 `artifactswipe`（`15` L61-70，拖拽类神器如魔豆：从神器初始化位置拖到格子，图标跟随当前神器）。覆盖 `click/swipe/hold`、`special` 的葫芦小/中/大体型、相机拍照/打印（§10.5 / §10.6） |
+| 3 | 通用动作「滑飞弹」 | ✅ 已实现 | 编辑器 `JOB_MISSILE_ACTION`（`24` L182-194，id `missile`，默认 10ms × 连击 20，`comboWatchOff` = 原子连击；`27b` L168-184 有专属「滑动时长」行）；agent `GENERIC_SWIPE_PAIR`（`dsl.py` L230-232，坐标键「滑飞弹点位1」→「滑飞弹点位2」，编译成 `swipe:点A,点B,时长`） |
+| 4 | 两个坐标之间的动作 | ✅ 需求已覆盖 | ①「从 A 滑到 B」= `GENERIC_SWIPE_PAIR` 这一**族**（`dsl.py` L192 注释明写「新增同类动作只需加一行」），滑飞弹是该族第一例；② 任意两个坐标点用 `ga:custom`（`24` L123-142：`click / swipe / hold / multi`，从坐标表挑键名）；③「点 A 再点 B」用两段 `ga:custom` click 表达 |
+
+> ⚠️ **唯一没做的只是 `15-board-actions.js` 里那个 `pairMode`**（「在棋盘上一次落两个格子当起点/终点」）——
+> 至今仍是注释里的写法示例（`15` L72-88），全仓 grep `pairMode` **只命中注释与本文档**，零实现。
+> 结论：**能力已被上表第 3/4 行覆盖**，`pairMode` 只是「更省事的落子交互」，不是新功能。
+> 真要做得先定交互（点两次 / 拖拽）、段的 `cells` 语义（`[起点,终点]` 还是 `cells2`）、
+> 以及与 `dslType` 的映射（`tap` 是单点，双点/新滑动要新的 `dslType`，见 §10.3 约束 2），
+> 然后照 §10.3 加注册表一条（换唯一 `armedNo`、配图、`inMore`）。
+
+**原登记描述（留档；状态已被上表取代，别再照它判断「还没做」）**：
 
 1. **HTML 适配无尽局外选择 80 个植物**
    —— 网页端支持在「无尽局外」（非局内）场景下从 80 个植物中选择。
@@ -1852,14 +1877,14 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 
 | 侧 | 文件 | 内容 |
 | --- | --- | --- |
-| 网页端 | **`static/js/16-jobset-reserved.js`** ★新增 | 四张注册表 + 默认值 + 导出/读回 + 恒空编译入口 |
+| 网页端 | **`static/js/16-jobset-reserved.js`** ★新增 | **五张**注册表 + 默认值 + 导出/读回 + 恒空编译入口 |
 | agent | **`agent/jobset/reserved.py`** ★新增 | 同名镜像 + 解析/归一化 + 恒空编译 + 提示文案 |
 
 > ★ `16` 的加载位置有两条硬要求：**在 15 之后**（往落子动作注册表补一条不可达的
 > 预留动作）、**在 20 之前**（`jobNewTable`/`jobBuild`/`jobApplyLoaded` 都要调它）。
 > 注册表漂移由 `selfcheck.py` §22b 拿**真实 JS 文件**正则比对，改一边不改另一边会红。
 
-### B. 十项功能 × 接口落点（实现时照这张表走）
+### B. 十三项功能 × 接口落点（实现时照这张表走）
 
 | # | 功能（用户原话） | 数据字段 | 导出键 | 实现时的挂钩点 | 状态 |
 | --- | --- | --- | --- | --- | --- |
@@ -1873,6 +1898,32 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 | 8 | 切换形态更智能（选植物→点几下） | `JOB_INBATTLE_RESERVED` `formSmart` | `ga:form` 段多 `plant` 字段 | `24` 加参数控件类型 `'plant'` + `dsl.generic_dsl` 的 form 分支 | 未实现 |
 | 9 | 世界作业链（导入一次、识别当前世界换阵容） | `jobReservedTop.worldChains` | `world_chains{enable,items[]}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成真替换（当前世界 `_check_world` 已在读） | 未实现 |
 | 10 | 正赛检查（选正赛会检查有没有开） | `jobReservedTop.modeCheck` | `mode_check{enable,expect,on_missing}` | 同上 | 未实现 |
+| 11 | **特殊表**（满足触发条件 → 换一张特殊阵容表） | `jobReservedTop.specialTables` | `special_tables{enable,triggers{restart,fail},table,side,use}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成 `reserved.special_table_decide()` 真判定，命中后改 `_STATE["table_index"]` 走下一次选卡；**计数要自己埋**（见下） | 未实现 |
+| 12 | **局内切换自动点波** | `JOB_INBATTLE_RESERVED` `autoWaveIn` | 通用动作 id `autoWaveIn` | `dsl.generic_dsl` 的 `RESERVED_GENERIC_ACTIONS` 分支 → 换真编译（开关坐标待拆包） | 未实现 |
+| 13 | **局内切换僵尸场外加速** | 同上 `zombieSpeedIn` | 同上 | 同上 | 未实现 |
+
+> ★ **第 11~13 项是 2026-11-02 追加的**（用户原话：「还有特殊表，重开一定次数换特殊阵容表，
+> 这个也做接口」「局内切换自动点波和僵尸场外加速也要改，都预留一下」）。
+>
+> **特殊表只登记两个触发条件**（用户定：「目前只能加这俩」）：
+> `restart`（重开累计次数）/ `fail`（失败累计次数）。其余候选（关卡区间 / 当前世界 /
+> 正赛训练 / 已用时 / 已换表次数 / 第几张表）**一律没登记** —— 要的时候往
+> `JOB_SPECIAL_TRIGGERS` 加一行即可，数据形状不用改；波数 / 阳光 / 掉车那类要新识别、
+> 属「**未验证**」，更不许提前登记。
+>
+> 判定语义：`enable=false` 或 `table=0` → 不生效；多个触发器 >0 → **全部满足（AND）**；
+> `use='once'`（用户定）= 只用它打一次、之后回原表，「已用过」状态**只放运行时内存**
+> （新任务 / `JobSetReset` 清空，绝不写进作业集文件 —— 否则换个会话跑就永远不再触发）。
+>
+> ⚠️ **实现特殊表前必须先解决计数**：现在代码里**没有任何重开/失败计数器**
+> （`level_tracker` 注释写明：重开走 `通用_重开_暂停`、不经过「点继续挑战」，
+> 所以关卡计数器天然不多推）。要埋三处：`JobSetEndRestart`（收尾超时）、
+> `JobSetStage` 的 `通用重开节点`、pipe 的 `无尽挑战_失败`。
+>
+> ⚠️ **第 12/13 项 id 带 `In` 后缀**是为了不和开局前那两个（`refreshWave` /
+> `zombieSpeed`）撞 id（撞了 agent 侧会认错成开局前动作）。局内的「自动点波」与
+> 开局前的「自动刷新下一波」、局内外的「僵尸场外加速」是不是同一个游戏开关 ——
+> **未验证**，实测确认后再决定是否合并 id。
 
 ### C. 数据结构（导出长这样）
 
@@ -1886,6 +1937,13 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
                 "artifact": null }]
   },
   "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },
+  "special_tables": {                    // ★ 特殊表（未启用；2026-11-02 追加）
+    "enable": false,
+    "triggers": { "restart": 3, "fail": 0 },   // 阈值；0 = 该条件不参与，多个 >0 = 全部满足
+    "table": 2,                                // 目标表序号（1 起；0 = 没选 → 整条规则不生效）
+    "side": "both",                            // both | normal | boss
+    "use": "once"                              // once = 打一次就回原表 | sticky = 一直用
+  },
   "tables": [{
     "pre_battle": [                      // 开局前动作（顺序 = 执行顺序）
       { "id": "wait",        "side": "both", "ms": 3000 },
@@ -2693,7 +2751,7 @@ jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
 3. `waitAfter` 的键虽然也是 `jobPlacementKey`（同源），但**删落点时仍然没人清理**它 ——
    等段存储换成 sids 后再一起做「删落点 → 清悬空键」。
 
-### 5. 下次开工前需要准备### 5. 下次开工前需要准备
+### 5. 下次开工前需要准备
 
 1. 一份真实作业集文件名（我会先把它复制一份到临时位置做对读）；
 2. 允许我把 `fuzz_drag` 跑到 **500 会话 × 150 操作**（约几分钟）；
@@ -2702,6 +2760,35 @@ jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
 ---
 
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 追加实测（预留接口 3 项：特殊表 + 局内两个开关，见 §10.10-B 第 11~13 行）**：
+
+```
+node --check static\js\16-jobset-reserved.js        → OK
+node tests\repro_reserved.js                        → 全过（接口在、功能不在；新增 11 条特殊表断言）
+编辑器 11 套 repro_*.js                              → 全过
+node tests\fuzz_drag.js 200 100                     → 0 个会话有首错
+selfcheck.py §22                                    → 全过（新增：特殊表触发 2 项 / 局内 4 项 /
+                                                      漂移比对 JOB_SPECIAL_TRIGGERS / 判定恒不换表 / 提示 6 行）
+⚠️ selfcheck.py 全局仍 exit 1，唯一 FAIL 是**预存在**：
+   create_yard.json: 创意庭院_确认自己在创意庭院.next <- ['使用收藏关卡','每日分享奖励']
+   secret_realm.json: 地宫2无尽_第一关_寻找8槽.custom_action_param <- ['地宫2_藤蔓植物','地宫2_远程植物']
+   （都在用户近期提交的 pipe 里，本轮没碰任何 pipe JSON）
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/js/16-jobset-reserved.js  ★新增 JOB_SPECIAL_TRIGGERS（重开/失败两个触发条件）
+                                                                 ＋ JOB_INBATTLE_RESERVED 追加 autoWaveIn / zombieSpeedIn
+                                                                 ＋ special_tables 默认值/导出/读回/摘要/恒不换表判定
+game_assist_tools/endless_setup/tests/repro_reserved.js          ★同步（注册表 4+2+4+2+2 = 14 项 + 特殊表 11 条断言）
+agent/jobset/reserved.py                                         ★同名镜像：SPECIAL_TRIGGERS / parse_special_tables /
+                                                                 special_table_decide（恒不换表）/ 提示文案
+agent/jobset/engine.py                                           JobSet.special_tables（只解析不消费）
+agent/jobset/selfcheck.py                                        §22 断言同步（含 JOB_SPECIAL_TRIGGERS 漂移比对）
+game_assist_tools/endless_setup/HANDOFF.md                       §0 / §10 / §10.10A-C / §11
+```
 
 **2026-11-02 实测（运行时：选卡/自定义动作的识别过程日志，见 §10.17）**：
 
