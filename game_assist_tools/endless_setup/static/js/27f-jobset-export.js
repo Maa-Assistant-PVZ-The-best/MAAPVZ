@@ -273,6 +273,15 @@ function jobBuild() {
                 return _a ? (_a.en || null) : null;
             })(),
             boss_artifact_body: (t.bossArtifactBody || null),
+            // ★ 神器核对文本（2026-11-02，pipe「无尽挑战_核对神器」的 OCR expected）：
+            //   从 artifacts.json 的 desc 取「中间那句」（规则见 35 的
+            //   jobArtifactVerifyText）。agent 侧没有 static/artifacts.json，
+            //   所以必须导出时算好写进作业集 —— 与 artifact_en 完全同套路。
+            //   boss 侧跟「有效值」走（_bArt 已含「沿用普通关」的回退）。
+            artifact_verify: (t.artifact && typeof jobArtifactVerifyText === 'function')
+                ? jobArtifactVerifyText(t.artifact) : [],
+            boss_artifact_verify: (_bArt && typeof jobArtifactVerifyText === 'function')
+                ? jobArtifactVerifyText(_bArt) : [],
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢

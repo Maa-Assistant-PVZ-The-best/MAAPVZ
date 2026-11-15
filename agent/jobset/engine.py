@@ -298,6 +298,12 @@ class Table:
         self.artifact_en: Optional[str] = str(_arten).strip() if _arten else None
         _artbody = self.raw.get("artifact_body")
         self.artifact_body: Optional[str] = str(_artbody).strip() if _artbody else None
+        # ★ 神器核对文本（2026-11-02，pipe「无尽挑战_核对神器」的 OCR expected）：
+        #   网页端从 artifacts.json 的 desc 取「中间那句」导出（描述在游戏里分行
+        #   显示，OCR 只稳定读到中间那段）。这里只当字符串列表归一化
+        #   （复用 _norm_plants：去空 / 去重保序 / strip，语义完全一致）。
+        self.artifact_verify: List[str] = _norm_plants(
+            self.raw.get("artifact_verify"))
 
         # ---- boss 关阵容（boss_lineup：可与普通关不同；缺省 = 沿用普通关）----
         #   网页端导出的是「有效值」（逐槽沿用普通关后的完整槽位），
@@ -312,6 +318,9 @@ class Table:
         self.boss_artifact: Optional[str] = str(_bart).strip() if _bart else None
         _barten = self.raw.get("boss_artifact_en")
         self.boss_artifact_en: Optional[str] = str(_barten).strip() if _barten else None
+        # ★ boss 侧核对文本（缺省 = 空 -> eff_artifact_verify 回落普通关）
+        self.boss_artifact_verify: List[str] = _norm_plants(
+            self.raw.get("boss_artifact_verify"))
 
         # 动作后等待：{ "once|card2|2,1|2": 2, ... }（网页端 jobPlacementKey 的键）
         # ★ 普通关与 boss 关各自独立（bossWaitAfter 缺省 -> 空表）
@@ -584,6 +593,17 @@ class Table:
         if is_boss and self.boss_artifact is not None:
             return self.boss_artifact_en or self.artifact_en
         return self.artifact_en
+
+    def eff_artifact_verify(self, is_boss: bool) -> List[str]:
+        """与 eff_artifact 同源的**核对文本**（pipe「无尽挑战_核对神器」的 expected）。
+
+        ★ 缺省/旧作业集（没有 artifact_verify 字段）-> 返回空列表，
+          runtime 会退回 pipe 里的 ['神器']（= 不做核对但也不会卡死）。
+        ★ boss 侧有值就用 boss 的，空则沿用普通关（与 eff_artifact_en 同口径）。
+        """
+        if is_boss and self.boss_artifact_verify:
+            return list(self.boss_artifact_verify)
+        return list(self.artifact_verify)
 
     def lineup_sig(self, is_boss: bool) -> tuple:
         """阵容签名（含神器占位）：相同 = 局内卡牌/编队/神器完全一致，

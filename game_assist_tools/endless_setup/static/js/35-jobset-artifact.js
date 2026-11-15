@@ -68,6 +68,43 @@ const ART_TYPE_CN = { click: '点击类', swipe: '滑动类', hold: '长按类',
 const ART_BODY_CN = { small: '小体型', mid: '中体型', big: '大体型', capture: '拍照', print: '打印' };
 const ART_EMPTY_ICON = '/static/artifact/_empty.webp';
 
+// ------------------------------------------------------------
+// ★ 神器「核对文本」（2026-11-02）：给 pipe 的「无尽挑战_核对神器」当 OCR expected 用
+// ------------------------------------------------------------
+//   为什么需要：点开神器卡片后靠 TemplateMatch 命中，可能撞脸点错；
+//   所以再 OCR 一次详情页的描述文本，认对才装备。
+//
+//   ★ 为什么取「中间那句」：游戏里描述是**分行显示**的，OCR 只能稳定读到
+//     中间那段（顶/底会被裁切）。例：
+//       desc  = 「全场随机扔下10个罐子，罐子里会随机掉出僵尸，植物卡片和阳光。」
+//       屏幕  = 三行，OCR 读到的是「罐子里会随机掉出僵尸」
+//
+//   规则（三条，别改乱）：
+//     ① 按中文标点切句，**丢掉短于 4 字的片段**
+//        —— 否则「闪电神器」那条（…眩晕，减速，百分比减血…）会算成「减速」，
+//        两个字在任何界面都命中，等于没核对。
+//     ② 剩 1~2 句：全部当候选（OCR expected 是「任一命中」）；
+//        剩 ≥3 句：只取正中那句。
+//     ③ 一句都切不出来（desc 缺失/太短）：回退 ['神器']
+//        —— 等于「不核对但也不会卡死」，比空数组安全。
+//
+//   ⚠️ 这里依赖 artifacts.json 的 desc 与游戏内实际文案一致（未验证）：
+//      对不上的神器会一直认不到 -> 走 pipe 的「神器_未找到」兜底（保持原装备）。
+//   ⚠️ 超长句（>10 字）若实测被折行切断，再给本函数加一条「追加中心切片」规则。
+const ART_VERIFY_MIN_LEN = 4;
+const ART_VERIFY_SEP = /[，。、；：,.;:!?！？]/;
+
+function jobArtifactVerifyText(name) {
+    const a = jobArtifactOf(name);
+    const desc = (a && typeof a.desc === 'string') ? a.desc : '';
+    const parts = desc.split(ART_VERIFY_SEP)
+        .map(function (s) { return s.trim(); })
+        .filter(function (s) { return s.length >= ART_VERIFY_MIN_LEN; });
+    if (!parts.length) return ['神器'];
+    if (parts.length <= 2) return parts;
+    return [parts[Math.floor(parts.length / 2)]];
+}
+
 // ---- 字段访问（target = 'normal' | 'boss'；boss 空 = 沿用普通关）----
 function jobArtifactField(t, target) {
     return target === 'boss' ? (t.bossArtifact || null) : (t.artifact || null);

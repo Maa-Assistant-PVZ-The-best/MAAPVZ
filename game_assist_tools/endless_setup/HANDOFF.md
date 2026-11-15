@@ -94,6 +94,17 @@
 | **局内切换僵尸场外加速**（`zombieSpeedIn`） | 战斗中拨「僵尸场外加速」（与开局前的 `zombieSpeed` 是否同一处**未验证**） |
 | 顺手 | §10 那四条「未来要加的东西」**全部已实现**（复核见 §10 的状态表） |
 
+**2026-11-02 追加（★★ 神器链加固，见 §10.21）**：
+
+| 改动 | 说明 |
+| --- | --- |
+| **jumpback 置顶** | 选神器链 10 个节点里 8 个的 `next` **第一位**统一挂 `[JumpBack]定位_全局_服务器通讯中` |
+| **OCR 核对** | 点开卡片后新增 `无尽挑战_核对神器`（`roi [264,326,752,175]`），`expected` 由 runtime 注入 |
+| **核对文本来源** | `static/artifacts.json` 的 `desc` → `35` 的 `jobArtifactVerifyText`（取**中间那句**）→ `27f` 导出 `artifact_verify` → `engine` → `runtime` 注入 |
+| **装完复核** | 新增 `无尽挑战_确认已装备`（OCR「卸下」，`max_hit 3`） |
+| **滑动上限 + 兜底** | `选择神器_滑动` 加 `max_hit 6`；新增 `无尽挑战_神器_未找到`（播报后关界面，绝不空链） |
+| **max_hit 清零** | `runtime._clear_artifact_hits()`：`max_hit` 是任务累计的，不清零第二关就滑不动 |
+
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
 | 功能 | 说明 | 位置 |
@@ -2759,7 +2770,144 @@ jobStepId(which, st, board)      // ← 需要加两个参数：链名 + 棋盘
 
 ---
 
+## 10.21 ★★ 神器链加固：jumpback 置顶 + OCR 核对 + 装完复核（2026-11-02）
+
+> 用户原话：「核对ocr的roi在这 `[264,326,752,175]`，目的是识别看看是不是正确的文本，
+> 文本字段会分行，建议使用中间的文字……文本在 `static/artifacts.json` 有记载」
+> 「`[JumpBack]定位_全局_服务器通讯中` 要在 next 最顶上，把 jumpback 和 ovr 核对都整上」
+
+改的是 pipe 的**选神器链**（`06Endless_god_vessel/0601Endless_god_vessel.json`），
+不是「局内用神器」（那是 `ga:artifact` 段 ＋ `artifactswipe` 落子动作，见 §10.5 / §10.6）。
+
+### A. 链改成什么样（10 个节点）
+
+```
+选取神器 → 神器界面 ─┬→ 神器(TemplateMatch) → ★核对神器 ─┬→ 装备神器 → ★确认已装备 → 关闭神器界面 → 开始战斗
+                     │                                    ├→ 已装备神器 ─────────┘
+                     └→ 选择神器_滑动(max_hit 6) ←────────┘（核对不中 → 继续翻页）
+                                          └→ ★神器_未找到 → 关闭神器界面（保持原装备）
+```
+
+| 改动 | 说明 |
+| --- | --- |
+| **每节点 next 首位** | `[JumpBack]定位_全局_服务器通讯中` —— loading 遮罩期任何识别都不可信，必须优先吃这一帧（`定位_全局_服务器通讯中` 是现成全局节点，见 `pos/ref_back_to_home_v1/global/global.json`） |
+| **★ `无尽挑战_核对神器`（新）** | 点开卡片后 OCR 详情页描述文本，认对才装备。`roi [264,326,752,175]`；`expected` 默认 `["神器"]` = **不做核对也不卡死**，真正值由 runtime 注入 |
+| **★ `无尽挑战_确认已装备`（新）** | 点完装备再认「卸下」，确认到才关界面；`max_hit 3`，认不到就重点装备，再不行落「关闭神器界面」 |
+| **`选择神器_滑动` 加 `max_hit 6`** | 原来是 next 自循环 = 无限滑；滑满仍未命中就落到兜底 |
+| **★ `无尽挑战_神器_未找到`（新）** | 兜底 + 播报（`focus`）「没找到目标神器，保持原装备继续」→ 关闭界面。**绝不空链** |
+| `神器.next` | 从「装备神器 / 已装备神器」改成 `[JB, 核对神器]` |
+
+**嵌套顺序原则**：`jumpback → 主路径 → 兜底`，每个 next 都必须有出路
+（`check_graph.py` 那条「正向未命中不能没有后继」的规矩）。
+
+### B. 核对文本从哪来（三步，别在 agent 里另造）
+
+```
+static/artifacts.json 的 desc（唯一权威）
+  → 35-jobset-artifact.js：jobArtifactVerifyText(name)   ← 取「中间那句」
+  → 27f 导出：artifact_verify / boss_artifact_verify      ← 和 artifact_en 同套路
+  → engine.py：Table.artifact_verify / boss_artifact_verify + eff_artifact_verify(is_boss)
+  → runtime._inject_artifact：注入 核对神器.expected
+```
+
+★ **为什么必须导出时算**：`artifacts.json` 只在编辑器的 `static/` 下，agent 包里没有；
+而 `en`（`artifact_en`）本来就是导出时现查写入，这里完全同构，不引入新依赖。
+
+**算法三条规则**（`jobArtifactVerifyText`）：
+
+1. 按 `，。、；：,.;:!?！？` 切句，**丢掉 <4 字的片段**；
+2. 剩 1~2 句 → 全用（OCR `expected` 是「任一命中」）；剩 ≥3 句 → **只取正中那句**；
+3. 一句都切不出（desc 缺失/太短）→ 回退 `["神器"]`。
+
+> ⚠️ 规则 1 是实打实踩出来的：**「闪电神器」**的 desc 是
+> 「对全场僵尸附加随机电荷，电荷能造成眩晕，**减速**，百分比减血等效果。」
+> 不丢短片段的话中间句算成「减速」两个字 —— 任何界面都能命中，等于没核对。
+
+**为什么取中间那句**：游戏里描述**分行显示**，OCR 只稳定读到中间那段。例：
+desc「全场随机扔下10个罐子，罐子里会随机掉出僵尸，植物卡片和阳光。」→ 中间句「罐子里会随机掉出僵尸」。
+
+当前 38 件神器的计算结果（抽查）：投罐＝`罐子里会随机掉出僵尸`、闪电＝`电荷能造成眩晕`、
+葫芦＝`将全场指定体型僵尸吸入葫芦中秒杀`、相机＝`使用相机完成拍照 | 使用相片完成植物回溯`。
+
+### C. 三个必须守住的坑
+
+| 坑 | 为什么 | 现在怎么治 |
+| --- | --- | --- |
+| **`max_hit` 是整个任务累计的** | 无尽里每关都可能换神器 → 不清零的话**第二关滑动节点就已被耗尽**，表现为「神器在后面页却怎么也不翻页」 | `runtime._clear_artifact_hits()`：每次真正进链前 `context.clear_hit_count()`（老 maafw 没这方法就静默跳过）。同款解法见 `agent/create_yard_hits.py` |
+| **核对节点的 `expected` 是新晋 runtime 管辖字段** | §10.5 快照原则：runtime 改过的字段必须能在还原时写回 pipe 原值 | 新增常量 `_ARTIFACT_VERIFY_ORIG = {"expected": ["神器"]}`，`selfcheck` §13 拿它跟 pipe 实值比对 |
+| **不能为了「兜底」去改 `选取神器` 的识别字段** | 旧版「神器没变就改 DirectHit」曾被回退；`选取神器` 至今零 runtime 管辖 | 本次只改它的 `next`（pipe 自身），`selfcheck` 仍断言它 `recognition==OCR`、`action==Click` |
+
+### D. runtime 改动（`agent/jobset/runtime.py`）
+
+```python
+NODE_ARTIFACT_VERIFY = "无尽挑战_核对神器"
+_ARTIFACT_VERIFY_ORIG = {"expected": ["神器"]}
+_ARTIFACT_HIT_NODES = ("无尽挑战_选择神器_滑动", "无尽挑战_确认已装备")
+NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中";  JB_COMM = "[JumpBack]" + NODE_JUMPBACK_COMM
+```
+
+`_inject_artifact` 的「要换」分支多两件事：注入 `核对神器.expected`、清 max_hit。
+没配核对文本时**只提醒一次**（`_STATE["artifact_verify_warned"]` 去重，避免每关刷屏）。
+
+### E. 门禁（`selfcheck.py` §13 新增 7 条，全绿）
+
+- 8 个链节点 `next[0]` 都是 `JB_COMM`（漏一个就红 ← 防回退）
+- `核对神器.expected` 快照与 pipe 一致
+- `核对神器.roi == [264,326,752,175]`
+- `神器.next` 末位 = `核对神器`
+- `滑动` / `确认已装备` 都有 `max_hit`
+- 兜底 `神器_未找到` 存在且 next 回 `关闭神器界面`、且 `滑动.next` 末位是它
+- `eff_artifact_verify`：旧作业集无字段→空；去空去重保序；boss 空→沿用普通关
+
+另外跑过：`check_resource.py assets\resource` ✅、`check_graph.py`（仍只有那 10 个预存在空 next）✅、
+编辑器 11 套 `repro_*.js` ✅、`fuzz_drag 200×100` ✅。
+
+### F. ⚠️ 未验证 / 待实测（真机跑了才知道）
+
+1. **`artifacts.json` 的 `desc` 与游戏内实际文案是否一致** —— 对不上的神器会一直认不到，
+   表现为走「神器_未找到」兜底（保持原装备开打，不换）。逐条实测后可能要校正 desc。
+2. **长句可能被折行切断**（棱镜塔 17 字、全息 18 字）。若实测认不到，再给
+   `jobArtifactVerifyText` 加一条「超 10 字追加中心 6 字切片」的规则。
+3. **`定位_全局_服务器通讯中` 的 expected 含单字「服」** —— 在「选择你的神器」这种文字密集
+   界面有误命中风险（一旦误命中会一直 JumpBack）。若实测抖动，就新建严格版节点
+   （roi 限屏幕中央 + 只留「服务器通讯中/更新数据」）给这条链专用。
+
+> **生效方式**：改的是 pipe → **重启 MAA 或重载资源**；编辑器 JS 改动 Ctrl+F5。
+> 作业集必须**重新保存一次**才会带上 `artifact_verify`（旧作业集没有该字段 = 不核对但也不卡死）。
+
+---
+
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（★★ 神器链加固：jumpback 置顶 + OCR 核对 + 装完复核，见 §10.21）**：
+
+```
+check_resource.py assets\resource   → All directories checked（exit 0）
+agent\jobset\check_graph.py         → 仍只有那 10 个**预存在**空 next（本链新增节点都有出路，无新增告警）
+selfcheck.py §13                    → 新增 7 条断言全 OK（jumpback 置顶 / 核对快照 / roi / max_hit /
+                                      兜底链 / eff_artifact_verify）；全局仍 exit 1，唯一 FAIL 是**预存在**的
+                                      create_yard.json + secret_realm.json（用户近期 pipe，本轮未碰）
+编辑器 11 套 repro_*.js              → 全过
+node tests\fuzz_drag.js 200 100     → 0 个会话有首错
+核对文本端到端抽查                   → 投罐「罐子里会随机掉出僵尸」/ 闪电「电荷能造成眩晕」/
+                                      葫芦「将全场指定体型僵尸吸入葫芦中秒杀」/ 未知名 → ["神器"]
+```
+
+本轮改动文件：
+
+```
+assets/resource/pipeline/Endless_ref/06Endless_god_vessel/0601Endless_god_vessel.json
+                                  ★整链改造：8 个节点 next 首位挂 jumpback；新增 核对神器 /
+                                    确认已装备 / 神器_未找到；滑动加 max_hit；神器.next 改接核对
+agent/jobset/runtime.py            ★NODE_ARTIFACT_VERIFY / _ARTIFACT_VERIFY_ORIG（快照）/
+                                    _ARTIFACT_HIT_NODES / NODE_JUMPBACK_COMM + _clear_artifact_hits()
+                                    ＋ _inject_artifact 注入核对文本（缺失时只提醒一次）
+agent/jobset/engine.py             Table.artifact_verify / boss_artifact_verify + eff_artifact_verify(is_boss)
+agent/jobset/selfcheck.py          §13：关闭神器界面 next 断言改 [JB, 开始战斗]；新增神器链 7 条断言
+game_assist_tools/endless_setup/static/js/35-jobset-artifact.js   ★jobArtifactVerifyText（desc → 中间句）
+game_assist_tools/endless_setup/static/js/27f-jobset-export.js    ★导出 artifact_verify / boss_artifact_verify
+game_assist_tools/endless_setup/HANDOFF.md                        §0 / §10.21 / §11
+```
 
 **2026-11-02 追加实测（预留接口 3 项：特殊表 + 局内两个开关，见 §10.10-B 第 11~13 行）**：
 

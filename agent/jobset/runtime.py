@@ -521,6 +521,22 @@ NODE_ARTIFACT_TPL = "无尽挑战_神器"
 NODE_ARTIFACT_PICK = "无尽挑战_选取神器"
 # 仅用于文档/断言：pipe 里它的 next 是静态 [开始战斗]，runtime 不碰。
 NODE_ARTIFACT_CLOSE = "无尽挑战_关闭神器界面"
+
+# ★ 神器链加固（2026-11-02，见 HANDOFF §10.21）：
+#   点开卡片后先 OCR 核对详情页的描述文本，认对了才点装备（防 TemplateMatch 撞脸）。
+NODE_ARTIFACT_VERIFY = "无尽挑战_核对神器"
+#   核对节点的 expected 由 runtime 注入（网页端从 artifacts.json 的 desc 取中间句，
+#   导出成作业集 artifact_verify）-> 这是**新增的 runtime 管辖字段**，
+#   必须收进快照（还原时写回 pipe 原值），selfcheck §13 有断言守门。
+_ARTIFACT_VERIFY_ORIG = {"expected": ["神器"]}
+# ★ 带 max_hit 的两个节点：每次真正进神器链之前要清零命中次数。
+#   max_hit 是**整个任务累计**的，而无尽里每关都可能换神器 —— 不清零第二关就滑不动了。
+#   （同一套解法见 agent/create_yard_hits.py 的 CreateYardResetHits）
+_ARTIFACT_HIT_NODES = ("无尽挑战_选择神器_滑动", "无尽挑战_确认已装备")
+# 神器链每个节点的 next **第一位**都挂它：loading 遮罩期任何识别都不可信，
+# 必须让它优先吃掉这一帧（2026-11-02 用户定：放最顶上，不是放末尾）。
+NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中"
+JB_COMM = "[JumpBack]" + NODE_JUMPBACK_COMM
 # 首关入口：next 静态 [清空卡牌]（骨架第一站），runtime 不碰。
 NODE_START_OCR = "无尽挑战_识别开始战斗"
 # ★ 选卡界面的入口节点们（选神器 = 选卡界面的一步，和清空卡牌同层）：
@@ -823,6 +839,22 @@ def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     _STATE["lineup_is_boss"] = bool(is_boss)
 
 
+def _clear_artifact_hits(context: Context) -> None:
+    """进神器链之前把带 max_hit 的节点命中次数清零。
+
+    ★ 为什么必须做：`max_hit` 是**整个任务累计**的（不是每关重置）。无尽里
+      每关都可能换神器，不清零的话第二关「选择神器_滑动」就已经被累计命中数
+      耗尽 —— 表现为「神器在后面的页里却怎么也不翻页」。
+    ★ maafw 老版本没有 clear_hit_count -> 静默跳过（退化为累计上限，不炸）。
+    ★ 从没命中过的节点清零会返回 False，属正常（与 create_yard_hits 同口径）。
+    """
+    for node in _ARTIFACT_HIT_NODES:
+        try:
+            context.clear_hit_count(node)
+        except Exception:
+            return                      # 方法不存在/不可用：整组放弃，别刷日志
+
+
 def _inject_artifact(context: Context, table, is_boss: bool,
                      force: bool = False) -> None:
     """把「选神器」这一步挂到选植物路线的终点（唯一入口）。
@@ -835,8 +867,8 @@ def _inject_artifact(context: Context, table, is_boss: bool,
         不换   -> 两者都还原 [开始战斗]
       于是「选取神器」全程保持 pipe 原样（OCR 认「神器」）：
         不在链上 = 不换神器；在链上 = 必换神器，没有第三种状态。
-      「关闭神器界面」的 next 是 pipe 静态 [开始战斗] —— 植物在进神器链
-      之前就换完了，关掉神器界面直接开打（runtime 不再碰它）。
+      「关闭神器界面」的 next 是 pipe 静态 [jumpback通讯中, 开始战斗] ——
+      植物在进神器链之前就换完了，关掉神器界面直接开打（runtime 不再碰它）。
 
     闸门规则（用户定，2026-10）：神器【不跟随训练模式】——
       不管正赛还是训练，只要「当前生效神器 == 上一关的神器」就跳过；
@@ -845,6 +877,11 @@ def _inject_artifact(context: Context, table, is_boss: bool,
     force=True（预热用）：首关开局局内装备状态未知，无视签名强制走流程。
       （预热可能被 Load/AutoCount 调两次 —— 走签名的话第二次会误判
       「相同」而把刚接好的线还原掉。）
+
+    ★ 2026-11-02 加固（见 HANDOFF §10.21）：要换时除了注入模板，还
+      ① 注入「核对神器」的 OCR expected（表里的 artifact_verify，取描述中间句）
+         —— 没配就退回 pipe 的 ['神器']（不核对也不卡死）；
+      ② 清掉带 max_hit 的两个节点的命中次数（任务累计，不清第二关就滑不动）。
     """
     art = table.eff_artifact(is_boss)
     en = table.eff_artifact_en(is_boss)
@@ -867,7 +904,26 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 _log(f"神器相同（{art}）-> 跳过选取神器，直接走选卡")
             _STATE["artifact_sig"] = art
             return
-        # 换神器：闸门（未变分支要先进骨架）+ 两个选卡终点接「选取神器」+ 模板
+        # 换神器：闸门（未变分支要先进骨架）+ 两个选卡终点接「选取神器」
+        #        + 模板（认哪张卡）+ 核对文本（认对这张卡才装备）+ 清 max_hit
+        verify = []
+        try:
+            verify = list(table.eff_artifact_verify(is_boss) or [])
+        except AttributeError:          # 自测桩/旧 Table 对象没有该方法
+            verify = []
+        if not verify:
+            # 去重：同一件神器只提醒一次，避免每关刷屏（这条只提示「去网页端重存」）
+            _warned = _STATE.get("artifact_verify_warned")
+            if not isinstance(_warned, set):
+                _warned = set()
+                _STATE["artifact_verify_warned"] = _warned
+            if art not in _warned:
+                _warned.add(art)
+                _log(f"⚠️ 神器「{art}」没有核对文本（artifact_verify 缺失）——"
+                     f"核对节点退回「神器」泛匹配（等于不核对）。"
+                     f"请在网页端重新保存作业集（神器 desc 见 artifacts.json）")
+        # ★ max_hit 清零：max_hit 是任务累计的，不清零第二关起滑动/确认节点就失效
+        _clear_artifact_hits(context)
         context.override_pipeline({
             NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ART)},
             NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
@@ -878,8 +934,13 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 "template": [f"General/god_vessel/{en}/",
                              f"General/god_vessel/{en}/{en}_1.png"],
             },
+            # 核对文本（pipe 默认 ['神器'] = 不核对也不卡死）
+            NODE_ARTIFACT_VERIFY: {
+                "expected": verify or list(_ARTIFACT_VERIFY_ORIG["expected"]),
+            },
         })
         _log(f"已注入神器流程：{art}（{en}）-> 选卡终点接 选取神器，"
+             f"核对「{'/'.join(verify) if verify else '未配置'}」后装备，"
              f"装备后回 开始战斗")
         _STATE["artifact_sig"] = art
     except Exception as e:

@@ -775,6 +775,23 @@ try:
     check("神器占位: 进入普通关签名", _t_art.lineup_sig(False) == ("plants", ("大喷菇",), "神器A"),
           str(_t_art.lineup_sig(False)))
     check("神器占位: boss 未配置 -> 沿用", _t_art.eff_artifact(True) == "神器A")
+    # ★ 核对文本（2026-11-02）：旧作业集没这个字段 -> 空列表 -> runtime 退回 ['神器']
+    check("神器核对文本: 旧作业集无字段 -> 空列表（= 不核对也不卡死）",
+          _t_art.eff_artifact_verify(False) == []
+          and _t_art.eff_artifact_verify(True) == [],
+          str((_t_art.artifact_verify, _t_art.boss_artifact_verify)))
+    _t_vfy13 = _eng13.Table({"from_level": 1,
+                             "lineup": {"plants": ["大喷菇"], "artifact": "投罐神器"},
+                             "artifact_verify": ["罐子里会随机掉出僵尸", "  ",
+                                                 "罐子里会随机掉出僵尸"],
+                             "boss_lineup": {"plants": ["大喷菇"], "artifact": "投罐神器"},
+                             "boss_artifact_verify": []}, 0)
+    check("神器核对文本: 去空 / 去重保序",
+          _t_vfy13.eff_artifact_verify(False) == ["罐子里会随机掉出僵尸"],
+          str(_t_vfy13.artifact_verify))
+    check("神器核对文本: boss 侧为空 -> 沿用普通关",
+          _t_vfy13.eff_artifact_verify(True) == ["罐子里会随机掉出僵尸"],
+          str(_t_vfy13.eff_artifact_verify(True)))
 
     # --- ★ 快照原则（2026-10-24 定稿）：快照只收 runtime 会动的字段 ---
     #   MAA override 按字段合并，没写的字段永远保持 pipe 现值 ——
@@ -834,9 +851,40 @@ try:
           _ap_pipe.get("recognition") == "OCR" and _ap_pipe.get("action") == "Click",
           str(_ap_pipe))
     _close_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_CLOSE)
-    check("★同步: 关闭神器界面 next 静态回「开始战斗」（runtime 不碰）",
-          _close_pipe.get("next") == [_rt13.NODE_BATTLE_START],
+    check("★同步: 关闭神器界面 next 静态 = [jumpback 通讯中, 开始战斗]（runtime 不碰）",
+          _close_pipe.get("next") == [_rt13.JB_COMM, _rt13.NODE_BATTLE_START],
           str(_close_pipe.get("next")))
+
+    # ---- ★ 神器链加固（2026-11-02，见 HANDOFF §10.21）----
+    #   ① 每节点 next 首位 = [JumpBack]定位_全局_服务器通讯中（loading 期识别不可信）
+    #   ② 点开卡片先核对描述文本，认对才装备   ③ 装完再确认「卸下」
+    #   ④ 滑动加 max_hit + 未找到兜底（绝不空链）
+    _art_chain13 = ("无尽挑战_选取神器", "无尽挑战_神器界面", "无尽挑战_神器",
+                    "无尽挑战_核对神器", "无尽挑战_装备神器", "无尽挑战_确认已装备",
+                    "无尽挑战_已装备神器", "无尽挑战_选择神器_滑动")
+    _no_jb13 = [n for n in _art_chain13
+                if (_pipe_node13(_GOD_PIPE, n).get("next") or [None])[0] != _rt13.JB_COMM]
+    check(f"★神器链: {len(_art_chain13)} 个节点 next 首位都是 [JumpBack]定位_全局_服务器通讯中",
+          not _no_jb13, f"缺 jumpback 的节点={_no_jb13}")
+    _vf_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_VERIFY)
+    check("★同步: 核对神器 expected 快照与 pipe 一致（注入后要能还原）",
+          _rt13._ARTIFACT_VERIFY_ORIG.get("expected") == _vf_pipe.get("expected"),
+          f"runtime={_rt13._ARTIFACT_VERIFY_ORIG} pipe={_vf_pipe.get('expected')}")
+    check("★神器链: 核对神器 roi = 描述区 [264,326,752,175]",
+          _vf_pipe.get("roi") == [264, 326, 752, 175], str(_vf_pipe.get("roi")))
+    check("★神器链: 神器节点 next 末位接「核对神器」（不再直接点装备）",
+          (_pipe_node13(_GOD_PIPE, "无尽挑战_神器").get("next") or [])[-1]
+          == _rt13.NODE_ARTIFACT_VERIFY)
+    check("★神器链: 滑动 / 确认已装备 都有 max_hit（防无限滑 / 死等）",
+          all((_pipe_node13(_GOD_PIPE, n).get("max_hit") or 0) >= 1
+              for n in _rt13._ARTIFACT_HIT_NODES),
+          str([_pipe_node13(_GOD_PIPE, n).get("max_hit")
+               for n in _rt13._ARTIFACT_HIT_NODES]))
+    check("★神器链: 滑满仍有兜底「神器_未找到」-> 关闭界面（绝不空链）",
+          (_pipe_node13(_GOD_PIPE, "无尽挑战_选择神器_滑动").get("next") or [])[-1]
+          == "无尽挑战_神器_未找到"
+          and _pipe_node13(_GOD_PIPE, "无尽挑战_神器_未找到").get("next")
+          == [_rt13.NODE_ARTIFACT_CLOSE])
     _start_pipe = _pipe_node13(_PICK_PIPE, _rt13.NODE_START_OCR)
     check("★同步: 首关入口 next 静态进骨架「清空卡牌」（runtime 不碰）",
           _start_pipe.get("next") == [_rt13.NODE_CLEAR_CARDS],
@@ -953,6 +1001,22 @@ try:
     check("★神器入口: 模板按当前表神器注入",
           any("artifact_calabash" in _json13.dumps(p, ensure_ascii=False)
               for p in _c13.overrides), str(_c13.overrides))
+    # ★ 核对文本注入（2026-11-02）：表里没有 artifact_verify -> 退回 pipe 原值 ['神器']
+    check("★神器入口: 没有核对文本时 expected 退回 ['神器']（不核对也不卡死）",
+          (_merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY) or {}).get("expected")
+          == list(_rt13._ARTIFACT_VERIFY_ORIG["expected"]),
+          str(_merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY)))
+    _tVase13 = _eng13.Table({"from_level": 1,
+                             "lineup": {"plants": ["大喷菇"], "artifact": "投罐神器"},
+                             "artifact_en": "artifact_vase",
+                             "artifact_verify": ["罐子里会随机掉出僵尸"]}, 0)
+    _rt13._STATE["artifact_sig"] = None
+    _cVase13 = _FakeCtx13()
+    _rt13._inject_artifact(_cVase13, _tVase13, False)
+    check("★神器入口: 有核对文本时按表注入到 核对神器.expected",
+          (_merged13(_cVase13, _rt13.NODE_ARTIFACT_VERIFY) or {}).get("expected")
+          == ["罐子里会随机掉出僵尸"],
+          str(_merged13(_cVase13, _rt13.NODE_ARTIFACT_VERIFY)))
 
     _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
     _c13 = _FakeCtx13()
