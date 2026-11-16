@@ -85,14 +85,14 @@
 | **运行时只播提示** | `runtime._reserved_notice()`：只 log 不 override，去重；两个调用点 = 将来真正要动的位置 |
 | **顺带修预存在红灯** | `selfcheck` §18「世界 case 共 16 个」写死 16（用户后加了第 17 个 case「地宫」）→ 改成「**注入当前世界的** case 恰好 16 个」 |
 
-**2026-11-02 追加（★ 预留接口 3 项，见 §10.10-B 第 11~13 行）**：
+**2026-11-02 追加（★ 预留接口，见 §10.10-B 第 12~13 行）**：
 
 | 追加项 | 说明 |
 | --- | --- |
-| **特殊表**（`special_tables`） | 满足触发条件 → 换成另一张特殊阵容表。**只登记两个条件**（重开累计 / 失败累计），`use='once'` = 打一次就回原表；判定入口 `special_table_decide()` **恒不换表** |
 | **局内切换自动点波**（`autoWaveIn`） | 战斗中拨「自动点波」开关（与开局前的 `refreshWave` 是否同一开关**未验证**） |
 | **局内切换僵尸场外加速**（`zombieSpeedIn`） | 战斗中拨「僵尸场外加速」（与开局前的 `zombieSpeed` 是否同一处**未验证**） |
 | 顺手 | §10 那四条「未来要加的东西」**全部已实现**（复核见 §10 的状态表） |
+| ~~特殊表~~ | **2026-11-02 已彻底删除**（数据字段 + 注册表 + 断言 + 文档）：用户定「特殊表本质就是 `tables[]` 里的一张普通表，用布局配置/关卡区间决定何时用」，不需要另立机制 |
 
 **2026-11-02 追加（★★ 神器链加固，见 §10.21）**：
 
@@ -128,9 +128,15 @@
 | 改动 | 说明 |
 | --- | --- |
 | **★ 失败后选项搬进网页** | 每张阵容表一个 **`fail_after`**（`stop` 默认 / `reset` / `continue`），UI 在**阵容表表单行** `#tfFailAfter`（挨着「boss 关」下拉）。runtime 换表时覆盖 `无尽挑战_提示_返回地图.next`（那个 option 本来做的就是这件事）→ **这张表说了算**。★ 用户已把 MAA 那边那个 option **删掉**，所以不再有「跟随全局」这一档；默认 `stop` 注入 `next=[]`，与 pipe 原值一致。见 §10.23 |
-| **特殊表 UI 已撤回** | 上一版做的「🔀 特殊表」按钮 + `#specialTableModal` + `46-jobset-special.js` **全删**（用户：「特殊表是啥玩意啊，先不要做这一步」）。数据接口（`special_tables`）保留在 16 / reserved.py，仍是「存得住但不执行」，**界面看不到** |
+| **特殊表：已彻底删除** | 先撤了 UI（按钮 + 弹窗 + `46-jobset-special.js`），随后按用户「特殊表本身就也是一张表，加载后和普通表没区别」**把整套概念也删了**：`special_tables` 字段、`JOB_SPECIAL_TRIGGERS`、`reserved.py` 的 SPECIAL_*、engine 字段、selfcheck/repro 断言全部移除。旧作业集里残留的该键会被**当未知键忽略**（无害） |
 
-**2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
+**2026-11-02 追加（📋 设置总览：所有配置一处可查）**：
+
+| 改动 | 说明 |
+| --- | --- |
+| **工具栏「📋 总览」** | 独立弹窗 `#jobOverviewModal`，**按表分组的设置中心**：一张表一个卡片 —— 上半是三行 option（**选卡/编队号 · boss 关阵容 · 失败后**），下半是**补给独立区块**；最下面一行是「开局前动作（未实现）」。全部可直接改。<br>★ **补给分两类**（25 的约定）：有顺序项带 `① ② ③`（顺序 = 优先拿哪个）；`pinned` 项（**「查看」**）**没有顺序**，单独显示成开关。<br>改完：当前表同步回主表单（`jobFillForm`）→ 重绘 → `jobSaveLocal`。作业集级全局项（局外选卡 / 识别速率 / 世界 / 标签）**刻意不放** |
+| **纯数据层可测** | `jobOverviewTables()`（读）+ `jobOverviewApply(idx, field, value)`（**option 唯一写入口**）＋ `jobOverviewToggleSupply(idx, candId)`（**补给按指定表**选/取消；25 的 `jobToggleSupplyItem` 只认 currentTable，这里不能复用）→ `repro_undo_boss` E 节 **15 条**断言覆盖；`jobRenderOverview()` 才碰 DOM |
+| **新弹窗三处登记** | `index.html` + `base.css`(`#jobOverviewModal`) + `27e` 的 `JOB_MODAL_SELECTORS`（`repro_registry` 已验：面板型弹窗 19 个全登记） |
 
 **2026-11-02 改动（编辑器 · 移动端，见 §10.11 / §10.12）**：
 
@@ -295,6 +301,8 @@ static/
     └── 45-jobset-dirty.js ★                      # 未保存改动防护（脏标记 / beforeunload / 三入口确认）
                                                   # 见 §10.16
                                                   # （46 = 特殊表弹窗，2026-11-02 已按用户要求撤回，编号不复用）
+    └── 47-jobset-overview.js ★                   # 📋 表设置总览：按表分组列出 option，**可直接改**
+                                                  # 读 jobOverviewTables / 写 jobOverviewApply（纯函数，可测）
 ```
 
 > ⚠️ **关键**：Flask 的静态目录挂载在 **`/static/`**（`Flask(static_folder=STATIC_DIR)`），
@@ -512,19 +520,16 @@ assets\resource\pipeline\Endless_ref/03_Endless_fight\03-1Endless_fight_end\03-1
   //   分组（「选择标签」弹窗的小标题）只活在网页端界面。
   //   ★ 纯标注：不参与运行时、也不给植物备注分套
   "tags": ["开僵尸场外加速", "氪佬", "需要月卡"],
-  // ★★ 预留接口（2026-11-01 建，2026-11-02 追加 special_tables —— 详见 §10.10）——
-  //   **作业集级 4 个 + 表级 3 个**（表级见下面 tables 里）；**全部恒为默认值**
+  // ★★ 预留接口（2026-11-01 建 —— 详见 §10.10）——
+  //   **作业集级 3 个 + 表级 3 个**（表级见下面 tables 里）；**全部恒为默认值**
   //   （还没有界面能改它们），旧作业集没有它们，读进来 = 未启用 = 行为不变。
   //   ⚠️ 「开局前动作 → 等待」曾实现过（pre_delay 方案），用户决定先不要、已回滚，
   //      所以这里仍然是「存得住但不会执行」。
+  //   ⚠️ 2026-11-02 删掉了 `special_tables`（特殊表）—— 用户定：那就是 tables[] 里
+  //      的一张普通表，用布局配置/关卡区间决定何时用。旧文件残留该键会被忽略。
   "reserved_version": 1,
   "world_chains": { "enable": false, "items": [] },        // 世界作业链（按世界换阵容）
   "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },  // 正赛检查
-  "special_tables": {                                       // 特殊表（满足触发条件 -> 换表）
-    "enable": false,
-    "triggers": { "restart": 0, "fail": 0 },                // 0 = 该条件不参与
-    "table": 0, "side": "both", "use": "once"               // once = 打一次就回原表
-  },
   "tables": [{
     "from_level": 1, "to_level": ...,
     "lineup": { "plants": [...], "mode": ..., "deck_no": ... },
@@ -1935,7 +1940,7 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 > 预留动作）、**在 20 之前**（`jobNewTable`/`jobBuild`/`jobApplyLoaded` 都要调它）。
 > 注册表漂移由 `selfcheck.py` §22b 拿**真实 JS 文件**正则比对，改一边不改另一边会红。
 
-### B. 十三项功能 × 接口落点（实现时照这张表走）
+### B. 十二项功能 × 接口落点（实现时照这张表走）
 
 | # | 功能（用户原话） | 数据字段 | 导出键 | 实现时的挂钩点 | 状态 |
 | --- | --- | --- | --- | --- | --- |
@@ -1949,29 +1954,20 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
 | 8 | 切换形态更智能（选植物→点几下） | `JOB_INBATTLE_RESERVED` `formSmart` | `ga:form` 段多 `plant` 字段 | `24` 加参数控件类型 `'plant'` + `dsl.generic_dsl` 的 form 分支 | 未实现 |
 | 9 | 世界作业链（导入一次、识别当前世界换阵容） | `jobReservedTop.worldChains` | `world_chains{enable,items[]}` | `runtime._reserved_notice` 的 JobSetLoad 调用点 → 换成真替换（当前世界 `_check_world` 已在读） | 未实现 |
 | 10 | 正赛检查（选正赛会检查有没有开） | `jobReservedTop.modeCheck` | `mode_check{enable,expect,on_missing}` | 同上 | 未实现 |
-| 11 | **特殊表**（满足触发条件 → 换一张特殊阵容表） | `jobReservedTop.specialTables` | `special_tables{enable,triggers{restart,fail},table,side,use}` | **只有接口，无界面**（2026-11-02 用户：「特殊表是啥玩意啊，先不要做这一步」→ 做过一版 UI 已**整体撤回**）。<br>实现分两步：**① 只数「换阵容重开」**（`JobSetStage` 里 `run_task(restart_node)` 之前 +1，Python 钩子现成、**零 pipe 改动**）；**② 失败计数**（`无尽挑战_提示_返回地图.next` 插一个 CustomAction 计数节点）。<br>⚠️ 收尾超时重开（`JobSetEndRestart`）已 pipe 化、**没有 Python 钩子**，要数它只能走 ② | 未实现 |
-| 12 | **局内切换自动点波** | `JOB_INBATTLE_RESERVED` `autoWaveIn` | 通用动作 id `autoWaveIn` | `dsl.generic_dsl` 的 `RESERVED_GENERIC_ACTIONS` 分支 → 换真编译（开关坐标待拆包） | 未实现 |
-| 13 | **局内切换僵尸场外加速** | 同上 `zombieSpeedIn` | 同上 | 同上 | 未实现 |
+| 11 | **局内切换自动点波** | `JOB_INBATTLE_RESERVED` `autoWaveIn` | 通用动作 id `autoWaveIn` | `dsl.generic_dsl` 的 `RESERVED_GENERIC_ACTIONS` 分支 → 换真编译（开关坐标待拆包） | 未实现 |
+| 12 | **局内切换僵尸场外加速** | 同上 `zombieSpeedIn` | 同上 | 同上 | 未实现 |
 
-> ★ **第 11~13 项是 2026-11-02 追加的**（用户原话：「还有特殊表，重开一定次数换特殊阵容表，
-> 这个也做接口」「局内切换自动点波和僵尸场外加速也要改，都预留一下」）。
+> ★ **第 11~12 项是 2026-11-02 追加的**（用户原话：「局内切换自动点波和僵尸场外加速也要改，
+> 都预留一下」）。
 >
-> **特殊表只登记两个触发条件**（用户定：「目前只能加这俩」）：
-> `restart`（重开累计次数）/ `fail`（失败累计次数）。其余候选（关卡区间 / 当前世界 /
-> 正赛训练 / 已用时 / 已换表次数 / 第几张表）**一律没登记** —— 要的时候往
-> `JOB_SPECIAL_TRIGGERS` 加一行即可，数据形状不用改；波数 / 阳光 / 掉车那类要新识别、
-> 属「**未验证**」，更不许提前登记。
+> ⚠️ **原第 11 项「特殊表」已彻底删除**（2026-11-02）。它曾登记 `JOB_SPECIAL_TRIGGERS`
+> （restart/fail 两个触发条件）+ `special_tables{enable,triggers,table,side,use}`，
+> 用户最终定性：「**特殊表他本身其实也是一个表，加载后和普通表没有区别**」
+> → 那就是 `tables[]` 里的一张普通表，用「布局配置 / 关卡区间」决定何时用它，
+> 不需要另立一套「满足条件就换表」的机制。字段、注册表、断言、文档全部移除；
+> 旧作业集里残留的 `special_tables` 键会被当未知键忽略。
 >
-> 判定语义：`enable=false` 或 `table=0` → 不生效；多个触发器 >0 → **全部满足（AND）**；
-> `use='once'`（用户定）= 只用它打一次、之后回原表，「已用过」状态**只放运行时内存**
-> （新任务 / `JobSetReset` 清空，绝不写进作业集文件 —— 否则换个会话跑就永远不再触发）。
->
-> ⚠️ **实现特殊表前必须先解决计数**：现在代码里**没有任何重开/失败计数器**
-> （`level_tracker` 注释写明：重开走 `通用_重开_暂停`、不经过「点继续挑战」，
-> 所以关卡计数器天然不多推）。要埋三处：`JobSetEndRestart`（收尾超时）、
-> `JobSetStage` 的 `通用重开节点`、pipe 的 `无尽挑战_失败`。
->
-> ⚠️ **第 12/13 项 id 带 `In` 后缀**是为了不和开局前那两个（`refreshWave` /
+> ⚠️ **第 11/12 项 id 带 `In` 后缀**是为了不和开局前那两个（`refreshWave` /
 > `zombieSpeed`）撞 id（撞了 agent 侧会认错成开局前动作）。局内的「自动点波」与
 > 开局前的「自动刷新下一波」、局内外的「僵尸场外加速」是不是同一个游戏开关 ——
 > **未验证**，实测确认后再决定是否合并 id。
@@ -1988,13 +1984,6 @@ boss 播报是 pipe 里的静态 focus（实时），两者必然错位一格。
                 "artifact": null }]
   },
   "mode_check": { "enable": false, "expect": "ranked", "on_missing": "warn" },
-  "special_tables": {                    // ★ 特殊表（未启用；2026-11-02 追加）
-    "enable": false,
-    "triggers": { "restart": 3, "fail": 0 },   // 阈值；0 = 该条件不参与，多个 >0 = 全部满足
-    "table": 2,                                // 目标表序号（1 起；0 = 没选 → 整条规则不生效）
-    "side": "both",                            // both | normal | boss
-    "use": "once"                              // once = 打一次就回原表 | sticky = 一直用
-  },
   "tables": [{
     "pre_battle": [                      // 开局前动作（顺序 = 执行顺序）
       { "id": "wait",        "side": "both", "ms": 3000 },
@@ -3051,13 +3040,74 @@ FAIL_BACK_PLANS = {"stop": ([], …), "reset": (["方案1"], …), "continue": (
 - `repro_undo_boss.js` D 节 5 条：新建表默认 `stop` / 三个合法值原样 /
   空串·非法值·中文名 → `stop` / `undefined`·`null` → `stop` / **两张表各自独立互不覆盖**
 
-> ⚠️ 与「特殊表」的 `fail` **计数**没关系 —— 那是另一件事（要插 CustomAction 节点），现在没做。
+> ⚠️ 「失败**计数**」现在不做 —— 它原本是给「特殊表」当触发条件用的，而特殊表已在
+> 2026-11-02 彻底删除（见 §10.10-B 的说明）。这里只负责**失败后怎么做**，不计数。
 > ⚠️ 你删掉 MAA 那个 option 之后，`无尽挑战_提示_返回地图` 的 next 会回落到 pipe 原值 `[]`；
 > runtime 默认注入的也是 `[]`，所以**删与不删行为一致**，不用担心顺序。
 
 ---
 
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（删除特殊表 + 📋 设置总览）**：
+
+```
+node --check 16 / 47 / 29 / 27e                  → OK
+agent 侧 import runtime / engine / reserved      → OK
+编辑器 11 套 repro_*.js                           → 全过
+repro_reserved.js                               → 全过（catalog 14 → 12 项；特殊表 11 条断言已删）
+repro_undo_boss.js                              → E 节 15 条「表设置总览」断言全过：
+                                                  每表一条记录 / 植物数只数有名槽 / 补给数量 /
+                                                  选卡+编队号 / boss 关阵容 / 写入口改值生效 /
+                                                  编队号 99 夹到 6 / 值没变返回 false / 非法值归一 / 越界表忽略 /
+                                                  补给追加到末尾 / 再点取消 / 不存在的补给忽略
+selfcheck.py §22                                → 全 OK（去掉 SPECIAL_TRIGGERS / special_tables 相关断言；
+                                                  作业集级提示 3 项 → 2 项、首次 6 行 → 5 行、总 9 → 8 行）
+⚠️ selfcheck 全局仍 exit 1，唯一 FAIL 是**预存在**的「异值多写入者」
+   （create_yard.json + secret_realm.json，用户近期 pipe）
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/index.html          「📋 总览」按钮 + #jobOverviewModal + 引入 47
+game_assist_tools/endless_setup/static/js/47-jobset-overview.js  ★新增（只读总览）
+game_assist_tools/endless_setup/static/css/base.css        #jobOverviewModal / #jobTableForm .tf-lbl·.tf-sel
+game_assist_tools/endless_setup/static/js/16-jobset-reserved.js  ★删除第五张注册表（特殊表）与全部 helper
+game_assist_tools/endless_setup/static/js/27e-jobset-hotkeys.js  JOB_MODAL_SELECTORS 加 ov-open
+game_assist_tools/endless_setup/static/js/29-jobset-init.js      jobInit 调 jobOverviewInit
+agent/jobset/reserved.py           ★删除 SPECIAL_TRIGGERS / SPECIAL_USES / parse_special_tables /
+                                     special_tables_armed·decide·summary；catalog 少一组
+agent/jobset/engine.py             ★删除 JobSet.special_tables
+agent/jobset/selfcheck.py          ★删除 §22 的特殊表断言；提示行数 3→2 / 6→5 / 9→8
+tests/repro_reserved.js            ★删除特殊表断言；catalog 14 → 12
+tests/repro_undo_boss.js           E 节 8 条（总览）+ D 节 5 条（失败后）断言
+game_assist_tools/endless_setup/HANDOFF.md   §0 / §1 / §5 / §10.10-B·C / §10.23 / §11
+```
+
+**2026-11-02 实测（📋 设置总览）**：
+
+```
+node --check 27e / 29 / 47                      → OK
+编辑器 11 套 repro_*.js                          → 全过
+repro_undo_boss.js                              → 新增 E 节 8 条「总览数据层」断言全过：
+                                                  行数=表数 / 固定 9 列 / 失败后按表分别显示 / 编队号 /
+                                                  植物数只数有名槽 / 收尾区分 loops / 关键项齐全 / 未配不崩
+repro_registry.js                               → 面板型弹窗 19 个全登记（含 #jobOverviewModal 的样式 + 键盘闸口）
+⚠️ 弹窗外观（宽表横向滚动、手机贴底）本环境无法验证 —— 请 Ctrl+F5 点「📋 总览」看一眼
+```
+
+本轮改动文件：
+
+```
+game_assist_tools/endless_setup/static/index.html          「📋 总览」按钮 + #jobOverviewModal + 引入 47
+game_assist_tools/endless_setup/static/js/47-jobset-overview.js  ★新增：jobOverviewData（纯数据）+ jobRenderOverview + 开关
+game_assist_tools/endless_setup/static/css/base.css        #jobOverviewModal 一组样式（无 !important / 无行内样式）
+game_assist_tools/endless_setup/static/js/27e-jobset-hotkeys.js  JOB_MODAL_SELECTORS 加 ov-open
+game_assist_tools/endless_setup/static/js/29-jobset-init.js      jobInit 调 jobOverviewInit
+game_assist_tools/endless_setup/tests/repro_undo_boss.js         E 节 8 条断言 + 加载 31/47
+game_assist_tools/endless_setup/HANDOFF.md                       §1 / §0 / §11
+```
 
 **2026-11-02 实测（★ 失败后选项搬进网页 · 每表单独设；特殊表 UI 撤回）**：
 

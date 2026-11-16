@@ -1927,6 +1927,133 @@ body.m-app .supply-stage { min-height: calc(var(--sc-card-w) * var(--sc-card-rat
 }
 #jobTableForm .tf-sel { max-width: 148px; }
 
+/* ============ 表设置总览弹窗（2026-11-02，47-jobset-overview.js） ============ */
+/* 按表分组的设置中心：一张表一个卡片，卡片里一行一个 option，可直接改。
+   z-index 10080（同 tagPicker）—— 必须高于底部导航 10050。 */
+#jobOverviewModal {
+    position: fixed; inset: 0; z-index: 10080;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(15,23,42,.52);
+}
+#jobOverviewModal.ov-open { display: flex; animation: jobFadeIn .16s ease-out both; }
+#jobOverviewModal .ov-panel {
+    width: min(820px, 94vw); max-height: 88vh;
+    background: #f7f8fb; border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(15,23,42,.38);
+    display: flex; flex-direction: column;
+    animation: jobPanelUp .26s cubic-bezier(.22,.61,.36,1) both;
+    overflow: hidden;
+}
+#jobOverviewModal .ov-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 15px 20px; flex: 0 0 auto;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f5fa 100%);
+    border-bottom: 1px solid #e5e8f0;
+}
+#jobOverviewModal .ov-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #4f46e5; box-shadow: 0 0 0 3px #eef2ff;
+}
+#jobOverviewModal .ov-title { font-size: 15px; font-weight: 700; color: #312e81; letter-spacing: .5px; }
+#jobOverviewModal .ov-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+#jobOverviewModal .ov-close {
+    width: 28px; height: 28px; border: none; border-radius: 8px;
+    background: #eef1f6; color: #475569; cursor: pointer; font-size: 15px; line-height: 1; margin-left: 8px;
+    transition: background .15s ease;
+}
+#jobOverviewModal .ov-close:hover { background: #dfe4ee; }
+#jobOverviewModal .ov-body { padding: 4px 16px 16px; overflow-y: auto; flex: 1 1 auto; }
+/* 一张表 = 一个卡片 */
+#jobOverviewModal .ov-card {
+    background: #fff; border: 1px solid #e5e8f0; border-radius: 12px;
+    margin-top: 12px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(15,23,42,.04);
+    transition: box-shadow .16s ease, border-color .16s ease;
+}
+#jobOverviewModal .ov-card:hover { box-shadow: 0 4px 14px rgba(15,23,42,.08); }
+#jobOverviewModal .ov-card.ov-cur { border-color: #a5b4fc; box-shadow: 0 0 0 3px #eef2ff; }
+#jobOverviewModal .ov-card-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, #fbfcfe 0%, #f3f5fa 100%);
+    border-bottom: 1px solid #eef1f6;
+}
+#jobOverviewModal .ov-card-title { font-size: 14px; font-weight: 700; color: #312e81; }
+#jobOverviewModal .ov-card-range { font-size: 11px; color: #94a3b8; }
+#jobOverviewModal .ov-cur-badge {
+    font-size: 10px; color: #3730a3; background: #eef2ff;
+    border: 1px solid #c7d2fe; border-radius: 999px; padding: 1px 9px; font-weight: 700;
+}
+#jobOverviewModal .ov-go {
+    margin-left: auto; border: 1px solid #c7d2fe; background: #fff; color: #4338ca;
+    border-radius: 999px; padding: 4px 13px; font-size: 12px; cursor: pointer; font-weight: 700;
+    transition: background .15s ease, border-color .15s ease;
+}
+#jobOverviewModal .ov-go:hover { border-color: #4f46e5; background: #eef2ff; }
+/* 一行 option：左定宽标签 + 右侧控件/只读值 */
+#jobOverviewModal .ov-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 9px 14px; border-bottom: 1px solid #f2f4f8; font-size: 12px;
+}
+#jobOverviewModal .ov-row:last-child { border-bottom: none; }
+#jobOverviewModal .ov-row:hover { background: #fafbfe; }
+#jobOverviewModal .ov-k {
+    flex: 0 0 84px; color: #64748b; font-weight: 700; letter-spacing: .3px;
+}
+#jobOverviewModal .ov-v { flex: 1 1 auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+#jobOverviewModal .ov-sel {
+    padding: 5px 8px; font-size: 12px; max-width: 190px;
+    border: 1px solid #dbe1ea; border-radius: 8px; color: #1e293b; background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+#jobOverviewModal .ov-sel:hover { border-color: #a5b4fc; }
+#jobOverviewModal .ov-sel:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px #eef2ff; }
+#jobOverviewModal .ov-sub-lbl { font-size: 11px; color: #94a3b8; margin-left: 2px; }
+#jobOverviewModal .ov-ro { color: #94a3b8; }
+/* 补给 chip：已选 = 实底可点取消；未选 = 虚线可点追加 */
+#jobOverviewModal .ov-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#jobOverviewModal .ov-chip {
+    border: 1px dashed #cbd5e1; background: #fff; color: #64748b;
+    border-radius: 999px; padding: 3px 11px; font-size: 11px; cursor: pointer;
+    transition: all .15s ease;
+}
+#jobOverviewModal .ov-chip:hover { border-color: #4f46e5; color: #4338ca; background: #f5f3ff; }
+#jobOverviewModal .ov-chip.ov-chip-on {
+    border: 1px solid #4f46e5; background: #4f46e5; color: #fff; font-weight: 700;
+}
+#jobOverviewModal .ov-chip.ov-chip-on:hover { background: #4338ca; border-color: #4338ca; }
+/* ★ 补给单独一块：浅底分组，与上面三行 option 视觉分开；
+   内部再分「①②③ 有序」/「可添加」/「无顺序（查看…）」三段 */
+#jobOverviewModal .ov-supply {
+    padding: 11px 14px 13px;
+    border-top: 1px solid #eef1f6;
+    background: #fbfcfe;
+}
+#jobOverviewModal .ov-supply-title {
+    font-size: 11px; font-weight: 700; color: #64748b;
+    letter-spacing: .3px; margin-bottom: 8px;
+}
+#jobOverviewModal .ov-chips-add,
+#jobOverviewModal .ov-chips-pin { margin-top: 9px; }
+#jobOverviewModal .ov-line-lbl {
+    flex: 0 0 auto; font-size: 11px; font-weight: 700; color: #94a3b8; margin-right: 2px;
+}
+#jobOverviewModal .ov-chip-add { border-color: #c7d2fe; color: #4338ca; }
+#jobOverviewModal .ov-hint { font-size: 11px; color: #94a3b8; padding-top: 8px; }
+#jobOverviewModal .ov-foot {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-top: 1px solid #e2e8f0; flex: 0 0 auto;
+}
+#jobOverviewModal .ov-foot button {
+    border: none; border-radius: 8px; padding: 7px 16px; cursor: pointer;
+    background: #4f46e5; color: #fff; font-size: 13px; font-weight: 700;
+}
+/* 手机：贴底整屏 */
+body.m-app #jobOverviewModal { align-items: flex-end; }
+body.m-app #jobOverviewModal .ov-panel {
+    width: 100vw; max-width: 100vw; max-height: 90vh; border-radius: 14px 14px 0 0;
+}
+
 /* ============================================================
    通用动作按钮：次数角标 + 「更多动作」占位
    ============================================================ */

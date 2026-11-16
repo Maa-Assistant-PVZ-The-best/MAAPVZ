@@ -158,6 +158,9 @@ function jobInit() {
     if (typeof jobTagInit === 'function') jobTagInit();
     // 表格映射对照（🔍 把别的作业集的棋盘叠加到当前棋盘）
     if (typeof jobRefInit === 'function') jobRefInit();
+    // ★ 设置总览弹窗（工具栏「📋 总览」，47-jobset-overview.js）
+    //   47 的 <script> 排在最后，但本函数由 window.onload 触发 -> 那时它已加载
+    if (typeof jobOverviewInit === 'function') jobOverviewInit();
 
     // 优先恢复本地缓存（刷新网页不丢配置），否则新建一张表
     const restored = jobLoadLocal();

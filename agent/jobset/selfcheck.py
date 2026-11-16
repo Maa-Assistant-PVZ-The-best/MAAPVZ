@@ -1884,11 +1884,8 @@ try:
     check("局外预留 2 项齐全（世界作业链 / 正赛检查）",
           set(_rsv22.OUTER_RESERVED) == {"worldChains", "modeCheck"},
           str(sorted(_rsv22.OUTER_RESERVED)))
-    check("特殊表触发条件 2 项齐全（重开累计 / 失败累计）",
-          set(_rsv22.SPECIAL_TRIGGERS) == {"restart", "fail"},
-          str(sorted(_rsv22.SPECIAL_TRIGGERS)))
-    check("特殊表 use 只有 once / sticky（once = 打一次就回原表）",
-          _rsv22.SPECIAL_USES == ("once", "sticky"), str(_rsv22.SPECIAL_USES))
+    # ★ 2026-11-02 删掉「特殊表」—— 用户定：它就是 tables[] 里的一张普通表，
+    #   不需要另立机制。所以这里也不再断言 SPECIAL_TRIGGERS / SPECIAL_USES。
     check("全部预留项都还没实现（implemented 全 False）",
           all(spec.get("implemented") is False for spec in _rsv22.catalog()),
           "实现某一项时必须同时改注册表与本节断言，别偷偷上功能")
@@ -1914,7 +1911,6 @@ try:
             ("JOB_PICK_FEATURES", set(_rsv22.PICK_FEATURES), "选卡选项"),
             ("JOB_INBATTLE_RESERVED", set(_rsv22.INBATTLE_RESERVED), "局内动作"),
             ("JOB_OUTER_RESERVED", set(_rsv22.OUTER_RESERVED), "局外选项"),
-            ("JOB_SPECIAL_TRIGGERS", set(_rsv22.SPECIAL_TRIGGERS), "特殊表触发条件"),
         ):
             _jsids = _js_ids22(_jsblk)
             check(f"{_cn}：网页端 {_jsblk} 与 agent 侧 id 一致",
@@ -1975,11 +1971,6 @@ try:
     check("旧作业集: mode_check 未启用",
           _js22_old.mode_check == {"enable": False, "expect": "ranked", "on_missing": "warn"},
           str(_js22_old.mode_check))
-    check("旧作业集: 特殊表未启用（阈值全 0 / 没选表 / use=once）",
-          _js22_old.special_tables == {"enable": False,
-                                       "triggers": {"restart": 0, "fail": 0},
-                                       "table": 0, "side": "both", "use": "once"},
-          str(_js22_old.special_tables))
 
     _raw22_new = {
         "code": "t22b", "name": "新作业集（带预留字段）", "max_level": 149,
@@ -1987,8 +1978,6 @@ try:
             {"world": "海盗港湾", "table": 2, "side": "boss",
              "slots": {"1": "X"}, "squad": 3, "artifact": "葫芦神器"}]},
         "mode_check": {"enable": True, "expect": "ranked", "on_missing": "abort"},
-        "special_tables": {"enable": True, "table": 2, "side": "boss",
-                           "triggers": {"restart": 3, "fail": 99999, "不存在的条件": 5}},
         "tables": [{"from_level": 1, "to_level": None,
                     "lineup": {"plants": ["A"]}, "slots": {"1": "A"},
                     "pre_battle": [{"id": "wait", "side": "both", "ms": 2500}],
@@ -2010,24 +1999,6 @@ try:
           str(_js22_new.world_chains["items"][:1]))
     check("新作业集: mode_check on_missing=abort 读回",
           _js22_new.mode_check["on_missing"] == "abort", str(_js22_new.mode_check))
-    check("新作业集: 特殊表读回（阈值夹到 9999 / 丢掉未登记条件）",
-          _js22_new.special_tables == {"enable": True,
-                                       "triggers": {"restart": 3, "fail": 9999},
-                                       "table": 2, "side": "boss", "use": "once"},
-          str(_js22_new.special_tables))
-    check("特殊表: 判定入口恒「不换表」且写明未实现",
-          _rsv22.special_table_decide(_js22_new.special_tables,
-                                      {"restart": 9, "fail": 9})["table"] == 0
-          and any("未实现" in m for m in
-                  _rsv22.special_table_decide(_js22_new.special_tables)["missing"]))
-    check("特殊表: use 非法值回落 once / table=0 视为没选",
-          _rsv22.parse_special_tables({"enable": True, "table": 0, "use": "乱写"})
-          == {"enable": True, "triggers": {"restart": 0, "fail": 0},
-              "table": 0, "side": "both", "use": "once"})
-    check("特殊表: 摘要文案（重开≥3 且 失败≥9999 → 表2）",
-          _rsv22.special_tables_summary(_js22_new.special_tables)
-          == "重开≥3次 且 失败≥9999次 → 表2（打一次就回原表）",
-          _rsv22.special_tables_summary(_js22_new.special_tables))
 
     # ---- 22f. 提示：没配 = 一个字都不打；配了 = 带 ⏳ 且写明未实现 ----
     check("提示: 没配预留项的作业集不产生任何日志",
@@ -2039,8 +2010,8 @@ try:
           str(_ln22))
     _ln22b = _rsv22.reserved_notice_lines(_t22_new, True)
     check("提示: boss 关别一样能算出（side=both 两侧都算）", len(_ln22b) == 3, str(_ln22b))
-    check("提示: 作业集级三项各一行（世界作业链 / 正赛 / 特殊表）",
-          len(_rsv22.jobset_notice_lines(_js22_new)) == 3,
+    check("提示: 作业集级两项各一行（世界作业链 / 正赛）",
+          len(_rsv22.jobset_notice_lines(_js22_new)) == 2,
           str(_rsv22.jobset_notice_lines(_js22_new)))
 
     # ---- 22g. 运行时钩子 _reserved_notice：只 log、不 override、去重 ----
@@ -2059,7 +2030,7 @@ try:
     try:
         _rt22._STATE["reserved_seen"] = None
         _ctx22 = _Ctx22()
-        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 作业集级 3 + 表级 3
+        _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 作业集级 2 + 表级 3
         _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, False)   # 同一组合 -> 去重
         _rt22._reserved_notice(_ctx22, _js22_new, _t22_new, True)    # 换关别 -> 新键 3 行
     finally:
@@ -2067,8 +2038,8 @@ try:
         _rt22._STATE["reserved_seen"] = None
     check("运行时钩子: 一个 override 都不写（配了也不执行）",
           _ctx22.overrides == [], str(_ctx22.overrides))
-    check("运行时钩子: 首次 6 行 + 重复调用去重 + boss 关别 3 行 = 9 行",
-          sum(1 for m in _logs22 if m.startswith("⏳")) == 9, str(_logs22))
+    check("运行时钩子: 首次 5 行 + 重复调用去重 + boss 关别 3 行 = 8 行",
+          sum(1 for m in _logs22 if m.startswith("⏳")) == 8, str(_logs22))
 
     # ---- 22h. 真实作业集（第 1 节载入的那份）不受影响 ----
     if js:
@@ -2078,10 +2049,8 @@ try:
               str([(t.pre_battle, t.pick_favorite, t.pick_tiers) for t in js.tables])[:160])
         check("真实作业集: 作业集级预留项均未启用",
               js.world_chains == {"enable": False, "items": []}
-              and js.mode_check["enable"] is False
-              and js.special_tables["enable"] is False
-              and js.special_tables["table"] == 0,
-              str((js.world_chains, js.mode_check, js.special_tables)))
+              and js.mode_check["enable"] is False,
+              str((js.world_chains, js.mode_check)))
 except Exception as _e22:
     check("预留接口", False, f"{type(_e22).__name__}: {_e22}")
 

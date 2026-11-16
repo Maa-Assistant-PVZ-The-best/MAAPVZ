@@ -698,13 +698,9 @@ class JobSet:
             raw.get("world_chains"))
         self.mode_check: Dict[str, Any] = _reserved.parse_mode_check(
             raw.get("mode_check"))
-        #   special_tables（2026-11-02 追加）：「满足触发条件（重开累计次数 /
-        #     失败累计次数）后改用另一张阵容表」
-        #                 -> {"enable": bool, "triggers": {restart, fail},
-        #                     "table": 1..N（0 = 没选）, "side", "use": once|sticky}
-        #   ★ 同样只解析、不消费：判定入口 reserved.special_table_decide() 恒不换表。
-        self.special_tables: Dict[str, Any] = _reserved.parse_special_tables(
-            raw.get("special_tables"))
+        #   ★ 2026-11-02 删掉 special_tables（特殊表）—— 用户定：特殊表本质就是
+        #     tables[] 里的一张普通表，用「布局配置 / 关卡区间」决定何时用，
+        #     不需要另立一套机制。旧作业集里残留的该键会被**直接忽略**。
 
         raw_tables = raw.get("tables")
         if not isinstance(raw_tables, (list, tuple)) or not raw_tables:

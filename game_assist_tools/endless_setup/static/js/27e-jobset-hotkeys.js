@@ -108,7 +108,8 @@ const JOB_MODAL_SELECTORS = [
     '#worldPicker.sp-open',           // 选择世界（37）
     '#notesPicker.sp-open',           // 植物/神器备注（38）
     '#refPicker.sp-open',             // 对照（39）
-    '#tagPicker.sp-open'              // 标签（41）
+    '#tagPicker.sp-open',             // 标签（41）
+    '#jobOverviewModal.ov-open'       // 设置总览（47）
 ];
 
 function jobAnyModalOpen() {

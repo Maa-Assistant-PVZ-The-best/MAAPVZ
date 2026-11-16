@@ -550,6 +550,26 @@
     </div>
 </div>
 
+<!-- ============ 表设置总览弹窗（2026-11-02；工具栏「📋 总览」，47-jobset-overview.js） ============
+     按表分组列出每张表的 option，并且**可以直接改**（改完自动存缓存）。
+     补给顺序、棋盘落点这些复杂交互仍去各自的界面；这里只放「表级 option」。
+     ★ 新弹窗三处登记：这里 + base.css 的 #jobOverviewModal 段 + 27e 的 JOB_MODAL_SELECTORS。 -->
+<div id="jobOverviewModal">
+    <div class="ov-panel">
+        <div class="ov-head">
+            <span class="ov-dot"></span>
+            <span class="ov-title">📋 表设置总览</span>
+            <span class="ov-sub">每张表一行 option，改完即时生效</span>
+            <button class="ov-close" id="ovClose" title="关闭">✕</button>
+        </div>
+        <div class="ov-body" id="ovBody"><!-- 由 47-jobset-overview.js 渲染 --></div>
+        <div class="ov-foot">
+            <span class="ov-hint" id="ovHint"></span>
+            <button id="ovDone">关闭</button>
+        </div>
+    </div>
+</div>
+
 <!-- ============ 表格映射对照弹窗（2026-10-13） ============ -->
 <div id="refPicker">
     <div class="rp-panel">
@@ -621,6 +641,7 @@
             <button class="btn btn-primary" id="jobDownloadBtn" title="上传本地作业集 / 下载远程作业集">🌐 远程作业集</button>
             <button class="btn" id="jobRefreshBtn" title="重新读取本地作业集列表">↻</button>
             <button class="btn" id="jobAdvBtn" title="高级设置">⚙ 高级设置</button>
+            <button class="btn" id="jobOverviewBtn" title="表设置总览：按表列出它的 option（选卡 / boss 关 / 失败后 / 补给 / 开局前动作），可直接在这里改">📋 总览</button>
             <span id="jobStatus" style="color:#22a65e;font-size:13px;"></span>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
@@ -1031,5 +1052,7 @@ document.getElementById('shutdownBtn').addEventListener('click', async function 
      ★ 依赖 jobBuild（导出用的同一份口径）、jobSaveLocal（改数据的唯一通道）、
        jobApplyLoaded / jobResetEditor / jobDelete / jobSetCurrent —— 必须最后加载。 -->
 <script src="/static/js/45-jobset-dirty.js"></script>
-<!-- 46 = （2026-11-02 已撤销）特殊表弹窗已按用户要求回退；编号留空不复用 -->
+<!-- 47 = ★ 设置总览（只读）：作业集级 + 每张表的配置一览。
+     入口 = 工具栏「📋 总览」。新弹窗三处登记：index.html + base.css + 27e -->
+<script src="/static/js/47-jobset-overview.js"></script>
 </body></html>

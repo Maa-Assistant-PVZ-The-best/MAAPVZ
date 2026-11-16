@@ -50,7 +50,8 @@ function mkSandbox() {
     vm.createContext(sandbox);
     for (const f of ['04-cards.js', '08-board-data.js', '15-board-actions.js', '20-jobset-core.js',
         '21-jobset-levels.js', '22-jobset-chain.js', '24-jobset-fields.js', '27a-jobset-steps.js', '27b-jobset-stepcfg.js', '27c-jobset-chain-render.js', '27d-jobset-slots.js', '27e-jobset-hotkeys.js', '27f-jobset-export.js',
-        '29-jobset-init.js']) {
+        '29-jobset-init.js', '31-jobset-adv.js', '25-jobset-supply.js', '26-jobset-supply-pick.js',
+        '47-jobset-overview.js']) {
         try {
             vm.runInContext(fs.readFileSync(path.join(JS_DIR, f), 'utf8'), sandbox, { filename: f });
         } catch (e) {
@@ -295,6 +296,73 @@ console.log('D. 失败后行为（failAfter 每表独立）');
         'D4 undefined / null（旧作业集没这个字段）-> stop = 与旧行为一致');
     ok(r.t0 === 'reset' && r.t1 === 'continue',
         'D5 每张表各自独立，互不覆盖');
+}
+
+// ============================================================
+// E. 表设置总览（47-jobset-overview.js）：数据层 + 写入口
+//    jobOverviewTables() 读、jobOverviewApply() 写 —— 都不碰 DOM，所以能在这里测。
+// ============================================================
+console.log('E. 表设置总览（jobOverviewTables / jobOverviewApply）');
+{
+    const s = mkSandbox();
+    const r = vm.runInContext(`
+      jobTables.length = 0; jobNewTable(); jobNewTable();
+      jobTables[0].failAfter = 'reset';
+      jobTables[0].lineupMode = 'deck'; jobTables[0].deckNo = 3;
+      jobTables[0].slots = { 1: '豌豆射手', 2: '向日葵' };
+      jobTables[0].supplyPicks = [
+        { id: 'all', name: '全部植物', img: '全部植物.png' },
+        { id: 'orange', name: '橙色植物', img: '橙色植物.png' },
+        { id: 'artifact', name: '神器', img: '神器.png' },
+        { id: 'view', name: '查看', img: '查看.png', pinned: true }   // ★ 无顺序项
+      ];
+      jobTables[1].bossLineupMode = 'deck'; jobTables[1].bossDeckNo = 5;
+      var ovRows = jobOverviewTables();
+      // 写入口：改第 2 张表的 失败后 + boss 编队号（越界要夹住）
+      var ok1 = jobOverviewApply(1, 'failAfter', 'continue');
+      var ok2 = jobOverviewApply(1, 'bossDeckNo', 99);
+      var ok3 = jobOverviewApply(1, 'bossDeckNo', 99);   // 第二次没变 -> false
+      var ok4a = jobOverviewApply(1, 'lineupMode', 'deck'); // 先切成编队
+      var ok4 = jobOverviewApply(1, 'lineupMode', '乱写');  // 再喂非法值 -> 归一成 plants
+      var ok5 = jobOverviewApply(99, 'failAfter', 'stop'); // 越界表 -> false
+      // 补给：按指定表 toggle（第 1 张表）
+      var sup0 = jobSupplyList(jobTables[0]).length;
+      var supAdd = jobOverviewToggleSupply(0, 'cucumber');       // 未选 -> 追加
+      var sup1 = jobSupplyList(jobTables[0]).length;
+      var supLast = jobSupplyList(jobTables[0])[sup1 - 1].id;    // 追加到末尾
+      var supDel = jobOverviewToggleSupply(0, 'cucumber');       // 再点 -> 取消
+      var sup2 = jobSupplyList(jobTables[0]).length;
+      var supBad = jobOverviewToggleSupply(0, '不存在的补给');
+      var ovRows2 = jobOverviewTables();
+      ({ n: ovRows.length, row0: ovRows[0], row1: ovRows[1],
+         ok1: ok1, ok2: ok2, ok3: ok3, ok4a: ok4a, ok4: ok4, ok5: ok5,
+         sup0: sup0, supAdd: supAdd, sup1: sup1, supLast: supLast,
+         supDel: supDel, sup2: sup2, supBad: supBad,
+         after1: ovRows2[1] });
+`, s);
+    ok(r.n === 2, 'E1 每张表一条记录（2）');
+    eq(r.row0.name, '表1', 'E2 记录带表名');
+    ok(r.row0.plants === 2, 'E3 植物数只数有名字的槽');
+    ok(r.row0.supplyOrdered.length === 3 && r.row0.supplyPinned.length === 1,
+        'E4 补给分两类：3 项有序 + 1 项无顺序（查看）');
+    ok(r.row0.lineupMode === 'deck' && r.row0.deckNo === 3,
+        'E5 选卡方式 + 编队号');
+    ok(r.row1.bossLineupMode === 'deck' && r.row1.bossDeckNo === 5,
+        'E6 boss 关阵容方式 + boss 编队号');
+    ok(r.ok1 === true && r.after1.failAfter === 'continue',
+        'E7 写入口：改失败后 -> 真的写进表');
+    ok(r.ok2 === true && r.after1.bossDeckNo === 6,
+        'E8 写入口：编队号 99 夹到 6');
+    ok(r.ok3 === false, 'E9 写入口：值没变返回 false（不产生无意义记录点）');
+    ok(r.ok4a === true && r.ok4 === true && r.after1.lineupMode === 'plants',
+        'E10 写入口：非法换阵方式归一成 plants（实际=' + r.after1.lineupMode + '）');
+    ok(r.ok5 === false, 'E11 写入口：越界表号直接忽略');
+    ok(r.sup0 === 4 && r.supAdd === true && r.sup1 === 5,
+        'E12 补给：点未选 -> 追加一项（4 -> 5）');
+    ok(r.supLast === 'cucumber', 'E13 补给：新加的排在最后（顺序 = 点击顺序）');
+    ok(r.supDel === true && r.sup2 === 4,
+        'E14 补给：再点一次 -> 取消（5 -> 4）');
+    ok(r.supBad === false, 'E15 补给：不存在的项直接忽略');
 }
 
 console.log('');

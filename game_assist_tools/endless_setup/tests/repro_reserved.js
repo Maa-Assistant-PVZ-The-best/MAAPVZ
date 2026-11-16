@@ -9,7 +9,7 @@
 // 退出码：0 = 全过；1 = 有断言失败
 //
 // 这一套只盯「接口」本身，不测任何游戏行为：
-//   1. 注册表齐全（开局前动作 4 / 选卡 2 / 局内 4 / 局外 2 / 特殊表触发 2），
+//   1. 注册表齐全（开局前动作 4 / 选卡 2 / 局内 4 / 局外 2），
 //      且全部 implemented=false；
 //   2. 新表自动带上预留字段（jobNewTable -> jobReservedDefaults）；
 //   3. ★ 导出（jobBuild）真的带 pre_battle / pick_favorite / pick_tiers
@@ -121,13 +121,8 @@ eq(G('JOB_INBATTLE_RESERVED').map(a => a.id),
     '局内预留 4 项（主动技能 / 智能切换形态 / 局内自动点波 / 局内场外加速）');
 eq(G('JOB_OUTER_RESERVED').map(a => a.exportKey), ['world_chains', 'mode_check'],
     '局外预留的导出字段名 = world_chains / mode_check');
-eq(G('JOB_SPECIAL_TRIGGERS').map(a => a.id), ['restart', 'fail'],
-    '特殊表触发条件 2 项（重开累计 / 失败累计）');
-ok(G('JOB_SPECIAL_TRIGGERS').every(a => a.implemented === false),
-    '特殊表触发条件全部 implemented=false（只留接口）');
-eq(G('JOB_SPECIAL_USES'), ['once', 'sticky'], '特殊表 use 只有 once / sticky');
 ok(G('JOB_RESERVED_VERSION') === 1, '预留接口版本号 = 1（与 agent 侧同值）');
-ok(G('jobReservedCatalog()').length === 14, '总表 14 项（4+2+4+2+2）');
+ok(G('jobReservedCatalog()').length === 12, '总表 12 项（4+2+4+2；特殊表 2026-11-02 已删）');
 
 // ---------------------------------------------------------------------------
 console.log('\n=== 2. 新表自动带预留字段默认值 ===');
@@ -148,9 +143,6 @@ ok(job.reserved_version === 1, '作业集级 reserved_version 导出 1');
 eq(job.world_chains, { enable: false, items: [] }, '作业集级 world_chains 默认未启用');
 eq(job.mode_check, { enable: false, expect: 'ranked', on_missing: 'warn' },
     '作业集级 mode_check 默认未启用 / expect=ranked / on_missing=warn');
-eq(job.special_tables,
-    { enable: false, triggers: { restart: 0, fail: 0 }, table: 0, side: 'both', use: 'once' },
-    '作业集级 special_tables 默认未启用（阈值全 0 / 没选表 / use=once）');
 
 // ---------------------------------------------------------------------------
 console.log('\n=== 4. 导出：配了值就原样写出去 ===');
@@ -166,10 +158,6 @@ jobReservedTop.worldChains.items = [{ world: '海盗港湾', table: 1, side: 'bo
   slots: { 1: '豌豆射手' }, lineup: [], squad: null, artifact: null }];
 jobReservedTop.modeCheck.enable = true;
 jobReservedTop.modeCheck.onMissing = 'abort';
-jobReservedTop.specialTables.enable = true;
-jobReservedTop.specialTables.table = 2;
-jobReservedTop.specialTables.use = 'once';
-jobReservedTop.specialTables.triggers = { restart: 3, fail: 0 };
 `);
 job = G('jobBuild()');
 const jt1 = job.tables[0];
@@ -182,9 +170,6 @@ ok(job.world_chains.enable === true && job.world_chains.items[0].world === '海�
     'world_chains 导出启用 + 条目');
 ok(job.mode_check.enable === true && job.mode_check.on_missing === 'abort',
     'mode_check 导出启用 + on_missing=abort');
-eq(job.special_tables,
-    { enable: true, triggers: { restart: 3, fail: 0 }, table: 2, side: 'both', use: 'once' },
-    'special_tables 导出启用（重开≥3 → 表2、打一次就回原表）');
 
 // ---------------------------------------------------------------------------
 console.log('\n=== 5. 读回：导出原样吃回去 + 丢掉脏数据 ===');
@@ -214,34 +199,6 @@ eq(old.preBattle, [], '旧作业集（无字段）读回 -> preBattle 空');
 ok(old.pickFavorite === false && JSON.stringify(old.pickTiers) === '{}',
     '旧作业集（无字段）读回 -> pickFavorite false / pickTiers 空');
 
-// ---- ★ 特殊表（作业集级）：读回 + 脏数据 + 旧作业集 ----
-const stBack = G(`(function(){
-  jobReservedTopDefaults();
-  jobReservedTopImport({ special_tables: {
-    enable: true, table: 3, side: 'boss', use: 'once',
-    triggers: { restart: 5, fail: 99999, 不存在的条件: 9 }
-  }});
-  return jobReservedTop.specialTables;
-})()`);
-eq(stBack, { enable: true, triggers: { restart: 5, fail: 9999 }, table: 3, side: 'boss', use: 'once' },
-    'special_tables 读回：阈值夹到上限 / 丢掉未登记的条件 / side 归一');
-const stOld = G(`(function(){
-  jobReservedTopDefaults();
-  jobReservedTopImport({});
-  return jobReservedTop.specialTables;
-})()`);
-eq(stOld, { enable: false, triggers: { restart: 0, fail: 0 }, table: 0, side: 'both', use: 'once' },
-    '旧作业集（无 special_tables）读回 -> 未启用，行为一字不差');
-const stDirty = G(`(function(){
-  return jobSpecialTablesNorm({ enable: 'yes', table: 'abc', side: '不是关别', use: '乱写',
-                                triggers: { restart: -5, fail: 'x' } });
-})()`);
-eq(stDirty, { enable: false, triggers: { restart: 0, fail: 0 }, table: 0, side: 'both', use: 'once' },
-    'special_tables 脏数据：enable 非真布尔 / 表名非法 / use 非法 全部回落默认');
-ok(G('jobSpecialTablesArmed({ enable: true, table: 0, triggers: { restart: 3 } })') === false,
-    '特殊表「没选目标表」= 不算配了东西（arm 判定）');
-ok(G('jobSpecialTablesArmed({ enable: false, table: 2, triggers: { restart: 3 } })') === false,
-    '特殊表「没打开 enable」= 不算配了东西');
 
 // ---------------------------------------------------------------------------
 console.log('\n=== 6. 摘要 / 关别过滤 / 编译入口 ===');
@@ -260,25 +217,6 @@ ok(cmp.missing.length === 1 && cmp.missing[0].indexOf('未实现') >= 0,
 const sum = G('jobReservedSummary({ preBattle: [{ id: "wait" }], pickFavorite: true, pickTiers: { 1: 3 } })');
 ok(sum.indexOf('未实现') >= 0 && sum.indexOf('开场前 1 项') >= 0,
     '状态栏摘要带上「未实现」，不会让人以为已经生效');
-
-// ---- ★ 特殊表：判定入口恒「不换表」+ 摘要 ----
-G(`jobReservedTopDefaults();
-   jobReservedTop.specialTables.enable = true;
-   jobReservedTop.specialTables.table = 2;
-   jobReservedTop.specialTables.triggers = { restart: 3, fail: 0 };`);
-const dec = G('jobSpecialTableDecide({ restart: 99, fail: 99 })');
-ok(dec.table === 0, 'jobSpecialTableDecide 现在恒返回 table=0（不换表）');
-ok(dec.missing.length === 1 && dec.missing[0].indexOf('未实现') >= 0,
-    '特殊表判定理由写明「未实现」');
-ok(G('jobSpecialTablesSummary(jobReservedTop.specialTables)')
-    === '重开≥3次 → 表2（打一次就回原表）',
-    '特殊表摘要 = 「重开≥3次 → 表2（打一次就回原表）」');
-G(`jobReservedTop.specialTables.triggers = { restart: 3, fail: 2 };
-   jobReservedTop.specialTables.use = 'sticky';`);
-ok(G('jobSpecialTablesSummary(jobReservedTop.specialTables)')
-    === '重开≥3次 且 失败≥2次 → 表2（一直用）',
-    '多个触发条件 = AND（「且」），sticky 写「一直用」');
-G('jobReservedTopDefaults();');
 
 // ---------------------------------------------------------------------------
 console.log('\n=== 7. 预留的落子动作「植物主动技能」不可达 ===');

@@ -27,12 +27,14 @@
 //   ★ 加载顺序 = 16（在 15 落子动作注册表之后、20 数据模型之前），
 //     因为 jobNewTable / jobBuild / jobApplyLoaded 都要调这里的函数。
 //
-//   ★ 五张注册表（加功能只加一行，别在旁边长新的）：
+//   ★ 四张注册表（加功能只加一行，别在旁边长新的）：
 //       JOB_PREBATTLE_ACTIONS   开局前额外动作（选卡终点 -> 开始战斗之间）
 //       JOB_PICK_FEATURES       选卡相关（标收藏 / 自由阶数）
 //       JOB_INBATTLE_RESERVED   局内相关（主动技能 / 智能切换形态 / 局内两个开关）
 //       JOB_OUTER_RESERVED      局外相关（世界作业链 / 正赛检查）
-//       JOB_SPECIAL_TRIGGERS    ★ 特殊表触发条件（2026-11-02 新增：重开 / 失败）
+//   ★ 2026-11-02 删掉了第五张（JOB_SPECIAL_TRIGGERS「特殊表」）—— 用户定：
+//     特殊表本质就是 tables[] 里的一张普通表，用「布局配置 / 关卡区间」决定何时用，
+//     不需要另立一套「满足条件就换表」的机制。
 // ============================================================
 
 // 预留接口的版本号（将来字段形状改了 -> 加一，agent 侧按版本兼容）
@@ -234,67 +236,6 @@ const JOB_OUTER_RESERVED = [
     }
 ];
 
-// ============================================================
-// 五、★ 特殊表（作业集级）：满足触发条件后改用另一张阵容表
-// ------------------------------------------------------------
-//   用户原话（2026-11-02）：「还有特殊表，重开一定次数换特殊阵容表，这个也做接口」
-//   紧接着补充：「特殊表是有触发条件，并非只有重开一定次数才执行，
-//                还有其余方式可以做到，只是我想不出来」
-//
-//   ★ 当前**只登记两个触发条件**（用户当天定：「目前只能加这俩」）：
-//       restart = 重开累计次数（收尾超时重开 + 换阵容重开）
-//       fail    = 判定为失败累计次数
-//     其余候选（关卡区间 / 当前世界 / 正赛训练 / 已用时 / 已换表次数 / 当前第几张表）
-//     **一律不登记**：等用户真要的时候往本表加一行即可，数据形状不用改。
-//     （波数 / 阳光 / 掉车那类要新识别的，属于「未验证」，更不许提前登记。）
-//
-//   ★ 数据形状（作业集级 jobReservedTop.specialTables）：
-//       {
-//         enable: false,        // 必须显式打开
-//         triggers: {           // 键 = 本注册表的 id；值 = 阈值（0 = 该条件不参与）
-//           restart: 3,
-//           fail: 0
-//         },
-//         table: 0,             // 目标表序号（1 起；0 = 没选 -> 整条规则不生效）
-//         side: 'both',         // 换哪一侧：both | normal | boss
-//         use: 'once'           // once = 只用它打一次、之后回原表（用户 2026-11-02 定）
-//                               // sticky = 命中后一直用它
-//       }
-//     导出键：special_tables（下划线版），见 jobReservedTopExport / TopImport。
-//
-//   ★ 判定语义（现在**一行都不执行**）：
-//       · enable=false 或 table=0            -> 不生效（= 旧作业集行为一字不差）
-//       · triggers 里多个 > 0                -> **全部满足（AND）**才算命中
-//       · use='once' 的「已用过」状态**只放内存**（不写文件），
-//         新任务 / JobSetReset 时清空 —— 否则换个会话跑，特殊表就永远不再触发。
-//
-//   ★ 未来实现时的两个挂钩点：
-//       ① 计数：在「重开」「失败」真正发生的位置各埋一次。⚠️ 现在代码里
-//          **没有任何重开/失败计数器**（level_tracker 的注释写明：重开走
-//          `通用_重开_暂停`、不经过「点继续挑战」，所以关卡计数器天然不多推）——
-//          要自己数。重开两处：`JobSetEndRestart`（收尾超时）与
-//          `JobSetStage` 的 `通用重开节点`；失败一处：pipe 的 `无尽挑战_失败`。
-//       ② 换表：命中后改表指针走下一次选卡（`_STATE["table_index"]`），
-//          **别动 pipe** —— JobSetLoad / JobSetStage 现有的表指针就够。
-// ============================================================
-const JOB_SPECIAL_TRIGGERS = [
-    {
-        id: 'restart', name: '重开累计次数', icon: '🔁', implemented: false,
-        unit: '次', def: 3, min: 1, max: 9999,
-        desc: '重开（收尾超时重开 / 换阵容重开）累计达到 N 次后启用特殊表'
-    },
-    {
-        id: 'fail', name: '失败累计次数', icon: '💀', implemented: false,
-        unit: '次', def: 1, min: 1, max: 9999,
-        desc: '判定为失败（走「无尽挑战_失败」分支）累计达到 N 次后启用特殊表'
-    }
-];
-
-// 特殊表的 `use` 取值（once = 打一次就回原表 / sticky = 一直用）
-const JOB_SPECIAL_USES = ['once', 'sticky'];
-
-// 特殊表的目标侧（复用关别归一化 jobReservedSide）
-
 // ------------------------------------------------------------
 // 预留补位的落子动作（塞进 15 的注册表，但**不可达**）
 //
@@ -394,81 +335,6 @@ function jobPreBattleSummary(item) {
     return def.name + (vals.length ? ' ' + vals.join(' 丨 ') : '');
 }
 
-// ---- 特殊表：查询 / 归一化（判定逻辑现在**一行都没有**）----
-
-// 按 id 找特殊表触发条件定义
-function jobSpecialTriggerById(id) {
-    const k = String(id || '');
-    return JOB_SPECIAL_TRIGGERS.filter(function (t) { return t.id === k; })[0] || null;
-}
-
-// 把所有触发条件的阈值夹到注册表声明的 min..max（0 = 该条件不参与，原样保留）
-function jobSpecialTriggerValue(def, raw) {
-    if (!def) return 0;
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n <= 0) return 0;
-    const lo = (def.min === undefined) ? 1 : def.min;
-    const hi = (def.max === undefined) ? 9999 : def.max;
-    return Math.min(hi, Math.max(lo, Math.floor(n)));
-}
-
-// 特殊表设置归一化：只认注册表里的触发条件 id，其余键一律丢
-function jobSpecialTablesNorm(raw) {
-    const src = (raw && typeof raw === 'object') ? raw : {};
-    const out = { enable: src.enable === true, triggers: {}, table: 0, side: 'both', use: 'once' };
-    const trg = (src.triggers && typeof src.triggers === 'object') ? src.triggers : {};
-    JOB_SPECIAL_TRIGGERS.forEach(function (def) {
-        out.triggers[def.id] = jobSpecialTriggerValue(def, trg[def.id]);
-    });
-    const tb = Math.floor(Number(src.table));
-    out.table = (Number.isFinite(tb) && tb >= 1) ? tb : 0;      // 0 = 没选
-    out.side = jobReservedSide(src.side);
-    out.use = (JOB_SPECIAL_USES.indexOf(String(src.use || '')) !== -1) ? String(src.use) : 'once';
-    return out;
-}
-
-// 特殊表默认值（= 未启用；所有触发阈值 0 = 不参与）
-function jobSpecialTablesDefaults() {
-    return jobSpecialTablesNorm({ enable: false, triggers: {}, table: 0 });
-}
-
-// 这项特殊表配置「算不算配了东西」（enable + 至少一个触发 + 选了表）
-function jobSpecialTablesArmed(st) {
-    const s = st || {};
-    if (s.enable !== true) return false;
-    if (!s.table || s.table < 1) return false;
-    const trg = s.triggers || {};
-    return JOB_SPECIAL_TRIGGERS.some(function (def) { return (trg[def.id] || 0) > 0; });
-}
-
-// 一行摘要（将来状态栏 / 播报用），如「重开≥3次 → 表2（打一次就回原表）」
-function jobSpecialTablesSummary(st) {
-    const s = st || {};
-    if (!jobSpecialTablesArmed(s)) return '';
-    const parts = [];
-    const trg = s.triggers || {};
-    JOB_SPECIAL_TRIGGERS.forEach(function (def) {
-        const v = jobSpecialTriggerValue(def, trg[def.id]);
-        if (v > 0) parts.push(def.name.replace('累计次数', '') + '≥' + v + '次');
-    });
-    return parts.join(' 且 ') + ' → 表' + s.table
-        + (s.use === 'sticky' ? '（一直用）' : '（打一次就回原表）');
-}
-
-// ★ 预留编译/判定入口 —— 现在恒「不换表」。
-//   与 agent 侧 reserved.py 的 special_table_decide() 一一对应。
-//   返回 { table: 0, missing: […] }：table=0 = 不动表指针。
-function jobSpecialTableDecide(counters) {
-    const st = jobReservedTop.specialTables;
-    if (!jobSpecialTablesArmed(st)) return { table: 0, missing: [] };
-    return {
-        table: 0,
-        missing: ['特殊表：接口已预留，当前版本未实现（不会换表）'],
-        // 计数器当前值原样回传，方便将来调试 / 自测；不参与任何判定
-        counters: (counters && typeof counters === 'object') ? counters : {}
-    };
-}
-
 // ============================================================
 // 六、默认值 / 导出 / 读回（三处唯一入口）
 //
@@ -487,16 +353,14 @@ function jobReservedDefaults(t) {
 }
 
 // 作业集级默认值（jobResetEditor / 首次载入调）
-let jobReservedTop = { worldChains: null, modeCheck: null, specialTables: null };
+let jobReservedTop = { worldChains: null, modeCheck: null };
 
 function jobReservedTopDefaults() {
     jobReservedTop = {
         // 世界作业链（预留，未消费）
         worldChains: { enable: false, items: [] },
         // 正赛模式检查（预留，未消费）
-        modeCheck: { enable: false, expect: 'ranked', onMissing: 'warn' },
-        // ★ 特殊表（预留，未消费）：满足触发条件后改用另一张阵容表（见第五节）
-        specialTables: jobSpecialTablesDefaults()
+        modeCheck: { enable: false, expect: 'ranked', onMissing: 'warn' }
     };
     return jobReservedTop;
 }
@@ -538,11 +402,6 @@ function jobReservedTopImport(job) {
         const om = String(mc.on_missing || mc.onMissing || 'warn');
         jobReservedTop.modeCheck.onMissing = (om === 'abort') ? 'abort' : 'warn';
     }
-    // ---- special_tables（特殊表：满足条件后换阵容表）----
-    //   ★ 旧作业集没有该键 -> 保持 jobReservedTopDefaults() 的「未启用」。
-    if (j.special_tables !== undefined) {
-        jobReservedTop.specialTables = jobSpecialTablesNorm(j.special_tables);
-    }
     return jobReservedTop;
 }
 
@@ -550,8 +409,6 @@ function jobReservedTopImport(job) {
 function jobReservedTopExport() {
     const wc = jobReservedTop.worldChains || { enable: false, items: [] };
     const mc = jobReservedTop.modeCheck || { enable: false, expect: 'ranked', onMissing: 'warn' };
-    // 特殊表：走归一化再导出（脏数据不落盘；没配也把默认形状写出去）
-    const st = jobSpecialTablesNorm(jobReservedTop.specialTables);
     return {
         // 预留接口版本（agent 侧 reserved.py 按它做兼容）
         reserved_version: JOB_RESERVED_VERSION,
@@ -563,14 +420,6 @@ function jobReservedTopExport() {
             enable: mc.enable === true,
             expect: mc.expect || 'ranked',
             on_missing: mc.onMissing || 'warn'
-        },
-        // ★ 特殊表（预留，未消费）：{enable, triggers{restart,fail}, table, side, use}
-        special_tables: {
-            enable: st.enable === true,
-            triggers: st.triggers,
-            table: st.table,
-            side: st.side,
-            use: st.use
         }
     };
 }
@@ -664,7 +513,6 @@ function jobReservedCatalog() {
     JOB_PICK_FEATURES.forEach(function (a) { out.push(Object.assign({ group: 'pick' }, a)); });
     JOB_INBATTLE_RESERVED.forEach(function (a) { out.push(Object.assign({ group: 'inBattle' }, a)); });
     JOB_OUTER_RESERVED.forEach(function (a) { out.push(Object.assign({ group: 'outer' }, a)); });
-    JOB_SPECIAL_TRIGGERS.forEach(function (a) { out.push(Object.assign({ group: 'specialTable' }, a)); });
     return out;
 }
 
