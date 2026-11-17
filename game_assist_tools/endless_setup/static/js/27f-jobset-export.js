@@ -288,6 +288,10 @@ function jobBuild() {
             //   「无尽挑战_提示_返回地图」的 next（GUI option 做的是同一件事，后盖赢）
             fail_after: (typeof jobNormFailAfter === 'function')
                 ? jobNormFailAfter(t.failAfter) : '',
+            // ★ 重开换表（表级，2026-11-02）：本关重开满 count 次 -> 切到第 to 张表。
+            //   被别的表 to 指向的表 -> agent 侧 engine 自动当「特殊表」（不按关卡选）。
+            on_restart: (typeof jobNormOnRestart === 'function')
+                ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 },
 
             // ---- 编辑器状态（新版）：形态 / 两条链顺序 / 等待节点 ----
             // 这些字段以前没导出，导致保存后再载入「槽位形态、循环链、延迟设置」全丢
@@ -417,6 +421,20 @@ function jobCurrentCode() {
 
 async function jobSave() {
     const msg = document.getElementById('jobStatus');
+    // ★ 重开换表校验（2026-11-02）：拦两类会「静默改变哪张表上场」的错配
+    //   ⚠️ 只用 setStatus（红色状态栏），不弹系统窗 —— 原生弹窗有预算上限（repro_registry 守门）
+    {
+        const errs = (typeof jobValidateOnRestart === 'function') ? jobValidateOnRestart() : [];
+        if (errs.length) {
+            if (msg) {
+                msg.textContent = '❌ 重开换表配置有误，未保存：' + errs[0]
+                    + (errs.length > 1 ? '（共 ' + errs.length + ' 处）' : '');
+                msg.style.color = '#dc2626';
+            }
+            console.warn('[jobset] 重开换表校验未通过：\n' + errs.join('\n'));
+            return;
+        }
+    }
     // ★ 关卡覆盖校验（图层模型）：1-149 必须被铺满，没铺满不让保存
     {
         (jobTables || []).forEach(function (t) { jobNormalizeCover(t); });

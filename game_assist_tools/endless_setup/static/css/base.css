@@ -406,6 +406,11 @@ h1 small { font-size:14px; font-weight:400; color:#888; }
 }
 .end-params-row:last-child { margin-bottom:0; }
 .end-params-row label { font-size:12px; color:#475569; }
+/* ★ 2026-11-02：收尾参数里的「重开换表」提示文字（代替行内 style，躲开行内样式预算） */
+.end-params-note { font-size:11px; color:#94a3b8; }
+#earlyEndOnRestartCount { width: 64px; text-align: center; }
+/* 只有选了「重开 n 次后换表」才显示次数+目标（默认藏，JS 切 inline-flex） */
+#earlyEndOnRestartParam { display: none; align-items: center; gap: 8px; flex-wrap: wrap; }
 .end-params-row input {
     width:90px; padding:3px 4px; border:1px solid #d0d7de; border-radius:4px; font-size:12px;
 }
@@ -2010,6 +2015,18 @@ body.m-app .supply-stage { min-height: calc(var(--sc-card-w) * var(--sc-card-rat
 #jobOverviewModal .ov-sel:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px #eef2ff; }
 #jobOverviewModal .ov-sub-lbl { font-size: 11px; color: #94a3b8; margin-left: 2px; }
 #jobOverviewModal .ov-ro { color: #94a3b8; }
+/* ★ 特殊表标记（被别的表「重开换表」指向）+ 重开次数输入框 */
+#jobOverviewModal .ov-sp-badge {
+    font-size: 10px; color: #9a3412; background: #fff7ed;
+    border: 1px solid #fed7aa; border-radius: 999px; padding: 1px 9px; font-weight: 700;
+}
+#jobOverviewModal .ov-num {
+    width: 62px; padding: 5px 8px; font-size: 12px; text-align: center;
+    border: 1px solid #dbe1ea; border-radius: 8px; color: #1e293b; background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+#jobOverviewModal .ov-num:hover { border-color: #a5b4fc; }
+#jobOverviewModal .ov-num:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 3px #eef2ff; }
 /* 补给 chip：已选 = 实底可点取消；未选 = 虚线可点追加 */
 #jobOverviewModal .ov-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 #jobOverviewModal .ov-chip {

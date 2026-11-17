@@ -79,6 +79,40 @@ function jobRenderEndParams() {
     setV('earlyEndAfterAction', p.after);
     setV('earlyEndSettleMs', p.settleMs);
     setV('earlyEndSubAction', p.sub);
+    // ★ 重开换表（2026-11-02）：两选一 ——「不换表」/「重开 n 次后换表」
+    {
+        const orr = (typeof jobNormOnRestart === 'function')
+            ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+        const on = (orr.count > 0);   // 只看次数：to 还没选时也算「已开启」，否则模式会被打回「不换表」
+        const modeSel = document.getElementById('earlyEndOnRestartMode');
+        if (modeSel) modeSel.value = on ? '1' : '0';
+        const box = document.getElementById('earlyEndOnRestartParam');
+        if (box) box.style.display = on ? 'inline-flex' : 'none';
+        setV('earlyEndOnRestartCount', orr.count || 1);   // 最低 1（0 = 不换表，靠模式表达）
+        const sel = document.getElementById('earlyEndOnRestartTo');
+        if (sel) {
+            const keep = String(orr.to || 0);
+            sel.innerHTML = '';
+            const o0 = document.createElement('option');
+            o0.value = '0';
+            o0.textContent = '（选目标表）';
+            sel.appendChild(o0);
+            (jobTables || []).forEach(function (x, i) {
+                if (i === currentTable) return;          // 不含自己
+                const o = document.createElement('option');
+                o.value = String(i + 1);
+                o.textContent = '表' + (i + 1);
+                sel.appendChild(o);
+            });
+            if (parseInt(keep, 10) > (jobTables || []).length) {
+                const o = document.createElement('option');
+                o.value = keep;
+                o.textContent = '表' + keep + '（已不存在）';
+                sel.appendChild(o);
+            }
+            sel.value = keep;
+        }
+    }
     jobEndParamsVisibility(p);
 }
 
@@ -168,6 +202,65 @@ function jobBindEndParams() {
     if (ss && !ss._endBound) {
         ss._endBound = true;
         ss.addEventListener('change', jobOnEndSubChange);
+    }
+    // ★ 重开换表（2026-11-02）：模式（不换表 / 重开 n 次后换表）+ 次数（最低 1）+ 目标表
+    const rm = document.getElementById('earlyEndOnRestartMode');
+    if (rm && !rm._endBound) {
+        rm._endBound = true;
+        rm.addEventListener('change', function () {
+            const t = jobTables[currentTable];
+            if (!t) return;
+            const cur = (typeof jobNormOnRestart === 'function')
+                ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+            if (this.value === '1') {
+                // 切到「重开换表」：次数最低 1（原来是 0）
+                t.onRestart = { count: (cur.count >= 1 ? cur.count : 1), to: cur.to };
+            } else {
+                t.onRestart = { count: 0, to: 0 };     // 不换表 = 两个都清
+            }
+            const box = document.getElementById('earlyEndOnRestartParam');
+            if (box) box.style.display = (t.onRestart.count > 0)
+                ? 'inline-flex' : 'none';
+            const ci = document.getElementById('earlyEndOnRestartCount');
+            if (ci) ci.value = t.onRestart.count || 1;
+            jobSaveLocal();
+        });
+    }
+    const rc = document.getElementById('earlyEndOnRestartCount');
+    if (rc && !rc._endBound) {
+        rc._endBound = true;
+        rc.addEventListener('change', function () {
+            const t = jobTables[currentTable];
+            if (!t) return;
+            const cur = (typeof jobNormOnRestart === 'function')
+                ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+            const n = parseInt(this.value, 10);
+            // ★ 最低 1：填 0 / 负数 / 垃圾 -> 1
+            const cnt = (Number.isFinite(n) && n >= 1) ? Math.min(9999, Math.floor(n)) : 1;
+            t.onRestart = { count: cnt, to: cur.to };
+            this.value = cnt;
+            jobSaveLocal();
+        });
+    }
+    const rt = document.getElementById('earlyEndOnRestartTo');
+    if (rt && !rt._endBound) {
+        rt._endBound = true;
+        rt.addEventListener('change', function () {
+            const t = jobTables[currentTable];
+            if (!t) return;
+            const cur = (typeof jobNormOnRestart === 'function')
+                ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+            const to = parseInt(this.value, 10);
+            t.onRestart = {
+                count: cur.count,
+                to: (Number.isFinite(to) && to >= 1 && to !== (currentTable + 1)) ? Math.floor(to) : 0
+            };
+            this.value = String(t.onRestart.to || 0);
+            const box = document.getElementById('earlyEndOnRestartParam');
+            if (box) box.style.display = (t.onRestart.count > 0)
+                ? 'inline-flex' : 'none';
+            jobSaveLocal();
+        });
     }
 }
 

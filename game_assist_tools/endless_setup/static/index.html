@@ -866,6 +866,22 @@
             <option value="settle">等待结算</option>
         </select>
     </div>
+    <!-- ★ 重开换表（2026-11-02，表级）：两选一 ——「不换表」/「重开 n 次后换表」。
+         选了后者才出现次数（最低 1）+ 目标表。放在收尾参数里是因为
+         「收尾超时后动作 = 重开」正是重开的主要来源之一。
+         数据与「📋 总览」的「重开换表」同一处（t.onRestart），两边实时同步。 -->
+    <div class="end-params-row">
+        <label>重开换表：</label>
+        <select id="earlyEndOnRestartMode">
+            <option value="0">不换表</option>
+            <option value="1">重开 n 次后换表</option>
+        </select>
+        <span id="earlyEndOnRestartParam" class="end-params-inline">
+            <input type="number" id="earlyEndOnRestartCount" min="1" max="9999" step="1" value="1">
+            <span class="end-params-note">次 → 切到</span>
+            <select id="earlyEndOnRestartTo"><option value="0">（选目标表）</option></select>
+        </span>
+    </div>
     <div class="end-params-row" id="earlyEndSettleRow" style="display:none;">
         <label>等待结算时长：</label>
         <input type="number" id="earlyEndSettleMs" min="0" step="500" value="15000">

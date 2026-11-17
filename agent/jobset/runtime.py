@@ -80,6 +80,21 @@ def _log(msg: str) -> None:
     print(f"[JobSet] {msg}", file=sys.stderr, flush=True)
 
 
+def _log_once(key: str, msg: str) -> None:
+    """同一个 key 只打一次（避免每关/每次选表都刷同一句）。
+
+    ★ 去重集合挂在 `_STATE["log_once"]`，JobSetLoad（新任务）时清空。
+    """
+    seen = _STATE.get("log_once")
+    if not isinstance(seen, set):
+        seen = set()
+        _STATE["log_once"] = seen
+    if key in seen:
+        return
+    seen.add(key)
+    _log(msg)
+
+
 def _sig_text(sig: Any) -> str:
     """阵容签名 -> 短文本（日志用，别把 8 个植物名全倒进一行）。"""
     if not isinstance(sig, tuple) or len(sig) < 2:
@@ -177,7 +192,10 @@ def _prewarm_for_level(context: Context, js: JobSet, lv: int) -> bool:
       注入路径，所以手动记一笔。
     """
     lv = lv if lv > 0 else 1
-    table = js.pick_table(lv)
+    # ⚠️ 这里的 is_boss **不能**用 `_pw_boss` —— 它在下面（第 200 行）才定义。
+    #    本轮曾写成 `_pick_table(js, lv, _pw_boss)` -> NameError -> 整段预热失败 ->
+    #    表现为「不选植物、补位完直接结算」。选表本身不依赖关别，传 False 即可。
+    table = _pick_table(js, lv, False)
     _log(f"预热：关卡={lv} -> 预计表{table.index + 1}（关卡 {table.from_level} 起）")
 
     # ★ 首关若是 boss 关（5 的倍数，与局内判定的计数口径一致），
@@ -821,6 +839,118 @@ def _inject_fail_after(context: Context, table) -> None:
         _log(f"注入失败后行为失败（{type(e).__name__}: {e}）")
 
 
+def _special_state(lv: int, create: bool = True) -> Dict[str, Any]:
+    """「重开换表」状态。
+
+    ★ 结构：{"lv": 最近一次记录的关卡, "active": 生效表序号(0=没有),
+             "chain": [本次尝试切过的表], "restart": 重开次数}
+
+    ★★ 2026-11-17 关键修正：**状态不再按关卡号重建**。
+      原因是实测发现「收尾重开」流程里有 `无尽训练_继续训练` -> 关卡计数器会被 +1，
+      所以「同一关再进 = 重开」这个判定永远不成立（每次都是"新关"），
+      重开换表因此一直不触发。
+      现在改成：状态**一直延续到「过关」**（由 `_special_on_pass` 清零），
+      重开与否用 `just_passed` 标记区分（见 `_special_on_fight_enter`）。
+    """
+    st = _STATE.get("special")
+    if not isinstance(st, dict):
+        if not create:
+            return {"lv": lv, "active": 0, "chain": [], "restart": 0}
+        st = {"lv": lv, "active": 0, "chain": [], "restart": 0}
+        _STATE["special"] = st
+    st["lv"] = lv
+    return st
+
+
+def _special_on_pass() -> None:
+    """过关了（点了「继续挑战」）-> 上一次尝试的重开换表状态整体作废。
+
+    由 `JobSetPlan` 的「计数」分支调用（那里正好是"过关 -> 下一关"的时刻）。
+    """
+    old = _STATE.get("special")
+    if isinstance(old, dict) and (old.get("active") or old.get("restart") or old.get("chain")):
+        _special_dbg(f"PASS reset (was active={old.get('active')} "
+                     f"restart={old.get('restart')} chain={old.get('chain')})")
+    _STATE["special"] = None
+
+
+def _pick_table(js, lv: int, is_boss: bool = False):
+    """★ 全局唯一的「选表」入口（原来 6 处 `js.pick_table(lv)` 全部收口到这里）。
+
+    先按关卡从**普通表**里选（`js.level_tables`），再看本关有没有被
+    「重开换表」顶上一张特殊表 —— 有就用它（并且**豁免 covers 检查**，
+    因为特殊表可能就是靠越界区间来救场的）。
+    """
+    st = _special_state(lv, create=False)
+    act = int(st.get("active") or 0)
+    if act >= 1 and act <= len(js.tables):
+        t = js.tables[act - 1]
+        _log_once(f"special_act_{lv}_{act}",
+                  f"本关使用特殊表{t.index + 1}（重开换表生效中，"
+                  f"链：{st.get('chain')}）")
+        return t
+    try:
+        return js.pick_table(lv)
+    except Exception:
+        # 兜底：全是特殊表 / 没有表覆盖当前关 -> 用第一张，别让整局挂掉
+        return js.tables[0] if js.tables else None
+
+
+def _special_restart_tick(js, lv: int) -> None:
+    """本关又进了一次 = 发生了一次重开：计数 +1，命中就切表。
+
+    ★ 为什么用「同一关再次进入 JobSetStage」当信号（而不是埋 pipe 节点）：
+      `level_tracker` 的计数器**只在点「继续挑战」时 +1**，而**重开不推计数器**
+      —— 所以「同一关卡再次进入」= 重开。这样一次覆盖三种重开：
+        · 换阵容重开（本函数所在分支自己 run_task(通用_重开_暂停)）
+        · 失败后行为 = 重置后继续打（游戏内重新开局）
+        · 收尾超时重开（JobSetEndRestart，已 pipe 化、没有 Python 钩子）
+      ⚠️ 前提：JobSetStage 对「同一次进关」只跑一次。若 pipe 里两个分支都指向它，
+         会多计一次 —— 日志里有「★ 重开换表计数」可核对。
+    """
+    st = _special_state(lv)
+    st["restart"] = int(st.get("restart") or 0) + 1
+    cur = None
+    act = int(st.get("active") or 0)
+    if act >= 1 and act <= len(js.tables):
+        cur = js.tables[act - 1]
+    else:
+        try:
+            cur = js.pick_table(lv)
+        except Exception:
+            cur = None
+    if cur is None:
+        return
+    spec = getattr(cur, "on_restart", None) or {}
+    cnt = int(spec.get("count") or 0)
+    to = int(spec.get("to") or 0)
+    cur_no = int(cur.index) + 1
+    _log(f"★ 重开换表计数：表{cur_no} 本关第 {st['restart']} 次重开"
+         f"（阈值 {cnt or '—'}，目标 {'表' + str(to) if to else '未配'}）")
+    _special_dbg(f"TICK table{cur_no} restart={st['restart']}/{cnt or 0} "
+                 f"target={to or 0} active={st.get('active')}")
+    if cnt <= 0 or to <= 0:
+        return
+    if st["restart"] < cnt:
+        return
+    # ---- 命中：切表 ----
+    if to == cur_no:
+        _log(f"⚠️ 重开换表：表{cur_no} 的规则指向自己，忽略")
+        return
+    if to > len(js.tables):
+        _log(f"⚠️ 重开换表：目标表{to} 不存在（作业集只有 {len(js.tables)} 张），忽略")
+        return
+    # ★ 2026-11-02 用户定：**允许切回已经用过的表**（原先这里禁止「回头」，
+    #   结果「表2 重开 N 次 -> 切回表1」被拦死，表现为一直重开、永远切不回去）。
+    #   不设总次数上限也不防回头 —— 循环由用户自己配，日志里看得见。
+    st["chain"].append(cur_no)
+    st["active"] = to
+    st["restart"] = 0          # ★ 切表清零：新表从 0 开始数（用户定的口径）
+    _log(f"🔀 ★ 重开换表：表{cur_no} 本关重开 {cnt} 次 -> 切到表{to}"
+         f"（本关切换轨迹：{st['chain']}；过关后自动回按关卡选表）")
+    _special_dbg(f"SWITCH table{cur_no} -> table{to} after {cnt} restarts")
+
+
 def _inject_lineup(context: Context, table, is_boss: bool) -> None:
     """按关卡形态注入阵容（选卡植物 + 编队），并维护「当前生效阵容」签名。
 
@@ -1236,6 +1366,148 @@ def lineup_gate_adjust(training: bool, need: bool, table: Any,
     return need, None
 
 
+def _special_dbg(msg: str) -> None:
+    """把「重开换表」的关键事件额外写一份到文件（诊断用，不影响正常日志）。
+
+    ★ 为什么要有：`[JobSet]` 走 stderr，出问题时不容易拿到；写文件后
+      用户可以直接打开 `agent/jobset/_special_debug.log` 看计数与切换轨迹。
+    ★ 出问题排查完可以把这个函数和调用点一起删掉（HANDOFF §10.24-F 有记录）。
+    """
+    try:
+        from pathlib import Path as _P
+        import datetime as _dt
+        p = _P(__file__).resolve().parent / "_special_debug.log"
+        ts = _dt.datetime.now().strftime("%H:%M:%S")
+        with open(p, "a", encoding="utf-8") as fh:
+            fh.write(f"{ts} {msg}\n")
+    except Exception:
+        pass
+
+
+def _special_on_fight_enter(js, lv: int, context=None) -> None:
+    """「进入局内」这一刻：除了「过关进新关」，其余都算一次**重开**。
+
+    ★★ 判据（2026-11-17 修正，不再看关卡号）：
+      过关必经 `JobSetPlan`（「计数」:true）-> 那里会置 `just_passed` 标记；
+      重开**不经过**它（收尾重开走 `通用_重开_暂停`，失败重置走返回地图）。
+      所以：这次进局内时若没看到 `just_passed` 且不是任务首次 -> 就是重开。
+      ⚠️ 之前用「同一关卡号再次进入」判定，实测因为重开会点「继续挑战」
+         （计数器 +1）而永远不成立 —— 这就是「一直重开、永不切表」的真正原因。
+    """
+    import time as _time
+    now = _time.time()
+    # ★ 本轮若已被 pipe 侧计数节点（JobSetRestartTick）记过 -> 这里跳过，避免双计
+    if _STATE.pop("ticked_round", False):
+        _special_dbg("Fight enter (already ticked by pipe node this round, skip)")
+        return
+    # 同一进关可能被调用多次（普通/boss 变体准备），2 秒内去重
+    if (now - float(_STATE.get("fight_tick_at") or 0)) < 2.0:
+        _special_dbg("Fight enter (dup within 2s, skip)")
+        return
+    _STATE["fight_tick_at"] = now
+
+    first = not _STATE.get("fight_seen")
+    _STATE["fight_seen"] = True
+    passed = bool(_STATE.pop("just_passed", False))
+
+    if first or passed:
+        # 任务首次进关 / 过关后进新关 -> 计数归位
+        _special_on_pass()
+        _log(f"重开换表：第 {lv} 关{'（过关进入）' if passed else '（首次）'}，计数归位")
+        _special_dbg(f"Fight enter lv={lv} first={first} passed={passed} -> reset")
+        return
+
+    # 重开：自己切表引起的不算
+    if _STATE.pop("self_restart", False):
+        _special_dbg(f"Fight enter lv={lv} (self-restart, not counted)")
+        _log("重开换表计数：本次重开由换阵容触发 -> 不计入")
+        return
+    _special_dbg(f"Fight enter lv={lv} -> RESTART")
+    _before = int(_special_state(lv, create=False).get("active") or 0)
+    _special_restart_tick(js, lv)
+    _after = int(_special_state(lv, create=False).get("active") or 0)
+    # ★ 兜底注入（pipe 计数点缺席时才会走到这里）：切了表就把新阵容灌进管道，
+    #   否则只剩状态变化、实际还是老阵容（2026-11-17 踩过）。
+    if context is not None and _after >= 1 and _after != _before:
+        try:
+            _newt = js.tables[_after - 1]
+            _inject_lineup(context, _newt, False)
+            _fight_ok = _inject_fight(context, _newt)
+            _STATE["plan_table_index"] = _newt.index
+            _STATE["table_index"] = _newt.index
+            _log(f"🔀 已注入表{_after} 的阵容：{_newt.eff_plants(False)}"
+                 f"（种植链={'OK' if _fight_ok else '注入失败'}）")
+            _special_dbg(f"INJECT(fight) table{_after} fight={'ok' if _fight_ok else 'FAIL'}")
+        except Exception as _e:
+            _special_dbg(f"INJECT(fight) FAILED {type(_e).__name__}: {_e}")
+
+
+@AgentServer.custom_action("JobSetRestartTick")
+class JobSetRestartTick(CustomAction):
+    """★「进入局内」计数节点 —— 「重开换表」的唯一驱动（2026-11-02）。
+
+    为什么需要它：`JobSetStage`（另有换阵容职责）在当前 pipe 里是**孤儿节点**
+    （`无尽挑战_进入到局内 -> 无尽局内_单次种植`，没人指向它），所以它里面的
+    重开计数永远不会执行 —— 表现为「一直重开、永远不切表」。
+
+    ★ 语义（2026-11-17 最终版）：**这个节点被调用的那一刻就是一次重开**。
+      接在 pipe 里「重开的必经点」上（`无尽挑战_收尾重开` / `无尽挑战_失败`），
+      不再靠关卡号或「首次/过关」去猜 —— 因为训练模式下失败也会点「继续训练」
+      把关卡号 +1，「过关 vs 重开」用关卡号根本分不开（实测 432 次收尾重开却 0 次计数）。
+
+    接线：节点 next 里插本节点，本节点 next 指回原来的目标。
+      例：`无尽挑战_收尾重开.next -> ["无尽挑战_重开计数_收尾"]`，
+          `无尽挑战_重开计数_收尾.next -> ["通用_重开_暂停"]`
+
+    参数：{"是boss关": bool}（可选，仅日志用）
+    """
+
+    def run(self, context: Context, argv) -> Any:
+        param = _parse_param(getattr(argv, "custom_action_param", None))
+        js: Optional[JobSet] = _STATE.get("jobset")
+        if js is None:
+            _log("重开计数：作业集还没载入，跳过")
+            return _fail()
+        try:
+            lv = _ensure_tracker(param).count
+        except Exception as e:
+            _log(f"重开计数：取关卡失败（{type(e).__name__}: {e}），跳过")
+            return _fail()
+
+        if _STATE.pop("self_restart", False):
+            # 切表/换阵容自己发起的重开 -> 不计数（否则新表一上来就有 1 次，阈值 1 会自激）
+            _log("重开换表计数：本次重开由换阵容触发 -> 不计入")
+            _special_dbg("PIPE tick (self-restart, not counted)")
+        else:
+            before = int(_special_state(lv, create=False).get("active") or 0)
+            _special_dbg("PIPE tick -> RESTART")
+            _special_restart_tick(js, lv)
+            after = int(_special_state(lv, create=False).get("active") or 0)
+            # ★★ 关键：切表后必须**立刻把新表的阵容/种植链注入管道**，
+            #   否则只改了状态（active）而管道还是旧表 -> 表现为「日志说切了、
+            #   实际还是原来那套植物」（2026-11-17 用户实测踩到）。
+            if after >= 1 and after != before:
+                new_t = js.tables[after - 1]
+                is_boss = bool(param.get("是boss关"))
+                try:
+                    _inject_lineup(context, new_t, is_boss)
+                    fight_ok = _inject_fight(context, new_t)
+                    _STATE["plan_table_index"] = new_t.index
+                    _STATE["table_index"] = new_t.index
+                    _STATE["locked_level"] = lv
+                    _log(f"🔀 已注入表{after} 的阵容：{new_t.eff_plants(is_boss)}"
+                         f"（{'boss 关' if is_boss else '普通关'}，"
+                         f"种植链={'OK' if fight_ok else '注入失败'}）")
+                    _special_dbg(f"INJECT table{after} plants={new_t.eff_plants(is_boss)} "
+                                 f"fight={'ok' if fight_ok else 'FAIL'}")
+                except Exception as _e:
+                    _log(f"⚠️ 切表后注入失败（{type(_e).__name__}: {_e}）")
+                    _special_dbg(f"INJECT FAILED {type(_e).__name__}: {_e}")
+        # 标记：本轮已由 pipe 计过，JobSetFight 不要再计（避免双计）
+        _STATE["ticked_round"] = True
+        return _ok()
+
+
 @AgentServer.custom_action("JobSetPlan")
 class JobSetPlan(CustomAction):
     """局外决定换不换阵容，并播报当前关卡/表。
@@ -1274,7 +1546,9 @@ class JobSetPlan(CustomAction):
                     and before >= js.max_level:
                 _log(f"🏁 已达关卡上限 {js.max_level}：本轮无尽结束，"
                      f"等待「重置」流程走完（重置完毕 -> 自动计数归位）")
-
+            # ★ 过关 -> 打「刚过关」标记（下一次进局内不算重开）+ 作废旧尝试状态
+            _STATE["just_passed"] = True
+            _special_on_pass()
         # ★ 每关开局把 boss 判定清零 —— 它是「只进不出」的粘滞状态：
         #   boss 关由头像路径（无尽局内_BOSS关种植，param 显式 true）置 True，
         #   但原来没有任何代码负责置回 False，导致 boss 关的**下一关**被
@@ -1302,7 +1576,7 @@ class JobSetPlan(CustomAction):
                 _log(_wnote)
 
         lv = tr.count
-        table = js.pick_table(lv)
+        table = _pick_table(js, lv, bool(param.get("是boss关")))
         training = bool(param.get("训练模式"))
         # ★ 识别过程日志：关卡 -> 表 是怎么算出来的（用户核对计数器/覆盖区间用）
         _log(f"选表：关卡{lv} -> 表{table.index + 1}"
@@ -1490,8 +1764,13 @@ class JobSetLoad(CustomAction):
             _STATE["lineup_is_boss"] = None  # 当前生效卡组的形态（boss/普通，闸门用）
             _STATE["artifact_sig"] = None   # 当前生效神器（跳过选神器判定）
             _STATE["fail_after"] = None     # 已注入的失败后方案（'' = 跟随 MAA 全局）
-            _STATE["training"] = None       # 训练模式标记（JobSetPlan 每关重写）
-            _STATE["world_checked"] = None  # 世界校验一次性标记（JobSetPlan 首跑置位）
+            _STATE["special"] = None        # 重开换表状态（active/chain/restart）
+            _STATE["stage_lv"] = None       # 上次 JobSetStage 看到的关卡（判「重开」用）
+            _STATE["log_once"] = None       # _log_once 去重集合
+            _STATE["self_restart"] = None   # 「这次重开是换阵容触发的」标记（不计数）
+            _STATE["fight_seen"] = None        # 是否已进过局内（判「首次」）
+            _STATE["just_passed"] = None        # 刚过关标记（判「重开」）
+            _STATE["fight_tick_at"] = None      # 进局内去重时间戳
             _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）
             _STATE["autocount_warned"] = None  # 「自动计数没跑成」是否已提醒过
             # ★ 预留接口提示的去重集合（新任务要重新提示一遍，见 _reserved_notice）
@@ -1637,7 +1916,7 @@ class JobSetLoad(CustomAction):
         #     时播，而那时**已经是下一关**了 —— 开局的第一关永远没有播报。
         #     计数器为 0（本地作业集没配「起始关卡」）时如实播「待识别」，
         #     真正的关卡号由 JobSetAutoCount 识别后补报。
-        table0 = js.pick_table(lv)
+        table0 = _pick_table(js, lv)
         # ★「（未校准）」只在**开局这一条**播报上带一次（2026-11-01 用户要求），
         #   每关的 `关卡数:N` 一律不带 —— 免得变成噪音。
         lv_line = _focus_level_line(lv, tr.count > 0,
@@ -1895,6 +2174,11 @@ class JobSetFight(CustomAction):
         lv = param.get("关卡")
         if lv in (None, ""):
             lv = tr.count if tr.count > 0 else 1
+
+        # ★ 「重开换表」计数（2026-11-02）：JobSetFight 是**每次进局内都会跑**的
+        #   CustomAction，所以不必改 pipe 也能数到重开。内部用 5 秒时间窗去重，
+        #   同一次进关被调用多次只算一次。
+        _special_on_fight_enter(js, int(lv) if str(lv).isdigit() else tr.count, context)
         try:
             lv = int(lv)
         except (TypeError, ValueError):
@@ -1913,8 +2197,12 @@ class JobSetFight(CustomAction):
             # ★ 关卡跳出了锁定表的覆盖区间（典型：一轮打完自动计数重置
             #   147/149 -> 1，同一次任务内表锁还在）-> 必须按关卡重新选表，
             #   否则新一轮第 1 关会沿用上一轮的尾表（链条/动作全错）。
-            if not table.covers(lv):
-                table = js.pick_table(lv)
+            # ★ 特殊表豁免（2026-11-02）：本关「重开换表」顶上的表往往**故意
+            #   不覆盖当前关**（卡在 45 关却用 50~99 的表来救），所以不能掰回去。
+            _st_plan = _special_state(lv, create=False)
+            _plan_special = (int(_st_plan.get("active") or 0) == (table.index + 1))
+            if not table.covers(lv) and not _plan_special:
+                table = _pick_table(js, lv, is_boss)
                 _log(
                     f"关卡{lv} 超出锁定表{prev_index + 1} 的覆盖区间"
                     f"（锁定时关卡={locked_lv}）-> 重新选表：表{table.index + 1}"
@@ -1925,7 +2213,7 @@ class JobSetFight(CustomAction):
                     f"（锁定时关卡={locked_lv}，本次关卡={lv}）"
                 )
         else:
-            table = js.pick_table(lv)
+            table = _pick_table(js, lv, is_boss)
 
         rules = table.rules(is_boss)
         kind_cn = "BOSS关" if is_boss else "普通关"
@@ -2289,7 +2577,19 @@ class JobSetStage(CustomAction):
         _log(f"计数器：{tr.describe()}")
 
         # ---- 3) 判断当前阶段 ----
-        table = js.pick_table(lv)
+        # ★ 重开换表（2026-11-02）：**同一关卡再次进入 = 发生了一次重开**
+        #   （计数器只在点「继续挑战」时 +1，重开不推计数器）。先 tick 再选表，
+        #   这样「重开满 N 次」当场切表、本次选卡就用新表。
+        _prev_stage_lv = _STATE.get("stage_lv")
+        _STATE["stage_lv"] = lv
+        if _prev_stage_lv == lv:
+            # ★ 自己造成的重开不算（2026-11-02）：切表/换阵容会 run_task(重开)，
+            #   那次重开进来若也计数，新表一上来就有 1 次 -> 阈值 1 时会自激无限切换。
+            if _STATE.pop("self_restart", False):
+                _log("重开换表计数：本次重开由换阵容触发 -> 不计入")
+            else:
+                _special_restart_tick(js, lv)
+        table = _pick_table(js, lv, is_boss)
         prev = _STATE.get("table_index")
         seen: set = _STATE.setdefault("seen_stages", set())
 
@@ -2311,7 +2611,11 @@ class JobSetStage(CustomAction):
             else:
                 reason = f"首次进关落在表{table.index + 1}（关卡{lv}），不换阵容"
         elif prev != table.index:
-            if table.index in seen:
+            # ★ 特殊表豁免（2026-11-02）：本关「重开换表」刚把表切过来时，
+            #   哪怕这张表以前打过（在 seen 里）也必须换 —— 否则会被吞掉。
+            _st_now = _special_state(lv, create=False)
+            _spec_forced = (int(_st_now.get("active") or 0) == (table.index + 1))
+            if table.index in seen and not _spec_forced:
                 reason = f"表{table.index + 1} 进入过，不换"
             else:
                 to_switch = True
@@ -2338,6 +2642,8 @@ class JobSetStage(CustomAction):
             #   清空卡牌是局外节点，必须先重开退出局内才能工作。
             restart_node = str(param.get("通用重开节点") or "通用_重开_暂停")
             _log(f"换阵容 -> 重开（{restart_node}）退出当前关")
+            # ★ 标记：这次重开是我们自己发起的 -> 下次进 JobSetStage 不当作「玩家重开」计数
+            _STATE["self_restart"] = True
             try:
                 context.run_task(restart_node)
                 _log("重开完成")

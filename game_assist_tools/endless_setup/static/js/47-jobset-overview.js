@@ -63,6 +63,12 @@ function jobOverviewTables() {
             bossDeckNo: Math.min(6, Math.max(1, parseInt(t.bossDeckNo) || 1)),
             failAfter: (typeof jobNormFailAfter === 'function')
                 ? jobNormFailAfter(t.failAfter) : 'stop',
+            // ★ 重开换表（表级）：本关重开 count 次 -> 切到 to 表
+            onRestart: (typeof jobNormOnRestart === 'function')
+                ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 },
+            // ★ 被谁引用（表序号，1 起）；非空 = 这张表是「特殊表」（不按关卡选）
+            referencedBy: (typeof jobTablesReferencing === 'function')
+                ? jobTablesReferencing(i + 1) : [],
             supplyOrdered: ordered,       // 有顺序
             supplyPinned: pinned,         // 无顺序（查看…）
             plants: nPlants,
@@ -94,6 +100,35 @@ function jobOverviewApply(idx, field, value) {
         const v = (typeof jobNormFailAfter === 'function')
             ? jobNormFailAfter(value) : 'stop';
         if (t.failAfter !== v) { t.failAfter = v; changed = true; }
+    } else if (field === 'onRestartMode') {
+        // ★ 两选一：不换表（清空两个） / 重开 n 次后换表（次数最低 1）
+        const cur = (typeof jobNormOnRestart === 'function')
+            ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+        if (String(value) === '1') {
+            if (cur.count < 1) {                 // 切过来时次数最低 1
+                t.onRestart = { count: 1, to: cur.to };
+                changed = true;
+            }
+        } else if (cur.count !== 0 || cur.to !== 0) {
+            t.onRestart = { count: 0, to: 0 };
+            changed = true;
+        }
+    } else if (field === 'onRestartCount' || field === 'onRestartTo') {
+        // ★ 重开换表：两个字段合成一个对象（count / to）；to 不能指向自己；count 最低 1
+        const cur = (typeof jobNormOnRestart === 'function')
+            ? jobNormOnRestart(t.onRestart) : { count: 0, to: 0 };
+        const next = { count: cur.count, to: cur.to };
+        if (field === 'onRestartCount') {
+            const c = parseInt(value, 10);
+            next.count = (Number.isFinite(c) && c >= 1) ? Math.min(9999, Math.floor(c)) : 1;
+        } else {
+            const to = parseInt(value, 10);
+            next.to = (Number.isFinite(to) && to >= 1 && to !== (idx + 1)) ? Math.floor(to) : 0;
+        }
+        if (next.count !== cur.count || next.to !== cur.to) {
+            t.onRestart = next;
+            changed = true;
+        }
     }
     if (!changed) return false;
     // ① 改的是当前编辑表 -> 把主表单同步过去（否则 jobSyncForm 会用旧控件值盖回）
@@ -203,6 +238,13 @@ function jobRenderOverview() {
         const head = mk('div', 'ov-card-head');
         head.appendChild(mk('span', 'ov-card-title', r.name));
         head.appendChild(mk('span', 'ov-card-range', r.range));
+        if (r.referencedBy && r.referencedBy.length) {
+            // ★ 只表达「会被切换过来」这件事，不叫它「特殊表」（2026-11-02 用户要求）
+            const sp = mk('span', 'ov-sp-badge',
+                '← 表' + r.referencedBy.join('/表') + ' 会切到这里');
+            sp.title = '有别的表的「重开换表」指向它：它不参与按关卡选表，只在条件命中时上场';
+            head.appendChild(sp);
+        }
         if (r.isCurrent) head.appendChild(mk('span', 'ov-cur-badge', '正在编辑'));
         const go = mk('button', 'ov-go', '切到这张表');
         go.type = 'button';
@@ -249,6 +291,63 @@ function jobRenderOverview() {
                   [['stop', '停止任务'], ['reset', '重置后继续打'], ['continue', '继续挑战']],
                   r.failAfter,
                   '这张表在「无尽坠机」之后怎么做（覆盖 MAA 那边的同名设置）')));
+
+        // ③b ★ 重开换表（2026-11-02）：两选一 ——「不换表」/「重开 n 次后换表」
+        //     选了后者才出现次数（最低 1）+ 目标表
+        const orNodes = [];
+        const orOn = (r.onRestart.count > 0);   // 只看次数：刚切过来时 to 还没选，也要把「次数+目标」露出来
+        orNodes.push(mkSel(r.idx, 'onRestartMode',
+                           [['0', '不换表'], ['1', '重开 n 次后换表']],
+                           orOn ? '1' : '0',
+                           '不换表 = 本关重开多少次都用同一张表'));
+        if (orOn) {
+            orNodes.push(mk('span', 'ov-sub-lbl', '重开满'));
+            const cntInput = document.createElement('input');
+            cntInput.type = 'number';
+            cntInput.min = '1';
+            cntInput.max = '9999';
+            cntInput.className = 'ov-num';
+            cntInput.value = String(r.onRestart.count || 1);
+            cntInput.title = '本关重开满几次后换表（最低 1）';
+            cntInput.addEventListener('change', function () {
+                if (jobOverviewApply(r.idx, 'onRestartCount', this.value)) {
+                    jobRenderOverview();
+                    if (typeof jobSaveLocal === 'function') jobSaveLocal();
+                }
+            });
+            orNodes.push(cntInput);
+            orNodes.push(mk('span', 'ov-sub-lbl', '次 → 切到'));
+            // 目标表下拉：不含自己
+            const toSel = document.createElement('select');
+            toSel.className = 'ov-sel';
+            toSel.title = '重开满 N 次后改用这张表（列表里不含自己）';
+            const o0 = document.createElement('option');
+            o0.value = '0';
+            o0.textContent = '（选目标表）';
+            toSel.appendChild(o0);
+            rows.forEach(function (x) {
+                if (x.idx === r.idx) return;
+                const o = document.createElement('option');
+                o.value = String(x.idx + 1);
+                o.textContent = x.name;
+                toSel.appendChild(o);
+            });
+            if (r.onRestart.to > rows.length) {
+                const o = document.createElement('option');
+                o.value = String(r.onRestart.to);
+                o.textContent = '表' + r.onRestart.to + '（已不存在）';
+                toSel.appendChild(o);
+            }
+            toSel.value = String(r.onRestart.to || 0);
+            toSel.addEventListener('change', function () {
+                if (jobOverviewApply(r.idx, 'onRestartTo', this.value)) {
+                    jobRenderOverview();
+                    if (typeof jobSaveLocal === 'function') jobSaveLocal();
+                }
+            });
+            orNodes.push(toSel);
+        }
+        card.appendChild(mkRow('重开换表', orNodes));
 
         // ④ 补给 —— ★ 单独一块，不再挤在「标签|值」一行里：
         //    · 有顺序的项带 ①②③（顺序 = 优先拿哪个）

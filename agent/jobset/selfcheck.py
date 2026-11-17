@@ -1122,6 +1122,71 @@ try:
           str([_eng13.Table({"from_level": 1, "fail_after": v}, 0).fail_after
                for v in ("乱写", None, "reset", "stop", "continue")]))
 
+    # ---- ★ 重开换表 / 特殊表派生（2026-11-02）----
+    _jsOR = _eng13.JobSet({"code": "tor", "name": "重开换表", "max_level": 149, "tables": [
+        {"from_level": 1, "to_level": 100, "lineup": {"plants": ["A"]},
+         "on_restart": {"count": 3, "to": 3}},
+        {"from_level": 100, "to_level": None, "lineup": {"plants": ["B"]}},
+        {"from_level": 1, "to_level": None, "lineup": {"plants": ["C"]},
+         "on_restart": {"count": 2, "to": 4}},
+        {"from_level": 1, "to_level": None, "lineup": {"plants": ["D"]}},
+    ]}, code="tor")
+    check("★重开换表: 被引用即特殊表（表3/表4 特殊，表1/表2 普通）",
+          [t.is_special for t in _jsOR.tables] == [False, False, True, True],
+          str([(t.index + 1, t.is_special) for t in _jsOR.tables]))
+    check("★重开换表: level_tables 只含普通表",
+          [t.index + 1 for t in _jsOR.level_tables] == [1, 2],
+          str([t.index + 1 for t in _jsOR.level_tables]))
+    check("★重开换表: pick_table 跳过特殊表（第 5 关 -> 表1）",
+          _jsOR.pick_table(5).index == 0, str(_jsOR.pick_table(5).index))
+    check("★重开换表: on_restart 归一化（自引用 -> to=0；负数 count -> 0）",
+          _eng13.Table({"from_level": 1, "on_restart": {"count": 3, "to": 1}}, 0).on_restart
+          == {"count": 3, "to": 0}
+          and _eng13.Table({"from_level": 1, "on_restart": {"count": -1, "to": 2}}, 0).on_restart
+          == {"count": 0, "to": 2},
+          str(_eng13.Table({"from_level": 1, "on_restart": {"count": 3, "to": 1}}, 0).on_restart))
+    _rt13._STATE["special"] = None
+    _rt13._special_restart_tick(_jsOR, 5)
+    _rt13._special_restart_tick(_jsOR, 5)
+    check("★重开换表: 同关重开 2 次未到阈值 -> 不切表",
+          (_rt13._special_state(5) or {}).get("active", 0) == 0,
+          str(_rt13._special_state(5)))
+    _rt13._special_restart_tick(_jsOR, 5)
+    _st5 = _rt13._special_state(5)
+    check("★重开换表: 第 3 次命中 -> active=表3 且计数清零",
+          _st5.get("active") == 3 and _st5.get("restart") == 0, str(_st5))
+    check("★重开换表: 命中后 _pick_table 返回特殊表（豁免关卡覆盖检查）",
+          _rt13._pick_table(_jsOR, 5, False).index == 2,
+          str(_rt13._pick_table(_jsOR, 5, False).index))
+    _rt13._special_restart_tick(_jsOR, 5)
+    _rt13._special_restart_tick(_jsOR, 5)
+    check("★重开换表: 链式接力（表3 重开 2 次 -> 表4）",
+          _rt13._special_state(5).get("active") == 4,
+          str(_rt13._special_state(5)))
+    check("★重开换表: 过关后链条整体失效（_special_on_pass 清空 active/chain）",
+          _rt13._special_on_pass() is None
+          and (_rt13._special_state(6, create=False) or {}).get("active", 0) == 0
+          and _rt13._pick_table(_jsOR, 6, False).index == 0,
+          str(_rt13._special_state(6, create=False)))
+    _rt13._STATE["special"] = None
+
+    # ★ 预热冒烟（2026-11-02 回归点）：_prewarm_for_level 里曾误用「下面才定义」的
+    #   `_pw_boss` -> NameError -> 整段预热失败 -> 真机表现为「不选植物、补位完直接结算」。
+    #   这里只要求它**不抛异常**（compiled 缺失时 _inject_fight 返回 False 属正常）。
+    _js_warm = _eng13.JobSet({"code": "tw", "name": "预热冒烟", "max_level": 149,
+                              "tables": [{"from_level": 1, "to_level": None,
+                                          "lineup": {"plants": ["A"]},
+                                          "compiled": {"v": 3, "normal": {}, "boss": {}}}]},
+                             code="tw")
+    _warm_ok, _warm_err = True, ""
+    try:
+        _rt13._prewarm_for_level(_FakeCtx13(), _js_warm, 5)
+    except Exception as _we:
+        _warm_ok, _warm_err = False, f"{type(_we).__name__}: {_we}"
+    check("★预热: _prewarm_for_level 不抛异常（本轮 NameError 回归点）",
+          _warm_ok, _warm_err)
+    _rt13._STATE["special"] = None
+
     _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
     _c13 = _FakeCtx13()
     _rt13._inject_artifact(_c13, _tArt13, False)

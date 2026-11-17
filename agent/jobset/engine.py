@@ -282,6 +282,26 @@ class Table:
         if self.raw.get("squadEnabled") is False:
             self.squad = None
 
+        # ---- ★ 重开换表（2026-11-02）----
+        #   t.onRestart = {"count": 3, "to": 3}：这张表在本关重开满 count 次
+        #   -> 切到第 to 张表（1 起）。count<=0 / to<=0 / to 指向自己 -> 视为未配置。
+        #   ★ **被别的表指向的那张表 = 特殊表**（不参与按关卡选表），
+        #     身份由 JobSet 派生（见 JobSet.__init__ 的 is_special），这里不存。
+        #   ★ 两种键都认：`on_restart`（导出文件里的下划线版）/ `onRestart`（编辑器内存版）
+        _or = self.raw.get("on_restart")
+        if _or is None:
+            _or = self.raw.get("onRestart")
+        _or = _or if isinstance(_or, dict) else {}
+        _cnt = _as_int(_or.get("count"), 0) or 0
+        _to = _as_int(_or.get("to"), 0) or 0
+        if _cnt < 1 or _cnt > 9999:
+            _cnt = 0
+        if _to < 1 or _to == (self.index + 1):
+            _to = 0
+        self.on_restart: Dict[str, int] = {"count": _cnt, "to": _to}
+        # 由 JobSet 派生后回填：True = 特殊表（被别的表 onRestart 指向）
+        self.is_special: bool = False
+
         slots = self.raw.get("slots")
         self.slots: Dict[str, str] = {}
         if isinstance(slots, dict):
@@ -709,15 +729,29 @@ class JobSet:
         self.tables: List[Table] = [
             Table(t, i) for i, t in enumerate(raw_tables)
         ]
+        # ---- ★ 特殊表派生（2026-11-02）----
+        #   **被别的表 onRestart.to 指向的表 = 特殊表**：不参与按关卡选表，
+        #   也不参与「关卡铺满」校验。身份纯派生 —— 作业集文件里不写 special 标记。
+        _referenced = set()
+        for _t in self.tables:
+            _to = int((_t.on_restart or {}).get("to") or 0)
+            if _to >= 1:
+                _referenced.add(_to)
+        for _t in self.tables:
+            _t.is_special = (int(_t.index) + 1) in _referenced
+        # 按关卡选表用的池子（特殊表不在里面）
+        self.level_tables: List[Table] = [t for t in self.tables if not t.is_special]
+
         # ★ 图层模式：任一表带 levels（网页端「布局配置」导出）-> 列表顺序即
         #   图层优先级（上面的先盖先赢），**不按 from_level 排序**；
         #   且 1..max_level 必须被铺满，缺关直接报错。
         #   旧版作业集（无 levels）维持原样：按 from_level 升序切片。
-        self.layered: bool = any(t.levels is not None for t in self.tables)
+        #   ★ 2026-11-02：判定与「铺满」只算**普通表**（特殊表按条件上场，不按关卡）。
+        self.layered: bool = any(t.levels is not None for t in self.level_tables)
         if self.layered:
             max_lv = self.max_level if self.max_level else 149
             missing = [lv for lv in range(1, max_lv + 1)
-                       if not any(t.covers(lv) for t in self.tables)]
+                       if not any(t.covers(lv) for t in self.level_tables)]
             if missing:
                 head = "、".join(str(x) for x in missing[:20])
                 raise JobSetError(
@@ -728,7 +762,10 @@ class JobSet:
                 )
         else:
             # 按 from_level 升序 —— 网页端本就保证有序，这里做一次兜底
-            self.tables.sort(key=lambda t: (t.from_level, t.index))
+            # ★ 只排 level_tables（选表用），**不动 self.tables 的顺序**：
+            #   全仓大量 `js.tables[table.index]` 依赖「列表下标 == table.index」，
+            #   一旦重排就会错位取到别的表（2026-11-02 加特殊表时踩到）。
+            self.level_tables.sort(key=lambda t: (t.from_level, t.index))
 
     # -- 选表 --------------------------------------------------------------
 
@@ -742,19 +779,23 @@ class JobSet:
         旧版区间模式：取最后一张 from_level <= level 的表（区间上限是开区间）。
             L=1,  表1[1,50), 表2[50,-)  -> 表1
             L=50, 表1[1,50), 表2[50,-)  -> 表2   ★ 到 50 就换表2
+
+        ★ 2026-11-02：只在 **level_tables（普通表）** 里选 —— 「特殊表」是被人
+          `onRestart.to` 指向的表，只能由条件触发上场，不参与按关卡选表。
         """
         lv = _as_int(level, None)
+        pool = self.level_tables or self.tables       # 兜底：全是特殊表的极端数据
         if lv is None:
-            return self.tables[0]
+            return pool[0]
 
         if self.layered:
-            for t in self.tables:
+            for t in pool:
                 if t.covers(lv):
                     return t
             raise JobSetError(f"第 {lv} 关没有被任何阵容表覆盖（作业集「{self.name}」）")
 
-        chosen = self.tables[0]
-        for t in self.tables:
+        chosen = pool[0]
+        for t in pool:
             if t.from_level <= lv:
                 chosen = t
             else:

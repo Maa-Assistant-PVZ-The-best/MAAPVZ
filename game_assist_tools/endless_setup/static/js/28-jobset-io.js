@@ -333,6 +333,10 @@ function jobApplyLoaded(job, code) {
         t.failAfter = (typeof jobNormFailAfter === 'function')
             ? jobNormFailAfter(t.fail_after !== undefined ? t.fail_after : t.failAfter)
             : '';
+        // ★ 重开换表（表级，2026-11-02）：旧作业集没有 -> {count:0,to:0} = 不切换
+        t.onRestart = (typeof jobNormOnRestart === 'function')
+            ? jobNormOnRestart(t.on_restart !== undefined ? t.on_restart : t.onRestart)
+            : { count: 0, to: 0 };
         for (let i = 1; i <= 8; i++) if (t.slots[i] === undefined) t.slots[i] = '';
         if (!Array.isArray(t.boardEarly)) t.boardEarly = [];
         if (!Array.isArray(t.boardLate)) t.boardLate = [];

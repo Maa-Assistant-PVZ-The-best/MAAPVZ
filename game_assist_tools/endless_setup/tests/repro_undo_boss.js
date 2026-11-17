@@ -365,6 +365,77 @@ console.log('E. 表设置总览（jobOverviewTables / jobOverviewApply）');
     ok(r.supBad === false, 'E15 补给：不存在的项直接忽略');
 }
 
+// ============================================================
+// F. 重开换表 / 特殊表派生（2026-11-02）
+// ============================================================
+console.log('F. 重开换表（onRestart + 特殊表派生 + 保存校验）');
+{
+    const s = mkSandbox();
+    const r = vm.runInContext(`
+      jobTables.length = 0; jobNewTable(); jobNewTable(); jobNewTable();
+      var jn = {
+        ok:   jobNormOnRestart({ count: 3, to: 2 }),
+        zero: jobNormOnRestart({ count: 0, to: 0 }),
+        bad:  jobNormOnRestart({ count: -5, to: 'x' }),
+        nul:  jobNormOnRestart(null)
+      };
+      jobTables[0].onRestart = { count: 3, to: 3 };       // 表1 -> 表3（表3 变特殊表）
+      var ref3 = jobTablesReferencing(3);
+      var ref1 = jobTablesReferencing(1);
+      var sp = [jobTableIsSpecial(0), jobTableIsSpecial(1), jobTableIsSpecial(2)];
+      jobTables[2].onRestart = { count: 2, to: 9 };       // 悬空引用
+      var errDangling = jobValidateOnRestart();
+      jobTables[2].onRestart = { count: 0, to: 0 };
+      // ★ 撞车检查只在「非图层模式」生效（图层模式按 levels 优先级盖，不看 from_level）
+      jobTables.forEach(function (t) { t.levels = null; });
+      jobTables[0].from_level = 1; jobTables[1].from_level = 1;   // 两张普通表撞车
+      var errClash = jobValidateOnRestart();
+      var froms = jobTables.map(function (t, i) {
+        return { n: i + 1, from: t.from_level, sp: jobTableIsSpecial(i),
+                 cnt: jobNormOnRestart(t.onRestart).count };
+      });
+      var okSelf = jobOverviewApply(0, 'onRestartTo', '1');       // 自引用
+      var afterSelf = jobNormOnRestart(jobTables[0].onRestart);
+      var okCnt = jobOverviewApply(0, 'onRestartCount', 5);
+      var afterCnt = jobNormOnRestart(jobTables[0].onRestart);
+      // 模式：不换表 -> 清空；重开 n 次后换表 -> 次数最低 1
+      var okModeOff = jobOverviewApply(0, 'onRestartMode', '0');
+      var afterModeOff = jobNormOnRestart(jobTables[0].onRestart);
+      var okModeOn = jobOverviewApply(0, 'onRestartMode', '1');
+      var afterModeOn = jobNormOnRestart(jobTables[0].onRestart);
+      var okCntZero = jobOverviewApply(0, 'onRestartCount', 0);   // 填 0 -> 抬到 1
+      var afterCntZero = jobNormOnRestart(jobTables[0].onRestart);
+      ({ jn: jn, ref3: ref3, ref1: ref1, sp: sp, froms: froms,
+         errDangling: errDangling, errClash: errClash,
+         okSelf: okSelf, afterSelf: afterSelf, okCnt: okCnt, afterCnt: afterCnt,
+         okModeOff: okModeOff, afterModeOff: afterModeOff,
+         okModeOn: okModeOn, afterModeOn: afterModeOn,
+         afterCntZero: afterCntZero });
+`, s);
+    ok(r.jn.ok.count === 3 && r.jn.ok.to === 2, 'F1 onRestart 归一化：合法值原样');
+    ok(r.jn.zero.count === 0 && r.jn.zero.to === 0, 'F2 0/0 = 不切换');
+    ok(r.jn.bad.count === 0 && r.jn.bad.to === 0 && r.jn.nul.count === 0,
+        'F3 非法值 / null -> 全部归 0');
+    ok(JSON.stringify(r.ref3) === JSON.stringify([1]),
+        'F4 jobTablesReferencing(3) = [1]（表1 指向表3）');
+    ok(r.ref1.length === 0, 'F5 没人指向表1');
+    ok(JSON.stringify(r.sp) === JSON.stringify([false, false, true]),
+        'F6 被引用即特殊表（表3 特殊，表1/表2 普通）');
+    ok(r.errDangling.length === 1 && r.errDangling[0].indexOf('不存在') >= 0,
+        'F7 保存校验：悬空引用被抓（实际=' + JSON.stringify(r.errDangling) + '）');
+    ok(r.errClash.length >= 1 && r.errClash.join(' ').indexOf('起始关卡') >= 0,
+        'F8 保存校验：两张普通表起始关卡撞车被抓（实际=' + JSON.stringify(r.errClash)
+        + ' 表状态=' + JSON.stringify(r.froms) + '）');
+    ok(r.okSelf === true && r.afterSelf.to === 0,
+        'F9 总览写入口：目标设成自己 -> 被置 0（实际 to=' + r.afterSelf.to + '）');
+    ok(r.okCnt === true && r.afterCnt.count === 5, 'F10 总览写入口：改重开次数生效');
+    ok(r.okModeOff === true && r.afterModeOff.count === 0 && r.afterModeOff.to === 0,
+        'F11 模式切「不换表」-> count/to 都清 0');
+    ok(r.okModeOn === true && r.afterModeOn.count === 1,
+        'F12 模式切「重开 n 次后换表」-> 次数最低抬到 1（实际=' + r.afterModeOn.count + '）');
+    ok(r.afterCntZero.count === 1, 'F13 次数填 0 -> 抬到 1（最低 1）');
+}
+
 console.log('');
 if (fails) {
     console.log('❌ 共 ' + fails + ' 条断言失败');

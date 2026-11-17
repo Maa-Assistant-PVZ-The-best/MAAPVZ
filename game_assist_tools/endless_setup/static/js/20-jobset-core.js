@@ -48,6 +48,82 @@ function jobNormFailAfter(v) {
         ? s : JOB_FAIL_AFTER_DEFAULT;
 }
 
+// ★ 重开换表归一化（表级，2026-11-02）：{count, to}
+//   count = 本关重开满几次；to = 切到第几张表（1 起）
+//   任一 <= 0 / 非法 -> 0 = 不切换（所以旧作业集没有该字段时行为不变）
+function jobNormOnRestart(v) {
+    const o = (v && typeof v === 'object') ? v : {};
+    const c = parseInt(o.count, 10);
+    const to = parseInt(o.to, 10);
+    return {
+        count: (Number.isFinite(c) && c >= 1 && c <= 9999) ? Math.floor(c) : 0,
+        to: (Number.isFinite(to) && to >= 1) ? Math.floor(to) : 0
+    };
+}
+
+// ★ 谁在引用第 toNo 张表（1 起）：返回引用它的表序号数组（1 起）
+//   用途：① 特殊表身份标记 ② 删表前拦截 ③ 保存校验
+function jobTablesReferencing(toNo) {
+    const n = parseInt(toNo, 10) || 0;
+    const out = [];
+    if (n < 1 || typeof jobTables === 'undefined' || !Array.isArray(jobTables)) return out;
+    jobTables.forEach(function (t, i) {
+        const o = jobNormOnRestart(t && t.onRestart);
+        if (o.count > 0 && o.to === n) out.push(i + 1);
+    });
+    return out;
+}
+
+// ★ 被引用即特殊表（不参与按关卡选表）—— 与 agent 侧 engine 的派生口径一致
+function jobTableIsSpecial(idx0) {
+    if (typeof jobTables === 'undefined' || !Array.isArray(jobTables)) return false;
+    const no = idx0 + 1;
+    return jobTablesReferencing(no).length > 0;
+}
+
+// ★ 保存前的「重开换表」校验（返回错误文案数组；空 = 通过）
+//   ① 悬空引用：to 指向不存在的表
+//   ② 普通表区间撞车：两张**普通表** from_level 相同（按关卡选表时会互相遮死）
+//      —— 这一条专门抓「原本是特殊表、失去引用后变回普通表、from_level 又和别的表撞」
+function jobValidateOnRestart() {
+    const errs = [];
+    if (typeof jobTables === 'undefined' || !Array.isArray(jobTables)) return errs;
+    const n = jobTables.length;
+
+    // ① 悬空引用
+    jobTables.forEach(function (t, i) {
+        const o = jobNormOnRestart(t && t.onRestart);
+        if (o.count > 0 && o.to >= 1 && o.to > n) {
+            errs.push('表' + (i + 1) + ' 的「重开换表」目标 表' + o.to
+                + ' 不存在（作业集只有 ' + n + ' 张表）');
+        }
+    });
+
+    // ② 普通表 from_level 撞车（图层模式不管 —— 它按 levels 优先级盖）
+    const layered = jobTables.some(function (t) {
+        return Array.isArray(t && t.levels) && t.levels.length > 0;
+    });
+    if (!layered) {
+        const byFrom = {};
+        jobTables.forEach(function (t, i) {
+            if (jobTableIsSpecial(i)) return;          // 特殊表不参与按关卡选表
+            const f = (t && t.from_level) ? parseInt(t.from_level, 10) : 1;
+            const k = String(Number.isFinite(f) ? f : 1);
+            (byFrom[k] = byFrom[k] || []).push(i + 1);
+        });
+        Object.keys(byFrom).forEach(function (k) {
+            const list = byFrom[k];
+            if (list.length > 1) {
+                errs.push('表' + list.join(' / 表')
+                    + ' 的起始关卡都是 ' + k + '（都是普通表，按关卡选表会互相遮死）。'
+                    + '如果是「特殊表失去引用后变回普通表」，请给它填一个不冲突的起始关卡，'
+                    + '或者恢复引用关系');
+            }
+        });
+    }
+    return errs;
+}
+
 function jobNewTable() {
     // ★ 新建之前先把「当前正在编辑的棋盘」存回它所属的表。
     //   否则新表会把全局 boardEarly 覆盖，上一个阵容的布阵就丢了。
@@ -102,6 +178,10 @@ function jobNewTable() {
         // ★ 失败后行为（2026-11-02，**每张表单独设**）：把 MAA option「失败后选项」
         //   搬进网页。三档 stop / reset / continue，默认 stop（= 注入 []，与 pipe 原值一致）。
         failAfter: JOB_FAIL_AFTER_DEFAULT,
+        // ★ 重开换表（2026-11-02，表级）：本关重开满 count 次 -> 切到第 to 张表。
+        //   count=0 / to=0 = 不切换。★ 被别人 `to` 指向的表**自动算特殊表**
+        //   （不参与按关卡选表），身份由 agent 侧 engine 派生，文件里不写 special 标记。
+        onRestart: { count: 0, to: 0 },
         // （innerWaits 已移除：从未有过消费者，纯遗留字段）
         boardEarly: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => [])),
         boardLate: Array.from({ length: rows }, () => Array(cols).fill(null).map(() => []))

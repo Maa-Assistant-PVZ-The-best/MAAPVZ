@@ -3047,7 +3047,118 @@ FAIL_BACK_PLANS = {"stop": ([], …), "reset": (["方案1"], …), "continue": (
 
 ---
 
+## 10.24 ★★ 重开换表（表级 onRestart，2026-11-02）
+
+> 用户原话：「使用 n 表重开 n 次后，可以选择使用特殊表，特殊表如果有重开，如果设定了上面的条件，
+> 也会一直重开到切换表。例如我在第10关一直重开至3次，切换表b，表b重开3次切换表c，一直打到11关，切回原来的表」
+> 追加口径：「被别的表引用就算特殊表」「fail 暂时不支持」「切表时按表b的计数重新数」
+> 「不要加上限，让用户自己改」「删掉时给红色提示且不让保存」
+
+### A. 数据：**表级一个字段**，没有独立的「特殊表」实体
+
+```jsonc
+"tables": [
+  { "from_level": 1, "to_level": 50, "on_restart": {"count": 3, "to": 3} },   // 表1 -> 表3
+  { "from_level": 50, "to_level": null },                                     // 表2 普通
+  { "from_level": 1, "to_level": null, "on_restart": {"count": 2, "to": 4} }, // 表3(特殊) -> 表4
+  { "from_level": 1, "to_level": null }                                       // 表4(特殊)
+]
+```
+
+- `count` = 本关重开满几次；`to` = 切到第几张表（1 起）；任一为 0 = 不切换
+- **被引用即特殊表**：`engine` 派生 `t.is_special`，文件里**不写** special 标记
+- `count` 夹 1..9999；`to` 自引用 / 越界 / 非法 -> 0
+
+### B. 选表分池（engine）
+
+- `referenced = {t.on_restart["to"] ...}` -> `t.is_special` -> `self.level_tables`（普通表池）
+- `pick_table(lv)` **只在 `level_tables` 里选**；`layered` 铺满校验也只看它
+- ⚠️ **不再 sort `self.tables`**（只 sort `level_tables`）：全仓大量 `js.tables[t.index]`
+  依赖「下标 == index」，重排会错位（本轮踩过）
+
+### C. 运行时状态机（runtime）
+
+```python
+_STATE["special"] = {"lv": 10, "active": 3, "chain": [1], "restart": 0}
+```
+
+- **重开信号（2026-11-17 最终版：pipe 必经点，不再靠猜）**：
+  · **主计数点**：`无尽挑战_收尾重开.next -> 无尽挑战_重开计数_收尾 -> 通用_重开_暂停`
+    （`03-1-01Endless_fight.json`）—— 收尾超时重开是重开的**必经点**，
+    节点被调用的那一刻就 `JobSetRestartTick` 计一次
+  · **兜底**：`JobSetFight` 里的 `_special_on_fight_enter`（`first`/`just_passed` 判定），
+    若本轮已被 pipe 计过（`_STATE["ticked_round"]`）则跳过，避免双计
+  ⚠️ **绝不能用关卡号判「过关 vs 重开」**：训练模式下失败也会点「继续训练」
+  把关卡号 +1，两者根本分不开 —— 实测日志 `无尽挑战_收尾重开` 出现 **432 次**、
+  计数却 **0 次**，这就是「一直重开、永不切表」的真正原因（踩过两次）
+  ⚠️ `JobSetStage` 在当前 pipe 里**没有上游**（孤儿节点），绝不能把计数挂那里
+- `_pick_table(js, lv, is_boss)` 是**唯一选表入口**（原来 6 处 `js.pick_table` 全收口）；
+  `active` 有值就直接返回那张表 -> 顺带**豁免 `covers` 检查**（特殊表常故意越界救场）
+- 命中：`chain.append(当前表)`（**只记录轨迹，不防回头**）、`active = to`、`restart = 0`（**切表清零**）
+- ★ **允许切回已经用过的表**（2026-11-02 用户定）：原先禁止「回头」导致
+  「表2 重开 N 次 -> 切回表1」被拦死，表现为**一直重开、永远切不回去**。不设总次数上限、不防回头
+- ★ **自己造成的重开不计数**：切表/换阵容会 `run_task(通用_重开_暂停)`，那次重开进 `JobSetStage`
+  时若也计数，新表一上来就有 1 次 -> 阈值 1 时会**自激无限切换**。所以换阵容前打
+  `_STATE["self_restart"] = True`，下次进 Stage 时 `pop` 掉并跳过计数
+- 换关 -> 状态整体重建 -> **自动回按关卡选表**
+- `_special_state(lv, create=False)` 是只读查询（预热/局外预判拿「下一关」来问，
+  在那里重建会把切好的链清掉 —— 本轮踩过）
+
+### D. 编辑器
+
+| 位置 | 改动 |
+| --- | --- |
+| `20` | `jobNewTable` 默认 `onRestart:{count:0,to:0}`；`jobNormOnRestart` / `jobTablesReferencing` / `jobTableIsSpecial` / `jobValidateOnRestart` |
+| `27f` | 每表导出 `on_restart`；**保存前跑校验，不通过就红字拦下不保存**（用 setStatus，不弹系统窗 - 有预算上限） |
+| `28` | 读回归一化 `t.onRestart` |
+| `23` + `index.html` | ★ **收尾参数面板（🚩，棋盘下侧）也加了「重开换表」**：**两选一** ——「不换表」/「重开 n 次后换表」；**选了后者才出现**次数（**最低 1**，填 0 自动抬到 1）+ 目标表下拉（不含自己）。放在这儿是因为「收尾超时后动作 = 重开」正是重开的主要来源之一；与总览同一份数据（`t.onRestart`），两边实时同步 |
+| `47` 总览 | 卡头 `特殊表 · 被表X 引用`；「重开换表」行同样是**两选一**（不换表 / 重开 n 次后换表），选了才出次数与目标表 |
+
+**保存校验两条**：① 悬空引用（`to` 指向不存在的表）② **普通表起始关卡撞车**
+（仅非图层模式；专门抓「特殊表失去引用后变回普通表」）。
+> ⚠️ 原计划的「删表时拦截」没做：编辑器里**没有删表入口**，所以改成保存时统一拦。
+
+### E. 门禁
+
+- `selfcheck` §13 新增 9 条：派生身份 / level_tables / pick_table 跳过 / 归一化 /
+  3 次命中 / 命中后返回特殊表 / 链式接力 / 换关失效
+- `repro_undo_boss` F 节新增 10 条：归一化 / 引用查询 / 派生 / 悬空拦截 / 撞车拦截 /
+  自引用置 0 / 改次数生效
+
 ## 11. 最近验证结果（全绿基线）
+
+**2026-11-02 实测（★ 重开换表 / 特殊表派生，见 §10.24）**：
+
+```
+node --check 20 / 27f / 28 / 47                  → OK
+agent import runtime / engine                    → OK
+selfcheck.py §13                                 → 新增 9 条「重开换表」断言全 OK
+                                                   （派生身份 / level_tables / pick_table 跳过 /
+                                                    归一化自引用与负数 / 3 次命中切表 /
+                                                    active 生效 / 链式接力 / 换关失效）
+repro_undo_boss.js                               → 新增 F 节 10 条全过
+编辑器 11 套 repro_*.js                           → 全过（含 repro_registry 预算门禁）
+⚠️ selfcheck 全局仍 exit 1，唯一 FAIL 是**预存在**的「异值多写入者」
+⚠️ **未上真机**：重开计数靠「同关再次进入 JobSetStage」这个推断，需实测确认
+```
+
+本轮改动文件：
+
+```
+agent/jobset/engine.py             ★Table.on_restart / is_special；JobSet.level_tables /
+                                    pick_table 改池子 / layered 只算普通表 / 不再 sort self.tables
+agent/jobset/runtime.py            ★_special_state / _pick_table（6 处收口）/ _special_restart_tick /
+                                    _log_once；Stage 先 tick 再选表；Plan 的 covers 与 Stage 的 seen
+                                    对特殊表豁免；JobSetLoad 清 special/stage_lv/log_once
+.../static/js/20-jobset-core.js    onRestart 默认值 + 4 个纯函数（归一化/引用/特殊表/校验）
+.../static/js/27f-jobset-export.js 导出 on_restart + 保存前校验（setStatus 红字，不弹系统窗）
+.../static/js/28-jobset-io.js      读回归一化 onRestart
+.../static/js/47-jobset-overview.js 卡头「特殊表·被表X引用」+「重开换表」行
+.../static/css/base.css            .ov-sp-badge / .ov-num
+.../tests/repro_undo_boss.js       F 节 10 条断言
+agent/jobset/selfcheck.py          §13 新增 9 条断言
+game_assist_tools/endless_setup/HANDOFF.md   §10.24 + §11
+```
 
 **2026-11-02 实测（删除特殊表 + 📋 设置总览）**：
 
