@@ -76,14 +76,21 @@ jobs:
           restore-keys: |
             android-native-${{ runner.os }}-
 
+      # build.versionName 钉成发版标签：MaaFwApp 默认用 git describe --tags 算版本号，
+      # 同一提交上有多个标签时（如 v1.5.8 与 v1.5.8-beta.6）会挑错，APK 内版本号变成 beta。
+      # 只在版本形如 vX.Y.Z 时钉死；手动跑分支构建时仍按 git describe 自动算。
       - name: Write local.properties
+        env:
+          RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
         run: |
           {
             echo "sdk.dir=${ANDROID_SDK_ROOT}"
             echo "pi.profile=../profile.yaml"
             echo "build.releaseAbi=${{ matrix.abi }}"
+            if [[ "$RELEASE_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              echo "build.versionName=${RELEASE_VERSION#v}"
+            fi
           } > Android/MaaFwApp/local.properties
-
       - name: Prepare PI tree
         run: python Android/prepare_android_pi.py
 
