@@ -295,6 +295,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MaaPVZ-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}
+          # 末尾的 -MFAA 是刻意加的，别删：release 页面按文件名字典序排 asset，
+          # 只有 MFAA / MXU 两边都带 UI 变体后缀，字母序才会是同位置比 F(70) < X(88)，
+          # 保证同平台的 MFAA 包永远排在 MXU 包前面（与 M9A 的 -MFAA / -MXU 一致）。
+          name: MaaPVZ-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}-MFAA
           path: "install"
           if-no-files-found: error

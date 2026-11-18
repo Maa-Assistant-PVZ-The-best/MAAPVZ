@@ -22,16 +22,13 @@ jobs:
       version: ${{ github.ref_name }}
 
   # MXU 变体是独立工作流，与上面的 MFA 包各自出包、互不阻塞
-  # ===== MXU 已停用：发版不再构建 MXU 包 =====
-  # 恢复时解开本节，并同步解开 publish.needs 的 desktop-mxu、
-  # Download MXU artifacts 步骤，以及 install-mxu.yml 的 workflow_call。
-  # desktop-mxu:
-  #   name: Desktop builds (MXU)
-  #   permissions:
-  #     contents: read
-  #   uses: ./.github/workflows/install-mxu.yml
-  #   with:
-  #     version: ${{ github.ref_name }}
+  desktop-mxu:
+    name: Desktop builds (MXU)
+    permissions:
+      contents: read
+    uses: ./.github/workflows/install-mxu.yml
+    with:
+      version: ${{ github.ref_name }}
 
   android:
     name: Android APK
@@ -85,11 +82,11 @@ jobs:
 
   publish:
     name: Publish GitHub Release
-    # MXU 已停用：不再等待 desktop-mxu（保留 job 会因它被注释而永久 skipped）
-    # 注意：flow 数组里不能只注释单个元素（# 会吞掉本行剩余内容），故改为块风格
+    # 保持块风格书写：flow 数组（[a, b, c]）里没法单独注释掉某一项，
+    # '#' 会把本行后面的元素一起吞掉。
     needs:
       - desktop
-      # - desktop-mxu
+      - desktop-mxu
       - android
       - changelog
     runs-on: ubuntu-latest
@@ -97,31 +94,32 @@ jobs:
       contents: write
       actions: write
     steps:
+      # pattern 必须以 -MFAA / -MXU 结尾：两类 artifact 现在是同前缀、靠后缀区分，
+      # 只写 MaaPVZ-win-* 会把 MFAA 和 MXU 两个包一起匹配进来。
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: MaaPVZ-win-*-${{ github.ref_name }}
+          pattern: MaaPVZ-win-*-${{ github.ref_name }}-MFAA
           path: release-assets/desktop
 
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: MaaPVZ-macos-*-${{ github.ref_name }}
+          pattern: MaaPVZ-macos-*-${{ github.ref_name }}-MFAA
           path: release-assets/desktop
 
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: MaaPVZ-linux-*-${{ github.ref_name }}
+          pattern: MaaPVZ-linux-*-${{ github.ref_name }}-MFAA
           path: release-assets/desktop
 
-      # MXU 变体单独用 MaaPVZ-MXU-* 前缀，避免与上面的 MFA 包模式冲突
-      # MXU 已停用：产物不再上传，恢复时解开本节
-      # - name: Download MXU artifacts
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     pattern: MaaPVZ-MXU-*-${{ github.ref_name }}
-      #     path: release-assets/desktop
+      # MXU 变体与 MFA 包同前缀、靠 -MXU 后缀区分，与上面的 -MFAA 互不重叠
+      - name: Download MXU artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: MaaPVZ-*-${{ github.ref_name }}-MXU
+          path: release-assets/desktop
 
       # 两个架构各一份；mapping.txt 是另一组 artifact（带 -mapping-），不下载、不公开
       - name: Download Android APK (arm64-v8a)

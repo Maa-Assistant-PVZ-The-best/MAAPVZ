@@ -6,51 +6,46 @@ name: install-mxu
 #   runtimes/<rid>/native）、以及 PI 不做 setting[] 裁剪（MXU 设置页要用它）。
 
 on:
-  # ===== MXU 变体已停用（2026-02）=====
-  # 自动 CI 与发版出包均已注释，仅保留手动触发。
-  # 恢复时把下面 push / pull_request / workflow_call 的 # 去掉，
-  # 并同步解开 release.yml 里 desktop-mxu / publish.needs / Download MXU artifacts 三处。
-  # 注意：workflow_dispatch 必须保留，否则整个 workflow 会被 GitHub 判为无效。
-  # push:
-  #   branches:
-  #     - "**"
-  #   paths:
-  #     - ".github/workflows/install-mxu.yml"
-  #     - ".github/workflows/install.yml"
-  #     - ".github/cliff.toml"
-  #     - "assets/**"
-  #     - "agent/**"
-  #     - "game_assist_tools/**"
-  #     - "tools/**"
-  #     - "**.py"
-  #     - "requirements.txt"
-  #     - "docs/imgs/**"
-  # pull_request:
-  #   branches:
-  #     - "**"
-  #   paths:
-  #     - ".github/workflows/install-mxu.yml"
-  #     - ".github/workflows/install.yml"
-  #     - ".github/cliff.toml"
-  #     - "assets/**"
-  #     - "agent/**"
-  #     - "game_assist_tools/**"
-  #     - "tools/**"
-  #     - "**.py"
-  #     - "requirements.txt"
-  #     - "docs/imgs/**"
+  push:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/install-mxu.yml"
+      - ".github/workflows/install.yml"
+      - ".github/cliff.toml"
+      - "assets/**"
+      - "agent/**"
+      - "game_assist_tools/**"
+      - "tools/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - ".github/workflows/install-mxu.yml"
+      - ".github/workflows/install.yml"
+      - ".github/cliff.toml"
+      - "assets/**"
+      - "agent/**"
+      - "game_assist_tools/**"
+      - "tools/**"
+      - "**.py"
+      - "requirements.txt"
+      - "docs/imgs/**"
   workflow_dispatch:
     inputs:
       version:
         description: Artifact version (leave empty to use the CI version)
         required: false
         type: string
-  # workflow_call:
-  #   inputs:
-  #     version:
-  #       description: Version used in artifact names
-  #       required: true
-  #       type: string
+  workflow_call:
+    inputs:
+      version:
+        description: Version used in artifact names
+        required: true
+        type: string
 
 concurrency:
   group: install-mxu-${{ github.workflow_ref }}-${{ github.ref }}
@@ -288,7 +283,9 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          # 用 MaaPVZ-MXU-* 前缀单独区分 UI 变体，避免与 MFA 包的 artifact 命名空间混在一起
-          name: MaaPVZ-MXU-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}
+          # 末尾的 -MXU 与 install.yml 的 -MFAA 成对使用，别删：
+          # release 页面按文件名字典序排 asset，两边都带变体后缀才能靠同位置 F(70) < X(88)
+          # 保证同平台内 MFAA 包排在 MXU 包前面；顺带让 artifact 名与 MFA 包天然不重名。
+          name: MaaPVZ-${{ matrix.os }}-${{ matrix.arch }}-${{ needs.meta.outputs.tag }}-MXU
           path: "install-mxu"
           if-no-files-found: error

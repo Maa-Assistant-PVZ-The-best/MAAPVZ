@@ -15,17 +15,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # filename 必须以 -MFAA.zip 结尾：桌面包现在同前缀、靠 -MFAA / -MXU 后缀区分，
+          # 只写 MaaPVZ-win-x86_64-* 会把 MFAA 和 MXU 两个包一起匹配进来。
           - os: win
             arch: x86_64
-            filename: 'MaaPVZ-win-x86_64-*'
+            filename: 'MaaPVZ-win-x86_64-*-MFAA.zip'
             rid: MaaPVZ
           - os: macos
             arch: x86_64
-            filename: 'MaaPVZ-macos-x86_64-*'
+            filename: 'MaaPVZ-macos-x86_64-*-MFAA.zip'
             rid: MaaPVZ
           - os: linux
             arch: x86_64
-            filename: 'MaaPVZ-linux-x86_64-*'
+            filename: 'MaaPVZ-linux-x86_64-*-MFAA.zip'
             rid: MaaPVZ
           - os: android
             arch: arm64
