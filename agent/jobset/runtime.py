@@ -1384,7 +1384,8 @@ def _special_dbg(msg: str) -> None:
         pass
 
 
-def _special_on_fight_enter(js, lv: int, context=None) -> None:
+def _special_on_fight_enter(js, lv: int, context=None,
+                            is_boss: Optional[bool] = None) -> None:
     """「进入局内」这一刻：除了「过关进新关」，其余都算一次**重开**。
 
     ★★ 判据（2026-11-17 修正，不再看关卡号）：
@@ -1431,13 +1432,20 @@ def _special_on_fight_enter(js, lv: int, context=None) -> None:
     if context is not None and _after >= 1 and _after != _before:
         try:
             _newt = js.tables[_after - 1]
-            _inject_lineup(context, _newt, False)
+            # ★ boss 关必须按 boss 卡组注入（2026-11-18 修）：原来写死 False，
+            #   boss 关切表会注入普通卡组。调用方（JobSetFight）已算好就传进来，
+            #   没传就按 _resolve_is_boss 的规则从 state 取（带跨关防染色）。
+            _ib = (bool(is_boss) if isinstance(is_boss, bool)
+                   else _resolve_is_boss({}, lv))
+            _inject_lineup(context, _newt, _ib)
             _fight_ok = _inject_fight(context, _newt)
             _STATE["plan_table_index"] = _newt.index
             _STATE["table_index"] = _newt.index
-            _log(f"🔀 已注入表{_after} 的阵容：{_newt.eff_plants(False)}"
-                 f"（种植链={'OK' if _fight_ok else '注入失败'}）")
-            _special_dbg(f"INJECT(fight) table{_after} fight={'ok' if _fight_ok else 'FAIL'}")
+            _log(f"🔀 已注入表{_after} 的阵容：{_newt.eff_plants(_ib)}"
+                 f"（{'boss 关' if _ib else '普通关'}，"
+                 f"种植链={'OK' if _fight_ok else '注入失败'}）")
+            _special_dbg(f"INJECT(fight) table{_after} boss={int(_ib)} "
+                         f"fight={'ok' if _fight_ok else 'FAIL'}")
         except Exception as _e:
             _special_dbg(f"INJECT(fight) FAILED {type(_e).__name__}: {_e}")
 
@@ -1479,8 +1487,13 @@ class JobSetRestartTick(CustomAction):
             _log("重开换表计数：本次重开由换阵容触发 -> 不计入")
             _special_dbg("PIPE tick (self-restart, not counted)")
         else:
+            # ★ boss 判定（2026-11-18 修）：原来这里写死 `bool(param.get("是boss关"))`，
+            #   而 pipe 节点没传这个参数 -> 恒为 False -> boss 关切表会注入普通卡组。
+            #   改用 _resolve_is_boss：param 有就用 param，没有就吃「本关」记下的判定
+            #   （带跨关防染色，见它的注释）。
+            is_boss = _resolve_is_boss(param, lv)
             before = int(_special_state(lv, create=False).get("active") or 0)
-            _special_dbg("PIPE tick -> RESTART")
+            _special_dbg(f"PIPE tick -> RESTART (boss={int(is_boss)})")
             _special_restart_tick(js, lv)
             after = int(_special_state(lv, create=False).get("active") or 0)
             # ★★ 关键：切表后必须**立刻把新表的阵容/种植链注入管道**，
@@ -1488,7 +1501,6 @@ class JobSetRestartTick(CustomAction):
             #   实际还是原来那套植物」（2026-11-17 用户实测踩到）。
             if after >= 1 and after != before:
                 new_t = js.tables[after - 1]
-                is_boss = bool(param.get("是boss关"))
                 try:
                     _inject_lineup(context, new_t, is_boss)
                     fight_ok = _inject_fight(context, new_t)
@@ -1771,6 +1783,7 @@ class JobSetLoad(CustomAction):
             _STATE["fight_seen"] = None        # 是否已进过局内（判「首次」）
             _STATE["just_passed"] = None        # 刚过关标记（判「重开」）
             _STATE["fight_tick_at"] = None      # 进局内去重时间戳
+            _STATE["ticked_round"] = None       # 本轮是否已由 pipe 计数（防双计）
             _STATE["autocount_seen"] = None   # 自动计数是否真的校准过（JobSetAutoCount 置位）
             _STATE["autocount_warned"] = None  # 「自动计数没跑成」是否已提醒过
             # ★ 预留接口提示的去重集合（新任务要重新提示一遍，见 _reserved_notice）
@@ -2175,18 +2188,20 @@ class JobSetFight(CustomAction):
         if lv in (None, ""):
             lv = tr.count if tr.count > 0 else 1
 
-        # ★ 「重开换表」计数（2026-11-02）：JobSetFight 是**每次进局内都会跑**的
-        #   CustomAction，所以不必改 pipe 也能数到重开。内部用 5 秒时间窗去重，
-        #   同一次进关被调用多次只算一次。
-        _special_on_fight_enter(js, int(lv) if str(lv).isdigit() else tr.count, context)
         try:
             lv = int(lv)
         except (TypeError, ValueError):
             lv = 1
 
         # ★ boss 判定：规则与防染色机制见 _resolve_is_boss 的注释
-        #   （91 关误判事故的修复点）。
+        #   （91 关误判事故的修复点）。**必须放在计数之前**：
+        #   切表后的阵容注入要用这里的判定，否则 boss 关会被注入成普通卡组。
         is_boss = _resolve_is_boss(param, lv)
+
+        # ★ 「重开换表」计数（2026-11-02）：JobSetFight 是**每次进局内都会跑**的
+        #   CustomAction，所以不必改 pipe 也能数到重开。内部用 2 秒时间窗去重，
+        #   同一次进关被调用多次只算一次。
+        _special_on_fight_enter(js, lv, context, is_boss)
 
         # ★ 优先用 JobSetStage 已经锁定好的表，保证「选卡」与「种植」是同一张表。
         #   只有 JobSetStage 没跑过（table_index 为 None）时才自己按关卡算。
