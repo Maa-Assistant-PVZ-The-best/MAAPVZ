@@ -55,7 +55,7 @@ permissions:
   contents: read
 
 env:
-  MAA_FRAMEWORK_VERSION: v5.14.2
+  MAA_FRAMEWORK_VERSION: v5.16.1
   # MXU 宿主版本；MXU v2.9.0 要求 MaaFramework >= v5.12.1，与当前 v5.14.2 兼容
   MXU_VERSION: v2.9.0
 
