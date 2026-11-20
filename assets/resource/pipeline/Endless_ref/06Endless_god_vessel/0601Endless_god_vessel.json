@@ -115,9 +115,7 @@
         //  35-jobset-artifact.js 的 jobArtifactVerifyText），导出成
         //  作业集 artifact_verify，再由 runtime 注入到这里。
         "recognition": "OCR",
-        "expected": [
-            "神器"
-        ], //会被覆盖（换神器时注入目标神器的核对文本；["神器"] 是「不做核对也不卡死」的兜底）
+        //会被覆盖（换神器时注入目标神器的核对文本；["神器"] 是「不做核对也不卡死」的兜底）
         "roi": [
             264,
             326,
