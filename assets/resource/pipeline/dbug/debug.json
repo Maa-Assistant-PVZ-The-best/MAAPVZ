@@ -1,26 +1,38 @@
 {
-    "测试": {
-        "action": {
-            "type": "Shell",
-            "param": {
-                "cmd": "cmd statusbar expand-notifications"
-            }
+    "NavToPage_神秘埃及": {
+        "action": "Custom",
+        "custom_action": "NavToPage",
+        "custom_action_param": {
+            "target": "神秘埃及"
         },
-        "post_delay": 4000,
         "next": [
-            "测试2"
+            "测试1"
         ]
     },
-    "测试2": {
-        "action": {
-            "type": "Shell",
-            "param": {
-                "cmd": "cmd statusbar collapse"
-            }
-        },
-        "post_delay": 400,
-        "next": [
-            "测试"
-        ]
+    "Nav_CurrentPage": {
+        "recognition": "OCR",
+        "roi": [
+            503,
+            407,
+            276,
+            150
+        ],
+        "action": "DoNothing"
+    },
+    "测试1": {
+        "recognition": "OCR",
+        "expected": [
+            "神秘埃及"
+        ],
+        "focus": "寻找埃及",
+        "roi": [
+            571,
+            473,
+            142,
+            37
+        ],
+        "action": "Click",
+        "post_wait_freezes": 1000,
+        "next": []
     }
 }

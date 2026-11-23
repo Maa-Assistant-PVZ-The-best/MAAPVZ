@@ -10,6 +10,16 @@
             630,
             112,
             85
+        ],
+        "next": [
+            "导航_寻找星系"
         ]
+    },
+    "导航_寻找星系": {
+        "action": "Custom",
+        "custom_action": "NavToPage",
+        "custom_action_param": {
+            "target": "" //留空待覆盖
+        }
     }
 }
