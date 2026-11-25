@@ -1680,7 +1680,7 @@ try:
           not _lost_all, "；".join(_lost_all[:5]))
 
     # ---- 本次事故的定点检查：当前世界/起始关卡 分信道 ----
-    _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "endless_ref.json")
+    _t18 = _jsonc18(_R18 / "assets" / "resource" / "task" / "Endless_ref" / "Endless_ref.json")
     _cases18 = _t18["option"]["无尽挑战_选择世界"]["cases"]
     # ★ 2026-11-01 起「地宫」也是一个 case，但它**故意不写 Plan 双节点**：
     #   地宫跑的是 Secret_realm 任务、不注入「当前世界」（见 HANDOFF §0 地宫无尽）。

@@ -44,7 +44,7 @@
         "./resource/task/misc/logs.json",
         "./resource/task/video_card/video_card.json",
         // Endless 重构版入口
-        "./resource/task/Endless_ref/endless_ref.json",
+        "./resource/task/Endless_ref/Endless_ref.json",
         // 植物探险(beta)：按层级拆分，序号即合并顺序
         "./resource/task/explore_ref/world.json",
         "./resource/task/explore_ref/plant.json",
