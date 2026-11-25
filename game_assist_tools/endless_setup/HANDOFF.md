@@ -2878,10 +2878,21 @@ NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中";  JB_COMM = "[JumpBack]"
 `_inject_artifact` 的「要换」分支多两件事：注入 `核对神器.expected`、清 max_hit。
 没配核对文本时**只提醒一次**（`_STATE["artifact_verify_warned"]` 去重，避免每关刷屏）。
 
+> ★★ **2026-11-25 修正（用户决定，重要）**：`核对神器.expected` 改成
+> **「表里配了核对文本才注入，没配就完全不碰这个字段」**。
+> 原来的兜底 `["神器"]` 是错的：**有些神器的详情页 OCR 文本里根本不含「神器」二字**
+> —— 按「神器」去核对必然认不到 → 核对节点失败 → 整条神器链卡死。
+> 配套改动：
+> ① pipe 侧 `0601Endless_god_vessel.json` 的 `无尽挑战_核对神器` **删掉 `expected`**
+>    （用户亲手删的，别再加回去）；
+> ② `_ARTIFACT_VERIFY_ORIG` 改成空 `{}`（该字段不再纳入快照还原）；
+> ③ selfcheck 两条断言改成「快照为空 且 pipe 不写死」「没核对文本时不注入 expected」。
+> ⚠️ 谁要把 `expected` 加回 pipe 或还原兜底，会直接把这个 bug 带回来。
+
 ### E. 门禁（`selfcheck.py` §13 新增 7 条，全绿）
 
 - 8 个链节点 `next[0]` 都是 `JB_COMM`（漏一个就红 ← 防回退）
-- `核对神器.expected` 快照与 pipe 一致
+- `核对神器`：**快照为空 且 pipe 不再写死 expected**（2026-11-25 改，见上）
 - `核对神器.roi == [264,326,752,175]`
 - `神器.next` 末位 = `核对神器`
 - `滑动` / `确认已装备` 都有 `max_hit`
@@ -2937,13 +2948,22 @@ NODE_JUMPBACK_COMM = "定位_全局_服务器通讯中";  JB_COMM = "[JumpBack]"
 
 ```python
 def _need_plant_fill(table, is_boss) -> bool:
-    if table.eff_squad(is_boss) is None:            # 不是编队模式 -> 走正常选卡
-        return False
-    return len(table.eff_plants(is_boss)) < PLANT_SLOT_COUNT   # = 8
+    # ★ 2026-11-25 修正：数「槽位棋盘 slots」，满 8 个就不补；**与编队无关**
+    slots = getattr(table, "slots", None) or {}
+    n = sum(1 for v in slots.values() if v and str(v).strip())
+    return n < PLANT_SLOT_COUNT     # = 8
 ```
 
-- **只用作业集字段**，不看游戏画面（正赛只要求「卡槽满 8 格」，作业集配了几株是已知的）
-- **按本关别判**（普通关看 `lineup.plants`、boss 关看 `boss_lineup.plants`）—— 允许「普通关补位、boss 关不补」
+> ⚠️ **2026-11-25 事故记录（别再犯）**：原来读的是 `eff_plants()`，也就是
+> `lineup.plants`（**选卡列表**）。但用编队时 `lineup.plants` 本来就是空的
+> （植物由游戏内编队提供），而用户实际填的 8 个植物在 **`slots`（槽位棋盘）** 里
+> —— 于是「槽位明明满 8 个」被判成「不足 8」→ 每关都白跑一趟补位。
+> 实测数据：表2 `lineup.plants=[]`、`slots=8 个`（宇宙蘑菇/暗影荚兰/暗影豌豆/…）。
+> 同一天还试过「OCR 数卡槽」，实测完全不可靠（读 3 块全是「虎头菇」、只落 1 格），
+> **已全部回退** —— 判据只能来自作业集字段，不能来自运行时识别。
+
+- **只用作业集字段**，不看游戏画面（正赛只要求「卡槽满 8 格」，槽位棋盘配了几格是已知的）
+- **与编队模式无关**：只要槽位满 8 就不补（用户原话：「和编队没关系，只要满 8 个就不补」）
 - **正赛 / 训练一致**，不分开判（与神器闸门那种「分开判」不同）
 - ★ 判定放在 `_inject_artifact` 里 → 该函数是**所有换表路径的必经点**
   （`_apply_table` → `_inject_lineup` → `_inject_artifact`；预热 `force=True` 也走它），

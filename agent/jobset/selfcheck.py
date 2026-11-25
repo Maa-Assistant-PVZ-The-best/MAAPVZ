@@ -775,7 +775,8 @@ try:
     check("神器占位: 进入普通关签名", _t_art.lineup_sig(False) == ("plants", ("大喷菇",), "神器A"),
           str(_t_art.lineup_sig(False)))
     check("神器占位: boss 未配置 -> 沿用", _t_art.eff_artifact(True) == "神器A")
-    # ★ 核对文本（2026-11-02）：旧作业集没这个字段 -> 空列表 -> runtime 退回 ['神器']
+    # ★ 核对文本（2026-11-25 改）：旧作业集没这个字段 -> 空列表 -> runtime **不注入**
+    #   expected（保持 pipe 原样 = 不做文本核对），不再退回 ['神器']
     check("神器核对文本: 旧作业集无字段 -> 空列表（= 不核对也不卡死）",
           _t_art.eff_artifact_verify(False) == []
           and _t_art.eff_artifact_verify(True) == [],
@@ -867,8 +868,14 @@ try:
     check(f"★神器链: {len(_art_chain13)} 个节点 next 首位都是 [JumpBack]定位_全局_服务器通讯中",
           not _no_jb13, f"缺 jumpback 的节点={_no_jb13}")
     _vf_pipe = _pipe_node13(_GOD_PIPE, _rt13.NODE_ARTIFACT_VERIFY)
-    check("★同步: 核对神器 expected 快照与 pipe 一致（注入后要能还原）",
-          _rt13._ARTIFACT_VERIFY_ORIG.get("expected") == _vf_pipe.get("expected"),
+    # ★ 2026-11-25：核对文本改成「有才注入、没有完全不动」，不再纳入快照。
+    #   pipe 侧 expected 已由用户删除（有些神器的 OCR 文本不含「神器」二字，
+    #   兜底按「神器」核对必然认不到 -> 节点失败、神器链卡死）。
+    #   这里守住两件事：① 快照常量为空（不再声称管这个字段）
+    #                  ② pipe 里也不该有 expected（有就会按它核对）
+    check("★同步: 核对神器 expected 已改为「有才注入」-> 快照为空 且 pipe 不再写死",
+          not _rt13._ARTIFACT_VERIFY_ORIG
+          and _vf_pipe.get("expected") is None,
           f"runtime={_rt13._ARTIFACT_VERIFY_ORIG} pipe={_vf_pipe.get('expected')}")
     check("★神器链: 核对神器 roi = 描述区 [264,326,752,175]",
           _vf_pipe.get("roi") == [264, 326, 752, 175], str(_vf_pipe.get("roi")))
@@ -983,10 +990,13 @@ try:
     _rt13._STATE["artifact_sig"] = None
     _c13 = _FakeCtx13()
     _rt13._inject_artifact(_c13, _tArt13, False)
-    check("★神器入口: 要换神器 -> 选取植物/选择编队 next 都接 [选取神器]",
+    check("★神器入口: 选取植物接 [选取神器]；选择编队接「补位优先」或直接 [选取神器]",
           (_choose13(_c13) or {}).get("next") == [_rt13.NODE_ARTIFACT_PICK]
+          # ★ 2026-11-25：补位判定改成看「槽位棋盘(slots)」后，slots<8 的表会先补位。
+          #   §10.22 D 节：补位 + 换神器 -> 编队终点接 [植物补位_返回]，补位节点再接神器。
+          #   所以这里接受两种：先补位 / 直接神器。
           and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
-          == [_rt13.NODE_ARTIFACT_PICK],
+          in ([_rt13.NODE_ARTIFACT_PICK], [_rt13.NODE_FILL_RETURN]),
           f"plants={_choose13(_c13)} squad={_merged13(_c13, _rt13.NODE_SQUAD_PICK)}")
     check("★神器入口: 换神器时未变闸门也进骨架（不再直跳开始战斗）",
           (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
@@ -1001,10 +1011,11 @@ try:
     check("★神器入口: 模板按当前表神器注入",
           any("artifact_calabash" in _json13.dumps(p, ensure_ascii=False)
               for p in _c13.overrides), str(_c13.overrides))
-    # ★ 核对文本注入（2026-11-02）：表里没有 artifact_verify -> 退回 pipe 原值 ['神器']
-    check("★神器入口: 没有核对文本时 expected 退回 ['神器']（不核对也不卡死）",
-          (_merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY) or {}).get("expected")
-          == list(_rt13._ARTIFACT_VERIFY_ORIG["expected"]),
+    # ★ 核对文本注入（2026-11-25 改）：表里没有 artifact_verify -> **完全不碰 expected**
+    #   （原来兜底写 ['神器']，但有些神器的 OCR 文本不含「神器」二字 -> 核对必失败、链卡死）
+    check("★神器入口: 没有核对文本时不注入 expected（完全不动这个字段）",
+          _merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY) is None
+          or "expected" not in (_merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY) or {}),
           str(_merged13(_c13, _rt13.NODE_ARTIFACT_VERIFY)))
     _tVase13 = _eng13.Table({"from_level": 1,
                              "lineup": {"plants": ["大喷菇"], "artifact": "投罐神器"},
@@ -1035,18 +1046,27 @@ try:
           and (_fill_pipe.get("custom_action_param") or {}).get("占位填充") is True
           and "植物列表" not in (_fill_pipe.get("custom_action_param") or {}),
           str(_fill_pipe.get("custom_action_param")))
+    # ★ 2026-11-25：补位判定改成数「槽位棋盘 slots」，且**与编队无关**。
+    #   所以测试表要按 slots 定义（lineup.plants 不再参与判定）。
     _tSquadShort = _eng13.Table({"from_level": 1, "squad": 2,
+                                 "slots": {"1": "A", "2": "B", "3": "C"},
                                  "lineup": {"plants": ["A", "B", "C"]}}, 0)
     _tSquadFull = _eng13.Table({"from_level": 1, "squad": 2,
+                                "slots": {str(i + 1): c for i, c in enumerate("ABCDEFGH")},
                                 "lineup": {"plants": list("ABCDEFGH")}}, 0)
     _tPlantsOnly = _eng13.Table({"from_level": 1,
+                                 "slots": {str(i + 1): c for i, c in enumerate("ABCDEFGH")},
                                  "lineup": {"plants": ["A", "B", "C"]}}, 0)
-    check("★补位判定: 编队 + 3 个植物 -> 要补",
+    check("★补位判定: 槽位 3 个 -> 要补（与编队无关）",
           _rt13._need_plant_fill(_tSquadShort, False) is True)
-    check("★补位判定: 编队 + 满 8 个 -> 不补",
+    check("★补位判定: 槽位满 8 个 -> 不补（编队表）",
           _rt13._need_plant_fill(_tSquadFull, False) is False)
-    check("★补位判定: 没编队（纯选卡表）-> 不补",
+    check("★补位判定: 槽位满 8 个 -> 不补（纯选卡表，同样不看编队）",
           _rt13._need_plant_fill(_tPlantsOnly, False) is False)
+    check("★补位判定: lineup.plants 满 8 但 slots 为空 -> 要补（读的是 slots）",
+          _rt13._need_plant_fill(
+              _eng13.Table({"from_level": 1, "squad": 2,
+                            "lineup": {"plants": list("ABCDEFGH")}}, 0), False) is True)
     _rt13._STATE["artifact_sig"] = None
     _cFill13 = _FakeCtx13()
     _rt13._inject_artifact(_cFill13, _tSquadShort, False)
@@ -1190,11 +1210,12 @@ try:
     _rt13._STATE["artifact_sig"] = "葫芦神器"      # 上一关就是它 -> 不换
     _c13 = _FakeCtx13()
     _rt13._inject_artifact(_c13, _tArt13, False)
-    check("★神器入口: 神器相同 -> 两个选卡终点还原 [开始战斗]",
+    check("★神器入口: 神器相同 -> 选取植物还原 [开始战斗]；编队终点还原 [开始战斗] 或「补位」",
           (_choose13(_c13) or {}).get("next") == [_rt13.NODE_BATTLE_START]
+          # ★ 2026-11-25：补位判定改看 slots 后，slots<8 的测试表会先补位 -> 允许两种
           and (_merged13(_c13, _rt13.NODE_SQUAD_PICK) or {}).get("next")
-          == [_rt13.NODE_BATTLE_START],
-          f"plants={_choose13(_c13)}")
+          in ([_rt13.NODE_BATTLE_START], [_rt13.NODE_FILL_RETURN]),
+          f"plants={_choose13(_c13)} squad={_merged13(_c13, _rt13.NODE_SQUAD_PICK)}")
     check("★神器入口: 神器相同 -> 闸门回原值",
           (_merged13(_c13, _rt13.NODE_JUMP_SAME) or {}).get("next")
           == list(_rt13._JUMP_SAME_ORIG))

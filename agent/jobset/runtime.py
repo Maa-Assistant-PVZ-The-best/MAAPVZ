@@ -544,9 +544,14 @@ NODE_ARTIFACT_CLOSE = "无尽挑战_关闭神器界面"
 #   点开卡片后先 OCR 核对详情页的描述文本，认对了才点装备（防 TemplateMatch 撞脸）。
 NODE_ARTIFACT_VERIFY = "无尽挑战_核对神器"
 #   核对节点的 expected 由 runtime 注入（网页端从 artifacts.json 的 desc 取中间句，
-#   导出成作业集 artifact_verify）-> 这是**新增的 runtime 管辖字段**，
-#   必须收进快照（还原时写回 pipe 原值），selfcheck §13 有断言守门。
-_ARTIFACT_VERIFY_ORIG = {"expected": ["神器"]}
+#   导出成作业集 artifact_verify）。
+# ★ 2026-11-25 修正（用户决定）：**只有真的配了核对文本才注入**，没配就完全不碰这个字段。
+#   原来这里有个兜底 `["神器"]`，问题是：有些神器的详情页 OCR 文本里根本不含「神器」二字
+#   -> 按「神器」去核对必然认不到 -> 核对节点报错、整条神器链卡死。
+#   pipe 侧也因此**删掉了 expected 字段**（用户 2026-11-25 亲手删的），
+#   所以这里绝不能再把兜底写回去，否则等于没删。
+#   ⚠️ 随之取消「快照」职责：本字段不再由 runtime「先存原值再还原」，而是只在有值时覆盖。
+_ARTIFACT_VERIFY_ORIG: Dict[str, Any] = {}
 # ★ 带 max_hit 的两个节点：每次真正进神器链之前要清零命中次数。
 #   max_hit 是**整个任务累计**的，而无尽里每关都可能换神器 —— 不清零第二关就滑不动了。
 #   （同一套解法见 agent/create_yard_hits.py 的 CreateYardResetHits）
@@ -1051,20 +1056,36 @@ def _clear_artifact_hits(context: Context) -> None:
 def _need_plant_fill(table, is_boss: bool) -> bool:
     """这张表在当前关别下要不要「编队选完再切回植物界面补位」。
 
-    判定（用户 2026-11-02 定，纯作业集数据、零识别）：
-      用编队（`eff_squad` 有值）**且** 该关别的植物数 < 8 -> 要补位。
+    ★ 判定（2026-11-25 修正，用户定）：**数「槽位棋盘」（`slots`）里有几个植物，
+      满 8 个就不补，不足 8 个才补**。与「是不是编队模式」无关。
 
-    ★ 为什么不看游戏画面：正赛只要求「卡槽满 8 格」，而作业集里这张表配了几株
-      是已知的 —— 不够 8 个就一定不满，没必要去识别。
-    ★ 正赛 / 训练一致，不分开判（与神器闸门那种「分开判」不同）。
-    ★ 每次换表都会重新算一次（本函数在所有换表路径的必经点被调用）。
+    ⚠️ 原来读的是 `eff_plants()`（= `lineup.plants`，**选卡列表**），那是错的：
+      用编队时 `lineup.plants` 本来就是空的（植物由游戏内编队提供），
+      于是「槽位里明明 8 个植物都满了」也会被判成「不足 8」-> 每次都白跑一遍补位。
+      （用户 2026-11-25 实测：表2 `lineup.plants=[]` 但 `slots` 有 8 个植物）
+
+    ★ 为什么不看游戏画面：槽位数是作业集里的已知数据（`slots` 就是那 8 格棋盘），
+      正赛只要求「卡槽满 8 格」，所以配了几个是确定的，不需要识别。
+    ★ 只在**编队终点**接补位链（`NODE_SQUAD_PICK.next`），选卡模式不受影响。
     """
     try:
-        if table.eff_squad(is_boss) is None:
-            return False                      # 不是编队模式 -> 走正常选卡，无需补位
-        return len(table.eff_plants(is_boss)) < PLANT_SLOT_COUNT
-    except AttributeError:                    # 自测桩 / 旧 Table 对象
+        slots = getattr(table, "slots", None) or {}
+    except Exception:                        # 自测桩 / 旧 Table 对象
         return False
+    n = 0
+    for _k, _v in slots.items():
+        if _v and str(_v).strip():
+            n += 1
+    return n < PLANT_SLOT_COUNT
+
+
+def _slot_plant_count(table) -> int:
+    """槽位棋盘里有几个植物（日志用）。"""
+    try:
+        slots = getattr(table, "slots", None) or {}
+    except Exception:
+        return -1
+    return sum(1 for _k, _v in slots.items() if _v and str(_v).strip())
 
 
 def _log_plant_fill(table, is_boss: bool) -> None:
@@ -1077,11 +1098,7 @@ def _log_plant_fill(table, is_boss: bool) -> None:
     if key in seen:
         return
     seen.add(key)
-    try:
-        n = len(table.eff_plants(is_boss))
-    except Exception:
-        n = -1
-    _log(f"⚠️ 表{getattr(table, 'index', 0) + 1} 植物只有 {n} 个"
+    _log(f"⚠️ 表{getattr(table, 'index', 0) + 1} 槽位只有 {_slot_plant_count(table)} 个植物"
          f"（不足 {PLANT_SLOT_COUNT}，{'boss 关' if is_boss else '普通关'}）"
          f"-> 编队选完后切回植物界面占位补位")
 
@@ -1165,11 +1182,12 @@ def _inject_artifact(context: Context, table, is_boss: bool,
             if art not in _warned:
                 _warned.add(art)
                 _log(f"⚠️ 神器「{art}」没有核对文本（artifact_verify 缺失）——"
-                     f"核对节点退回「神器」泛匹配（等于不核对）。"
-                     f"请在网页端重新保存作业集（神器 desc 见 artifacts.json）")
+                     f"核对节点**不注入 expected**（保持 pipe 原样，等于不核对文本、"
+                     f"只靠 TemplateMatch 认卡）。"
+                     f"想要核对请在网页端重新保存作业集（神器 desc 见 artifacts.json）")
         # ★ max_hit 清零：max_hit 是任务累计的，不清零第二关起滑动/确认节点就失效
         _clear_artifact_hits(context)
-        context.override_pipeline({
+        _art_over: Dict[str, Any] = {
             NODE_JUMP_SAME: {"next": list(_JUMP_SAME_ART)},
             NODE_JUMP_DIFF: {"next": list(_JUMP_DIFF_ORIG)},
             NODE_SUPPLY_CONFIRM: {"next": list(_SUPPLY_CONFIRM_ORIG)},
@@ -1183,13 +1201,16 @@ def _inject_artifact(context: Context, table, is_boss: bool,
                 "template": [f"General/god_vessel/{en}/",
                              f"General/god_vessel/{en}/{en}_1.png"],
             },
-            # 核对文本（pipe 默认 ['神器'] = 不核对也不卡死）
-            NODE_ARTIFACT_VERIFY: {
-                "expected": verify or list(_ARTIFACT_VERIFY_ORIG["expected"]),
-            },
-        })
+        }
+        # ★ 2026-11-25：**只有真的配了核对文本才覆盖 expected**。
+        #   没配就完全不碰这个字段 —— pipe 里也已经删掉了 expected（用户决定），
+        #   绝不能再用 ["神器"] 兜底：有些神器的详情页 OCR 文本不含「神器」二字，
+        #   按「神器」核对必然认不到 -> 核对节点失败、神器链卡死。
+        if verify:
+            _art_over[NODE_ARTIFACT_VERIFY] = {"expected": list(verify)}
+        context.override_pipeline(_art_over)
         _log(f"已注入神器流程：{art}（{en}）-> 选卡终点接 选取神器，"
-             f"核对「{'/'.join(verify) if verify else '未配置'}」后装备，"
+             f"核对「{'/'.join(verify) if verify else '未配置（不核对）'}」后装备，"
              f"装备后回 开始战斗")
         _STATE["artifact_sig"] = art
     except Exception as e:
