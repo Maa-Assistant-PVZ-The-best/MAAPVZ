@@ -19,7 +19,32 @@
         "action": "Custom",
         "custom_action": "NavToPage",
         "custom_action_param": {
-            "target": "" //留空待覆盖
-        }
-    }
+            "target": "神秘埃及" //留空待覆盖
+        },
+        "next": [
+            "导航_进入星系"
+        ]
+    },
+    "导航_进入星系": {
+        "action": "Click",
+        "target": [
+            646,
+            491
+        ],
+        "next": [
+            "导航_进入星系_进入",
+            "导航_进入星系"
+        ]
+    },
+    "导航_进入星系_进入": {
+        "recognition": "OCR",
+        "expected": [
+            "进入"
+        ],
+        "action": "Click",
+        "next": [
+            "导航_进入星系_定位第一关"
+        ]
+    },
+    "导航_进入星系_定位第一关": {} //进入星系后一直左滑，滑到第一关再停止，去找关卡
 }
